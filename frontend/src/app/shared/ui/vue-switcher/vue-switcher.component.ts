@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
-import { IconComponent } from '../../ui/icon/icon.component';
+import { IconComponent } from '../icon/icon.component';
 
 /** Un onglet du sélecteur : une vue du module, c'est-à-dire une route lazy. `lien` est absolu (ex. `/paie/cartes`). */
 export interface VueOnglet {

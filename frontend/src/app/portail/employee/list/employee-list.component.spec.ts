@@ -6,7 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of, Subject, throwError } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';

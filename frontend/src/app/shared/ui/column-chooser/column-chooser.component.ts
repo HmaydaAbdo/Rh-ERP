@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, linkedSignal } from '@angular/core';
 
 import { ColumnState } from '../../table/table-columns';
-import { SelectComponent, SelectOption } from '../../ui/select/select.component';
+import { SelectComponent, SelectOption } from '../select/select.component';
 
 /** Sélecteur des colonnes visibles d'un tableau (voir `conventions/frontend.md`, section Tableaux) : au moins une colonne reste
  * visible, une sélection vide est ignorée et le champ resynchronisé (voir `ColumnState.setSelected`). */

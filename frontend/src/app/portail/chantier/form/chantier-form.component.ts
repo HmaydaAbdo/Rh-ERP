@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { form, FormField, FormRoot, maxLength, required, hidden, pattern, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';

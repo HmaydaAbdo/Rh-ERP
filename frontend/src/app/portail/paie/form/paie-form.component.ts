@@ -4,8 +4,8 @@ import { disabled, form, FormField, FormRoot, max, maxLength, min, required, val
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';

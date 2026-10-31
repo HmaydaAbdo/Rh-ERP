@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSupp } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppListComponent } from './heures-supp-list.component';

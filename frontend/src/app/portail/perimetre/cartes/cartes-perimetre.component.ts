@@ -13,7 +13,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
+import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { Employee } from '../../employee/models/employee.model';
 import { libelleStatutEmploye } from '../../employee/models/employee-statut';

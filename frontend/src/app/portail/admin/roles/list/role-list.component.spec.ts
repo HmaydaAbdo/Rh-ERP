@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { saisir } from '../../../../shared/testing/formulaire';
 import { Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';

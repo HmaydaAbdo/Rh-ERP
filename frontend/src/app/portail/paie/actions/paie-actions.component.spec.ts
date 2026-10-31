@@ -3,7 +3,7 @@ import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { NotificationService } from '@shared/feedback/feedback.service';
+import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';

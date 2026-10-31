@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { EMPTY, firstValueFrom, of } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { Function } from '../models/function.model';
 import { FunctionService } from '../services/function.service';

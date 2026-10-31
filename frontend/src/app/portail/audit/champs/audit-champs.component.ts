@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnChooserComponent } from '../../../shared/ui/column-chooser/column-chooser.component';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { libelleChamp } from '../audit-format';

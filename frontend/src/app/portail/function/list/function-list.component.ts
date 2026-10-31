@@ -4,9 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
+import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';

@@ -41,13 +41,5 @@
   "portail/paie/import/paie-import-wizard.component.ts": "styles propres (132 lignes)",
   "portail/paie/parcours/paie-parcours.component.ts": "styles propres (150 lignes)",
   "portail/perimetre/analytique/analytique-perimetre.component.ts": "styles propres (341 lignes)",
-  "portail/perimetre/cartes/cartes-perimetre.component.ts": "styles propres (360 lignes)",
-  "shared/components/collection-shell/collection-shell.component.ts": "dossier partagé hors shared/ui",
-  "shared/components/collection-table/collection-table.component.ts": "dossier partagé hors shared/ui",
-  "shared/components/column-chooser/column-chooser.component.ts": "styles propres (6 lignes) ; dossier partagé hors shared/ui",
-  "shared/components/lazy-select/lazy-select.component.ts": "styles propres (3 lignes) ; dossier partagé hors shared/ui",
-  "shared/components/month-picker/month-picker.component.ts": "styles propres (63 lignes) ; dossier partagé hors shared/ui",
-  "shared/components/pdf-export-button/pdf-export-button.component.ts": "dossier partagé hors shared/ui",
-  "shared/components/vue-switcher/vue-switcher.component.ts": "styles propres (45 lignes) ; dossier partagé hors shared/ui",
-  "shared/feedback/feedback-viewport.component.ts": "styles propres (80 lignes) ; dossier partagé hors shared/ui"
+  "portail/perimetre/cartes/cartes-perimetre.component.ts": "styles propres (360 lignes)"
 }

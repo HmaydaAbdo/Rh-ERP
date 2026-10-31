@@ -9,12 +9,12 @@ import { DateInputComponent } from '../../../shared/ui/date-input/date-input.com
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { EmployeeReferenceOption, EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 

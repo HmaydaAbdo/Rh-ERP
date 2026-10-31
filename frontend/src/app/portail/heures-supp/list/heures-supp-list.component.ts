@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, forkJoin, map } from 'rxjs';
 
-import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableLazyLoadEvent } from '../../../shared/ui/table/table.component';
 import { HeuresSupp, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
@@ -12,9 +12,9 @@ import { HeuresSuppService } from '../services/heures-supp.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
-import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
+import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
 import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { chargerToutLeReferentiel } from '../../perimetre/perimetre-module';
 

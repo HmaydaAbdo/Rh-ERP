@@ -28,7 +28,7 @@ import { AssistantRacineComponent } from './core/assistant/assistant-racine.comp
 import { AuthService } from './core/auth/services/auth.service';
 import { SIDEBAR_ITEMS } from './core/navigation/nav-items';
 import { ThemeService } from './core/theme/theme.service';
-import { FeedbackViewportComponent } from './shared/feedback/feedback-viewport.component';
+import { FeedbackViewportComponent } from './shared/ui/feedback/feedback-viewport.component';
 
 function estRouteAuthentification(url: string): boolean {
   const chemin = url.split(/[?#]/, 1)[0] ?? '';

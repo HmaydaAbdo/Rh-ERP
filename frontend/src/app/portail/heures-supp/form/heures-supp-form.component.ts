@@ -4,7 +4,7 @@ import { FormField, FormRoot, disabled, form, min, required } from '@angular/for
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';

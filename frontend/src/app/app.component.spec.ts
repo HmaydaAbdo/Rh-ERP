@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '@shared/ui/feedback/feedback.service';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { CurrentUser } from './core/auth/models/auth.model';

@@ -3,9 +3,9 @@ import { ChangeDetectionStrategy, Component, contentChild, input, model, output 
 
 import { ColumnChooserComponent } from '../column-chooser/column-chooser.component';
 import { ColumnState } from '../../table/table-columns';
-import { TableCellDirective, TableComponent, TableFooterDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../ui/table/table.component';
-import { ButtonComponent } from '../../ui/button/button.directive';
-import { MessageComponent } from '../../ui/message/message.component';
+import { TableCellDirective, TableComponent, TableFooterDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../table/table.component';
+import { ButtonComponent } from '../button/button.directive';
+import { MessageComponent } from '../message/message.component';
 
 /** Configuration d'affichage du compteur et des états vides; les données et les colonnes restent fournies par le domaine. */
 export interface CollectionTableConfig {

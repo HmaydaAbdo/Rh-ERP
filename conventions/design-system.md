@@ -202,7 +202,7 @@ une ligne complète pour préserver leurs libellés.
 
 Les jetons Staport et les composants propres à Staport sont la source visuelle. Angular Aria/CDK fournit les primitives
 d'interaction accessibles; Tailwind CSS 4 fournit les utilitaires reliés aux jetons; Lucide Angular fournit les icônes.
-Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/` et `src/app/shared/components/`, présentés par la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre). Le catalogue ERP-RH recense toutes les briques d'interface partagées, y compris les composants de collection et d'intégration ; une brique visuelle partagée ne peut pas rester cachée dans un dossier commun sans page de démonstration ou référence explicite au catalogue.
+Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/`, présentés par la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre). Le catalogue ERP-RH recense toutes les briques d'interface partagées, y compris les composants de collection et d'intégration ; une brique visuelle partagée ne peut pas rester cachée dans un dossier commun sans page de démonstration ou référence explicite au catalogue.
 
 Utiliser les composants Angular Aria et CDK comme primitives accessibles et construire les composants Staport par-dessus,
 avec HTML natif dès que l'interaction est simple. Le système de design est porté par les jetons Staport, Tailwind CSS 4,

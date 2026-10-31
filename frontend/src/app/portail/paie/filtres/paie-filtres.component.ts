@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, li
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
-import { MonthPickerComponent } from '../../../shared/components/month-picker/month-picker.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { LazySelectSource } from '../../../shared/ui/lazy-select/lazy-select.model';
+import { MonthPickerComponent } from '../../../shared/ui/month-picker/month-picker.component';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReference } from '../../../shared/reference-data/equipe-reference.model';

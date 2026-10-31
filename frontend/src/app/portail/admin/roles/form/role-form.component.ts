@@ -4,7 +4,7 @@ import { disabled, form, FormField, FormRoot, maxLength, required, validate } fr
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { Page } from '../../../../shared/models/page.model';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
 import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';

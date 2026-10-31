@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, of } from 'rxjs';
 
-import { LazySelectPage, LazySelectSource } from '../components/lazy-select/lazy-select.model';
+import { LazySelectPage, LazySelectSource } from '../ui/lazy-select/lazy-select.model';
 import { Page } from '../models/page.model';
 import { EQUIPE_ORPHELINE, EquipeReference, rechercheEquipeOrpheline } from './equipe-reference.model';
 

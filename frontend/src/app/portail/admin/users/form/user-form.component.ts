@@ -5,8 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/services/auth.service';
-import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { LazySelectComponent } from '../../../../shared/ui/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';

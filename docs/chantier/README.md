@@ -409,7 +409,7 @@ modification, suppression et synchronisation sont conditionnés par `CHANTIER_WR
 
 Le référentiel chantier est également consommé par les formulaires/filtres Employee et Paie
 (`shared/reference-data/chantier-reference.service.ts`, implémentation du contrat de pagination
-attendu par le sélecteur générique `shared/components/lazy-select` — voir `conventions/frontend.md`,
+attendu par le sélecteur générique `shared/ui/lazy-select` — voir `conventions/frontend.md`,
 section Sélecteurs) pour la sélection d'affectation (simple) et le filtrage de liste (multiple). Le sélecteur
 affiche le code et le nom; quand `nom` est vide, il affiche la désignation. La recherche accepte ces trois
 textes. Dans un filtre multiple, « Tout sélectionner » retire la restriction même pour les pages non
