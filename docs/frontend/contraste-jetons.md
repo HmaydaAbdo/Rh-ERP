@@ -16,16 +16,16 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Texte secondaire sur surface-sunken | `--color-text-muted` #4b5563 | `--color-surface-sunken` #e5e7eb | 6,10:1 | 4,5:1 | OK |
 | Texte sur surface-hover | `--color-text` #111827 | `--color-surface-hover` #e8ebf0 | 14,84:1 | 7:1 | OK |
 | Texte secondaire sur surface-hover | `--color-text-muted` #4b5563 | `--color-surface-hover` #e8ebf0 | 6,32:1 | 4,5:1 | OK |
-| Lien sur surface | `--color-link` #1d4ed8 | `--color-surface` #ffffff | 6,70:1 | 4,5:1 | OK |
-| Lien sur fond de page | `--color-link` #1d4ed8 | `--color-canvas` #f3f4f6 | 6,09:1 | 4,5:1 | OK |
+| Lien sur surface | `--color-link` #1e40af | `--color-surface` #ffffff | 8,72:1 | 4,5:1 | OK |
+| Lien sur fond de page | `--color-link` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 4,5:1 | OK |
 | Texte fort sur action douce | `--color-primary-strong` #1e40af | `--color-primary-soft` #e3eafb | 7,24:1 | 7:1 | OK |
-| Libellé de bouton principal | `--color-primary-contrast` #ffffff | `--color-primary` #1d4ed8 | 6,70:1 | 4,5:1 | OK |
-| Libellé de bouton principal au survol | `--color-primary-contrast` #ffffff | `--color-primary-hover` #1e40af | 8,72:1 | 4,5:1 | OK |
-| Action sur surface | `--color-primary` #1d4ed8 | `--color-surface` #ffffff | 6,70:1 | 3:1 | OK |
-| Action sur fond de page | `--color-primary` #1d4ed8 | `--color-canvas` #f3f4f6 | 6,09:1 | 3:1 | OK |
+| Libellé de bouton principal | `--color-primary-contrast` #ffffff | `--color-primary` #1e40af | 8,72:1 | 4,5:1 | OK |
+| Libellé de bouton principal au survol | `--color-primary-contrast` #ffffff | `--color-primary-hover` #1e3a8a | 10,36:1 | 4,5:1 | OK |
+| Action sur surface | `--color-primary` #1e40af | `--color-surface` #ffffff | 8,72:1 | 3:1 | OK |
+| Action sur fond de page | `--color-primary` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 3:1 | OK |
 | Libellé du bouton de suppression | `--color-danger-contrast` #ffffff | `--color-danger` #7f1d1d | 10,02:1 | 4,5:1 | OK |
-| Anneau de focus sur surface | `--color-focus` #1d4ed8 | `--color-surface` #ffffff | 6,70:1 | 3:1 | OK |
-| Anneau de focus sur fond de page | `--color-focus` #1d4ed8 | `--color-canvas` #f3f4f6 | 6,09:1 | 3:1 | OK |
+| Anneau de focus sur surface | `--color-focus` #1e40af | `--color-surface` #ffffff | 8,72:1 | 3:1 | OK |
+| Anneau de focus sur fond de page | `--color-focus` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 3:1 | OK |
 | Bordure franche sur surface | `--color-border-strong` #7f8796 | `--color-surface` #ffffff | 3,62:1 | 3:1 | OK |
 | Bordure franche sur fond de page | `--color-border-strong` #7f8796 | `--color-canvas` #f3f4f6 | 3,29:1 | 3:1 | OK |
 | Bordure de ligne sur surface | `--color-border` #a9b0bc | `--color-surface` #ffffff | 2,18:1 | 2,18:1 | OK |

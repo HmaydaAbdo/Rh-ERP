@@ -63,7 +63,7 @@ jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais
 | Carte et tableau (`--color-surface`) | `#FFFFFF` | `#2B2A28` |
 | Texte (`--color-text`) | `#111827` | `#F5F4EF` |
 | Texte secondaire (`--color-text-muted`) | `#4B5563` | `#BDBAB1` |
-| Action (`--color-primary`) | `#1D4ED8` | `#ECEAE3` (blanc cassé) |
+| Action (`--color-primary`) | `#1E40AF` | `#ECEAE3` (blanc cassé) |
 | Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#1F1E1D` |
 | Rail de navigation | `#111827` | `#141413` |
 | Bordure franche (`--color-border-strong`) | `#7F8796` | `#8A877F` |
