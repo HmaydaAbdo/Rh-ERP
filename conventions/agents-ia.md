@@ -243,7 +243,7 @@ propriétaire avant d'écrire quoi que ce soit.
 | Boucle d'agent, appels d'outils | `create_deep_agent` (Deep Agents, au-dessus de `create_agent` de LangChain), exécuté par LangGraph |
 | Choix des outils utiles parmi le catalogue | `LLMToolSelectorMiddleware` |
 | Plan visible et suivi pour une tâche à plusieurs étapes | `TodoListMiddleware` (ou Deep Agents) |
-| Plafonds par run | `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` |
+| Plafonds par run | Aucun plafond appliqué par nous (décision du 2026-10-31) ; `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` ne sont pas utilisés |
 | Nouvel essai, repli de modèle | `ModelRetryMiddleware`, `ToolRetryMiddleware`, `ModelFallbackMiddleware`, et la passerelle |
 | Masquage d'identifiants | `PIIMiddleware` |
 | Mémoire compactée | `SummarizationMiddleware` ; persistance par un checkpointer LangGraph |
