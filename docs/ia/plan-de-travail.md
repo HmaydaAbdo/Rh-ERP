@@ -244,6 +244,32 @@ via `ag-ui-langgraph`, que CopilotKit consomme avec ses composants (discussion, 
 CopilotKit Angular reste le client** ; pour les surfaces A2UI, le rendu officiel `@a2ui/angular` est la voie de dépassement du
 blocage de `@a2ui/web_core` (Q20).
 
+**Comparaison fonction par fonction (2026-10-31, README et documents de `@langchain/angular` lus ; spécification A2UI lue).**
+`@langchain/angular` ne porte **pas** A2UI : le mot n'apparaît dans aucun de ses documents ni dans la page d'accueil du
+frontend LangChain, qui ne cite que des bibliothèques React (AI Elements, assistant-ui) et OpenUI. Le rendu A2UI pour Angular est
+`@a2ui/angular`, un projet distinct.
+
+| Fonction | CopilotKit Angular | `@langchain/angular` |
+|---|---|---|
+| Composants de discussion prêts à l'emploi | Oui (`CopilotChat`, `CopilotSidebar`, `CopilotPopup`) | Non (sans interface ; bibliothèques citées : React) |
+| Flux, messages, état en signaux | Oui (`injectAgentStore`) | Oui (`injectStream`) |
+| Rendu des appels d'outils | `registerRenderToolCall` | `stream.toolCalls` (à habiller soi-même) |
+| Outils côté navigateur | `registerFrontendTool` | Outils sans interface (`headless-tools`) |
+| Interruptions et approbation | `registerHumanInTheLoop`, `injectInterrupt` | Interruptions en signaux |
+| A2UI | Oui (catalogue, `createAngularCatalog`) | Non mentionné |
+| MCP Apps | Oui (`provideMCPApps`) | Non mentionné |
+| Branches, retour dans le temps | Non vu dans les guides lus | Oui |
+| Sous-agents, fichiers multimédias en flux | Non vu | Oui (`subagents-subgraphs`, `injectFiles`) |
+| Fils et mémoire | Fils et mémoire exigent Intelligence | Fils durables via le serveur d'agent (licence en production) |
+| Protocole | AG-UI (norme ouverte) | « Agent Streaming Protocol » du serveur d'agent LangGraph |
+
+**A2UI n'est pas un transport.** La documentation d'A2UI le dit : « AG-UI is a transport protocol… A2UI is a UI format… use AG-UI as
+the pipe, A2UI as the content ». Les transports d'A2UI sont A2A et AG-UI (stables) ; REST, WebSocket et SSE sont « planned » ou
+« proposed », sans exemple. Supprimer AG-UI obligerait à écrire nous-mêmes le cycle d'un run, le texte en flux, les appels
+d'outils, l'état et les interruptions. **Décision : AG-UI transporte, A2UI décrit l'interface.** Seule couche supprimable
+autrement : le service Node `copilot-runtime`, mais CopilotKit réserve la connexion directe au développement
+(`agents__unsafe_dev_only`) ou à l'offre entreprise (`selfManagedAgents`).
+
 Source : [exemples Angular](https://docs.copilotkit.ai/angular/features) (41 entrées, lue) et [référence](https://docs.copilotkit.ai/reference/angular) (lue). Aucune n'est libellée bêta ; aucune n'indique si elle exige Intelligence.
 
 | ID | Fonction CopilotKit | Preuve de terminé | Origine |
