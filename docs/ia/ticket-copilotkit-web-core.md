@@ -1,4 +1,4 @@
-# Ticket à ouvrir chez CopilotKit (E0.8)
+# Ticket à ouvrir chez CopilotKit (E1.8)
 
 Texte prêt à coller dans https://github.com/CopilotKit/CopilotKit/issues (rédigé le 2026-10-31, à relire avant envoi).
 

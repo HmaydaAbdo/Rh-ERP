@@ -1,4 +1,4 @@
-// Veille de versions des composants IA (plan de travail IA, E0.2, couche 1) : compare les versions verrouillées
+// Veille de versions des composants IA (plan de travail IA, E1.2, couche 1) : compare les versions verrouillées
 // (ia/uv.lock, frontend/package-lock.json, copilot-runtime/package-lock.json) à la dernière version stable publiée sur
 // PyPI et npm, et signale les préversions plus récentes. À lancer à l'ouverture de toute tâche IA et au moins une fois par
 // mois ; consigner le résultat au § 3 de docs/ia/plan-de-travail.md.
@@ -43,7 +43,7 @@ const json = async (url) => {
 
 const lignes = [];
 const ajouter = (nom, verrouille, stable, prerelease, date) => {
-  const retard = verrouille !== null && stable !== verrouille; // absent = composant non adopté (ex. deepagents avant E1.0)
+  const retard = verrouille !== null && stable !== verrouille; // absent = composant non adopté (ex. deepagents avant E2.0)
   lignes.push({ nom, verrouille: verrouille ?? 'absent', stable, prerelease, date, retard, cause: retard ? (blocages[nom] ?? null) : null });
 };
 

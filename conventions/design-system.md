@@ -2,7 +2,7 @@
 
 > Conventions de design applicables à tout le frontend : identité visuelle, jetons, thèmes, typographie, mouvement,
 > composants, visualisations et accessibilité. Complète `frontend.md` (section « Design System »), qui pose la règle
-> générale : aucune valeur de design écrite en dur. L'identité Staport constitue le fil visuel commun ; les détails
+> générale : aucune valeur de design écrite en dur. La charte « standard de la catégorie » constitue le fil visuel commun ; les détails
 > propres à une application (logo d'écran, parcours, composants métier) sont décrits dans sa documentation.
 
 ---
@@ -31,21 +31,74 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 
 ---
 
-# Identité visuelle Staport
+# Identité visuelle : charte « standard de la catégorie »
 
-L'interface traduit l'identité Staport en une expérience **précise, accueillante et premium**, adaptée à des outils de
-travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
-alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface. Le thème clair conserve ses
-surfaces minérales et son accent cuivre ; le thème sombre adopte **Graphite Staport**, une gamme noire mate et graphite,
-avec actions et icônes bleues, texte net et accent cuivre réservé à quelques repères.
+**Décision du propriétaire du 2026-10-31** : l'identité visuelle précédente (bleu de marque, cuivre, Graphite Staport) est
+remplacée. Seuls le nom et le logo Staport sont conservés. La charte retenue est le **standard de la catégorie, exécuté sans
+faute** : un ERP clair, net et rassurant, bleu d'action sur neutres ardoise, pensé pour que l'on s'y sente à l'aise des heures
+durant. Le niveau de finition à atteindre est celui de **Linear** (rythme, états, vitesse, clavier), de **Stripe Dashboard**
+(chiffres, tableaux et filtres d'une lisibilité exemplaire) et de **Notion** (confort de lecture et d'édition).
 
-Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
-à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Le thème sombre traverse
-les surfaces, actions, navigation, formulaires et états actifs. Le bleu marque les actions, icônes et focus ; le cuivre
-reste rare et secondaire. Les fonds graphite gardent les données lisibles. Les variations de lumière servent la hiérarchie et la lecture.
-Éviter le néon uniforme, le glassmorphism systématique et les dégradés décoratifs.
-Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
-le logo ne garantit pas à lui seul un contraste suffisant pour les usages d'interface.
+Principes, par ordre de priorité :
+
+1. **Le texte est toujours clairement visible.** Texte courant : contraste d'au moins **7:1** sur sa surface (AAA) ; texte
+   secondaire : au moins **4,5:1** ; aucun gris clair sur blanc, aucun texte de moins de 12 px, dans les deux thèmes, y compris au
+   soleil sur téléphone.
+2. **Les bordures sont franches, surtout celles des tableaux.** Voir « Bordures » ci-dessous.
+3. **Aéré et calme** : une densité confortable (lignes de tableau hautes, marges généreuses), le même rythme d'espacement
+   partout ; l'information dense s'obtient par la hiérarchie, pas en serrant.
+4. **Un seul vocabulaire de composants** : tout écran, de tout domaine, est composé de composants partagés (voir « Composants
+   partagés »). Aucun composant propre à un domaine.
+5. **L'attachement vient du soin** : états vides utiles, chargements en squelette, erreurs claires, transitions brèves et
+   discrètes, pas d'ornements. Éviter le néon, le glassmorphism, les dégradés décoratifs, les ombres lourdes.
+
+## Palette
+
+Le bleu d'action est la seule couleur de marque ; les couleurs de statut restent distinctes de lui. Valeurs de référence (les
+jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais ces valeurs) :
+
+| Rôle | Thème clair | Thème sombre |
+|---|---|---|
+| Fond de page (`--color-canvas`) | `#F3F4F6` | `#0F172A` |
+| Carte et tableau (`--color-surface`) | `#FFFFFF` | `#1E293B` |
+| Texte (`--color-text`) | `#111827` | `#F1F5F9` |
+| Texte secondaire (`--color-text-muted`) | `#4B5563` | `#B6C2D2` |
+| Action (`--color-primary`) | `#1D4ED8` | `#7AA7FF` |
+| Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#0B1220` |
+| Rail de navigation | `#111827` | `#020617` |
+| Bordure franche (`--color-border-strong`) | `#7F8796` | `#7283A0` |
+| Bordure de ligne (`--color-border`) | `#A9B0BC` | `#56688A` |
+| Succès / avertissement / erreur | texte sur fond teinté, contraste ≥ 7:1 | idem |
+
+Contrastes calculés le 2026-10-31 : texte sur carte 17,74:1 (clair) et 13,35:1 (sombre) ; texte secondaire 7,56:1 et 8,11:1 ;
+action sur blanc 6,70:1 ; bordure franche 3.62:1 sur la carte blanche et 3.29:1 sur le fond gris (clair), 3,81:1 sur la carte
+(sombre). Toute valeur est recalculée à l'implémentation ; une valeur qui passe sous ces seuils est corrigée avant d'être
+adoptée.
+
+## Bordures
+
+* **Tableaux** : cadre extérieur et trait sous l'en-tête en bordure **franche** (≥ 3:1 sur la surface voisine) ; séparateurs de
+  lignes en bordure de ligne, toujours visibles (≥ 2.18:1 au minimum, jamais plus clairs) ; lignes alternées ou survol pour
+  guider l'œil sans remplacer les bordures.
+* **Champs de saisie, boutons secondaires, cartes** : bordure franche (≥ 3:1), jamais un simple trait clair ; focus : anneau
+  de 2 px de la couleur d'action, d'au moins 3:1 sur la surface, décalé de la bordure.
+* Une bordure ne porte jamais seule une information : l'état (erreur, sélection) ajoute aussi une icône ou du texte.
+
+## Typographie
+
+* Une seule famille sans empattement, de milieu de gamme, sobre et très lisible : **Inter** (licence OFL), embarquée dans
+  l'application (`@fontsource-variable/inter`), chiffres tabulaires (`font-variant-numeric: tabular-nums`) pour tous les montants,
+  jamais de CDN. Pas de police d'affichage décorative.
+* Échelle à jetons uniquement ; corps de texte courant de 15 à 16 px, interligne de 1,5 ; titres en graisse 600.
+* Prévoir dès maintenant l'arabe de droite à gauche : propriétés logiques (`margin-inline-start`, `inset-inline`) au lieu de
+  gauche/droite ; police arabe à choisir au moment de livrer l'arabe.
+
+## Composants partagés
+
+Tout écran est composé de composants du dossier partagé (`shared/ui/`). Si un besoin n'y est pas couvert, on **ajoute le
+composant au dossier partagé** (ou on étend un existant) avant de l'utiliser ; on n'écrit jamais un composant dans le dossier
+d'un domaine pour un usage visuel. Les tableaux utilisent **AG Grid Community** et les graphiques **`ng2-charts`**, habillés
+par les jetons de cette charte (décision du 2026-10-31).
 
 Le rendu premium repose sur le soin apporté à la typographie, aux espacements, aux états de composants et à la stabilité
 visuelle, pas sur l'ajout d'effets. Les écrans denses gardent des niveaux de lecture évidents. Chaque écran conserve une
@@ -108,10 +161,15 @@ troisième palette de marque qui dupliquerait les thèmes.
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
 * Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
 
-## Graphite Staport — thème sombre
+## Thème sombre
 
-| Rôle | Couleur | Jeton principal |
-|---|---|---|
+Le thème sombre suit les valeurs du tableau « Palette » : fond ardoise très sombre, cartes un cran plus clair, texte presque
+blanc, action bleu clair. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une
+simple inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification
+métier dans les deux thèmes. La carte des chantiers adopte un chrome sombre constant ; ses vues Satellite et Relief gardent leur
+matière propre.
+
+---|---|---|
 | Noir mat (canevas) | `#0D0D0D` | `--color-canvas` |
 | Graphite (surface) | `#151515` | `--color-surface` |
 | Graphite clair (séparation) | `#2B2B2B` | `--color-border-strong` |
