@@ -233,6 +233,17 @@ Chaque ligne remplace une pièce maison par la fonction officielle ; la pièce m
 
 ### E6 — Interface CopilotKit complète (Angular)
 
+**Choix du client d'agent (analyse du 2026-10-31, documentation officielle lue).** Angular seul ne fournit **aucune** interface
+d'agent : sa page IA ne liste que Genkit, Firebase AI Logic et l'API Gemini, sans composant de discussion ni AG-UI/A2UI.
+`@langchain/angular` 1.2.9 (`injectStream`, licence MIT) offre flux, messages, appels d'outils, interruptions, outils sans
+interface, branches et fils sous forme de signaux, mais **sans composants visuels**, et il parle au **serveur d'agent LangGraph**
+(ou à un serveur qui implémente son « Agent Streaming Protocol », routes `/threads/:id/commands` et `/threads/:id/stream`) ;
+or le serveur d'agent exige en production une clé de licence (`LANGGRAPH_CLOUD_LICENSE_KEY`) et un accès sortant à
+`beacon.langchain.com`, et l'implémenter nous-mêmes serait du code maison. Notre service FastAPI parle **AG-UI** (norme ouverte)
+via `ag-ui-langgraph`, que CopilotKit consomme avec ses composants (discussion, outils, interruptions, A2UI). **Conclusion :
+CopilotKit Angular reste le client** ; pour les surfaces A2UI, le rendu officiel `@a2ui/angular` est la voie de dépassement du
+blocage de `@a2ui/web_core` (Q20).
+
 Source : [exemples Angular](https://docs.copilotkit.ai/angular/features) (41 entrées, lue) et [référence](https://docs.copilotkit.ai/reference/angular) (lue). Aucune n'est libellée bêta ; aucune n'indique si elle exige Intelligence.
 
 | ID | Fonction CopilotKit | Preuve de terminé | Origine |
