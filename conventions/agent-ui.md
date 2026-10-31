@@ -40,6 +40,30 @@ propriétaire consignée) est levée, aux conditions suivantes, qui viennent de 
   reste accompagnée d'un repli sur le catalogue ou sur le texte.
 * Le catalogue A2UI, lui, reste fermé : le moteur A2UI n'interprète ni HTML, ni script, ni URL active (voir plus bas).
 
+Mesures contre les risques propres à l'interface ouverte (fausse interface qui imite un écran légitime, script qui lit ou
+envoie des données, injection par un champ piégé, page qui sature le navigateur, chiffre faux bien présenté). Chaque mesure a
+son test, et aucune n'est remplacée par une autre :
+
+* **Isolation** : seul le moteur officiel, iframe sans accès à l'origine ; vérifier par un test que le code généré ne peut ni
+  lire le stockage ou les cookies de l'application, ni naviguer la page parente, ni émettre de requête réseau non prévue
+  (politique de contenu de l'iframe à fixer et à prouver ; non vérifiée à ce jour).
+* **Fonctions de l'hôte** : liste blanche minimale ; chacune valide ses arguments, revérifie identité, permission et
+  périmètre côté serveur, journalise l'appel dans l'audit, et ne renvoie que des données autorisées.
+* **Données** : seules les données nécessaires à la vue entrent dans le code généré, après les projections par champ de
+  Spring ; aucune donnée interdite à l'utilisateur, aucun secret, aucun jeton.
+* **Jeu adverse** : cas d'injection directe et indirecte (champs de données piégés), d'exfiltration (lien, image, requête),
+  d'usurpation d'écran (faux formulaire, faux bouton d'approbation) et de contournement de périmètre, rejoués à chaque
+  changement de modèle, de prompt ou de bibliothèque.
+* **Bornes** : taille du code généré, temps d'exécution, nombre de vues ouvertes par réponse et par minute.
+* **Chiffres** : toute valeur affichée vient d'un outil métier ; une vue ouverte ne calcule ni ne remplace une valeur métier.
+* **Action humaine** : une vue ouverte n'exécute jamais d'écriture ; une action sensible passe par l'approbation humaine
+  décrite dans `security.md` et `mcp.md`.
+* **Arrêt et repli** : un paramètre désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
+  repli (catalogue ou texte) et est journalisé sans son contenu.
+* **Veille** : à chaque revue mensuelle des modèles (`docs/ia.md` § 4.1), relire les nouvelles pratiques de sécurité des
+  interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner dans le plan de travail IA ce qui
+  change cette liste.
+
 ## Objectifs et frontières
 
 Les protocoles sont complémentaires :
