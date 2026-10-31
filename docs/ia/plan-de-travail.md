@@ -33,7 +33,7 @@ Toute tâche est **Non touché** tant qu'elle ne figure pas dans la colonne « E
 |---|---|---|
 | E0 Socle de vérité | Partiel | E0.2 **Partiel** (couches 1, 3 et 4 faites le 2026-10-31 ; reste l'abonnement aux publications, à faire par le propriétaire) ; E0.9 **Terminé** ; E0.10 **Non touché** (prochaine tâche ; protocole v0.9 adopté, v1.0 quand il sera stable) ; zod reste en 4 (voir § 3) ; E0.8 texte prêt, envoi par le propriétaire ; E0.1 **Partiel** (2026-10-31 : verrous Python et npm alignés, `@ag-ui/a2ui-middleware` 0.0.14 ; `@a2ui/web_core` 0.14.0 **testé et refusé** : le rendu de `@copilotkit/angular` 0.6.0 est écrit pour 0.10.4 et 3 tests du catalogue ERP échouent ; `openai` bloqué par `litellm`, E14) |
 | E1 Fiabilité de l'agent | Non touché | — |
-| E2 Migration Spring → Python FastAPI | Non touché | Bloquée par Q15 (ADR) |
+| E2 Migration Spring → Python FastAPI | Non touché | Décision prise (Q15) : tout le backend, domaine par domaine ; ADR (E2.1) à écrire |
 | E3 Rôles, départements, hiérarchie, champs | Non touché | — |
 | E4 Confidentialité, traces, conformité | Non touché | — |
 | E5 Sécurité par fiche de poste | Non touché | — |
@@ -68,7 +68,7 @@ Décisions du propriétaire, dont celle du **2026-10-31** (en gras) :
    chacun est rendu configurable, mesuré, puis relevé ou justifié.
 5. Garde-fous qui ne bougent pas, pour **chaque** fonction adoptée :
    - **gratuit** : aucun abonnement ni service payant (décision du 2026-10-27) ;
-   - **Spring reste l'autorité** des données, droits, filtres et calculs ; les droits sont revérifiés à chaque appel ;
+   - **Le backend métier reste l'autorité** des données, droits, filtres et calculs (Spring aujourd'hui, FastAPI domaine par domaine selon E2) ; les droits sont revérifiés à chaque appel ;
    - **données RH** : minimisation, audit, loi 09-08 ; aucune donnée réelle vers un modèle externe sans décision (Q5) ;
      **le masquage des champs sensibles est une règle métier appliquée côté Spring** (décision du 2026-10-31, E3) ;
    - **auto-hébergé** : les services hébergés par l'éditeur (CopilotKit Intelligence, LangSmith) sont exclus tant que
@@ -129,9 +129,10 @@ l'agent (E1, dont E1.0 : Deep Agents).
 
 Dépendances qui justifient l'ordre :
 
-- **E2 avant E3** : l'ADR de migration vers FastAPI (E2.1) décide où se construisent les rôles, départements et champs ; si l'ADR
-  décide de migrer, l'exécution d'E2 précède E3, E5 et E10, sinon leur travail côté Spring serait refait. Si l'ADR décide de ne
-  pas migrer, E2 se clôt avec l'ADR.
+- **E2 avant E3** : la migration est décidée (tout le backend, domaine par domaine). E3 (rôles, départements, champs) et E5
+  (sécurité par fiche de poste) se construisent sur le domaine `auth` **déjà migré** (E2.5) ; E10 (RAG) et les outils d'E11
+  s'appuient sur les domaines migrés qu'ils interrogent. L'ADR (E2.1) précède tout ; les domaines métier (E2.6) peuvent se
+  poursuivre pendant E3 à E8 tant que chaque domaine est servi par un seul backend à la fois.
 - **E3 avant E4 et E5** : le masquage est une règle métier appliquée par les projections par champ.
 - **E4 et E5 avant tout utilisateur réel** : l'interface ouverte (E8.9) exige E4.5 (interrupteur d'arrêt) et E5.5 (jeu adverse).
 - **E6 après E5** ; **E7 après E6.2 et E6.8** ; **E10 après E5** (droits filtrés avant le modèle) ; **E11 après E1.0 et E5**.
@@ -195,19 +196,29 @@ Source : [middlewares préconstruits](https://docs.langchain.com/oss/python/lang
 | E1.10 | Flux d'événements de LangGraph : la documentation recommande la version 3 (`stream_events(version="v3")`, projections `messages`, `values`, `subgraphs`, `output`, introduite en 1.2) ; `ag-ui-langgraph` 0.0.47 appelle encore `astream_events` en version 2. Suivre ses mises à jour **sans réimplémenter le flux** ; flux personnalisé `get_stream_writer` pour l'avancement | Version de `ag-ui-langgraph` qui adopte la v3 identifiée, ou question posée à l'éditeur | Streaming (page lue) |
 | E1.11 | Retour dans le temps et reprise (`get_state_history`, `update_state`, [time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel)) comme **aide à l'analyse d'incident**, sur données synthétiques | Procédure d'incident testée | Analyse « time travel » |
 
-### E2 — Migration du backend Java Spring vers Python FastAPI (demande du 2026-10-31)
+### E2 — Migration du backend Java Spring vers Python FastAPI (décision du 2026-10-31 : tout le backend, domaine par domaine)
 
-**Épopée de cadrage : aucune tâche d'exécution n'est lancée avant l'ADR (Q15).** Elle contredit trois décisions en vigueur
-(« Spring reste l'autorité » ; serveur MCP en Spring AI ; migrations Flyway) : l'ADR doit les remplacer explicitement. Les
-tâches suivantes sont des intitulés à instruire dans la documentation officielle de FastAPI, pas des choix.
+**Décision du propriétaire (Q15, 2026-10-31)** : migrer **tout le backend**, **domaine par domaine**, en commençant par les
+domaines transversaux (sécurité, utilisateurs, audit…), puis les domaines métier **un par un**. L'ADR (E2.1) reste à écrire
+avant la première ligne : la migration contredit trois décisions en vigueur (« Spring reste l'autorité » ; serveur MCP en
+Spring AI ; migrations Flyway) et les conventions écrites pour Java (`jpa.md`, `architecture.md`, `testing.md`, `swagger.md`,
+`metrics.md`…), qu'il devra remplacer explicitement. Pendant la migration, **le backend qui sert un domaine fait autorité
+pour ce domaine** (Spring tant qu'il n'est pas basculé, FastAPI ensuite). Les tâches sont des intitulés à instruire dans la
+documentation officielle de FastAPI, pas des choix.
+
+Domaines du backend actuel (nombre de fichiers Java relevé le 2026-10-31) : `common` (12), `auth` (73), `audit` (48),
+`parametre` (13), `mcp` (14) ; domaines métier `function` (19), `equipe` (19), `chantier` (29), `employee` (37),
+`heuresupp` (33), `paie` (111) ; 42 migrations Flyway.
 
 | ID | Tâche | Preuve de terminé | Origine |
 |---|---|---|---|
-| E2.1 | **ADR** : motif, périmètre (tout ou domaine par domaine), coût, risques, ce qui est conservé (Flyway ou Alembic, JWT RS256, audit) ; mise à jour des principes du § 1 | ADR approuvé (Q15) | Demande 2026-10-31 |
-| E2.2 | Inventaire exhaustif : endpoints, entités, règles de calcul de la paie, permissions, tâches planifiées, tests existants (couverture à égaler) | Inventaire versionné | Idem |
-| E2.3 | Stratégie de bascule progressive (domaine par domaine derrière le proxy, tests de contrat identiques des deux côtés) ; critère de parité chiffré, notamment pour la paie | Plan de bascule approuvé | Idem |
-| E2.4 | Cible technique : FastAPI, accès aux données, migrations, authentification, serveur MCP (SDK MCP Python officiel au lieu de Spring AI), observabilité, CI | Prototype d'un domaine à faible risque | Idem |
-| E2.5 | Exécution domaine par domaine, retrait de chaque domaine Java après parité prouvée ; retrait final de Spring | Domaine servi par FastAPI, tests de parité verts | Idem |
+| E2.1 | **ADR** : motif, cible (FastAPI, accès aux données, migrations Flyway ou Alembic, JWT RS256, audit), stratégie de bascule, règle « le backend qui sert un domaine fait autorité », conventions à remplacer, mise à jour des principes du § 1 | ADR approuvé | Demande 2026-10-31 |
+| E2.2 | Inventaire exhaustif par domaine : endpoints, entités, règles de calcul (paie surtout), permissions, tâches planifiées, tests existants dont la couverture est à égaler | Inventaire versionné | Idem |
+| E2.3 | Stratégie de bascule : proxy qui route chaque domaine vers l'ancien ou le nouveau backend, même base PostgreSQL pendant la transition, **tests de contrat identiques des deux côtés**, critère de parité chiffré (notamment pour la paie), retour arrière | Plan de bascule approuvé | Idem |
+| E2.4 | Cible technique et prototype sur le premier domaine : FastAPI, accès aux données, migrations, authentification, observabilité, CI, image Docker (règle du `docker compose` unique) | Prototype du domaine `common` servi par FastAPI | Idem |
+| E2.5 | **Tranche transversale, dans cet ordre** : `common`, `auth` (sécurité, utilisateurs, rôles, permissions, jetons), `audit`, `parametre`, puis le serveur MCP (SDK MCP Python officiel au lieu de Spring AI ; les outils de chaque domaine le rejoignent avec leur domaine) | Chaque domaine servi par FastAPI, tests de parité verts, domaine Java retiré | Idem |
+| E2.6 | **Domaines métier, un par un** (ordre proposé, du moins risqué au plus critique, à valider) : `function`, `equipe`, `chantier`, `employee`, `heuresupp`, `paie` ; un domaine n'est basculé qu'après parité prouvée, et ses outils MCP migrent avec lui | Idem, par domaine | Idem |
+| E2.7 | Retrait final de Spring (dépendances, image, CI, conventions Java) | Aucune trace de Spring dans le dépôt, CI verte | Idem |
 
 ### E3 — Rôles, départements, hiérarchie et sécurité par champ (demande du 2026-10-31)
 
@@ -518,8 +529,9 @@ Les documents supprimés se relisent avec `git show 46cf1e39^:<chemin>` (par exe
   développement : doivent-ils aussi devenir des compétences de l'agent en exécution, ou reste-t-on sur du contenu séparé ?
 - **Q14 — Migrations du checkpointer (ancien D6).** `AsyncPostgresSaver.setup()` crée les tables au démarrage du service ;
   l'ancienne décision demandait de les gérer par Flyway avec un compte sans droit de création. À confirmer ou à changer.
-- **Q15 — Migration vers FastAPI (E2).** Quel motif et quel périmètre (tout le backend, ou un domaine pilote d'abord) ?
-  Acceptez-vous de remplacer la décision « Spring reste l'autorité » et le serveur MCP Spring AI par un ADR ?
+- **Q15 — Migration vers FastAPI (E2). Répondue le 2026-10-31 : tout le backend, domaine par domaine, en commençant par
+  la sécurité, les utilisateurs et l'audit, puis les domaines métier un par un.** Reste : le motif à consigner dans l'ADR, et
+  l'ordre des domaines métier (E2.6, proposé).
 - **Q18 — IA interne (E14).** Matériel disponible (GPU, mémoire) ou budget d'achat ? Quand abandonner LiteLLM : dès que
   le premier modèle interne tient le jeu de référence, ou seulement quand tous les fournisseurs gratuits sont retirés ?
 - **Q19 — Veille et CI (E0.2). Répondue le 2026-10-31 : oui**, Dependabot est activé pour les composants IA, ses PR lancent la CI.
