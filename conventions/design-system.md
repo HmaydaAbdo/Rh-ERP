@@ -162,7 +162,7 @@ une ligne complète pour préserver leurs libellés.
 
 Les jetons Staport et les composants propres à Staport sont la source visuelle. Angular Aria/CDK fournit les primitives
 d'interaction accessibles; Tailwind CSS 4 fournit les utilitaires reliés aux jetons; Lucide Angular fournit les icônes.
-Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/` et la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre).
+Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/` et `src/app/shared/components/`, présentés par la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre). Le catalogue ERP-RH recense toutes les briques d'interface partagées, y compris les composants de collection et d'intégration ; une brique visuelle partagée ne peut pas rester cachée dans un dossier commun sans page de démonstration ou référence explicite au catalogue.
 
 Utiliser les composants Angular Aria et CDK comme primitives accessibles et construire les composants Staport par-dessus,
 avec HTML natif dès que l'interaction est simple. Le système de design est porté par les jetons Staport, Tailwind CSS 4,
@@ -172,6 +172,10 @@ Chaque composant partagé définit les états qui s'appliquent parmi : repos, su
 chargement et erreur, ainsi que ses variantes de densité si elles sont utiles. Ces états restent perceptibles sans dépendre
 uniquement de la couleur. Valider au clavier, lecteur d'écran, focus, contraste, français, comportement zoneless et
 performance chaque composant partagé.
+La démo catalogue utilise des données locales déterministes lorsque le composant dépend normalement d'une API ; elle
+montre les variantes et états utiles sans appeler un backend métier. Les composants purement structurels sont montrés
+avec des projections représentatives. Chaque ajout ou changement d'API met à jour la démo, la documentation publique
+et les tests du catalogue dans le même changement.
 AG Grid Community n'est utilisé que pour une grille avancée lorsqu'un besoin mesuré le justifie ; il est encapsulé
 et chargé à la demande. PrimeNG, PrimeIcons et PrimeFlex sont exclus du socle pour limiter le verrouillage fournisseur et
 garder la maîtrise du langage visuel.

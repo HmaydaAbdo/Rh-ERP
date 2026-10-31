@@ -67,7 +67,7 @@ propre rôle. Uniquement des solutions gratuites et open source (règle du proje
 
 ## Vues Cartes, Tabulaire et Analytique
 
-- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern défini dans `conventions/frontend.md` (« Pattern des trois vues métier ») et l'ADR 0012. Coque et assemblage Tabulaire configurables sont partagés; routes, filtres, données, colonnes, cellules, actions et règles métier restent propres à chaque domaine.
+- **Convention commune** : les domaines métier qui présentent une collection consultable suivent le pattern défini dans `conventions/frontend.md` (« Pattern des trois vues métier ») et l'ADR 0012. Coque, rendu des filtres, assemblage Tabulaire, Cartes et Analytique sont partagés ; routes, critères et valeurs de filtres, données, colonnes, cellules, actions et règles métier sont fournis par le domaine comme configuration/adaptateur.
 - **Fait (2026-10-17) — domaine Paie** : les vues Tabulaire, Cartes et Analytique sont livrées sous une coque commune
   (`portail/paie/vues/`, sélecteur de vue, actions dans l'en-tête), avec filtres et navigation cohérents entre les niveaux.
 - **Fait (2026-10-19) — domaine Employés** : plan validé en 5 lots. Lot 1 fait : sélecteur de vue extrait dans
