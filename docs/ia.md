@@ -213,6 +213,15 @@ pris en charge ; chaque surface a un repli texte.
 
 ## 7. Plan et suivi
 
+L'inventaire des capacités officielles CopilotKit, LangChain, LangGraph et Deep Agents — avec l'état
+actuel, les pistes non implémentées et l'ordre d'évaluation — est maintenu dans le [plan Copilot Kit
+Future to Implement](ia/copilot-kit-future-to-implement.md). Ce plan complète les tâches ci-dessous :
+il ne remplace pas les décisions et validations métier déjà requises.
+
+La comparaison ciblée du backend Python avec les fonctions officielles LangChain, LangGraph et Deep Agents est
+documentée dans l'[analyse des écarts IA backend](ia/backend-gap-analysis.md). Elle décrit l'état réel du code et les
+priorités; elle n'implémente pas les capacités candidates.
+
 États : ⬜ à faire · 🟦 en cours · ✅ fait · ⛔ bloqué.
 
 ### Jalons
