@@ -27,7 +27,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 |---|---|---|---|
 | Rangement des dossiers partagés | `shared/components/*` (7), `shared/feedback` | — | Déplacement vers `shared/ui/` (mécanique) |
 | Authentification | `login`, `forgot-password`, `reset-password` (un seul fichier de 329 lignes partagé par référence), `access-denied` (58) | 387 | `auth-card` — **fait** (E0.2, 2026-10-31) ; `access-denied` reste à traiter |
-| Coquille d'application | `app.component` (rail, barre du haut, tiroir) | 357 | `app-shell` |
+| Coquille d'application | `app.component` (rail, barre du haut, tiroir) | 357 | `app-shell` — **fait** (E0.2, 2026-10-31) |
 | Tableaux de bord | `perimetre/analytique`, `perimetre/cartes`, `paie/cartes`, `paie/parcours` | 1 035 | `stat-tile`, `chart-card`, `dashboard-section` |
 | Assistants d'import et d'export | `paie/export` (7 composants), `paie/import` (2), `heures-supp/import` | 980 | `stepper`, `file-drop`, `summary-list` |
 | Carte des chantiers | `chantier/carte` (2) | 356 | `map` |
@@ -38,7 +38,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 
 1. Rangement des dossiers partagés (aucun changement visuel).
 2. Authentification (`stp-auth-card` : fait ; reste `access-denied`).
-3. Coquille d'application.
+3. Coquille d'application (`stp-app-shell` : fait).
 4. Tableaux de bord, assistants d'import et d'export, filtres et détails.
 5. Carte et assistant IA (avec E0.7 et E9).
 

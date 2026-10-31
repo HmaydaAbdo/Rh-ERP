@@ -1,0 +1,119 @@
+<div
+  class="app-shell"
+  role="presentation"
+  [class.app-shell--auth]="!navigationVisible()"
+  [class.app-shell--menu-ouvert]="menuOuvert()"
+  [class.app-shell--carte]="navigationVisible() && modeCarte()"
+  [class.app-shell--carte-menu-ouvert]="menuCarteOuvert()"
+  (keydown.escape)="fermerMenu()"
+>
+  @if (navigationVisible()) {
+    <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
+    @if (modeCarte()) {
+      <button
+        type="button"
+        class="app-carte-menu"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="menuCarteOuvert()"
+        [attr.aria-label]="menuCarteOuvert() ? 'Navigation ouverte' : 'Ouvrir la navigation'"
+        title="Navigation"
+        (pointerenter)="ouvrirMenuCarteAuSurvol($event)"
+        (pointerleave)="reporterFermetureMenuCarteAuPointeur($event)"
+        (focusin)="ouvrirMenuCarte()"
+        (focusout)="reporterFermetureMenuCarte()"
+        (click)="cliquerMenuCarte()"
+      >
+        <stp-icon name="menu" size="1.25rem" />
+      </button>
+    }
+    <header class="app-topbar">
+      <button
+        type="button"
+        class="app-topbar__menu"
+        aria-controls="menu-principal"
+        [attr.aria-expanded]="menuOuvert()"
+        [attr.aria-label]="menuOuvert() ? 'Fermer le menu' : 'Ouvrir le menu'"
+        (click)="basculerMenu()"
+      >
+        <stp-icon [name]="menuOuvert() ? 'x' : 'menu'" size="1.25rem" />
+      </button>
+    </header>
+    <div class="app-backdrop" (click)="fermerMenu()" aria-hidden="true"></div>
+
+    <aside
+      id="menu-principal"
+      class="app-sidebar"
+      (focusin)="ouvrirMenuCarte()"
+      (focusout)="reporterFermetureMenuCarte()"
+      (pointerenter)="ouvrirMenuCarte()"
+      (pointerleave)="reporterFermetureMenuCarte()"
+    >
+      <nav class="app-sidebar__nav" aria-label="Navigation principale">
+        @for (entree of entrees(); track entree.index) {
+          @if (entree.type === 'groupe') {
+            <details
+              class="app-sidebar__group"
+              [style.--nav-index]="entree.index"
+              [open]="groupeOuvert(entree.groupe, entree.enfants)"
+              (toggle)="changerGroupe(entree.groupe, $event)"
+            >
+              <summary class="app-sidebar__link app-sidebar__group-title" [attr.title]="entree.groupe.label">
+                <stp-icon [name]="entree.groupe.icon" size="1.5rem" />
+                <span class="app-sidebar__label">{{ entree.groupe.label }}</span>
+                <stp-icon class="app-sidebar__group-chevron" name="chevron-down" size="1rem" />
+              </summary>
+              <div class="app-sidebar__group-items">
+                @for (enfant of entree.enfants; track enfant.route; let position = $index) {
+                  <a
+                    [routerLink]="enfant.route"
+                    routerLinkActive="active"
+                    class="app-sidebar__link app-sidebar__link--child"
+                    [style.--nav-index]="position"
+                    [attr.title]="enfant.label"
+                    (click)="fermerMenu()"
+                  >
+                    <stp-icon [name]="enfant.icon" size="1.5rem" />
+                    <span class="app-sidebar__label">{{ enfant.label }}</span>
+                  </a>
+                }
+              </div>
+            </details>
+          } @else {
+            <a
+              [routerLink]="entree.item.route"
+              routerLinkActive="active"
+              class="app-sidebar__link"
+              [style.--nav-index]="entree.index"
+              [attr.title]="entree.item.label"
+              (click)="fermerMenu()"
+            >
+              <stp-icon [name]="entree.item.icon" size="1.5rem" />
+              <span class="app-sidebar__label">{{ entree.item.label }}</span>
+            </a>
+          }
+        }
+      </nav>
+
+      <div class="app-sidebar__footer">
+        @if (utilisateur(); as nom) {
+          <span class="app-sidebar__label app-sidebar__username">{{ nom }}</span>
+        }
+        <button
+          type="button"
+          class="app-sidebar__action"
+          [attr.aria-label]="theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'"
+          [attr.title]="theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
+          (click)="basculerTheme.emit()"
+        >
+          <stp-icon [name]="theme() === 'light' ? 'moon' : 'sun'" />
+        </button>
+        <button type="button" class="app-sidebar__action" aria-label="Se déconnecter" title="Se déconnecter" (click)="deconnecter.emit()">
+          <stp-icon name="log-out" />
+        </button>
+      </div>
+    </aside>
+  }
+  <main id="contenu" class="app-content" tabindex="-1">
+    <ng-content />
+  </main>
+</div>

@@ -1,142 +1,21 @@
 <app-feedback-viewport />
 
-<div
-  class="app-shell"
-  role="presentation"
-  [class.app-shell--auth]="!navigationVisible()"
-  [class.app-shell--menu-ouvert]="menuOuvert()"
-  [class.app-shell--carte]="navigationVisible() && estCarte()"
-  [class.app-shell--carte-menu-ouvert]="menuCarteOuvert()"
-
-  (keydown.escape)="fermerMenu()"
+<stp-app-shell
+  [items]="menu()"
+  [groupes]="groupes"
+  [utilisateur]="user()?.username ?? null"
+  [theme]="theme.theme()"
+  [navigationVisible]="navigationVisible()"
+  [modeCarte]="estCarte()"
+  (basculerTheme)="theme.basculer()"
+  (deconnecter)="onLogout()"
 >
-  @if (navigationVisible()) {
-    <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
-    @if (estCarte()) {
-      <button
-        type="button"
-        class="app-carte-menu"
-        aria-controls="menu-principal"
-        [attr.aria-expanded]="menuCarteOuvert()"
-        [attr.aria-label]="menuCarteOuvert() ? 'Navigation ouverte' : 'Ouvrir la navigation'"
-        title="Navigation"
-        (pointerenter)="ouvrirMenuCarteAuSurvol($event)"
-        (pointerleave)="reporterFermetureMenuCarteAuPointeur($event)"
-        (focusin)="ouvrirMenuCarte()"
-        (focusout)="reporterFermetureMenuCarte()"
-        (click)="cliquerMenuCarte()"
-      >
-        <svg lucideMenu aria-hidden="true"></svg>
-      </button>
-    }
-    <header class="app-topbar">
-      <button
-        type="button"
-        class="app-topbar__menu"
-        aria-controls="menu-principal"
-        [attr.aria-expanded]="menuOuvert()"
-        [attr.aria-label]="menuOuvert() ? 'Fermer le menu' : 'Ouvrir le menu'"
-        (click)="basculerMenu()"
-      >
-        @if (menuOuvert()) { <svg lucideX aria-hidden="true"></svg> } @else { <svg lucideMenu aria-hidden="true"></svg> }
-      </button>
-    </header>
-    <div class="app-backdrop" (click)="fermerMenu()" aria-hidden="true"></div>
+  <router-outlet></router-outlet>
+</stp-app-shell>
 
-    <aside
-      id="menu-principal"
-      class="app-sidebar"
-      (focusin)="estCarte() && ouvrirMenuCarte()"
-      (focusout)="reporterFermetureMenuCarte()"
-      (pointerenter)="estCarte() && ouvrirMenuCarte()"
-      (pointerleave)="reporterFermetureMenuCarte()"
-    >
-      <nav class="app-sidebar__nav" aria-label="Navigation principale">
-        @for (item of navItems(); track item.route; let index = $index) {
-          @if (item.group === 'administration-systeme') {
-            @if (item.route === administrationItems()[0]?.route) {
-              <details class="app-sidebar__group" [style.--nav-index]="index" [open]="administrationOuverte()" (toggle)="changerGroupe('administration-systeme', $event)">
-                <summary class="app-sidebar__link app-sidebar__group-title" title="Administration système">
-                  <svg lucideLayers aria-hidden="true"></svg>
-                  <span class="app-sidebar__label">Administration système</span>
-                  <svg lucideChevronDown class="app-sidebar__group-chevron" aria-hidden="true"></svg>
-                </summary>
-                <div class="app-sidebar__group-items">
-                  @for (administration of administrationItems(); track administration.route; let childIndex = $index) {
-                    <a [routerLink]="administration.route" routerLinkActive="active" class="app-sidebar__link app-sidebar__link--child"
-                      [style.--nav-index]="childIndex" (click)="fermerMenu()" [attr.title]="administration.label">
-                      @switch (administration.icon) {
-                        @case ('user-cog') { <svg lucideUserCog aria-hidden="true"></svg> }
-                        @case ('shield') { <svg lucideShield aria-hidden="true"></svg> }
-                        @case ('settings') { <svg lucideSettings aria-hidden="true"></svg> }
-                        @case ('history') { <svg lucideHistory aria-hidden="true"></svg> }
-                      }
-                      <span class="app-sidebar__label">{{ administration.label }}</span>
-                    </a>
-                  }
-                </div>
-              </details>
-            }
-          } @else {
-          <a
-            [routerLink]="item.route"
-            routerLinkActive="active"
-            class="app-sidebar__link"
-            [style.--nav-index]="index"
-            (click)="fermerMenu()"
-            [attr.title]="item.label"
-          >
-            @switch (item.icon) {
-              @case ('wallet') { <svg lucideWallet aria-hidden="true"></svg> }
-              @case ('users') { <svg lucideUsers aria-hidden="true"></svg> }
-              @case ('building') { <svg lucideBuilding aria-hidden="true"></svg> }
-              @case ('map-pinned') { <svg lucideMapPinned aria-hidden="true"></svg> }
-              @case ('briefcase') { <svg lucideBriefcase aria-hidden="true"></svg> }
-              @case ('network') { <svg lucideNetwork aria-hidden="true"></svg> }
-              @case ('user-cog') { <svg lucideUserCog aria-hidden="true"></svg> }
-              @case ('shield') { <svg lucideShield aria-hidden="true"></svg> }
-              @case ('settings') { <svg lucideSettings aria-hidden="true"></svg> }
-              @case ('history') { <svg lucideHistory aria-hidden="true"></svg> }
-              @case ('clock-3') { <svg lucideClock3 aria-hidden="true"></svg> }
-            }
-            <span class="app-sidebar__label">{{ item.label }}</span>
-          </a>
-          }
-        }
-      </nav>
-
-      <div class="app-sidebar__footer">
-        @if (user(); as u) {
-          <span class="app-sidebar__label app-sidebar__username">{{ u.username }}</span>
-        }
-        <button
-          type="button"
-          class="app-sidebar__action"
-          [attr.aria-label]="theme.theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'"
-          [attr.title]="theme.theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
-          (click)="theme.basculer()"
-        >
-          @if (theme.theme() === 'light') { <svg lucideMoon aria-hidden="true"></svg> } @else { <svg lucideSun aria-hidden="true"></svg> }
-        </button>
-        <button
-          type="button"
-          class="app-sidebar__action"
-          aria-label="Se déconnecter"
-          title="Se déconnecter"
-          (click)="onLogout()"
-        >
-          <svg lucideLogOut aria-hidden="true"></svg>
-        </button>
-      </div>
-    </aside>
+@if (assistantVisible()) {
+  <!-- Chargé après l'écran (client AG-UI compris) : le premier affichage ne paie pas l'assistant. -->
+  @defer (on idle) {
+    <app-assistant />
   }
-  <main id="contenu" class="app-content" tabindex="-1">
-    <router-outlet></router-outlet>
-  </main>
-  @if (assistantVisible()) {
-    <!-- Chargé après l'écran (client AG-UI compris) : le premier affichage ne paie pas l'assistant. -->
-    @defer (on idle) {
-      <app-assistant />
-    }
-  }
-</div>
+}

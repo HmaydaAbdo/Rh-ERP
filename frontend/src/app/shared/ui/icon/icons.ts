@@ -65,6 +65,13 @@ import {
   LucideUsers,
   LucideWallet,
   LucideX,
+  LucideMenu,
+  LucideMoon,
+  LucideSun,
+  LucideMapPinned,
+  LucideNetwork,
+  LucideShield,
+  LucideUserCog,
   provideLucideIcons
 } from '@lucide/angular';
 
@@ -140,6 +147,13 @@ export function provideStaportIcons() {
     LucideUserPlus,
     LucideUsers,
     LucideWallet,
-    LucideX
+    LucideX,
+    LucideMenu,
+    LucideMoon,
+    LucideSun,
+    LucideMapPinned,
+    LucideNetwork,
+    LucideShield,
+    LucideUserCog
   );
 }
