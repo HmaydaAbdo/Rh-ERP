@@ -165,7 +165,7 @@ export class TableComponent<T extends object> {
       field: colonne.field,
       headerName: colonne.shortHeader ?? colonne.header,
       headerTooltip: colonne.header,
-      // Le contenu vient du gabarit projeté (`stpCell`) : la valeur brute, parfois un objet, ne sert qu'au tri.
+      // Le contenu vient du gabarit projeté (`stpCell`) ; sans gabarit, la cellule affiche cette valeur (vide pour un objet).
       valueFormatter: ({ value }) => (value == null || typeof value === 'object' ? '' : String(value)),
       sortable: colonne.sortable !== false,
       // L'ordre vient du serveur (ou de ce composant en mode mémoire) : la grille n'y touche pas.

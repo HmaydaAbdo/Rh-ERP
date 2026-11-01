@@ -24,6 +24,8 @@ import { EmployeeAnalytique, EmployeeRegroupement } from '../../employee/models/
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique, PaieEffectifMois, PaieSearchCriteria } from '../../paie/models/paie.model';
 import { couleurEvolution, libelleEvolutionMesure, MesureEvolution } from '../../paie/analytique/paie-chart-theme';
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { formaterMontant, formaterVariation, libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
@@ -33,7 +35,7 @@ import {
 } from '../perimetre';
 import { LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
-import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
+import { axeDeMesure, hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsBarresGroupees, optionsLigne, optionsLigneGroupee, unitesDesMesures } from './graphiques-perimetre';
 
 interface Graphique<T extends ChartType> { data: ChartData<T>; options: ChartOptions<T> }
 type MesureRepartition = 'masse' | 'effectif';
@@ -89,7 +91,7 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, MessageComponent],
+  imports: [TableComponent, TableCellDirective, DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, MessageComponent],
   templateUrl: './analytique-perimetre.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -113,6 +115,71 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleDimensionVue = computed(() => this.libelleDimensionVueMaj().toLocaleLowerCase('fr'));
   protected readonly mesuresEvolution = MESURES_EVOLUTION;
   protected readonly libelleEvolutionMesure = libelleEvolutionMesure;
+  protected readonly colonnesEquipes = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelleDimensionVueMaj() },
+    { field: 'effectif', header: 'Effectif (personnes)', align: 'text-end' },
+    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC (personnes)', align: 'text-end' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
+  ]);
+  protected readonly colonnesEvolutionEquipe: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'effectif', header: 'Effectif (personnes)', align: 'text-end' },
+    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC (personnes)', align: 'text-end' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
+  ];
+  protected readonly colonnesQualite: TableColumn[] = [
+    { field: 'rattachement', header: 'Rattachement' },
+    { field: 'bulletins', header: 'Bulletins', align: 'text-end' }
+  ];
+  protected readonly colonnesHeuresSupp = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelleDimensionVueMaj() },
+    { field: 'effectif', header: 'Effectif', align: 'text-end' },
+    { field: 'heures', header: 'Heures', align: 'text-end' },
+    { field: 'montantDh', header: 'Montant (DH)', align: 'text-end' },
+    { field: 'stcDh', header: 'STC (DH)', align: 'text-end' },
+    { field: 'forfaitDh', header: 'Forfait (DH)', align: 'text-end' },
+    { field: 'netAPayerDh', header: 'Net (DH)', align: 'text-end' }
+  ]);
+  protected readonly colonnesEvolutionPaie: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
+    { field: 'effectif', header: 'Effectif payé', align: 'text-end' },
+    { field: 'stc', header: 'STC', align: 'text-end' },
+    { field: 'stcMontant', header: 'Montant STC (DH)', align: 'text-end' }
+  ];
+  protected readonly colonnesRepartitionPaie = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelles[this.dimension()] },
+    { field: 'effectif', header: 'Payés', align: 'text-end' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC' },
+    { field: 'approfondir', header: 'Approfondir', sortable: false }
+  ]);
+  protected readonly colonnesTranches: TableColumn[] = [
+    { field: 'tranche', header: 'Tranche' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-end' }
+  ];
+  protected readonly colonnesMouvements: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'effectif', header: 'Payés', align: 'text-end' },
+    { field: 'entrees', header: 'Entrées', align: 'text-end' },
+    { field: 'sorties', header: 'Sorties', align: 'text-end' },
+    { field: 'mutations', header: 'Mutations', align: 'text-end' }
+  ];
+  protected readonly colonnesAge: TableColumn[] = [
+    { field: 'tranche', header: 'Âge' },
+    { field: 'effectif', header: 'Employés', align: 'text-end' }
+  ];
+  protected readonly colonnesAnciennete: TableColumn[] = [
+    { field: 'tranche', header: 'Ancienneté' },
+    { field: 'effectif', header: 'Employés', align: 'text-end' }
+  ];
+  protected readonly colonnesFiches = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelles[this.dimension()] },
+    { field: 'effectif', header: 'Employés', align: 'text-end' },
+    { field: 'actifs', header: 'En poste', align: 'text-end' }
+  ]);
   protected readonly libellePeriode = libellePeriode;
   protected readonly libelleTranche = libelleTranche;
   protected readonly libelleTrancheTotal = libelleTrancheTotal;
@@ -285,29 +352,52 @@ export class AnalytiquePerimetreComponent implements OnInit {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
     return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
   });
-  protected readonly graphiquesRepartitionEquipe = computed<(Graphique<'bar'> & { mesure: MesureEvolution })[]>(() => {
+  /** Un seul graphique pour tous les indicateurs choisis : barres côte à côte, un axe par unité (décision du 2026-11-01). */
+  protected readonly graphiqueRepartitionEquipe = computed<(Graphique<'bar'> & { hauteur: number }) | null>(() => {
     this.theme.theme();
-    return this.mesureRepartitionEquipe().map((mesure) => {
-      const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0).sort((a, b) => b[mesure] - a[mesure] || a.libelle.localeCompare(b.libelle, 'fr'));
-      return {
-        mesure,
-        data: { labels: groupes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: groupes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
-        options: optionsBarres({ indexAxis: 'y', montants: mesure === 'masse' || mesure === 'stcMontant' })
-      };
-    });
+    const mesures = this.mesureRepartitionEquipe();
+    if (mesures.length === 0) {
+      return null;
+    }
+    const unites = unitesDesMesures(mesures);
+    const groupes = this.tableauEquipes()
+      .filter((groupe) => mesures.some((mesure) => groupe[mesure] > 0))
+      .sort((a, b) => b[mesures[0]] - a[mesures[0]] || a.libelle.localeCompare(b.libelle, 'fr'));
+    return {
+      data: {
+        labels: groupes.map((groupe) => groupe.libelle),
+        datasets: mesures.map((mesure) => ({
+          label: this.libelleMesureEquipe(mesure),
+          data: groupes.map((groupe) => groupe[mesure]),
+          backgroundColor: couleurEvolution(mesure),
+          borderRadius: 4,
+          xAxisID: axeDeMesure('x', mesure, unites)
+        }))
+      },
+      options: optionsBarresGroupees(unites),
+      hauteur: hauteurPourLignes(groupes.length * (1 + (mesures.length - 1) * 0.6))
+    };
   });
-  protected readonly graphiquesEvolutionEquipe = computed<(Graphique<'line'> & { mesure: MesureEvolution })[]>(() => {
+  protected readonly graphiqueEvolutionEquipe = computed<Graphique<'line'> | null>(() => {
     this.theme.theme();
+    const mesures = this.mesureEvolutionEquipe();
+    if (mesures.length === 0) {
+      return null;
+    }
+    const unites = unitesDesMesures(mesures);
     const evolution = this.evolutionEquipe();
-    return this.mesureEvolutionEquipe().map((mesure) => {
-      const couleur = couleurEvolution(mesure);
-      return {
-        mesure,
-        data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25 }] },
-        options: optionsLigne(mesure === 'masse' || mesure === 'stcMontant')
-      };
-    });
+    return {
+      data: {
+        labels: evolution.map((mois) => libellePeriode(mois.periode)),
+        datasets: mesures.map((mesure) => {
+          const couleur = couleurEvolution(mesure);
+          return { label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25, yAxisID: axeDeMesure('y', mesure, unites) };
+        })
+      },
+      options: optionsLigneGroupee(unites)
+    };
   });
+  protected readonly libellesMesures = (mesures: readonly MesureEvolution[]): string => mesures.map((mesure) => this.libelleMesureEquipe(mesure)).join(', ');
 
   protected readonly graphiqueEvolution = computed<Graphique<'line'> & { plugins: ReturnType<typeof valeursSurPoints>[] }>(() => {
     this.theme.theme();

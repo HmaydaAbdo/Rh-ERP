@@ -76,6 +76,25 @@ class HoteComponent {
   readonly cliquable = (ligne: Employe): boolean => ligne.id !== 3;
 }
 
+@Component({
+  imports: [TableComponent],
+  template: `<stp-table label="Simple" [value]="lignes" [columns]="colonnes" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />`
+})
+class HoteSimpleComponent {
+  readonly lignes = [{ nom: 'Ali', age: 31, adresse: { ville: 'Fès' } }];
+  readonly colonnes: TableColumn[] = [{ field: 'nom', header: 'Nom' }, { field: 'age', header: 'Âge' }, { field: 'adresse', header: 'Adresse' }];
+}
+
+describe('TableComponent sans gabarit de cellule', () => {
+  it('affiche la valeur de chaque colonne, et rien pour un objet', async () => {
+    const fixture = TestBed.createComponent(HoteSimpleComponent);
+    fixture.detectChanges();
+    await attendreGrille(fixture);
+
+    expect(lignesGrille(fixture.nativeElement)[0].cells.map((c) => c.textContent?.trim())).toEqual(['Ali', '31', '']);
+  });
+});
+
 describe('TableComponent (AG Grid)', () => {
   let fixture: ComponentFixture<HoteComponent>;
   let hote: HoteComponent;

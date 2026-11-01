@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions } from 'chart.js';
 
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { ChartComponent } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
@@ -33,11 +35,21 @@ const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 
  */
 @Component({
   selector: 'app-paie-parcours',
-  imports: [DecimalPipe, RouterLink, ChartComponent, IconComponent],
+  imports: [TableComponent, TableCellDirective, DecimalPipe, RouterLink, ChartComponent, IconComponent],
   templateUrl: './paie-parcours.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieParcoursComponent {
+  protected readonly colonnesBulletins: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'chantier', header: 'Chantier' },
+    { field: 'fonction', header: 'Fonction' },
+    { field: 'equipe', header: 'Équipe' },
+    { field: 'nombreJoursTravailles', header: 'Jours', align: 'text-end' },
+    { field: 'salaireMensuel', header: 'Salaire', align: 'text-end' },
+    { field: 'salaireTotal', header: 'Total', align: 'text-end' },
+    { field: 'observation', header: 'Observation' }
+  ];
   readonly employeId = input.required<number>();
 
   private readonly paieService = inject(PaieService);

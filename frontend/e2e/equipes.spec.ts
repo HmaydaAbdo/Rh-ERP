@@ -128,8 +128,9 @@ test.describe('Équipes', () => {
     await page.getByRole('option', { name: 'Masse salariale (DH)' }).click();
     await indicateursEvolution.click();
     await page.getByRole('option', { name: 'STC (personnes)' }).click();
-    await expect(repartition.locator('.app-chart-indicator')).toHaveCount(2);
-    await expect(evolution.locator('.app-chart-indicator')).toHaveCount(2);
+    // Les deux indicateurs choisis sont groupés dans un seul graphique par bloc.
+    await expect(repartition.locator('.app-chart-indicator')).toHaveCount(1);
+    await expect(evolution.locator('.app-chart-indicator')).toHaveCount(1);
     await expect(page.locator('.app-data-details[open]')).toHaveCount(0);
     expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5, 6] });
     expect(mock.bodies['POST /paie/analytique']).toContainEqual({ periode: '2026-08', equipeIds: [5] });

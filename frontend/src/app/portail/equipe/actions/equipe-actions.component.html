@@ -11,15 +11,7 @@
   @if (result(); as rapport) {
     <p><strong>{{ rapport.totalLignes }}</strong> ligne(s) traitée(s) — <strong>{{ rapport.crees }}</strong> créée(s), <strong>{{ rapport.ignores }}</strong> rejetée(s).</p>
     @if (rapport.lignesIgnorees.length > 0) {
-      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes d'équipes rejetées à l’import">
-        <table class="app-static-table">
-          <caption class="app-lecteur">Détail des lignes d'équipes rejetées pendant l'import</caption>
-          <thead><tr><th scope="col">Ligne</th><th scope="col">Code</th><th scope="col">Libellé</th><th scope="col">Raison</th></tr></thead>
-          <tbody>@for (ligne of rapport.lignesIgnorees; track ligne.numeroLigne) {
-            <tr><td>{{ ligne.numeroLigne }}</td><td>{{ ligne.code }}</td><td>{{ ligne.libelle }}</td><td>{{ ligne.raison }}</td></tr>
-          }</tbody>
-        </table>
-      </div>
+      <stp-table label="Lignes d’équipes rejetées à l’import" [value]="rapport.lignesIgnorees" [columns]="colonnesIgnorees" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
     }
   }
 </stp-dialog>

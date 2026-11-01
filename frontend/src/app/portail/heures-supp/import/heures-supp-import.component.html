@@ -70,9 +70,20 @@
             }
           }
           <details ><summary>Voir le récapitulatif détaillé</summary>
-            <div class="app-static-table-scroll"><table class="app-static-table"><thead><tr><th>CIN</th><th>Employé</th><th>P/H</th><th>S/H (DH/h)</th><th>Montant</th><th>STC</th><th>Forfait</th><th>Net à payer</th></tr></thead><tbody>
-              @for (ligne of a.lignes; track ligne.cin) { <tr><td>{{ ligne.cin }}</td><td>{{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small></td><td>{{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }}</td><td>{{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-2') }}</td><td>{{ ligne.montantDh | number:'1.2-2' }}</td><td>{{ ligne.stcDh | number:'1.2-2' }}</td><td>{{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') }}</td><td><strong>{{ ligne.netAPayerDh | number:'1.2-2' }}</strong></td></tr> }
-            </tbody></table></div>
+            <stp-table label="Récapitulatif détaillé de l’import" [value]="a.lignes" [columns]="colonnesRecap" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
+              <ng-template stpCell let-ligne let-col="col">
+                @switch (col.field) {
+                  @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
+                  @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
+                  @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-2') }} }
+                  @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') }} }
+                  @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.2-2' }}</strong> }
+                  @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} }
+                  @case ('stcDh') { {{ ligne.stcDh | number:'1.2-2' }} }
+                  @default { {{ ligne[col.field] }} }
+                }
+              </ng-template>
+            </stp-table>
           </details>
           <div class="app-wizard__pied"><button stp-button variant="secondary" type="button" (click)="etape.set(3)">Modifier les forfaits</button><button stp-button variant="text" type="button" (click)="etape.set(2)">Modifier le fichier</button>
             @if (!a.pret) { <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="corriger()">Enregistrer les corrections puis réanalyser</button> }

@@ -24,16 +24,9 @@
 
     @if (analyse.erreurs.length > 0) {
       <h3 class="app-wizard__titre"><stp-icon name="file-x" /> À corriger dans le fichier <span class="app-wizard__nombre">{{ analyse.erreurs.length }}</span></h3>
-      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Erreurs du fichier">
-        <table class="app-static-table">
-          <thead><tr><th scope="col">Ligne</th><th scope="col">CIN</th><th scope="col">Nom</th><th scope="col">Problème</th></tr></thead>
-          <tbody>
-            @for (erreur of analyse.erreurs; track erreur.numeroLigne) {
-              <tr><td>{{ erreur.numeroLigne }}</td><td>{{ erreur.cin ?? '—' }}</td><td>{{ erreur.nomPrenom ?? '—' }}</td><td>{{ erreur.raison }}</td></tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <stp-table label="Erreurs du fichier" [value]="analyse.erreurs" [columns]="colonnesErreurs" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
+        <ng-template stpCell let-erreur let-col="col">{{ erreur[col.field] ?? '—' }}</ng-template>
+      </stp-table>
     }
 
     @if (analyse.chantiersClotures.length > 0) {

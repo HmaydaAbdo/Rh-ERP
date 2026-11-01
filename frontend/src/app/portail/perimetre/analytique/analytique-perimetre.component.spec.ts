@@ -7,6 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
@@ -138,6 +139,7 @@ describe('AnalytiquePerimetreComponent', () => {
     await harness.navigateByUrl(url, HoteComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
+    await attendreGrille(harness.fixture);
     return harness.routeNativeElement as HTMLElement;
   }
 
@@ -145,6 +147,7 @@ describe('AnalytiquePerimetreComponent', () => {
     await harness.navigateByUrl(url, HoteEquipeComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
+    await attendreGrille(harness.fixture);
     return harness.routeNativeElement as HTMLElement;
   }
 
@@ -152,6 +155,7 @@ describe('AnalytiquePerimetreComponent', () => {
     await harness.navigateByUrl(url, HoteFunctionComponent);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
+    await attendreGrille(harness.fixture);
     return harness.routeNativeElement as HTMLElement;
   }
 
@@ -275,12 +279,13 @@ describe('AnalytiquePerimetreComponent', () => {
     harness.detectChanges();
     const section = page.querySelector('[aria-labelledby="pa-fiches-repartition"]')!;
     expect(section.textContent).toContain('Chargement de la répartition…');
-    expect(section.querySelector('tbody')?.textContent).not.toContain('Nador');
+    expect(lignesGrille(section).map((ligne) => ligne.textContent).join(' ')).not.toContain('Nador');
     attente.next([{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 2, actifs: 2 }]);
     attente.complete();
     await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(section.querySelector('tbody')?.textContent).toContain('Chauffeurs');
+    await attendreGrille(harness.fixture);
+    expect(lignesGrille(section).map((ligne) => ligne.textContent).join(' ')).toContain('Chauffeurs');
   });
 
   it('annonce une panne de la projection qualité sans la présenter comme un filtre sans résultat', async () => {
@@ -426,7 +431,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.querySelectorAll('.app-data-details[open]')).toHaveLength(0);
   });
 
-  it('permet de sélectionner plusieurs indicateurs indépendamment et affiche un graphique par indicateur', async () => {
+  it('permet de sélectionner plusieurs indicateurs indépendamment et les groupe dans un seul graphique par bloc', async () => {
     const page = await ouvrirEquipe();
     const repartition = [...page.querySelectorAll('.app-panel')]
       .find((section) => section.textContent?.includes('Répartition de la paie par équipe'))!;
@@ -438,8 +443,14 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect((repartition.querySelector('input[aria-label="Indicateurs de la répartition par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
     expect((evolution.querySelector('input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
-    expect(repartition.querySelectorAll('.app-chart-indicator')).toHaveLength(2);
-    expect(evolution.querySelectorAll('.app-chart-indicator')).toHaveLength(2);
+    // Les deux indicateurs sont groupés dans un seul graphique par bloc, avec un axe par unité (personnes, DH).
+    expect(repartition.querySelectorAll('.app-chart-indicator')).toHaveLength(1);
+    expect(evolution.querySelectorAll('.app-chart-indicator')).toHaveLength(1);
+    const graphiques = harness.fixture.debugElement.queryAll(By.directive(ChartComponent)).map((debug) => debug.componentInstance as ChartComponent<'bar' | 'line'>);
+    const groupes = graphiques.filter((graphique) => graphique.data().datasets.length === 2);
+    expect(groupes.map((graphique) => graphique.data().datasets.map((jeu) => jeu.label))).toEqual([['Effectif (personnes)', 'Masse salariale (DH)'], ['Effectif (personnes)', 'STC (personnes)']]);
+    expect(Object.keys(groupes[0].options()!.scales!)).toEqual(expect.arrayContaining(['x', 'x1']));
+    expect(Object.keys(groupes[1].options()!.scales!)).not.toContain('y1');
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {
@@ -465,7 +476,8 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect(paie.analyser.mock.calls.length).toBe(appelsPaie);
     expect(page.textContent).toContain('Répartition par fonction');
-    expect(page.textContent).toMatch(/MACON.*1\s·\s1\s000,00\sDH/);
+    await attendreGrille(harness.fixture);
+    expect(lignesGrille(page).map((ligne) => ligne.textContent.replace(/\s+/g, ' ')).join(' | ')).toMatch(/MACON.*1 · 1 000,00 DH/);
     expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'FONCTION');
   });
 
@@ -522,7 +534,8 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = await ouvrir();
 
     expect(page.textContent).toContain('Mouvements mois par mois');
-    expect(page.textContent).toMatch(/août 2026\s*2\s*1\s*0\s*0/);
+    const mouvements = page.querySelector('[aria-labelledby="pa-mouvements"]')!;
+    expect(lignesGrille(mouvements).map((ligne) => ligne.cells.map((c) => c.textContent?.trim()).join(' '))).toContain('août 2026 2 1 0 0');;
   });
 
   it('garde les fiches Employé et masque la paie sans PAIE_READ', async () => {

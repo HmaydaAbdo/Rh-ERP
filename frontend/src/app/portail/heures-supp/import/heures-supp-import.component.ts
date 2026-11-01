@@ -2,6 +2,8 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { StepperComponent, StepperEtape } from '../../../shared/ui/stepper/stepper.component';
@@ -26,11 +28,21 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
   templateUrl: './heures-supp-import.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppImportComponent {
+  protected readonly colonnesRecap: TableColumn[] = [
+    { field: 'cin', header: 'CIN' },
+    { field: 'nomPrenom', header: 'Employé' },
+    { field: 'heuresSupplementaires', header: 'P/H', align: 'text-end' },
+    { field: 'salaireHoraireDh', header: 'S/H (DH/h)', align: 'text-end' },
+    { field: 'montantDh', header: 'Montant', align: 'text-end' },
+    { field: 'stcDh', header: 'STC', align: 'text-end' },
+    { field: 'forfaitDh', header: 'Forfait', align: 'text-end' },
+    { field: 'netAPayerDh', header: 'Net à payer', align: 'text-end' }
+  ];
   protected readonly chantiers = inject(ChantierReferenceService);
   protected readonly fonctions = inject(FunctionReferenceService);
   protected readonly employes = inject(EmployeeReferenceService);

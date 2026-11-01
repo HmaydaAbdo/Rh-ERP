@@ -68,7 +68,10 @@ describe('EquipeActionsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Code d'équipe déjà existant");
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(document.querySelector('[role="dialog"] .ag-row')?.textContent).toContain("Code d'équipe déjà existant");
+    }, { timeout: 5000 });
     expect(imported).not.toHaveBeenCalled();
   });
 });

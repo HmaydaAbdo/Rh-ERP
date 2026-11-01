@@ -1,6 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
+import { TableColumn } from '../../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../../shared/ui/table/table.component';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
 import { DateInputComponent } from '../../../../shared/ui/date-input/date-input.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
@@ -29,11 +31,12 @@ const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
  */
 @Component({
   selector: 'app-paie-import-etape-controle',
-  imports: [DecimalPipe, ButtonComponent, DateInputComponent, IconComponent, SelectComponent],
+  imports: [TableComponent, TableCellDirective, DecimalPipe, ButtonComponent, DateInputComponent, IconComponent, SelectComponent],
   templateUrl: './controle-etape.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieImportEtapeControleComponent {
+  protected readonly colonnesErreurs: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'cin', header: 'CIN' }, { field: 'nomPrenom', header: 'Nom' }, { field: 'raison', header: 'Problème' }];
   protected readonly store = inject(PaieImportStore);
   protected readonly libellesChamps = LIBELLES_CHAMPS;
   protected readonly typesSalaire = TYPES_SALAIRE;

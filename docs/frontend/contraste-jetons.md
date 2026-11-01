@@ -48,9 +48,9 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Statut info sur surface | `--color-info` #1e3a8a | `--color-surface` #ffffff | 10,36:1 | 7:1 | OK |
 | Graphique : série 1 sur surface (informatif) | `--chart-1` #256abf | `--color-surface` #ffffff | 5,39:1 | 3:1 | OK |
 | Graphique : série 2 sur surface (informatif) | `--chart-2` #eb6834 | `--color-surface` #ffffff | 3,20:1 | 3:1 | OK |
-| Graphique : série 3 sur surface (informatif) | `--chart-3` #1baf7a | `--color-surface` #ffffff | 2,82:1 | 3:1 | sous le seuil, informatif |
-| Graphique : série 4 sur surface (informatif) | `--chart-4` #eda100 | `--color-surface` #ffffff | 2,17:1 | 3:1 | sous le seuil, informatif |
-| Graphique : série 5 sur surface (informatif) | `--chart-5` #e87ba4 | `--color-surface` #ffffff | 2,69:1 | 3:1 | sous le seuil, informatif |
+| Graphique : série 3 sur surface (informatif) | `--chart-3` #1aa674 | `--color-surface` #ffffff | 3,11:1 | 3:1 | OK |
+| Graphique : série 4 sur surface (informatif) | `--chart-4` #c48500 | `--color-surface` #ffffff | 3,13:1 | 3:1 | OK |
+| Graphique : série 5 sur surface (informatif) | `--chart-5` #e56897 | `--color-surface` #ffffff | 3,11:1 | 3:1 | OK |
 | Graphique : série 6 sur surface (informatif) | `--chart-6` #008300 | `--color-surface` #ffffff | 4,95:1 | 3:1 | OK |
 | Graphique : série 7 sur surface (informatif) | `--chart-7` #4a3aa7 | `--color-surface` #ffffff | 8,56:1 | 3:1 | OK |
 | Graphique : série 8 sur surface (informatif) | `--chart-8` #e34948 | `--color-surface` #ffffff | 3,95:1 | 3:1 | OK |
@@ -104,12 +104,12 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Graphique : série 3 sur surface (informatif) | `--chart-3` #199e70 | `--color-surface` #2b2a28 | 4,21:1 | 3:1 | OK |
 | Graphique : série 4 sur surface (informatif) | `--chart-4` #c98500 | `--color-surface` #2b2a28 | 4,67:1 | 3:1 | OK |
 | Graphique : série 5 sur surface (informatif) | `--chart-5` #d55181 | `--color-surface` #2b2a28 | 3,63:1 | 3:1 | OK |
-| Graphique : série 6 sur surface (informatif) | `--chart-6` #008300 | `--color-surface` #2b2a28 | 2,90:1 | 3:1 | sous le seuil, informatif |
+| Graphique : série 6 sur surface (informatif) | `--chart-6` #008900 | `--color-surface` #2b2a28 | 3,13:1 | 3:1 | OK |
 | Graphique : série 7 sur surface (informatif) | `--chart-7` #9085e9 | `--color-surface` #2b2a28 | 4,59:1 | 3:1 | OK |
 | Graphique : série 8 sur surface (informatif) | `--chart-8` #e66767 | `--color-surface` #2b2a28 | 4,44:1 | 3:1 | OK |
 
 ## Bilan
 
 - Couples requis en échec : 0
-- Couples informatifs sous le seuil : 5
+- Couples informatifs sous le seuil : 1
 - Jetons de l'ancienne identité restants dans `frontend/src` : 0

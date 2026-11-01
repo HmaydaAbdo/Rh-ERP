@@ -252,9 +252,7 @@ Tous les tableaux interactifs ont **le même style**, défini une seule fois dan
 visible, en-têtes en majuscules sur fond neutre, alternance de lignes, survol, état vide illustré, paginateur compact. Les classes d'alignement
 (`text-center`, `text-right`) et de graisse (`font-semibold`, `font-bold`) utilisées par `TableColumn.align` et
 `cellClass` y sont définies. **Aucun écran ne redéfinit ces règles** : toute évolution du style se fait dans
-`table.component.scss`, pour tous les tableaux interactifs à la fois. Un petit tableau statique de résultats d'import peut utiliser
-`app-static-table-scroll` et `app-static-table` (`styles/_page.scss`) ; il garde un nom accessible, une légende, des en-têtes
-`scope="col"` et un défilement clavier/tactile indépendant. Ne pas utiliser cette exception pour une liste métier.
+`table.component.scss`, pour tous les tableaux interactifs à la fois. Aucun tableau HTML natif n'est écrit : une petite liste statique utilise aussi `stp-table` (`[paginated]="false"`).
 
 ## Colonnes pilotées par la configuration
 

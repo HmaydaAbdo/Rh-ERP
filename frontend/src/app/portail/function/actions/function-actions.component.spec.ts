@@ -71,7 +71,10 @@ describe('FunctionActionsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Libellé vide');
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(document.querySelector('[role="dialog"] .ag-row')?.textContent).toContain('Libellé vide');
+    }, { timeout: 5000 });
     expect(TestBed.inject(NotificationService).notifications()).toEqual([]);
     expect(importe).not.toHaveBeenCalled();
   });

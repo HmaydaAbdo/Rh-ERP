@@ -6,6 +6,8 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableComponent } from '../../../shared/ui/table/table.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
@@ -19,11 +21,12 @@ import { FunctionService } from '../services/function.service';
  */
 @Component({
   selector: 'app-function-actions',
-  imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
+  imports: [TableComponent, RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './function-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FunctionActionsComponent {
+  protected readonly colonnesIgnorees: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'libelle', header: 'Libellé' }, { field: 'raison', header: 'Raison' }];
   /** Des fonctions ont été importées : la vue affichée doit se recharger. */
   readonly importe = output<void>();
 
