@@ -54,7 +54,7 @@ latences p50/p95, détail par cas) ; journal : `backend/target/evaluation-ia.txt
 
 ## Développer
 
-Prérequis : `uv` 0.12 ou plus récent (il installe Python 3.13 lui-même).
+Prérequis : `uv` 0.12 ou plus récent (il installe Python 3.14 lui-même).
 
 ```bash
 cd ia
@@ -103,7 +103,7 @@ avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS`
 
 ## Image et exploitation
 
-- Image multi-étapes, bases `python:3.13-slim` et `uv` épinglées par digest ; dépendances installées
+- Image multi-étapes, bases `python:3.14-slim` et `uv` épinglées par digest ; dépendances installées
   depuis `uv.lock` sans outils de développement ; utilisateur non privilégié `10001`.
 - Service Compose `ia` démarré par défaut (sans profil) après la tâche `litellm-cles`, système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
