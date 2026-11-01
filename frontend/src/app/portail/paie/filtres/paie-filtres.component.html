@@ -9,7 +9,7 @@
       type="button"
       cdkOverlayOrigin
       #origine="cdkOverlayOrigin"
-      aria-label="Choisir le mois"
+      [attr.aria-label]="'Choisir le mois : ' + libelle()"
       aria-haspopup="dialog"
       [attr.aria-expanded]="panneauMoisOuvert()"
       (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
