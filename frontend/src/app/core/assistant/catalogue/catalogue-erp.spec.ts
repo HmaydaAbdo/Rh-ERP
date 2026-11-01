@@ -65,7 +65,7 @@ describe('catalogue ERP', () => {
     const { page } = await monter();
 
     expect(page.querySelector('h3')?.textContent).toContain('Chantiers');
-    expect(page.querySelector('.meta')?.textContent).toContain('4');
+    expect(page.querySelector('.app-datagrid__meta')?.textContent).toContain('4');
     expect(Array.from(page.querySelectorAll('[role="columnheader"]')).map((c) => c.textContent?.trim())).toEqual([
       'Code',
       'Effectif',

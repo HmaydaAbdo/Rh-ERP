@@ -102,6 +102,11 @@ composant au dossier partagé** (ou on étend un existant) avant de l'utiliser ;
 d'un domaine pour un usage visuel. Les tableaux utilisent **AG Grid Community** et les graphiques **`ng2-charts`**, habillés
 par les jetons de cette charte (décision du 2026-10-31).
 
+**Règle vérifiée en CI** : aucun composant situé hors de `shared/ui/` ne porte de styles propres (`styleUrl`, `styles`). Un écran de domaine
+compose des composants de `shared/ui/` et les classes partagées de `src/styles/` (`app-page`, `app-toolbar`, `app-kpi`, `app-panel`,
+`app-wizard`…) ; ce dont il a besoin et qui manque s'ajoute à ces feuilles ou à `shared/ui/`. Le contrôle `npm run check:composants`
+(script `scripts/check-composants-partages.mjs`) échoue sur toute infraction.
+
 Le rendu premium repose sur le soin apporté à la typographie, aux espacements, aux états de composants et à la stabilité
 visuelle, pas sur l'ajout d'effets. Les écrans denses gardent des niveaux de lecture évidents. Chaque écran conserve une
 action principale identifiable et un parcours métier compréhensible sans animation.

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import type { HumanInTheLoopToolCall, HumanInTheLoopToolRenderer } from '@copilotkit/angular';
+import { ButtonComponent } from '../../shared/ui/button/button.directive';
 import { LucideCheck } from '@lucide/angular';
 import { z } from 'zod';
 
@@ -30,22 +31,22 @@ type ArgumentsQuestion = z.infer<typeof PARAMETRES_QUESTION>;
  */
 @Component({
   selector: 'app-question-utilisateur',
-  imports: [LucideCheck],
+  imports: [LucideCheck, ButtonComponent],
+  host: { class: 'my-2 block' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="question" [attr.aria-label]="'Question de l’assistant'">
-      <p class="intitule">{{ args().question }}</p>
+    <section class="app-ask" [attr.aria-label]="'Question de l’assistant'">
+      <p class="app-ask__title">{{ args().question }}</p>
       @if (!repondue()) {
-        <div class="options" role="group" [attr.aria-label]="args().question">
+        <div class="options app-ask__options" role="group" [attr.aria-label]="args().question">
           @for (option of args().options ?? []; track option.label) {
             <button
               type="button"
-              class="option"
-              [class.choisie]="choix().includes(option.label)"
+              class="option app-choice-btn"
               [attr.aria-pressed]="choix().includes(option.label)"
               (click)="basculer(option.label)"
             >
-              <span class="coche" aria-hidden="true"><svg lucideCheck></svg></span>
+              <span class="app-choice-btn__box" aria-hidden="true"><svg lucideCheck></svg></span>
               <span class="texte">
                 {{ option.label }}
                 @if (option.description) {
@@ -55,101 +56,21 @@ type ArgumentsQuestion = z.infer<typeof PARAMETRES_QUESTION>;
             </button>
           }
         </div>
-        <form class="libre" (submit)="$event.preventDefault(); envoyer()">
+        <form class="app-ask__free" (submit)="$event.preventDefault(); envoyer()">
           <input
+            class="stp-input"
             type="text"
             placeholder="Ou répondez avec vos mots…"
             aria-label="Réponse libre"
             [value]="libre()"
             (input)="libre.set($any($event.target).value)"
           />
-          <button type="submit" class="valider" [disabled]="!pret()">Valider</button>
+          <button type="submit" stp-button class="valider" [disabled]="!pret()">Valider</button>
         </form>
       } @else {
-        <p class="reponse"><svg lucideCheck aria-hidden="true"></svg> {{ resultat() }}</p>
+        <p class="reponse app-ask__answer"><svg lucideCheck aria-hidden="true"></svg> {{ resultat() }}</p>
       }
     </section>
-  `,
-  styles: `
-    :host { display: block; margin: var(--space-sm) 0; }
-    .question {
-      display: grid;
-      gap: var(--space-sm);
-      padding: var(--space-md);
-      border: 1px solid var(--color-border);
-      border-left: 3px solid var(--assistant-accent);
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
-    }
-    .intitule { margin: 0; font-size: var(--text-base); font-weight: 600; color: var(--color-text); }
-    .options { display: grid; gap: var(--space-xs); }
-    .option {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-sm);
-      width: 100%;
-      padding: var(--space-sm) var(--space-sm-md);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: transparent;
-      font: inherit;
-      font-size: var(--text-sm);
-      text-align: left;
-      color: var(--color-text);
-      cursor: pointer;
-      &:hover { background: var(--color-surface-alt); }
-      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-      &.choisie { border-color: var(--color-primary); background: var(--color-primary-soft); }
-      small { display: block; color: var(--color-text-muted); font-size: var(--text-xs); }
-    }
-    .coche {
-      display: grid;
-      place-items: center;
-      flex: none;
-      width: 1.125rem;
-      height: 1.125rem;
-      margin-top: 0.0625rem;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-sm);
-      color: transparent;
-      svg { width: 0.75rem; height: 0.75rem; }
-    }
-    .choisie .coche { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-primary-contrast); }
-    .libre { display: flex; gap: var(--space-xs); }
-    .libre input {
-      flex: 1;
-      min-width: 0;
-      padding: var(--space-xs) var(--space-sm);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      background: var(--color-surface-alt);
-      font: inherit;
-      font-size: var(--text-sm);
-      color: var(--color-text);
-      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-    }
-    .valider {
-      padding: var(--space-xs) var(--space-md);
-      border: 0;
-      border-radius: var(--radius-md);
-      background: var(--color-primary);
-      font: inherit;
-      font-size: var(--text-sm);
-      font-weight: 600;
-      color: var(--color-primary-contrast);
-      cursor: pointer;
-      &:disabled { opacity: 0.5; cursor: default; }
-      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-    }
-    .reponse {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-      margin: 0;
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-      svg { width: 0.875rem; height: 0.875rem; color: var(--color-success); }
-    }
   `
 })
 export class QuestionUtilisateurComponent implements HumanInTheLoopToolRenderer<ArgumentsQuestion> {

@@ -17,8 +17,7 @@ import { ChantierCarteComponent } from './chantier-carte.component';
   imports: [ChantierCarteComponent, ButtonComponent, IconComponent, SelectComponent, FormField, FormRoot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  templateUrl: './chantier-carte-page.component.html',
-  styleUrl: './chantier-carte-page.component.scss'
+  templateUrl: './chantier-carte-page.component.html'
 })
 export class ChantierCartePageComponent {
   private readonly service = inject(ChantierService);

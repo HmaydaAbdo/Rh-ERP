@@ -9,108 +9,21 @@ import { FilAssistant } from './fil-assistant.service';
  */
 @Component({
   selector: 'app-assistant-entete',
+  host: { class: 'flex min-w-0 items-center gap-2' },
   imports: [LucideSparkles, LucideSquarePen],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="signature" aria-hidden="true">
-      <img class="monogramme" src="assets/brand/monogramme.svg" alt="" />
-      <span class="intelligence"><svg lucideSparkles></svg></span>
+    <span class="relative size-(--control-height) flex-none" aria-hidden="true">
+      <img class="block size-full rounded-md" src="assets/brand/monogramme.svg" alt="" />
+      <span class="absolute end-0 bottom-0 grid size-4 place-items-center rounded-full border border-surface bg-primary text-primary-contrast"><svg lucideSparkles class="size-3"></svg></span>
     </span>
-    <div class="titres">
-      <h2 class="titre">Staport Intelligence</h2>
-      <p class="sous-titre">Votre assistant numérique</p>
+    <div class="min-w-0 flex-1">
+      <h2 class="m-0 text-md font-semibold text-text">Staport Intelligence</h2>
+      <p class="m-0 text-xs text-muted">Votre assistant numérique</p>
     </div>
-    <button type="button" class="nouvelle" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
-      <svg lucideSquarePen aria-hidden="true"></svg>
+    <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
+      <svg lucideSquarePen class="size-4" aria-hidden="true"></svg>
     </button>
-  `,
-  styles: `
-    :host {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-      min-width: 0;
-    }
-
-    .signature {
-      position: relative;
-      flex: none;
-      width: var(--control-height);
-      aspect-ratio: 1;
-    }
-
-    .monogramme {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border-radius: var(--radius-md);
-    }
-
-    .intelligence {
-      position: absolute;
-      inset-block-end: 0;
-      inset-inline-end: 0;
-      display: grid;
-      place-items: center;
-      width: var(--space-md);
-      aspect-ratio: 1;
-      border: 1px solid var(--color-surface);
-      border-radius: var(--radius-pill);
-      background: var(--assistant-accent);
-      color: var(--assistant-accent-contrast);
-
-      svg {
-        width: var(--space-sm-md);
-        height: var(--space-sm-md);
-      }
-    }
-
-    .titre {
-      margin: 0;
-      font-size: var(--text-md);
-      font-weight: 600;
-      line-height: 1.2;
-      color: var(--color-text);
-    }
-
-    .titres {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .nouvelle {
-      display: grid;
-      flex: none;
-      place-items: center;
-      width: 2rem;
-      height: 2rem;
-      border: 0;
-      border-radius: var(--radius-md);
-      background: transparent;
-      color: var(--color-text-muted);
-      cursor: pointer;
-
-      svg {
-        width: 1rem;
-        height: 1rem;
-      }
-
-      &:hover {
-        background: var(--color-surface-alt);
-        color: var(--color-text);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--color-focus);
-        outline-offset: 1px;
-      }
-    }
-
-    .sous-titre {
-      margin: 0;
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
   `
 })
 export class AssistantEnteteComponent {

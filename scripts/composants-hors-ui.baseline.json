@@ -1,10 +1,1 @@
-{
-  "core/assistant/assistant-chat.component.ts": "styles propres (14 lignes)",
-  "core/assistant/assistant-entete.component.ts": "styles propres (75 lignes)",
-  "core/assistant/catalogue/a2ui-chart.component.ts": "styles propres (24 lignes)",
-  "core/assistant/catalogue/a2ui-data-table.component.ts": "styles propres (106 lignes)",
-  "core/assistant/catalogue/a2ui-kpi-grid.component.ts": "styles propres (25 lignes)",
-  "core/assistant/question-utilisateur.component.ts": "styles propres (79 lignes)",
-  "portail/chantier/carte/chantier-carte-page.component.ts": "styles propres (113 lignes)",
-  "portail/chantier/carte/chantier-carte.component.ts": "styles propres (197 lignes)"
-}
+{}

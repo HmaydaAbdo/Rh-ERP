@@ -1,7 +1,143 @@
+// Carte des chantiers (MapLibre) : contrôles, épingles, fiche d'un lieu et barre de recherche. Les classes app-map et app-map-page sont aussi
+// posées par le code qui construit les marqueurs et les fiches (éléments créés hors des gabarits).
+@use 'breakpoints' as bp;
+
+.app-map-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: calc(100% + 2 * var(--space-xl));
+  height: max(26rem, 100svh);
+  margin: calc(-1 * var(--space-xl));
+}
+
+.app-map-page__map { flex: 1 1 auto; min-height: 0; }
+
+.app-map-page__search {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-md);
+  left: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: min(23rem, calc(100% - 2 * var(--space-md)));
+  min-height: 2.75rem;
+  padding: 0 var(--space-sm-md);
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-md);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text);
+  box-shadow: var(--map-ui-shadow);
+}
+
+.app-map-page__search-icon { flex: 0 0 auto; color: var(--map-ui-icon); }
+
+.app-map-page__input {
+  flex: 1 1 auto;
+  width: 5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--map-ui-text);
+  font: inherit;
+  font-size: var(--text-sm);
+
+  &::placeholder { color: var(--map-ui-text-muted); opacity: 1; }
+  &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: 2px; border-radius: var(--radius-xs); }
+}
+
+.app-map-page__sep { align-self: stretch; width: 1px; margin-block: var(--space-xs); background: var(--map-ui-border); }
+
+.app-map-page__kind {
+  flex: 0 0 8rem;
+  width: 8rem;
+
+  .stp-select__input {
+    min-height: 2.5rem;
+    padding-inline: var(--space-xs) 2rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--map-ui-text);
+    font-size: var(--text-sm);
+
+    &:hover { background: color-mix(in srgb, var(--map-ui-icon) 9%, transparent); }
+    &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: -1px; }
+  }
+
+  .stp-select__toggle { inset-inline-end: 0; color: var(--map-ui-icon); }
+}
+
+.app-map-page__retry,
+.app-map-page__empty {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--space-md) + 3.5rem);
+  left: var(--space-md);
+}
+
+.app-map-page__empty {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text-muted);
+  font-size: var(--text-xs);
+}
+
+// En mode carte, le hamburger et la recherche partagent la ligne supérieure avec un espacement constant.
+@include bp.desktop {
+  .app-shell--carte .app-map-page {
+    width: 100%;
+    height: max(26rem, 100svh);
+    margin: 0;
+    isolation: auto;
+  }
+
+  .app-shell--carte .app-map-page__search,
+  .app-shell--carte .app-map-page__retry,
+  .app-shell--carte .app-map-page__empty {
+    left: calc(var(--space-md) + 3.25rem);
+  }
+
+  .app-shell--carte .app-map-page__search { z-index: 110; width: min(23rem, calc(100% - 6rem)); }
+  .app-shell--carte .app-map__controls {
+    left: var(--space-md);
+    top: calc(var(--space-md) + 3.5rem);
+  }
+}
+
+@include bp.compact-nav {
+  .app-map-page {
+    width: calc(100% + 2 * var(--space-xl));
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
+    margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-xl)) calc(-1 * var(--space-md));
+  }
+}
+
+@include bp.phone {
+  .app-map-page {
+    width: calc(100% + 2 * var(--space-md));
+    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
+    margin: calc(-1 * var(--space-md));
+  }
+
+  .app-map-page__search {
+    top: var(--space-sm);
+    left: var(--space-sm);
+    width: calc(100% - 2 * var(--space-sm));
+  }
+}
+
+
 // L'élément racine appartient à MapLibre : il le place en `position: absolute` et le déplace par `transform` à chaque image.
 // Ne jamais y toucher (ni position, ni transform, ni transition) : le marqueur glisserait hors de son site au zoom.
 // L'aspect et l'animation sont portés par l'épingle qu'il contient.
-.chantier-carte__marqueur {
+.app-map__marker {
   display: block;
   width: 2.5rem;
   height: 2.5rem; // = HAUTEUR_EPINGLE_PX
@@ -36,7 +172,7 @@
   &:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
 }
 
-.chantier-carte__epingle {
+.app-map__pin {
   display: block;
   width: 100%;
   height: 100%;
@@ -46,35 +182,35 @@
   transform-origin: 50% 92%;
   transition: transform var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
 
-  .chantier-carte__marqueur:hover &,
-  .chantier-carte__marqueur:focus-visible & {
+  .app-map__marker:hover &,
+  .app-map__marker:focus-visible & {
     filter: drop-shadow(0 0 0.6rem var(--map-marker-core));
     transform: scale(1.15);
   }
 }
 
-.chantier-carte__epingle-corps {
+.app-map__pin-body {
   fill: var(--map-marker-core);
   stroke: var(--map-marker-ring);
   stroke-width: 1.5;
 }
 
-.chantier-carte__epingle-centre { fill: var(--map-ui-canvas); }
+.app-map__pin-center { fill: var(--map-ui-canvas); }
 
-.chantier-carte__marqueur:focus-visible {
+.app-map__marker:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 
 // La carte remplit l'espace que lui laisse la page ; le conteneur MapLibre est positionné dedans (pas de hauteur en pourcentage).
-app-chantier-carte {
+.app-map-host {
   display: block;
   position: relative;
   height: 100%;
   min-height: 20rem;
 }
 
-.chantier-carte {
+.app-map {
   // L'univers cartographique et ses contrôles restent nocturnes, même si l'application est en thème clair.
   color-scheme: dark;
   --color-surface-sunken: var(--map-ui-canvas);
@@ -94,14 +230,14 @@ app-chantier-carte {
   height: 100%;
 }
 
-.chantier-carte__carte {
+.app-map__canvas {
   position: absolute;
   inset: 0;
   overflow: hidden;
   background: var(--color-surface-alt);
 }
 
-.chantier-carte__erreur {
+.app-map__error {
   position: absolute;
   top: var(--space-md);
   right: var(--space-md);
@@ -112,7 +248,7 @@ app-chantier-carte {
 }
 
 // Commandes sans panneau : une colonne légère, immédiatement sous la recherche de la page.
-.chantier-carte__commandes {
+.app-map__controls {
   position: absolute;
   left: var(--space-md);
   top: calc(var(--space-md) + 3.5rem);
@@ -126,9 +262,9 @@ app-chantier-carte {
   scrollbar-width: none;
 }
 
-.chantier-carte__modes { display: contents; }
+.app-map__modes { display: contents; }
 
-.chantier-carte__outil {
+.app-map__tool {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -158,10 +294,10 @@ app-chantier-carte {
   }
 }
 
-.chantier-carte__separateur { width: 1.6rem; height: 1px; margin: 0.25rem 0.4rem; background: color-mix(in srgb, var(--map-ui-icon) 54%, transparent); }
+.app-map__sep { width: 1.6rem; height: 1px; margin: 0.25rem 0.4rem; background: color-mix(in srgb, var(--map-ui-icon) 54%, transparent); }
 
 // ---- Fiche d'un lieu ----
-.chantier-carte .maplibregl-popup-content {
+.app-map .maplibregl-popup-content {
   padding: var(--space-sm-md) var(--space-md);
   border: 1px solid var(--map-ui-border);
   border-radius: var(--radius-md);
@@ -169,19 +305,19 @@ app-chantier-carte {
   box-shadow: var(--shadow-lg);
 }
 
-.chantier-carte .maplibregl-popup-tip {
+.app-map .maplibregl-popup-tip {
   border-top-color: var(--color-surface);
   border-bottom-color: var(--color-surface);
 }
 
-.chantier-carte__fiche {
+.app-map__card {
   margin: 0;
   color: var(--color-text);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.chantier-carte__fiche-chantier {
+.app-map__card-site {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
@@ -191,9 +327,9 @@ app-chantier-carte {
   & + & { margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--map-ui-border); }
 }
 
-.chantier-carte__fiche-code { color: var(--map-ui-focus); font-weight: 700; }
-.chantier-carte__fiche-nom { color: var(--map-ui-text); font-weight: 650; }
-.chantier-carte__fiche-nature {
+.app-map__card-code { color: var(--map-ui-focus); font-weight: 700; }
+.app-map__card-name { color: var(--map-ui-text); font-weight: 650; }
+.app-map__card-kind {
   grid-column: 2;
   justify-self: start;
   margin: 0;
@@ -205,20 +341,21 @@ app-chantier-carte {
   font-size: var(--text-xs);
 }
 
-.chantier-carte .maplibregl-ctrl-attrib.maplibregl-compact,
-.chantier-carte .maplibregl-ctrl-attrib {
+.app-map .maplibregl-ctrl-attrib.maplibregl-compact,
+.app-map .maplibregl-ctrl-attrib {
   background: var(--map-ui-surface);
   color: var(--map-ui-text-muted);
 }
 
-.chantier-carte .maplibregl-ctrl-logo { display: none; }
+.app-map .maplibregl-ctrl-logo { display: none; }
 
-.chantier-carte .maplibregl-ctrl-attrib a {
+.app-map .maplibregl-ctrl-attrib a {
   color: var(--map-ui-text);
 }
 
 // En plein écran, l'hôte prend tout l'écran : la carte le remplit toujours.
-app-chantier-carte:fullscreen {
+.app-map-host:fullscreen {
   width: 100%;
   height: 100%;
 }
+

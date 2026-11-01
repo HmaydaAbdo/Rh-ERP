@@ -41,12 +41,12 @@ test.describe('Chantiers', () => {
 
     await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/chantiers\/cartes\?code=C1$/);
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'C168' });
     await expect(carte).toContainText('En cours');
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Effectif (personnes)');
     await expect(carte).toContainText('Paie · août 2026');
-    await expect(page.locator('.perimetre-carte').filter({ hasText: 'C196' })).toContainText('Clôturé');
+    await expect(page.locator('.app-entity').filter({ hasText: 'C196' })).toContainText('Clôturé');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Les filtres suivent dans l'Analytique et bornent le périmètre analysé (mêmes chantiers que les deux autres vues).
@@ -73,7 +73,7 @@ test.describe('Chantiers', () => {
     });
     await page.goto('/chantiers/cartes');
 
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'C168' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'C168' });
     await expect(carte).toBeVisible();
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');

@@ -347,3 +347,102 @@
   }
 }
 
+
+// ---- Question à choix : réponses en boutons à case, saisie libre ----
+.app-ask {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+
+  &__title {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+  }
+
+  &__options {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  &__free {
+    display: flex;
+    gap: var(--space-xs);
+
+    input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__answer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+
+    stp-icon,
+    svg {
+      color: var(--color-success);
+    }
+  }
+}
+
+.app-choice-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-sm-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+
+  small {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  &__box {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-block-start: 0.0625rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    color: transparent;
+  }
+
+  &[aria-pressed='true'] &__box {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+  }
+}

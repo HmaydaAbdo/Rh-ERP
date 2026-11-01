@@ -730,3 +730,18 @@
     }
   }
 }
+
+// Tonalité d'une tuile d'indicateur : variation favorable ou défavorable
+.app-kpi {
+  &--positive strong {
+    color: var(--color-success);
+  }
+
+  &--negative strong {
+    color: var(--color-danger);
+  }
+}
+
+.app-chart--short {
+  height: 14rem;
+}
