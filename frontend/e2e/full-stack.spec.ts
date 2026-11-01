@@ -40,17 +40,21 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await page.getByRole('button', { name: 'Se connecter' }).click();
   const sessionAdmin = await (await connexionAdmin).json() as { accessToken: string };
   const adminToken = sessionAdmin.accessToken;
-  await expect(page.locator('a[href="/paie"]').first()).toBeVisible();
+  const ouvrirBarre = page.getByRole('button', { name: 'Ouvrir la barre Staport' });
+  await expect(ouvrirBarre).toBeVisible();
 
+  // Navigation unifiée : le bouton hamburger de l'en-tête ouvre la barre Staport ; les destinations d'administration sont dans un groupe repliable ;
+  // un lien ouvre la vue d'ouverture de l'écran (« /paie/cartes ») et referme la barre.
   for (const [url, titre] of [
     ['/employees', 'Employés'], ['/chantiers', 'Chantiers'], ['/functions', 'Fonctions'],
     ['/equipes', 'Équipes'], ['/paie', 'Paie'], ['/admin/users', 'Utilisateurs'],
     ['/admin/roles', 'Rôles'], ['/admin/parametres', 'Paramètres'], ['/audit', 'Journal d’audit']
   ] as const) {
-    const lien = page.locator(`a[href="${url}"]`).first();
+    await ouvrirBarre.click();
+    const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
+    const lien = navigation.locator(`a[href^="${url}"]`).first();
     if (!(await lien.isVisible())) {
-      const groupe = url.startsWith('/admin/') || url === '/audit' ? 'Administration système' : 'Référentiel RH';
-      await page.getByTitle(groupe, { exact: true }).click();
+      await navigation.getByText('Administration système', { exact: true }).click();
     }
     await lien.click();
     await expect(page.getByRole('heading', { name: titre })).toBeVisible();

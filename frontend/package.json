@@ -72,6 +72,8 @@
     "zod": "4.6.7",
     "@ag-ui/client": "$@ag-ui/client",
     "@ag-ui/core": "1.0.3",
-    "@ag-ui/a2ui-middleware": "0.0.14"
+    "@ag-ui/a2ui-middleware": "0.0.14",
+    "minimatch": "11.0.3",
+    "glob": "14.0.3"
   }
 }
