@@ -1,7 +1,7 @@
 # Image erp-rh-litellm : passerelle de modèles d'ERP-RH. Version ET digest épinglés : un tag repoussé
 # ne peut pas changer ce qui tourne. Le routage de litellm_config.yaml a été vérifié pour cette version ;
 # relancer test_providers.py (--providers, suite complète, --production-key) avant toute mise à jour.
-FROM ghcr.io/berriai/litellm:v1.104.2@sha256:3d88bd757134a00e8c00237b85a021ab1f6d54abb9c1df750f411dbe7256a500
+FROM ghcr.io/berriai/litellm:v1.109.0-dev.2@sha256:8a1e132563ef9cae391f0518f652eb7c643fac39ded5c40a0106ee3e06945986
 
 # Configuration intégrée à l'image (aucun secret : uniquement des références os.environ/…).
 COPY --chmod=0444 litellm_config.yaml /app/config.yaml
