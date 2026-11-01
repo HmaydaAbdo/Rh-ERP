@@ -13,7 +13,7 @@ const racine = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--'))
 
 // Retards connus et expliqués : ils n'échouent pas le mode strict. Les retirer dès que la cause disparaît.
 const blocages = {
-  'openai': 'LiteLLM exige openai<3.0.0 (plan, § 3 et E14)',
+  'litellm': 'préversion 1.109.0.dev2 adoptée sur décision du propriétaire (2026-11-01) : seule à lever openai<3 (plan, § 3)',
   '@a2ui/web_core': '@copilotkit/angular 0.6.0 épingle 0.10.4 (plan, § 3)',
   'agentevals': 'bibliothèque dormante : dernière publication le 2025-07-24 (plan, § 3)',
 };
