@@ -47,7 +47,7 @@ def sujet(jeton_agent: str) -> str:
         sub = json.loads(base64.urlsafe_b64decode(charge + "=" * (-len(charge) % 4))).get("sub")
         if isinstance(sub, str) and sub:
             return sub
-    except (IndexError, ValueError):
+    except IndexError, ValueError:
         pass
     return "anonyme-" + hashlib.sha256(jeton_agent.encode()).hexdigest()[:16]
 
