@@ -19,6 +19,11 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # @angular/build 22.2.x n'accepte que TypeScript >=6.0 <6.1 (pair) : TypeScript 6.1 et 7 sont refusés à l'installation.
+      # À retirer quand une version d'Angular déclare une plage plus large.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: docker
     directory: /backend
     schedule:
