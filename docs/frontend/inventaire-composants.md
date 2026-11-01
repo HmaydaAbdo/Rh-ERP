@@ -66,3 +66,10 @@ Les feuilles `styles/*.scss` sont le vocabulaire partagé du système de design 
 
 **Exports supprimés** (décision du 2026-11-01) : le bouton d'export PDF par composant, `PdfImpressionService` et l'export CSV du tableau de
 l'assistant sont retirés ; seuls les exports produits par le backend subsistent, dont le rapport de paie.
+
+## Galerie
+
+La page `/catalogue` (développement) montre chaque composant de `shared/ui/` puis le vocabulaire des feuilles `src/styles/` (assistant en
+étapes, tableau de bord, cartes, fiche, réglages, droits, barre de filtres), dans les deux thèmes. Elle est contrôlée par axe (aucune
+violation, clair et sombre). Les captures de référence — clair et sombre, ordinateur et téléphone — sont dans `docs/frontend/references/` ;
+`npm run e2e:references` (depuis `frontend/`, avec `E2E_PORT` pointant vers un serveur de développement) les régénère.

@@ -6,6 +6,7 @@ import type { ChartData, ChartOptions } from 'chart.js';
 import { ColumnState } from '../../table/table-columns';
 import type { TableColumn } from '../../table/table-columns';
 import { BadgeComponent } from '../badge/badge.component';
+import { CatalogueKitComponent } from './catalogue-kit.component';
 import { ButtonComponent } from '../button/button.directive';
 import { ChartComponent } from '../chart/chart.component';
 import { DateInputComponent } from '../date-input/date-input.component';
@@ -51,6 +52,7 @@ interface ValeursCatalogue {
   imports: [
     FormField,
     BadgeComponent,
+    CatalogueKitComponent,
     ButtonComponent,
     ChartComponent,
     DateInputComponent,
