@@ -17,6 +17,9 @@ public interface IUserService {
 
     UserResponseDto findById(Long id);
 
+    /** Le compte d'un nom de connexion (la casse est ignorée), avec ses permissions effectives. */
+    UserResponseDto findByUsername(String username);
+
     UserResponseDto create(UserCreateRequestDto dto);
 
     UserResponseDto update(Long id, UserUpdateRequestDto dto);

@@ -76,7 +76,18 @@
 
     <ng-template stpRowActions let-user>
       <button stp-button variant="text" icon="pencil" iconOnly type="button" title="Modifier" [attr.aria-label]="'Modifier ' + user.username" (click)="onEdit(user)"></button>
+      @if (peutRegler()) {
+        <button stp-button variant="text" icon="house" iconOnly type="button" title="Régler l’accueil" [attr.aria-label]="'Régler l’accueil de ' + user.username" (click)="onOuvrirAccueil(user)"></button>
+      }
       <button stp-button variant="text" icon="key-round" iconOnly type="button" title="Réinitialiser le mot de passe" [attr.aria-label]="'Réinitialiser le mot de passe de ' + user.username" (click)="onOpenReset(user)"></button>
     </ng-template>
   </stp-table>
 </div>
+
+<stp-dialog [header]="'Accueil de ' + (accueilCible()?.username ?? '')" width="46rem" [(open)]="accueilOuvert">
+  @if (accueilEdite(); as accueil) {
+    <app-accueil-editeur [accueil]="accueil" [enregistrement]="accueilEnregistrement()" (enregistrer)="onEnregistrerAccueil($event)" (reinitialiser)="onReinitialiserAccueil()" />
+  } @else {
+    <p class="app-muted" role="status">Chargement de l’accueil…</p>
+  }
+</stp-dialog>

@@ -9,11 +9,13 @@ import { mockApi, page as pageDe } from './support/api-mock';
  * visuelle reste celle du propriétaire (captures par `npm run e2e:references`).
  */
 const DROITS = [
+  'ACCUEIL_READ', 'ACCUEIL_WRITE', 'ACCUEIL_ADMIN',
   'EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'CHANTIER_READ', 'CHANTIER_WRITE', 'FUNCTION_READ', 'FUNCTION_WRITE', 'EQUIPE_READ', 'EQUIPE_WRITE',
   'PAIE_READ', 'PAIE_EXPORT', 'PAIE_IMPORT', 'HEURES_SUPP_READ', 'USER_MANAGE', 'ROLE_MANAGE', 'PARAMETRE_READ', 'AUDIT_READ'
 ];
 
 const ECRANS: string[] = [
+  '/accueil',
   '/employees',
   '/chantiers',
   '/chantiers/cartes',
@@ -49,6 +51,7 @@ for (const theme of ['light', 'dark'] as const) {
             'POST /roles/search': () => pageDe([]),
             'POST /paie/search': () => pageDe([]),
             'GET /paie/periodes': () => [],
+            'GET /accueil': () => ({ version: null, personnalise: false, indicateurs: [], disponibles: [] }),
             'GET /parametres': () => []
           });
           await page.setViewportSize(taille);
