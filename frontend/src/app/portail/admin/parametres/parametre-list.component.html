@@ -1,5 +1,5 @@
 <div class="parametre-list app-page">
-  <div class="app-page__header">
+  <div class="app-page__header"><stp-dock-declencheur />
     <div>
       <h1>Paramètres</h1>
       <p>Valeurs de fonctionnement de l’application.</p>
@@ -7,25 +7,25 @@
   </div>
 
   @if (loading()) {
-    <div class="parametre-list__loading" role="status" aria-busy="true">
+    <div class="app-skeleton-grid" role="status" aria-busy="true">
       <span class="app-lecteur">Chargement des paramètres…</span>
       @for (ligne of [1, 2, 3, 4]; track ligne) {
-        <span class="app-skeleton parametre-list__squelette"></span>
+        <span class="app-skeleton block h-32 rounded-md"></span>
       }
     </div>
   } @else if (erreur()) {
-    <div class="parametre-list__empty" role="alert">
+    <div class="app-empty" role="alert">
       <stp-icon name="triangle-alert" size="1.25rem" />
       <span>Impossible de charger les paramètres. Vérifiez la connexion puis réessayez.</span>
       <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
     </div>
   } @else if (parametres().length === 0) {
-    <div class="parametre-list__empty" role="status">
+    <div class="app-empty" role="status">
       <stp-icon name="settings" size="1.25rem" />
       <span>Aucun paramètre disponible.</span>
     </div>
   } @else {
-    <div class="parametre-list__items">
+    <div class="app-stack-list">
       @for (parametre of parametres(); track parametre.id) {
         <app-parametre-item [parametre]="parametre" [editable]="canWrite()" (saved)="onSaved($event)" />
       }

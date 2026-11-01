@@ -1,8 +1,9 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { Parametre, ParametreService } from '../services/parametre.service';
@@ -10,10 +11,9 @@ import { ParametreItemComponent } from './parametre-item.component';
 
 @Component({
   selector: 'app-parametre-list',
-  imports: [ButtonComponent, IconComponent, ParametreItemComponent],
+  imports: [DockDeclencheurComponent, ButtonComponent, IconComponent, ParametreItemComponent],
   templateUrl: './parametre-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './parametre-list.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ParametreListComponent {
   private readonly parametreService = inject(ParametreService);

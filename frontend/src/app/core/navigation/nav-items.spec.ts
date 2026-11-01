@@ -13,7 +13,7 @@ describe('NAV_ITEMS', () => {
     expect(NAV_ITEMS.every((i) => i.route.startsWith('/'))).toBe(true);
   });
 
-  it('la paie est le premier écran du menu (écran d’accueil de qui y a accès)', () => {
+  it('la paie est le premier écran du menu (écran d’arrivée de qui y a accès)', () => {
     expect(NAV_ITEMS[0]).toMatchObject({ label: 'Paie', route: '/paie', permission: 'PAIE_READ' });
   });
 

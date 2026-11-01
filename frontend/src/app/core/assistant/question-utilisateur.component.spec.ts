@@ -19,7 +19,7 @@ describe('QuestionUtilisateurComponent', () => {
   it('affiche la question et ses options, valider reste inactif tant que rien n’est choisi', () => {
     const { page } = monter();
 
-    expect(page.querySelector('.intitule')?.textContent).toContain('Quel mois voulez-vous ?');
+    expect(page.querySelector('.app-ask__title')?.textContent).toContain('Quel mois voulez-vous ?');
     expect(page.querySelectorAll('.option')).toHaveLength(2);
     expect((page.querySelector('.valider') as HTMLButtonElement).disabled).toBe(true);
   });

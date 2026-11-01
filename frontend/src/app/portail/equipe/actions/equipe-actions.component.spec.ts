@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { EquipeService } from '../services/equipe.service';
 import { EquipeActionsComponent } from './equipe-actions.component';
@@ -68,7 +68,10 @@ describe('EquipeActionsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Code d'équipe déjà existant");
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(document.querySelector('[role="dialog"] .ag-row')?.textContent).toContain("Code d'équipe déjà existant");
+    }, { timeout: 5000 });
     expect(imported).not.toHaveBeenCalled();
   });
 });

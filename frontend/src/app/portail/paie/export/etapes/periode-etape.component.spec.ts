@@ -26,7 +26,7 @@ describe('PaieExportEtapePeriodeComponent', () => {
     store.periodes.set(PERIODES);
     await stabiliser(fixture);
 
-    expect(racine.querySelector('.export-wizard__carte--ok')).toBeNull();
+    expect(racine.querySelector('.app-wizard__carte--ok')).toBeNull();
   });
 
   it('résume le mois choisi : bulletins, chantiers, masse salariale et sorties STC', async () => {
@@ -36,7 +36,7 @@ describe('PaieExportEtapePeriodeComponent', () => {
     store.choisirPeriode('2026-08');
     await stabiliser(fixture);
 
-    const carte = racine.querySelector('.export-wizard__carte--ok') as HTMLElement;
+    const carte = racine.querySelector('.app-wizard__carte--ok') as HTMLElement;
     expect(carte.getAttribute('role')).toBe('status');
     expect(carte.querySelector('strong')?.textContent).toContain('août 2026 contient de la paie');
     expect(Array.from(carte.querySelectorAll('dt')).map((dt) => dt.textContent)).toEqual(['bulletins', 'chantiers', 'masse salariale', 'STC / sorties']);

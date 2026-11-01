@@ -27,6 +27,7 @@ parcours complets limités aux flux représentatifs. Aucun niveau ne remplace le
 | Contrat API et événementiel | Requêtes/réponses OpenAPI, schémas MCP/BI, flux et événements d'agent (ex. AG-UI), codes d'erreur, pagination et compatibilité consommateur-producteur | Toute modification d'API, d'événement ou de contrat interservice |
 | Unitaire frontend | Fonctions, stores, services, guards, interceptors, validateurs et transformations | Toute logique frontend ajoutée ou modifiée |
 | Composant frontend | Rendu, actions, formulaires, clavier, focus, chargement, vide, erreur, refus et responsive | Tout composant, écran ou interaction touché |
+| Catalogue partagé | Présence de la démo, API publique, états accessibles et contrats des domaines consommateurs concernés | Tout ajout ou changement d'un composant partagé ; vérifier le catalogue en thèmes clair/sombre |
 | E2E navigateur | Parcours utilisateur pilotés par rôles et libellés accessibles, permissions visibles, navigation et états accessibles | Chaque flux critique et chaque fonctionnalité visible qui traverse plusieurs écrans |
 | Full stack | Navigateur ou client réel → frontend → API réelle → base réelle et audit attendu | Chaque domaine métier et chaque flux transverse représentatif avant fusion |
 | Non fonctionnel | Accessibilité, sécurité, charge, résilience, limites et observabilité | Selon risque ; sécurité et accessibilité sur les parcours qui les exposent |

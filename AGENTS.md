@@ -46,6 +46,16 @@ Deux règles imposées par le propriétaire, sans exception :
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
+- **Documentation officielle lue, jamais supposée.** Aucune affirmation sur le comportement, la version, la
+  compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
+  son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
+  lu est écrit « non vérifié » ; la mémoire du modèle n'est pas une source.
+- **Plan de travail IA unique.** Le travail IA restant est suivi dans [`docs/ia/plan-de-travail.md`](docs/ia/plan-de-travail.md)
+  : on avance épopée par épopée dans l'ordre du plan, on relit en entier la documentation officielle concernée à l'entrée
+  de chaque épopée (§ 4.0 du plan), on marque l'état (Terminé, Partiel, Incomplet, Non touché) dans le même commit que le
+  travail, et on ne supprime ni fichier, ni branche, ni donnée en dehors du périmètre de la tâche en cours sans l'accord du
+  propriétaire. Les versions IA suivent la dernière stable (veille : E1.2) ; une limite de version causée par une
+  dépendance (par exemple `openai` bloqué par LiteLLM) est consignée au § 3 du plan.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
   `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
   recommandation. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.

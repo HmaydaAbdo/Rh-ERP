@@ -1,8 +1,9 @@
+import { attendreGrille, lignesGrille } from '../../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { Page } from '../../../../shared/models/page.model';
 import { saisir, soumettre } from '../../../../shared/testing/formulaire';
 import { PolitiqueMotDePasseService } from '../../../../shared/validators/politique-mot-de-passe.service';
@@ -30,7 +31,7 @@ describe('UserListComponent', () => {
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement;
-  const noms = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
+  const noms = () => lignesGrille(racine()).map((l) => l.cells[0]?.textContent?.trim());
   const dialogue = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 
   async function afficher(): Promise<void> {
@@ -47,12 +48,14 @@ describe('UserListComponent', () => {
     fixture = TestBed.createComponent(UserListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
   async function stabiliser(): Promise<void> {
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -71,9 +74,9 @@ describe('UserListComponent', () => {
     await afficher();
 
     expect(noms()).toEqual(['admin', 'rh.fatima', 'ancien']);
-    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 4).map((td) => td.textContent?.replace(/\s+/g, ' ').trim());
+    const ligne = (i: number) => lignesGrille(racine())[i].cells.slice(0, 4).map((td) => td.textContent?.replace(/\s+/g, ' ').trim());
     expect(ligne(1)).toEqual(['rh.fatima', 'rh.fatima@staport.ma', 'RHComptable', 'Actif']);
-    expect(Array.from(racine().querySelectorAll('tbody tr')[1].querySelectorAll('.user-list__role-tag')).map((r) => r.textContent?.trim())).toEqual(['RH', 'Comptable']);
+    expect(Array.from(lignesGrille(racine())[1].querySelectorAll('.user-list__role-tag')).map((r) => r.textContent?.trim())).toEqual(['RH', 'Comptable']);
     expect(ligne(2)[3]).toBe('Inactif');
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('3 utilisateurs');
   });

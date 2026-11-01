@@ -1,3 +1,4 @@
+import { attendreGrille } from '../../../shared/testing/grille';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
@@ -49,15 +50,15 @@ describe('PaieParcoursComponent', () => {
     const appel = afficher(PARCOURS);
 
     expect(appel).toHaveBeenCalledWith(9);
-    expect(texte('.parcours__tuile strong')).toEqual(['3', '13 200,00', '78', 'septembre 2026']);
-    expect(texte('.parcours__tuile small')[0]).toBe('juillet 2026 → septembre 2026');
+    expect(texte('.app-kpi strong')).toEqual(['3', '13 200,00', '78', 'septembre 2026']);
+    expect(texte('.app-kpi small')[0]).toBe('juillet 2026 → septembre 2026');
   });
 
   it('raconte les changements mois par mois, du plus récent au plus ancien', () => {
     afficher(PARCOURS);
 
-    expect(texte('.parcours__date')).toEqual(['septembre 2026', 'août 2026', 'juillet 2026']);
-    expect(texte('.parcours__evenement')).toEqual([
+    expect(texte('.app-timeline__date')).toEqual(['septembre 2026', 'août 2026', 'juillet 2026']);
+    expect(texte('.app-timeline__event')).toEqual([
       'Salaire : 4 000,00 → 4 500,00',
       'Équipe : OP → sans équipe',
       'Fonction : OPERATEUR → CHAUFFEUR',
@@ -67,10 +68,11 @@ describe('PaieParcoursComponent', () => {
     ]);
   });
 
-  it('liste les bulletins, chacun ouvrant sa fiche', () => {
+  it('liste les bulletins, chacun ouvrant sa fiche', async () => {
     afficher(PARCOURS);
+    await attendreGrille(fixture);
 
-    const liens = Array.from(racine().querySelectorAll('tbody a')).map((a) => [a.textContent, a.getAttribute('href')]);
+    const liens = Array.from(racine().querySelectorAll('.ag-cell a')).map((a) => [a.textContent, a.getAttribute('href')]);
     expect(liens).toEqual([
       ['septembre 2026', '/paie/33'],
       ['août 2026', '/paie/22'],

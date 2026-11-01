@@ -6,17 +6,17 @@
     <button stp-button variant="secondary" type="button" (click)="reessayer()">Réessayer</button>
   </div>
 } @else if (versions().length === 0) {
-  <p class="audit-historique__vide">Aucune version enregistrée pour cet enregistrement.</p>
+  <p class="app-muted">Aucune version enregistrée pour cet enregistrement.</p>
 }
 
-<ol class="audit-historique">
+<ol class="app-versions">
   @for (version of versions(); track version.revision) {
-    <li class="audit-historique__version">
-      <header class="audit-historique__entete">
+    <li class="app-card">
+      <header class="app-versions__head">
         <strong>{{ libelleOperation(version.operation) }}</strong>
         <span>{{ formaterHorodatage(version.horodatage) }}</span>
         <span>par {{ version.utilisateurNom }}</span>
-        <span class="audit-historique__origine">{{ libelleOrigine(version.origine) }}</span>
+        <span class="app-versions__origin">{{ libelleOrigine(version.origine) }}</span>
       </header>
       <app-audit-champs [champs]="version.champs"></app-audit-champs>
     </li>

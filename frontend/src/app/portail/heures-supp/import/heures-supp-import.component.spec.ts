@@ -6,8 +6,8 @@ import { of, throwError } from 'rxjs';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { HeuresSuppImportAnalyse, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppImportComponent } from './heures-supp-import.component';
@@ -138,7 +138,7 @@ describe('HeuresSuppImportComponent', () => {
     const boutonImporter = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Confirmer l’import')) as HTMLButtonElement;
     boutonImporter.click();
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('IMPORT TERMINÉ');
+    expect(document.body.textContent).toContain('lignes importées');
   });
 
   it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {

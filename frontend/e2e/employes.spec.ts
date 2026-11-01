@@ -58,10 +58,7 @@ test.describe('Employés — Cartes et Analytique', () => {
     await page.goto('/employees/cartes');
 
     await expect(page.getByRole('navigation', { name: 'Vue des employés' }).getByRole('link')).toHaveCount(3);
-    const exportPdf = page.getByRole('button', { name: 'Exporter les résultats de ce périmètre en PDF' });
-    await expect(exportPdf).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(exportPdf).toBeVisible();
     const largeurApresRedimensionnement = await page.evaluate(() => new Promise<number>(resolve => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve(document.documentElement.scrollWidth)));
     }));
@@ -76,10 +73,11 @@ test.describe('Employés — Cartes et Analytique', () => {
     await page.getByRole('button', { name: 'Ouvrir CH. CAMION' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3&equipeIds=5&fonctionIds=2$/);
     await expect(page.getByRole('link', { name: /ALAMI Karim/ })).toHaveAttribute('href', '/employees/9');
-    const accessibilite = await new AxeBuilder({ page }).include('.perimetre-cartes').analyze();
+    const accessibilite = await new AxeBuilder({ page }).include('.app-entitys').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
 
-    await page.getByRole('link', { name: 'Voir la liste' }).click();
+    // Les onglets de vue gardent le périmètre : la vue Tabulaire reprend les mêmes filtres.
+    await page.getByRole('navigation', { name: /Vues? des employés/ }).getByRole('link', { name: 'Tabulaire' }).click();
     await expect(page).toHaveURL(/\/employees\?(?=.*chantierIds=3)(?=.*equipeIds=5)(?=.*fonctionIds=2).*$/);
   });
 
@@ -90,13 +88,10 @@ test.describe('Employés — Cartes et Analytique', () => {
     await expect(page.getByText('37,4 ans')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Pyramide des âges' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mouvements mois par mois' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Exporter la pyramide des âges en PDF' })).toBeVisible();
-    expect(await page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button').count()).toBeGreaterThanOrEqual(5);
-    await expect(page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button button[aria-label^="Exporter"]')).toHaveCount(await page.locator('.perimetre-analytique__section--exportable > app-pdf-export-button').count());
     await expect(page.locator('a.stp-button', { hasText: 'Voir les cartes' })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-    const accessibilite = await new AxeBuilder({ page }).include('.perimetre-analytique').analyze();
+    const accessibilite = await new AxeBuilder({ page }).include('.app-dashboard').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
   });
 });

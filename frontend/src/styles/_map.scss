@@ -1,0 +1,328 @@
+// Carte des chantiers (MapLibre) : contrôles, épingles, fiche d'un lieu et barre de recherche. Les classes app-map et app-map-page sont aussi
+// posées par le code qui construit les marqueurs et les fiches (éléments créés hors des gabarits).
+@use 'breakpoints' as bp;
+
+.app-map-page.app-page {
+  padding: 0;
+}
+
+.app-map-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: max(26rem, 100svh);
+}
+
+.app-map-page__map { flex: 1 1 auto; min-height: 0; }
+
+.app-map-page__search {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-md);
+  inset-inline-start: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: min(23rem, calc(100% - 2 * var(--space-md)));
+  min-height: 2.75rem;
+  padding: 0 var(--space-sm-md);
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-md);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text);
+  box-shadow: var(--map-ui-shadow);
+}
+
+.app-map-page__search-icon { flex: 0 0 auto; color: var(--map-ui-icon); }
+
+.app-map-page__input {
+  flex: 1 1 auto;
+  width: 5rem;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--map-ui-text);
+  font: inherit;
+  font-size: var(--text-sm);
+
+  &::placeholder { color: var(--map-ui-text-muted); opacity: 1; }
+  &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: 2px; border-radius: var(--radius-xs); }
+}
+
+.app-map-page__sep { align-self: stretch; width: 1px; margin-block: var(--space-xs); background: var(--map-ui-border); }
+
+.app-map-page__kind {
+  flex: 0 0 8rem;
+  width: 8rem;
+
+  .stp-select__input {
+    min-height: 2.5rem;
+    padding-inline: var(--space-xs) 2rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--map-ui-text);
+    font-size: var(--text-sm);
+
+    &:hover { background: color-mix(in srgb, var(--map-ui-icon) 9%, transparent); }
+    &:focus-visible { outline: 2px solid var(--map-ui-focus); outline-offset: -1px; }
+  }
+
+  .stp-select__toggle { inset-inline-end: 0; color: var(--map-ui-icon); }
+}
+
+.app-map-page__retry,
+.app-map-page__empty {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--space-md) + 3.5rem);
+  inset-inline-start: var(--space-md);
+}
+
+.app-map-page__empty {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text-muted);
+  font-size: var(--text-xs);
+}
+
+// La carte occupe tout l'écran ; la recherche et les commandes se posent dans son angle de début (la barre Staport a le menu).
+@include bp.phone {
+  .app-map-page__search {
+    top: var(--space-sm);
+    inset-inline-start: var(--space-sm);
+    width: calc(100% - 2 * var(--space-sm));
+  }
+}
+
+// L'élément racine appartient à MapLibre : il le place en `position: absolute` et le déplace par `transform` à chaque image.
+// Ne jamais y toucher (ni position, ni transform, ni transition) : le marqueur glisserait hors de son site au zoom.
+// L'aspect et l'animation sont portés par l'épingle qu'il contient.
+.app-map__marker {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem; // = HAUTEUR_EPINGLE_PX
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  &::after {
+    position: absolute;
+    z-index: 2;
+    inset-inline-start: calc(100% + 0.75rem);
+    top: 50%;
+    width: max-content;
+    max-width: min(18rem, 62vw);
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--map-tooltip-border);
+    border-radius: var(--radius-md);
+    background: var(--map-tooltip-surface);
+    box-shadow: var(--map-marker-tooltip-shadow);
+    color: var(--map-tooltip-text);
+    content: attr(data-tooltip);
+    font: 600 var(--text-sm)/1.55 var(--font-sans, sans-serif);
+    white-space: pre-line;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-0.25rem, -50%);
+    transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  }
+
+  &:hover::after,
+  &:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+}
+
+.app-map__pin {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0.15rem 0.35rem rgba(0, 5, 13, 0.55));
+  // Grossit depuis sa pointe : le site désigné ne bouge pas.
+  transform-origin: 50% 92%;
+  transition: transform var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+
+  .app-map__marker:hover &,
+  .app-map__marker:focus-visible & {
+    filter: drop-shadow(0 0 0.6rem var(--map-marker-core));
+    transform: scale(1.15);
+  }
+}
+
+.app-map__pin-body {
+  fill: var(--map-marker-core);
+  stroke: var(--map-marker-ring);
+  stroke-width: 1.5;
+}
+
+.app-map__pin-center { fill: var(--map-ui-canvas); }
+
+.app-map__marker:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+// La carte remplit l'espace que lui laisse la page ; le conteneur MapLibre est positionné dedans (pas de hauteur en pourcentage).
+.app-map-host {
+  display: block;
+  position: relative;
+  height: 100%;
+  min-height: 20rem;
+}
+
+.app-map {
+  // L'univers cartographique et ses contrôles restent nocturnes, même si l'application est en thème clair.
+  color-scheme: dark;
+  --color-surface-sunken: var(--map-ui-canvas);
+  --color-surface-hover: color-mix(in srgb, var(--map-ui-text) 10%, var(--map-ui-surface));
+  --color-border-strong: var(--map-ui-border);
+  --color-surface: var(--map-ui-surface);
+  --color-surface-alt: var(--map-ui-canvas);
+  --color-border: var(--map-ui-border);
+  --color-text: var(--map-ui-text);
+  --color-text-muted: var(--map-ui-text-muted);
+  --color-primary: var(--map-ui-primary);
+  --color-focus: var(--map-ui-focus);
+  --color-focus-soft: var(--map-ui-focus-soft);
+  --map-icon-filter: none;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.app-map__canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+}
+
+.app-map__error {
+  position: absolute;
+  top: var(--space-md);
+  inset-inline-end: var(--space-md);
+  z-index: 2;
+  width: min(28rem, calc(100% - 2 * var(--space-md)));
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+}
+
+// Commandes sans panneau : une colonne légère, immédiatement sous la recherche de la page.
+.app-map__controls {
+  position: absolute;
+  inset-inline-start: var(--space-md);
+  top: calc(var(--space-md) + 3.5rem);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  max-height: calc(100% - 7rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.app-map__modes { display: contents; }
+
+.app-map__tool {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 2rem;
+  padding: 0.15rem 0.25rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--map-ui-text);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-shadow: 0 1px 5px var(--map-ui-canvas);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out);
+
+  stp-icon { color: var(--map-ui-icon); font-size: 1rem; }
+  &:hover { color: var(--map-ui-highlight); }
+  &:hover stp-icon { color: var(--map-ui-highlight); }
+
+  &[aria-pressed='true'] { color: var(--map-ui-highlight); }
+  &[aria-pressed='true'] stp-icon { color: var(--map-ui-highlight); }
+  &:focus-visible {
+    outline: 2px solid var(--map-ui-focus);
+    outline-offset: 2px;
+  }
+}
+
+.app-map__sep { width: 1.6rem; height: 1px; margin: 0.25rem 0.4rem; background: color-mix(in srgb, var(--map-ui-icon) 54%, transparent); }
+
+// ---- Fiche d'un lieu ----
+.app-map .maplibregl-popup-content {
+  padding: var(--space-sm-md) var(--space-md);
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-map .maplibregl-popup-tip {
+  border-top-color: var(--color-surface);
+  border-bottom-color: var(--color-surface);
+}
+
+.app-map__card {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.app-map__card-site {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-sm);
+  min-width: 13rem;
+
+  & + & { margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--map-ui-border); }
+}
+
+.app-map__card-code { color: var(--map-ui-focus); font-weight: 700; }
+.app-map__card-name { color: var(--map-ui-text); font-weight: 650; }
+.app-map__card-kind {
+  grid-column: 2;
+  justify-self: start;
+  margin: 0;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--map-ui-border);
+  border-radius: var(--radius-pill);
+  background: var(--map-ui-canvas);
+  color: var(--map-ui-text-muted);
+  font-size: var(--text-xs);
+}
+
+.app-map .maplibregl-ctrl-attrib.maplibregl-compact,
+.app-map .maplibregl-ctrl-attrib {
+  background: var(--map-ui-surface);
+  color: var(--map-ui-text-muted);
+}
+
+.app-map .maplibregl-ctrl-logo { display: none; }
+
+.app-map .maplibregl-ctrl-attrib a {
+  color: var(--map-ui-text);
+}
+
+// En plein écran, l'hôte prend tout l'écran : la carte le remplit toujours.
+.app-map-host:fullscreen {
+  width: 100%;
+  height: 100%;
+}
+

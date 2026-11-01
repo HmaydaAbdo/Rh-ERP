@@ -78,3 +78,85 @@ export function optionsLigne(montants: boolean): ChartOptions<'line'> {
     }
   };
 }
+
+/** Unité d'une mesure d'effectif ou de masse : un graphique groupé donne un axe à chaque unité (deux au plus). */
+export type UniteMesure = 'personnes' | 'dh';
+
+export function uniteDeMesure(mesure: string): UniteMesure {
+  return mesure === 'masse' || mesure === 'stcMontant' ? 'dh' : 'personnes';
+}
+
+/** Unités présentes dans une sélection de mesures, dans l'ordre de la sélection : la première porte l'axe principal. */
+export function unitesDesMesures(mesures: readonly string[]): UniteMesure[] {
+  return Array.from(new Set(mesures.map(uniteDeMesure)));
+}
+
+/** Identifiant d'axe d'une mesure : `base` pour l'unité principale, `base1` pour la seconde. */
+export function axeDeMesure(base: 'x' | 'y', mesure: string, unites: readonly UniteMesure[]): string {
+  return unites.indexOf(uniteDeMesure(mesure)) <= 0 ? base : `${base}1`;
+}
+
+function axeValeurs(unite: UniteMesure, choix: { principal: boolean; deuxUnites: boolean; position: 'left' | 'right' | 'top' | 'bottom' }) {
+  const valeurs = (v: string | number) => (unite === 'dh' ? formaterMontant(Number(v)) : FORMAT_ENTIER.format(Number(v)));
+  return {
+    type: 'linear' as const,
+    position: choix.position,
+    beginAtZero: true,
+    grace: '8%',
+    ticks: { color: jeton('--color-text-muted'), font: police(), precision: 0, callback: valeurs },
+    grid: choix.principal ? grille() : { display: false },
+    border: { display: false },
+    title: choix.deuxUnites
+      ? { display: true, text: unite === 'dh' ? 'Montants (DH)' : 'Bulletins', color: jeton('--color-text-muted'), font: police() }
+      : { display: false }
+  };
+}
+
+/**
+ * Barres horizontales groupées : plusieurs indicateurs côte à côte dans un même graphique, un axe de valeurs par unité
+ * (décision du 2026-11-01). Les groupes sont sur l'axe `y`, la première unité sur `x` en bas, la seconde sur `x1` en haut.
+ */
+export function optionsBarresGroupees(unites: readonly UniteMesure[]): ChartOptions<'bar'> {
+  const deuxUnites = unites.length > 1;
+  const categories = { color: jeton('--color-text-muted'), font: police(), autoSkip: false, maxRotation: 0 };
+  const scales: Record<string, unknown> = {
+    y: { ticks: categories, grid: { display: false }, border: { display: false } },
+    x: axeValeurs(unites[0] ?? 'personnes', { principal: true, deuxUnites, position: 'bottom' })
+  };
+  if (deuxUnites) {
+    scales['x1'] = axeValeurs(unites[1], { principal: false, deuxUnites, position: 'top' });
+  }
+  return {
+    maintainAspectRatio: false,
+    animation: animationGraphique(),
+    indexAxis: 'y',
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, position: 'bottom', labels: { color: jeton('--color-text'), font: police(), boxWidth: 12 } },
+      tooltip: { ...infobulle() }
+    },
+    scales: scales as ChartOptions<'bar'>['scales']
+  };
+}
+
+/** Évolutions mensuelles groupées : une courbe par indicateur, un axe `y` par unité, la seconde à droite. */
+export function optionsLigneGroupee(unites: readonly UniteMesure[]): ChartOptions<'line'> {
+  const deuxUnites = unites.length > 1;
+  const scales: Record<string, unknown> = {
+    x: { ticks: { color: jeton('--color-text-muted'), font: police(), autoSkip: true, maxRotation: 0 }, grid: { display: false }, border: { display: false } },
+    y: axeValeurs(unites[0] ?? 'personnes', { principal: true, deuxUnites, position: 'left' })
+  };
+  if (deuxUnites) {
+    scales['y1'] = axeValeurs(unites[1], { principal: false, deuxUnites, position: 'right' });
+  }
+  return {
+    maintainAspectRatio: false,
+    animation: animationGraphique(),
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, position: 'bottom', labels: { color: jeton('--color-text'), font: police(), boxWidth: 12 } },
+      tooltip: { ...infobulle() }
+    },
+    scales: scales as ChartOptions<'line'>['scales']
+  };
+}

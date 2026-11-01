@@ -4,8 +4,10 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableComponent } from '../../../shared/ui/table/table.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
@@ -14,12 +16,12 @@ import { EquipeService } from '../services/equipe.service';
 
 @Component({
   selector: 'app-equipe-actions',
-  imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
+  imports: [TableComponent, RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './equipe-actions.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `.equipe-actions__fichier { display: none; }`
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquipeActionsComponent {
+  protected readonly colonnesIgnorees: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'code', header: 'Code' }, { field: 'libelle', header: 'Libellé' }, { field: 'raison', header: 'Raison' }];
   readonly importe = output<void>();
   private readonly equipeService = inject(EquipeService);
   private readonly notificationService = inject(NotificationService);

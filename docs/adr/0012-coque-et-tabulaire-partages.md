@@ -12,7 +12,7 @@ Les domaines ont toutefois des contrats différents : colonnes et rendu des cell
 
 ## Décision
 
-1. Créer dans `frontend/src/app/shared/components/` un composant partagé de coque de collection. Il rend le titre, le sélecteur de vues, les emplacements d'actions et de filtres, ainsi que le `RouterOutlet`. Une configuration typée fournit le titre, le libellé accessible et les trois liens.
+1. Créer dans `frontend/src/app/shared/ui/` un composant partagé de coque de collection. Il rend le titre, le sélecteur de vues, les emplacements d'actions et de filtres, ainsi que le `RouterOutlet`. Une configuration typée fournit le titre, le libellé accessible et les trois liens.
 2. Créer un composant partagé de vue Tabulaire. Il rend le compteur, le choix des colonnes et `stp-table`, et relaie la pagination serveur ainsi que les événements de chargement et de réordonnancement. Une configuration typée fournit les libellés; le domaine passe ses données et son `ColumnState`.
 3. Les filtres, adaptateurs API, critères, colonnes, rendu des cellules, actions de ligne, permissions et règles métier restent déclarés dans le domaine propriétaire. Les actions et filtres entrent dans la coque par projection de contenu ; les cellules et actions de ligne entrent dans la vue Tabulaire par les contrats existants de `stp-table`.
 4. Appliquer le pattern aux cinq domaines dans l'ordre de revue demandé : Équipe, Fonction, Chantier, Employé, Paie. Les routes de création, détail et modification restent hors de la coque de collection.

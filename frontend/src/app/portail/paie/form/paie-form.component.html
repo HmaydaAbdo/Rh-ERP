@@ -1,6 +1,6 @@
 <div class="paie-form app-page app-page--wide">
   <a routerLink="/paie" class="app-back"><stp-icon name="arrow-left" /> Paie</a>
-  <div class="app-page__header">
+  <div class="app-page__header"><stp-dock-declencheur />
     <h1>{{ isEditMode() ? 'Modifier le bulletin' : 'Nouveau bulletin de paie' }}</h1>
   </div>
 
@@ -12,7 +12,7 @@
     </stp-message>
   } @else {
   @if (isEditMode()) {
-    <stp-message severity="info" text="L'employé et la période ne sont pas modifiables après création — un bulletin est un document historique." class="paie-form__notice"></stp-message>
+    <stp-message severity="info" text="L'employé et la période ne sont pas modifiables après création — un bulletin est un document historique."></stp-message>
   }
 
   <form [formRoot]="form" class="app-form__grid app-form__grid--3">

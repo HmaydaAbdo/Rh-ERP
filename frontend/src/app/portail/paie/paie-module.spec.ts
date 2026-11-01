@@ -30,7 +30,4 @@ describe('MODULE_PAIE', () => {
     });
   });
 
-  it('revient à la vue Tabulaire avec les filtres de la barre', () => {
-    expect(MODULE_PAIE.parametresListe(params({ periode: '2026-08', nom: 'ali', chantierIds: '3,4' }))).toMatchObject({ periode: '2026-08', nom: 'ali', chantierIds: '3,4' });
-  });
 });

@@ -11,7 +11,7 @@ dependencies = [
     "httpx",
     "openai",
     "mcp",
-    "langgraph",
+    "langgraph>=1.2.19",
     "ag-ui-protocol==1.0.0",
     "ag-ui-langgraph==0.0.47",
     "langchain[mcp]>=1.4.7",
@@ -21,7 +21,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http==1.45.1",
     "opentelemetry-instrumentation-fastapi==0.66b1",
     "opentelemetry-instrumentation-httpx==0.66b1",
-    "openinference-instrumentation-langchain==0.1.80",
+    "openinference-instrumentation-langchain==0.1.81",
     "langgraph-checkpoint-postgres>=3.2.0",
     "psycopg[binary,pool]>=3.3.6",
 ]

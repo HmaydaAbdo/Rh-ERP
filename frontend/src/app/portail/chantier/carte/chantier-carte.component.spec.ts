@@ -41,10 +41,10 @@ describe('ChantierCarteComponent', () => {
     ]);
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
-    expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(1);
-    const marqueur = element.querySelector<HTMLButtonElement>('.chantier-carte__marqueur')!;
+    expect(element.querySelectorAll('.app-map__marker')).toHaveLength(1);
+    const marqueur = element.querySelector<HTMLButtonElement>('.app-map__marker')!;
     expect(marqueur.textContent).toBe('');
-    expect(marqueur.querySelector('svg.chantier-carte__epingle')).not.toBeNull();
+    expect(marqueur.querySelector('svg.app-map__pin')).not.toBeNull();
     // MapLibre seul positionne la racine du marqueur, ancrée sur la pointe de l'épingle.
     expect(marqueur.classList).toContain('maplibregl-marker');
     expect(marqueur.classList).toContain('maplibregl-marker-anchor-bottom');
@@ -59,7 +59,7 @@ describe('ChantierCarteComponent', () => {
     expect(element.querySelector('.maplibregl-popup')?.textContent).not.toContain('Google Maps');
     fixture.componentRef.setInput('chantiers', []);
     await fixture.whenStable();
-    expect(element.querySelectorAll('.chantier-carte__marqueur')).toHaveLength(0);
+    expect(element.querySelectorAll('.app-map__marker')).toHaveLength(0);
   });
 
   it('dessine une carte accessible et propose ses commandes sans chrome MapLibre redondant', async () => {
@@ -95,7 +95,7 @@ describe('ChantierCarteComponent', () => {
     await fixture.whenStable();
     const element: HTMLElement = fixture.nativeElement;
     const bouton = (nom: string) =>
-      [...element.querySelectorAll<HTMLButtonElement>('.chantier-carte__outil')].find((b) => b.textContent?.trim() === nom)!;
+      [...element.querySelectorAll<HTMLButtonElement>('.app-map__tool')].find((b) => b.textContent?.trim() === nom)!;
     expect(bouton('Plan').getAttribute('aria-pressed')).toBe('true');
     expect(bouton('Relief').getAttribute('aria-pressed')).toBe('true');
 
@@ -162,7 +162,7 @@ describe('ChantierCarteComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')).toBeNull();
   });
 
-  it("garde le style cartographique et ne redessine pas la carte quand le thème de l'application change", async () => {
+  it("redessine la carte, plan clair ou sombre, quand le thème de l'application change", async () => {
     const setStyle = vi.spyOn(CarteMapLibre.prototype, 'setStyle');
     localStorage.setItem('staport-theme', 'light');
     const theme = TestBed.inject(ThemeService);
@@ -174,7 +174,7 @@ describe('ChantierCarteComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(setStyle).toHaveBeenCalledTimes(appelsALaCreation);
+    expect(setStyle).toHaveBeenCalledTimes(appelsALaCreation + 1);
   });
 
   it('suit la taille de son conteneur', async () => {

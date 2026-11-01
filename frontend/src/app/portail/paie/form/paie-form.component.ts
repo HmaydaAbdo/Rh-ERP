@@ -1,11 +1,12 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, FormRoot, max, maxLength, min, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
@@ -50,7 +51,7 @@ interface PaieSaisie {
 
 @Component({
   selector: 'app-paie-form',
-  imports: [
+  imports: [DockDeclencheurComponent, 
     FormField,
     FormRoot,
     RouterLink,
@@ -63,8 +64,7 @@ interface PaieSaisie {
     MonthInputComponent
   ],
   templateUrl: './paie-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './paie-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieFormComponent {
   private readonly paieService = inject(PaieService);

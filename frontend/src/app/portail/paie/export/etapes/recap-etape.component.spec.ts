@@ -3,7 +3,7 @@ import { CHANTIERS, PERIODES, TABLEAUX, monterEtape, stabiliser } from './etapes
 
 describe('PaieExportEtapeRecapComponent', () => {
   const lignes = (racine: HTMLElement) =>
-    Array.from(racine.querySelectorAll('.export-wizard__recap > div')).map((l) => [l.querySelector('span')?.textContent, l.querySelector('strong')?.textContent?.replace(/\s+/g, ' ').trim()]);
+    Array.from(racine.querySelectorAll('.app-wizard__recap > div')).map((l) => [l.querySelector('span')?.textContent, l.querySelector('strong')?.textContent?.replace(/\s+/g, ' ').trim()]);
 
   async function monter() {
     return monterEtape(PaieExportEtapeRecapComponent, (store) => {
@@ -23,7 +23,7 @@ describe('PaieExportEtapeRecapComponent', () => {
       ['Vue d\'ensemble', 'Incluse'],
       ['Détail par équipe', 'Aucun, une section par chantier']
     ]);
-    expect(racine.querySelector('.export-wizard__fichier code')?.textContent).toBe('Paie_Rapport_BI_2026-08.pdf');
+    expect(racine.querySelector('.app-wizard__fichier code')?.textContent).toBe('Paie_Rapport_BI_2026-08.pdf');
   });
 
   it('en Excel, n’affiche ni chantier ni vue d’ensemble, et nomme le classeur', async () => {
@@ -34,7 +34,7 @@ describe('PaieExportEtapeRecapComponent', () => {
 
     expect(lignes(racine).map((l) => l[0])).toEqual(['Période', 'Format', 'Détail par équipe']);
     expect(lignes(racine)[1][1]).toBe('Classeur Excel détaillé');
-    expect(racine.querySelector('.export-wizard__fichier code')?.textContent).toBe('Paie_Export_2026-08.xlsx');
+    expect(racine.querySelector('.app-wizard__fichier code')?.textContent).toBe('Paie_Export_2026-08.xlsx');
   });
 
   it('montre le marché choisi et la vue d’ensemble retirée', async () => {
@@ -65,7 +65,7 @@ describe('PaieExportEtapeRecapComponent', () => {
     store.etape.set('recap');
     await stabiliser(fixture);
 
-    const modifier = (ligne: number) => racine.querySelectorAll('.export-wizard__recap > div')[ligne].querySelector('button') as HTMLButtonElement;
+    const modifier = (ligne: number) => racine.querySelectorAll('.app-wizard__recap > div')[ligne].querySelector('button') as HTMLButtonElement;
     modifier(0).click();
     expect(store.etape()).toBe('periode');
 

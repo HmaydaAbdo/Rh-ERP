@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { ChantierService } from '../services/chantier.service';
 

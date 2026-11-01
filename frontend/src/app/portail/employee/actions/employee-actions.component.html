@@ -7,7 +7,7 @@
   }
 </div>
 
-<input #fileInput type="file" accept=".xlsx" class="employee-actions__fichier" (change)="onFileSelected($event)" />
+<input #fileInput type="file" accept=".xlsx" class="hidden" (change)="onFileSelected($event)" />
 
 <stp-dialog header="Résultat de l'import" width="640px" [(open)]="showImportResultDialog">
   @if (importResult(); as result) {
@@ -18,29 +18,7 @@
     </p>
 
     @if (result.lignesIgnorees.length > 0) {
-      <div class="app-static-table-scroll" role="region" tabindex="0" aria-label="Lignes d’employés ignorées à l’import">
-        <table class="app-static-table">
-          <caption class="app-lecteur">Détail des lignes d'employés ignorées pendant l'import</caption>
-          <thead>
-            <tr>
-              <th scope="col">Ligne</th>
-              <th scope="col">CIN</th>
-              <th scope="col">Nom &amp; prénom</th>
-              <th scope="col">Raison</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (ligne of result.lignesIgnorees; track ligne.numeroLigne) {
-              <tr>
-                <td>{{ ligne.numeroLigne }}</td>
-                <td>{{ ligne.cin }}</td>
-                <td>{{ ligne.nomPrenom }}</td>
-                <td>{{ ligne.raison }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <stp-table label="Lignes d’employés ignorées à l’import" [value]="result.lignesIgnorees" [columns]="colonnesIgnorees" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
     }
   }
 </stp-dialog>

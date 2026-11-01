@@ -33,7 +33,7 @@ const SPACES = /[\s  ]/g;
     }
 
     input {
-      text-align: right;
+      text-align: end;
     }
   `
 })

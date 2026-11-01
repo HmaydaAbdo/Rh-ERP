@@ -16,16 +16,16 @@ describe('PaieExportEtapeMaterielComponent', () => {
   it('présente un tableau par équipe détaillée, avec le chantier concerné', async () => {
     const { racine } = await monter();
 
-    expect(racine.querySelector('.export-wizard__contexte')?.textContent).toContain('Chantier C168');
-    expect(racine.querySelector('.export-wizard__tableau-tete h4')?.textContent).toBe('Camions C168');
+    expect(racine.querySelector('.app-wizard__contexte')?.textContent).toContain('Chantier C168');
+    expect(racine.querySelector('.app-wizard__tableau-tete h4')?.textContent).toBe('Camions C168');
     expect(racine.textContent).toContain('Équipe Chauffeurs');
-    expect(Array.from(racine.querySelectorAll('.export-wizard__ligne label')).map((l) => l.textContent)).toEqual(['Camion benne', 'Camion citerne']);
+    expect(Array.from(racine.querySelectorAll('.app-wizard__ligne label')).map((l) => l.textContent)).toEqual(['Camion benne', 'Camion citerne']);
   });
 
   it('commence sans aucune ligne renseignée', async () => {
     const { racine } = await monter();
 
-    expect(racine.querySelector('.export-wizard__progression')?.textContent).toContain('0 sur 2 renseignées');
+    expect(racine.querySelector('.app-wizard__progression')?.textContent).toContain('0 sur 2 renseignées');
     expect(champ(racine, 'Camion benne').value).toBe('');
   });
 
@@ -37,7 +37,7 @@ describe('PaieExportEtapeMaterielComponent', () => {
     await stabiliser(fixture);
 
     expect(store.nombre('Camion benne')).toBe(12);
-    expect(racine.querySelector('.export-wizard__progression')?.textContent).toContain('1 sur 2 renseignées');
+    expect(racine.querySelector('.app-wizard__progression')?.textContent).toContain('1 sur 2 renseignées');
     expect(store.total(TABLEAUX[0])).toBe(12);
   });
 
@@ -81,15 +81,15 @@ describe('PaieExportEtapeMaterielComponent', () => {
 
   it('l’interrupteur laisse la colonne vide pour la remplir au stylo, et l’annonce', async () => {
     const { fixture, store, racine } = await monter();
-    const interrupteur = racine.querySelector('button[role="switch"]') as HTMLButtonElement;
-    expect(interrupteur.getAttribute('aria-checked')).toBe('false');
+    const interrupteur = racine.querySelector('input[role="switch"]') as HTMLInputElement;
+    expect(interrupteur.checked).toBe(false);
 
     interrupteur.click();
     await stabiliser(fixture);
 
     expect(store.estVide(TABLEAUX[0])).toBe(true);
-    expect(interrupteur.getAttribute('aria-checked')).toBe('true');
-    expect(racine.querySelector('.export-wizard__progression')?.textContent).toContain('Laissé vide');
+    expect(interrupteur.checked).toBe(true);
+    expect(racine.querySelector('.app-wizard__progression')?.textContent).toContain('Laissé vide');
   });
 
   it('Entrée passe au champ suivant', async () => {

@@ -8,7 +8,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-recap',
   imports: [IconComponent],
   templateUrl: './recap-etape.component.html',
-  styleUrl: './recap-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapeRecapComponent {

@@ -1,10 +1,11 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormField, FormRoot, disabled, form, min, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
@@ -35,9 +36,8 @@ function periodeTexte(periode: Date | null): string | null {
 
 @Component({
   selector: 'app-heures-supp-form',
-  imports: [DecimalPipe, FormField, FormRoot, RouterLink, LazySelectComponent, MessageComponent, MonthInputComponent, ButtonComponent, FieldErrorComponent, IconComponent, NumberInputComponent],
+  imports: [DockDeclencheurComponent, DecimalPipe, FormField, FormRoot, RouterLink, LazySelectComponent, MessageComponent, MonthInputComponent, ButtonComponent, FieldErrorComponent, IconComponent, NumberInputComponent],
   templateUrl: './heures-supp-form.component.html',
-  styleUrl: './heures-supp-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppFormComponent {

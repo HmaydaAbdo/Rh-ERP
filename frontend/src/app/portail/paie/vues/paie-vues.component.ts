@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/components/collection-shell/collection-shell.component';
+import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { PaieActionsComponent } from '../actions/paie-actions.component';
 import { AUCUN_FILTRE, lireFiltres, PaieFiltres, versParametres } from '../filtres/paie-filtres';
 import { PaieFiltresComponent } from '../filtres/paie-filtres.component';

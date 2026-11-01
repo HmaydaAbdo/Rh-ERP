@@ -1,7 +1,7 @@
 @if (loading() || erreurChargement()) {
   <div class="app-page app-page--narrow">
     <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
-    <div class="app-page__header"><h1>Fiche de l’employé</h1></div>
+    <div class="app-page__header"><stp-dock-declencheur /><h1>Fiche de l’employé</h1></div>
     @if (loading()) {
       <stp-message text="Chargement de l’employé…" />
     } @else {
@@ -14,9 +14,9 @@
   <div class="employee-fiche app-page">
     <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
 
-    <header class="employee-fiche__entete">
-      <span class="employee-fiche__initiales" aria-hidden="true">{{ initiales() }}</span>
-      <div class="employee-fiche__identite">
+    <header class="app-profile">
+      <span class="app-profile__avatar" aria-hidden="true">{{ initiales() }}</span>
+      <div class="app-profile__identity">
         <h1>{{ employee.nomPrenom }}</h1>
         <p>
           <span>CIN {{ employee.cin }}</span>
@@ -34,8 +34,8 @@
     </header>
 
     <section aria-labelledby="fiche-situation">
-      <h2 id="fiche-situation" class="employee-fiche__titre">Situation actuelle</h2>
-      <dl class="employee-fiche__situation">
+      <h2 id="fiche-situation" class="app-section-title">Situation actuelle</h2>
+      <dl class="app-facts">
         <div>
           <dt>Fonction</dt>
           <dd>{{ employee.fonction.libelle }}</dd>

@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { ConfirmDialogService } from '@shared/feedback/feedback.service';
+import { ConfirmDialogService } from '@shared/ui/feedback/feedback.service';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
 
 import { FormulaireProtege, unsavedChangesGuard } from './unsaved-changes.guard';

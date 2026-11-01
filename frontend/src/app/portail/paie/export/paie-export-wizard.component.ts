@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, effect, inject, model, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, model, untracked } from '@angular/core';
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
-import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { StepperComponent } from '../../../shared/ui/stepper/stepper.component';
+import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { PaieExportEtapeEquipesComponent } from './etapes/equipes-etape.component';
 import { PaieExportEtapeFormatComponent } from './etapes/format-etape.component';
 import { PaieExportEtapeChantierComponent } from './etapes/chantier-etape.component';
@@ -23,10 +24,9 @@ import { PaieExportStore } from './paie-export.store';
  */
 @Component({
   selector: 'app-paie-export-wizard',
-  imports: [
+  imports: [StepperComponent, WizardStateComponent, 
     ButtonComponent,
     DialogComponent,
-    IconComponent,
     PaieExportEtapePeriodeComponent,
     PaieExportEtapeFormatComponent,
     PaieExportEtapeChantierComponent,
@@ -36,13 +36,13 @@ import { PaieExportStore } from './paie-export.store';
   ],
   providers: [PaieExportStore],
   templateUrl: './paie-export-wizard.component.html',
-  styleUrl: './paie-export-wizard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportWizardComponent {
   readonly visible = model(false);
 
   protected readonly store = inject(PaieExportStore);
+  protected readonly etapesStepper = computed(() => this.store.etapes().map((id) => ({ id, libelle: this.store.libelleEtapes[id] })));
 
   constructor() {
     // À chaque ouverture (visible passe à vrai), l'assistant repart d'un état neuf.

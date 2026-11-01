@@ -1,4 +1,4 @@
-import { hauteurPourLignes, libelleTranche, libelleTrancheTotal } from './graphiques-perimetre';
+import { axeDeMesure, hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarresGroupees, optionsLigneGroupee, unitesDesMesures } from './graphiques-perimetre';
 
 describe('libelleTranche', () => {
   it('écrit les âges borne haute incluse, l’ancienneté de borne à borne', () => {
@@ -21,5 +21,22 @@ describe('hauteurPourLignes', () => {
   it('garde une hauteur minimale et grandit avec le nombre de lignes', () => {
     expect(hauteurPourLignes(2)).toBe(10);
     expect(hauteurPourLignes(20)).toBeCloseTo(44);
+  });
+});
+
+describe('graphiques groupés', () => {
+  it('range chaque indicateur sur l’axe de son unité, la première unité choisie étant l’axe principal', () => {
+    const unites = unitesDesMesures(['masse', 'effectif', 'stcMontant', 'stc']);
+
+    expect(unites).toEqual(['dh', 'personnes']);
+    expect(['masse', 'effectif', 'stcMontant', 'stc'].map((mesure) => axeDeMesure('y', mesure, unites))).toEqual(['y', 'y1', 'y', 'y1']);
+  });
+
+  it('ne crée un second axe, titré, que pour une seconde unité', () => {
+    expect(Object.keys(optionsLigneGroupee(['personnes']).scales ?? {})).toEqual(['x', 'y']);
+    expect(Object.keys(optionsLigneGroupee(['personnes', 'dh']).scales ?? {})).toEqual(['x', 'y', 'y1']);
+    expect(Object.keys(optionsBarresGroupees(['dh', 'personnes']).scales ?? {})).toEqual(['y', 'x', 'x1']);
+    expect((optionsLigneGroupee(['personnes']).scales?.['y'] as { title: { display: boolean } }).title.display).toBe(false);
+    expect((optionsLigneGroupee(['personnes', 'dh']).scales?.['y1'] as { title: { text: string } }).title.text).toBe('Montants (DH)');
   });
 });

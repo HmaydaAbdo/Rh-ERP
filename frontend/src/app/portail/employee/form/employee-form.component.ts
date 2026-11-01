@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField, FormRoot, maxLength, min, required, validate } from '@angular/forms/signals';
@@ -5,8 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
@@ -55,7 +56,7 @@ interface EmployeeSaisie {
 
 @Component({
   selector: 'app-employee-form',
-  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent, DateInputComponent, NumberInputComponent, MessageComponent],
+  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, LazySelectComponent, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent, DateInputComponent, NumberInputComponent, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-form.component.html'
 })

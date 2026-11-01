@@ -5,10 +5,10 @@ import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
-import { IconComponent } from '../../../shared/ui/icon/icon.component';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { CartesPerimetreComponent } from '../../perimetre/cartes/cartes-perimetre.component';
 import { cleIds, Dimension, LIBELLES_DIMENSIONS, Niveau, Portee } from '../../perimetre/perimetre';
 import { GroupeCarte, nomGroupe } from '../../perimetre/perimetre-groupes';
@@ -36,9 +36,8 @@ interface Suppression {
  */
 @Component({
   selector: 'app-paie-cartes',
-  imports: [FormField, ButtonComponent, DialogComponent, IconComponent, CartesPerimetreComponent],
+  imports: [FormField, ButtonComponent, DialogComponent, MessageComponent, CartesPerimetreComponent],
   templateUrl: './paie-cartes.component.html',
-  styleUrl: './paie-cartes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieCartesComponent {

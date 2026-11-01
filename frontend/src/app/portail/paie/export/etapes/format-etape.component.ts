@@ -8,7 +8,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-format',
   imports: [IconComponent],
   templateUrl: './format-etape.component.html',
-  styleUrl: './format-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapeFormatComponent {

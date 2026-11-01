@@ -34,7 +34,7 @@ const ANALYSE: PaieImportAnalyse = {
 describe('PaieImportWizardComponent', () => {
   let fixture: ComponentFixture<PaieImportWizardComponent>;
   let service: { analyserImport: ReturnType<typeof vi.fn>; corrigerImport: ReturnType<typeof vi.fn>; importer: ReturnType<typeof vi.fn> };
-  const dialogue = () => document.querySelector('.import-wizard') as HTMLElement;
+  const dialogue = () => document.querySelector('.app-wizard') as HTMLElement;
   const store = () => fixture.debugElement.injector.get(PaieImportStore);
 
   async function ouvrir(permissions: string[]): Promise<void> {
@@ -60,8 +60,8 @@ describe('PaieImportWizardComponent', () => {
   it('annonce le mois imposé avant le choix du fichier', async () => {
     await ouvrir(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE']);
 
-    expect(dialogue().querySelector('.import-wizard__mois strong')?.textContent).toBe('octobre 2026');
-    expect(dialogue().querySelector('.import-wizard__depot input[type="file"]')).not.toBeNull();
+    expect(dialogue().querySelector('.app-wizard__mois strong')?.textContent).toBe('octobre 2026');
+    expect(dialogue().querySelector('.app-wizard__depot input[type="file"]')).not.toBeNull();
   });
 
   it('range chaque problème avec sa solution : fichier, chantier à rouvrir, fiche à créer, fiche à mettre à jour', async () => {
@@ -74,7 +74,7 @@ describe('PaieImportWizardComponent', () => {
     expect(texte).toContain('Chantiers clôturés');
     expect(dialogue().querySelector('button[aria-label="Rouvrir le chantier C059"]')).not.toBeNull();
     expect(texte).toContain('NOUVEAU');
-    expect(Array.from(dialogue().querySelectorAll('.controle__ecarts dd')).map((dd) => dd.textContent?.replace(/\s+/g, ' ').trim()))
+    expect(Array.from(dialogue().querySelectorAll('.app-controle__ecarts dd')).map((dd) => dd.textContent?.replace(/\s+/g, ' ').trim()))
       .toEqual(['C059 devient C168', '4 000,00 devient 4 500,00']);
     const continuer = Array.from(dialogue().querySelectorAll('button')).find((b) => b.textContent?.includes('Continuer')) as HTMLButtonElement;
     expect(continuer.disabled).toBe(true);

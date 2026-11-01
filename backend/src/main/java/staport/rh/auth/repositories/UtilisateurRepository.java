@@ -16,6 +16,8 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long>,
     @Query("select u from Utilisateur u where upper(trim(u.username)) = upper(trim(:username))")
     Optional<Utilisateur> findByUsernameForUpdate(@Param("username") String username);
 
+    Optional<Utilisateur> findByUsernameIgnoreCase(String username);
+
     boolean existsByUsernameIgnoreCase(String username);
 
     boolean existsByEmailIgnoreCase(String email);

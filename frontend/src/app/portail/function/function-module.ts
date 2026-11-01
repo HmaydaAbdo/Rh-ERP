@@ -2,7 +2,7 @@ import { map } from 'rxjs';
 
 import { critereEmployesDe, criterePaieDe } from '../perimetre/perimetre';
 import { chargerToutLeReferentiel, ModulePerimetre } from '../perimetre/perimetre-module';
-import { filtreFunctionActif, lireFiltresFunction, versCriteresFunction, versParametresFunction } from './filtres/function-filtres';
+import { filtreFunctionActif, lireFiltresFunction, versCriteresFunction } from './filtres/function-filtres';
 import { FunctionService } from './services/function.service';
 
 /** Ce que le module Fonctions apporte aux vues Cartes et Analytique partagées (voir `portail/perimetre/`). */
@@ -18,7 +18,6 @@ export function moduleFunction(functionService: FunctionService): ModulePerimetr
     vueEffectifParDimension: true,
     introAnalytique: 'Répartition de la masse salariale et de l’effectif payé par fonction, puis évolution mensuelle.',
     periodePaieRecenteFixe: true,
-    sansRaccourciListe: true,
     sansRaccourciCartes: true,
     sansLienEmployes: true,
     lienEmployesPresDuNiveau: true,
@@ -29,7 +28,6 @@ export function moduleFunction(functionService: FunctionService): ModulePerimetr
     triCartesPaie: ['masse', 'effectif'],
     route: '/functions',
     permission: 'FUNCTION_READ',
-    parametresListe: (params) => versParametresFunction(lireFiltresFunction(params)),
     critereEmployes: (_params, portee) => critereEmployesDe(portee),
     criterePaie: (_params, portee, periode) => criterePaieDe(portee, periode),
     catalogue: {

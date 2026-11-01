@@ -17,8 +17,7 @@ La clarté de navigation de Codex sert de référence. Les règles métier ne ch
 - Parcours : authentification et navigation, Paie, Employés, Chantiers, Fonctions, Équipes, Administration (Utilisateurs,
   Rôles, Paramètres), puis Journal d'audit.
 - Connexion, mot de passe oublié et réinitialisation : scène centrée, sans logo, liste de fonctions ni libellé « Espace privé ».
-  La photo du chantier routier dans l'Atlas générée pour Staport RH est intégrée comme asset local dans
-  `frontend/src/assets/auth/staport-login-atlas.png`.
+  (Remplacé le 2026-10-31, E0.2 : carte plate `stp-auth-card` qui suit le thème ; la photo de fond a été supprimée.)
 - Menu latéral desktop iconique sans en-tête de marque ; infobulles et déploiement au survol/focus clavier. Le défilement
   reste possible sans barre visible. Sur écrans compacts, le menu est un tiroir accessible.
 - Navigation Chrome sur le `ng serve` lancé par l'utilisateur au port **4200** ; ne pas démarrer Docker ni un autre serveur.

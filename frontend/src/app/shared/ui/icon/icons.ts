@@ -9,6 +9,7 @@ import {
   LucideArrowUpDown,
   LucideArrowUpRight,
   LucideBox,
+  LucideBrain,
   LucideBriefcase,
   LucideBuilding,
   LucideCalendar,
@@ -36,6 +37,7 @@ import {
   LucideGitCompare,
   LucideGripVertical,
   LucideHistory,
+  LucideHouse,
   LucideInfo,
   LucideKeyRound,
   LucideLayers,
@@ -53,6 +55,7 @@ import {
   LucideSatellite,
   LucideScan,
   LucideSearch,
+  LucideSparkles,
   LucideSettings,
   LucideSlidersHorizontal,
   LucideTable,
@@ -65,6 +68,13 @@ import {
   LucideUsers,
   LucideWallet,
   LucideX,
+  LucideMenu,
+  LucideMoon,
+  LucideSun,
+  LucideMapPinned,
+  LucideNetwork,
+  LucideShield,
+  LucideUserCog,
   provideLucideIcons
 } from '@lucide/angular';
 
@@ -85,6 +95,7 @@ export function provideStaportIcons() {
     LucideArrowUpDown,
     LucideArrowUpRight,
     LucideBox,
+    LucideBrain,
     LucideBriefcase,
     LucideBuilding,
     LucideCalendar,
@@ -112,6 +123,7 @@ export function provideStaportIcons() {
     LucideGitCompare,
     LucideGripVertical,
     LucideHistory,
+    LucideHouse,
     LucideInfo,
     LucideKeyRound,
     LucideLayers,
@@ -129,6 +141,7 @@ export function provideStaportIcons() {
     LucideSatellite,
     LucideScan,
     LucideSearch,
+    LucideSparkles,
     LucideSettings,
     LucideSlidersHorizontal,
     LucideTable,
@@ -140,6 +153,13 @@ export function provideStaportIcons() {
     LucideUserPlus,
     LucideUsers,
     LucideWallet,
-    LucideX
+    LucideX,
+    LucideMenu,
+    LucideMoon,
+    LucideSun,
+    LucideMapPinned,
+    LucideNetwork,
+    LucideShield,
+    LucideUserCog
   );
 }

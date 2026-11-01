@@ -29,7 +29,7 @@ describe('paie-chart-theme', () => {
 
     expect(couleurEvolution('stc')).toBe('green');
     expect(couleurEvolution('stcMontant')).toBe('goldenrod');
-    expect(libelleEvolutionMesure('stc')).toBe('STC (personnes)');
+    expect(libelleEvolutionMesure('stc')).toBe('STC (bulletins)');
     expect(libelleEvolutionMesure('stcMontant')).toBe('STC (DH)');
   });
 });

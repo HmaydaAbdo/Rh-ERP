@@ -93,6 +93,12 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UserResponseDto findByUsername(String username) {
+        return toDto(repository.findByUsernameIgnoreCase(username).orElseThrow(() -> new UtilisateurNotFoundException(username)));
+    }
+
+    @Override
     @Transactional
     @AuditableAction(action = "UTILISATEUR_CREATION", type = TypeOperation.CREATE, entite = Utilisateur.class)
     public UserResponseDto create(UserCreateRequestDto dto) {

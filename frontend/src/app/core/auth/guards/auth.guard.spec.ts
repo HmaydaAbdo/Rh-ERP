@@ -32,7 +32,7 @@ describe('homeGuard', () => {
   it("renvoie vers le premier écran du menu auquel l'utilisateur a accès", () => {
     configurer(['EMPLOYEE_READ', 'CHANTIER_READ']);
     const resultat = TestBed.runInInjectionContext(() => homeGuard(null as never, null as never));
-    expect(url(resultat)).toBe('/employees');
+    expect(url(resultat)).toBe('/employees/cartes');
   });
 
   it("accueille le Président et les directeurs (rôle DIRECTION : CARTE_READ seule) sur la carte", () => {

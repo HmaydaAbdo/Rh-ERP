@@ -24,6 +24,12 @@ Ne pas y recopier de secrets ni le transcript de la conversation.
 
 * Traiter le sujet demandé point par point. Expliquer brièvement le résultat attendu et les domaines
   concernés, puis mener le travail autorisé jusqu'à son résultat vérifiable.
+* Avant tout changement d'interface, rechercher le composant correspondant dans le socle partagé,
+  le catalogue et ses usages dans les domaines. Consigner dans le plan ou la revue la correspondance
+  entre les besoins de l'écran et les composants retenus. Si une brique générique manque, proposer son
+  ajout au socle et au catalogue avant de la coder dans un domaine ; ne pas contourner cette étape par
+  une copie locale. Consulter l'inventaire [composants partagés](../docs/frontend/audit-composants-partages.md)
+  pour les écarts connus et le mettre à jour lorsque le constat change.
 * Pour une règle métier inconnue, un choix d'architecture important ou une modification de convention
   encore non approuvée : présenter le problème, les options et une recommandation, puis attendre
   l'accord. Préparer une proposition concrète à lire avant de demander cet accord.
@@ -41,7 +47,8 @@ Ne pas y recopier de secrets ni le transcript de la conversation.
 
 * Réutiliser le socle existant. Pour les collections, appliquer la coque, le Tabulaire, les Cartes et
   l'Analytique partagés et configurés par domaine selon [frontend.md](frontend.md). Garder les règles
-  métier, filtres, colonnes, actions et priorités propres au domaine.
+  métier, critères de filtre, colonnes, données, actions et priorités comme configuration métier ; leur
+  rendu et leurs interactions utilisent les composants partagés.
 * Conserver la parité des champs et des contraintes entre formulaires et imports ; signaler les
   champs requis et optionnels selon le contrat réellement appliqué.
 * Appliquer [testing.md](testing.md) : associer les règles et scénarios aux tests exécutables,
@@ -55,6 +62,10 @@ Ne pas y recopier de secrets ni le transcript de la conversation.
   interactions dans le navigateur, sur téléphone et grand écran, dans les deux thèmes, au clavier et
   avec les préférences d'accessibilité applicables. Vérifier aussi chargement, vide, erreur et refus
   selon le composant. Une capture seule ne prouve pas le fonctionnement d'un parcours.
+* Pour un composant partagé, vérifier sa présence au catalogue, ses états et ses usages dans tous les
+  domaines consommateurs modifiés. Une brique d'interface locale n'est pas justifiée par sa seule
+  spécificité métier : toute exception temporaire suit les preuves et l'accord préalable prévus dans
+  [frontend.md](frontend.md) et figure à l'inventaire avec son plan de sortie.
 * Respecter les services et ports du propriétaire décrits dans le handoff. Utiliser `localhost`
   pour la revue locale lorsqu'il est demandé ; les serveurs de test utilisent leur environnement
   dédié. Déclarer les contrôles impossibles ou interrompus et leur cause.

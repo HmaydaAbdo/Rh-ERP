@@ -13,6 +13,7 @@
 | Employé | [employee.md](employee.md) |
 | Paie (et rapport) | [paie.md](paie.md) |
 | Auth (comptes, rôles) | [auth.md](auth.md) |
+| Accueil | [accueil.md](accueil.md) |
 | Paramètres | [parametre.md](parametre.md) |
 | Audit (journal, historique) | [audit.md](audit.md) |
 | Carte des chantiers | [carte.md](carte.md) |
@@ -134,6 +135,9 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | | `POST /paie/export` · `POST /paie/report/pdf` | `PAIE_EXPORT` |
 | Utilisateurs | `POST /users/search`, `GET /users/{id}`, `POST /users`, `PUT /users/{id}`, `PUT /users/{id}/permissions-refusees`, `POST /users/{id}/reset-password` | `USER_MANAGE` |
 | Rôles | `POST /roles/search`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`, `DELETE /roles/{id}`, `GET /permissions` | `ROLE_MANAGE` pour les rôles ; `ROLE_MANAGE` ou `USER_MANAGE` pour le catalogue |
+| Accueil | `GET /accueil` | `ACCUEIL_READ` |
+| | `PUT /accueil` · `DELETE /accueil` | `ACCUEIL_WRITE` |
+| | `GET` · `PUT` · `DELETE /accueil/utilisateurs/{id}` | `ACCUEIL_ADMIN` |
 | Paramètres | `GET /parametres` | `PARAMETRE_READ` |
 | | `PUT /parametres/{id}` | `PARAMETRE_WRITE` |
 | Audit | `POST /logs/search`, `GET /logs/{id}`, `GET /logs/{id}/details`, `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` |

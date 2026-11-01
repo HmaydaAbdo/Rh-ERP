@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
@@ -6,7 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of, Subject, throwError } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { Employee } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
@@ -43,6 +44,7 @@ describe('EmployeeListComponent', () => {
     harness = await RouterTestingHarness.create();
     await harness.navigateByUrl(url, EmployeeListComponent);
     await harness.fixture.whenStable();
+    await attendreGrille(harness.fixture);
     harness.detectChanges();
   }
 
@@ -50,7 +52,7 @@ describe('EmployeeListComponent', () => {
     await afficher();
 
     expect(service.search.mock.lastCall![1]).toEqual({ page: 0, size: 10, sort: 'nomPrenom,asc' });
-    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 7).map((td) => td.textContent?.trim());
+    const ligne = (i: number) => lignesGrille(racine())[i].cells.slice(0, 7).map((td) => td.textContent?.trim());
     expect(ligne(0)).toEqual(['Ali Alaoui', 'AB123', 'MACON', 'C196', 'Opérateurs', '02/11/2020', 'En poste']);
     expect(ligne(1)).toEqual(['Zahra Idrissi', 'CD456', 'CHAUFFEUR', 'C168', '-', '14/05/2018', 'Sorti']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 employés');
@@ -59,14 +61,14 @@ describe('EmployeeListComponent', () => {
 
   it('montre le salaire et son unité à qui peut lire la paie, et seulement à lui', async () => {
     await afficher('/employees', [...TOUTES, 'PAIE_READ']);
-    const salaires = () => Array.from(racine().querySelectorAll('tbody tr')).map((tr) => tr.querySelectorAll('td')[5].textContent?.replace(/\s+/g, ' ').trim());
+    const salaires = () => lignesGrille(racine()).map((tr) => tr.cells[5].textContent?.replace(/\s+/g, ' ').trim());
 
-    expect(Array.from(racine().querySelectorAll('thead th')).map((th) => th.textContent?.trim())).toContain('Salaire');
+    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((th) => th.textContent?.trim())).toContain('Salaire');
     expect(salaires()).toEqual(['4 000,00 / mois', '120,00 / jour']);
 
     TestBed.resetTestingModule();
     await afficher();
-    expect(Array.from(racine().querySelectorAll('thead th')).map((th) => th.textContent?.trim())).not.toContain('Salaire');
+    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((th) => th.textContent?.trim())).not.toContain('Salaire');
   });
 
   describe('filtres de l’URL', () => {
@@ -82,6 +84,7 @@ describe('EmployeeListComponent', () => {
 
       await TestBed.inject(Router).navigateByUrl('/employees?chantierIds=4');
       await harness.fixture.whenStable();
+    await attendreGrille(harness.fixture);
 
       expect(service.search).toHaveBeenCalledTimes(1);
       expect(criteres()).toMatchObject({ chantierIds: [4] });
@@ -101,9 +104,10 @@ describe('EmployeeListComponent', () => {
       ancienne.next(page([EMPLOYES[0]]));
       ancienne.complete();
       harness.detectChanges();
+      await attendreGrille(harness.fixture);
 
-      expect(racine().querySelector('tbody')?.textContent).toContain('Zahra Idrissi');
-      expect(racine().querySelector('tbody')?.textContent).not.toContain('Ali Alaoui');
+      expect(racine().querySelector('.ag-root')?.textContent).toContain('Zahra Idrissi');
+      expect(racine().querySelector('.ag-root')?.textContent).not.toContain('Ali Alaoui');
     });
   });
 
@@ -116,11 +120,12 @@ describe('EmployeeListComponent', () => {
 
     (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer')) as HTMLButtonElement).click();
     await harness.fixture.whenStable();
+    await attendreGrille(harness.fixture);
     harness.detectChanges();
 
     expect(criteres()).toMatchObject({ nomPrenom: 'ali' });
     expect(racine().querySelector('[role="alert"]')).toBeNull();
-    expect(racine().querySelector('tbody')?.textContent).toContain('Ali Alaoui');
+    expect(racine().querySelector('.ag-root')?.textContent).toContain('Ali Alaoui');
   });
 
   describe('permissions', () => {

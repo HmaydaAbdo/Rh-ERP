@@ -57,7 +57,7 @@ describe('EmployeeDetailComponent', () => {
     return { fixture, page: fixture.nativeElement as HTMLElement };
   }
 
-  const valeurs = (page: HTMLElement) => Array.from(page.querySelectorAll('.employee-fiche__situation dd')).map((d) => d.textContent?.replace(/\s+/g, ' ').trim());
+  const valeurs = (page: HTMLElement) => Array.from(page.querySelectorAll('.app-facts dd')).map((d) => d.textContent?.replace(/\s+/g, ' ').trim());
 
   it('annonce le chargement avant de présenter l’identité', () => {
     const reponse = new Subject<Employee>();
@@ -92,8 +92,8 @@ describe('EmployeeDetailComponent', () => {
 
     expect(service.getById).toHaveBeenCalledWith(9);
     expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
-    expect(page.querySelector('.employee-fiche__initiales')?.textContent).toBe('AA');
-    expect(page.querySelector('.employee-fiche__identite p span')?.textContent).toBe('CIN AB123');
+    expect(page.querySelector('.app-profile__avatar')?.textContent).toBe('AA');
+    expect(page.querySelector('.app-profile__identity p span')?.textContent).toBe('CIN AB123');
     expect(valeurs(page)).toEqual(['MACON', 'C196', 'Sans équipe', '5 ans et 11 mois depuis le 02/11/2020', '36 ans né le 07/03/1990']);
   });
 

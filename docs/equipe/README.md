@@ -95,7 +95,7 @@ propriétaire du référentiel et de ses fiches : il n'existe pas de second agr�
 |---|---|
 | Effectif | Nombre de personnes payées dans le mois (un bulletin par employé et par mois) |
 | Masse salariale | Somme des salaires totaux des bulletins du mois, en dirhams (DH) |
-| STC (personnes) | Bulletins en solde de tout compte ou sortie ce mois-là (même règle que le rapport de paie) |
+| STC (bulletins) | Bulletins en solde de tout compte ou sortie ce mois-là (même règle que le rapport de paie) |
 | STC (DH) | Montant de ces bulletins |
 | Variation | Écart en personnes (effectif, STC) et en pourcentage (montants) par rapport au **mois calendaire précédent** ; sans bulletin ce mois-là, la comparaison est « indisponible », jamais un zéro trompeur |
 
@@ -255,20 +255,20 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   leur code reste un repère secondaire. Les cartes prennent leurs indicateurs exclusivement des bulletins du
   dernier mois de paie enregistré. Le résumé indique le nombre d'équipes référencées, l'effectif en personnes et
   la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le mois Paie est aligné
-  sur le titre du niveau; résumé et export PDF des résultats sont regroupés dans le même en-tête. Les bulletins sans équipe
+  sur le titre du niveau; le résumé des résultats est dans le même en-tête. Les bulletins sans équipe
   ne sont pas présentés comme une carte Équipe. Le mois est déterminé par la base,
   sans sélecteur de période. La navigation
   par onglets remplace le raccourci vers le Tabulaire; l'accès aux employés est une icône avec infobulle à droite du titre de
   niveau dans Cartes. Elle conserve le périmètre courant et nécessite `EMPLOYEE_READ`; les filtres restent conservés entre les vues.
-  Chaque carte présente séparément les quatre indicateurs Paie : Effectif (personnes), Masse salariale (DH),
-  STC (personnes) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
+  Chaque carte présente séparément les quatre indicateurs Paie : Bulletins de paie, Masse salariale (DH),
+  STC (bulletins) et STC (DH). Chaque indicateur affiche son libellé, sa valeur du dernier mois enregistré et
   son évolution par rapport au mois calendaire précédent : écart en personnes et pourcentage en DH. Un groupe
   absent d'un mois précédent enregistré est comparé à zéro; sans paie enregistrée pour ce mois, la comparaison
   est indiquée comme indisponible. Les effectifs des fiches Employé ne sont pas chargés ni présentés dans ces Cartes,
   afin que l'effectif, la masse et les STC proviennent d'une seule source pour un même mois.
 - **Analytique** présente la répartition par équipe pour le dernier mois de paie enregistré et l'évolution mensuelle
-  pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Effectif (personnes),
-  Masse salariale (DH), STC (personnes) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
+  pour une équipe choisie. Chaque graphique propose un multisélecteur déroulant de quatre indicateurs — Bulletins de paie,
+  Masse salariale (DH), STC (bulletins) et STC (DH) — et affiche un graphique distinct pour chaque indicateur coché.
   Les graphiques de répartition et le suivi incluent « Orphelins (sans équipe) »; le suivi transmet `equipeIds=0` et couvre
   l'historique des bulletins sans équipe. Un graphique d'anneau dédié à la qualité du rattachement, distinct des graphiques
   de répartition, apparaît dans cette section uniquement si le dernier mois contient des bulletins orphelins; il propose
@@ -315,7 +315,6 @@ reste un modèle d'import, pas un export.
 | Orphelins proposés dans les filtres d'équipe, présents dans la répartition et suivis dans l'historique | `reference-services.spec.ts`, `paie-option.sources.spec.ts`, `employee-filtres.component.spec.ts`, `analytique-perimetre.component.spec.ts` |
 | Orphelins absents du Tabulaire et des Cartes; graphique en anneau uniquement dans la section qualité Analytique si leur nombre est supérieur à zéro, filtres Chantier/Fonction et accès protégé par `PAIE_READ` | `cartes-perimetre.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
-| PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
 
 Les commandes et prérequis des suites sont décrits dans [la documentation des tests](../testing.md).

@@ -1,11 +1,12 @@
+import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
-import { ColumnChooserComponent } from '../../../../shared/components/column-chooser/column-chooser.component';
-import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ColumnChooserComponent } from '../../../../shared/ui/column-chooser/column-chooser.component';
+import { ConfirmDialogService, NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { surChangementDesFiltres } from '../../../../shared/forms/filtres';
 import { ColumnState } from '../../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../../shared/ui/badge/badge.component';
@@ -20,7 +21,7 @@ const filtresVides = () => ({ nom: '', description: '' });
 
 @Component({
   selector: 'app-role-list',
-  imports: [ColumnChooserComponent, FormField, FormRoot, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [DockDeclencheurComponent, ColumnChooserComponent, FormField, FormRoot, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './role-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

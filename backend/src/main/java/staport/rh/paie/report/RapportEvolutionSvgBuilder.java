@@ -53,9 +53,9 @@ final class RapportEvolutionSvgBuilder {
                     new Serie("Montants des STC", "DH", RapportChartSvgBuilder.COULEUR_STC_DH, RepartitionBean::getStcMontant,
                             PaieReportNumberFormat::masse));
             case EFFECTIFS -> List.of(
-                    new Serie("Effectif rémunéré", "personnes", RapportChartSvgBuilder.COULEUR_EFFECTIF,
+                    new Serie("Bulletins de paie", "bulletins", RapportChartSvgBuilder.COULEUR_EFFECTIF,
                             point -> BigDecimal.valueOf(point.getEffectif()), this::formaterEntier),
-                    new Serie("Sorties du personnel (STC)", "personnes", RapportChartSvgBuilder.COULEUR_STC_PERSONNES,
+                    new Serie("Sorties du personnel (STC)", "bulletins", RapportChartSvgBuilder.COULEUR_STC_PERSONNES,
                             point -> BigDecimal.valueOf(point.getStc()), this::formaterEntier));
         };
     }

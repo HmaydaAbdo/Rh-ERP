@@ -1,39 +1,39 @@
-<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
-  <p class="export-wizard__consigne">Choisissez un ou plusieurs marchés, ou gardez le rapport complet.</p>
+<section class="app-wizard__panneau" [class.app-wizard__panneau--arriere]="store.sens() === 'arriere'">
+  <p class="app-wizard__consigne">Choisissez un ou plusieurs marchés, ou gardez le rapport complet.</p>
   <input
     type="search"
-    class="export-wizard__recherche"
+    class="stp-input"
     placeholder="Rechercher un marché"
     aria-label="Rechercher un marché"
     [value]="store.rechercheChantier()"
     (input)="store.rechercherChantier($any($event.target).value)"
   />
   @if (store.chantiersEnCours()) {
-    <p class="export-wizard__legende">Chargement des marchés…</p>
+    <p class="app-wizard__legende">Chargement des marchés…</p>
   }
-  <div class="export-wizard__choix" role="group" aria-label="Marchés du rapport">
-    <label class="export-wizard__choix-item" [class.export-wizard__choix-item--choisi]="store.marchesChoisis().length === 0">
+  <div class="app-wizard__choix" role="group" aria-label="Marchés du rapport">
+    <label class="app-wizard__choix-item" [class.app-wizard__choix-item--choisi]="store.marchesChoisis().length === 0">
       <input type="checkbox" class="stp-checkbox" [checked]="store.marchesChoisis().length === 0" (change)="store.choisirMarches([])" />
       <span>
-        <span class="export-wizard__code">Tous les marchés</span>
-        <span class="export-wizard__meta">Rapport complet : un chapitre par marché</span>
+        <span class="app-wizard__code">Tous les marchés</span>
+        <span class="app-wizard__meta">Rapport complet : un chapitre par marché</span>
       </span>
     </label>
     @for (c of store.chantiersProposes(); track c.code) {
-      <label class="export-wizard__choix-item" [class.export-wizard__choix-item--choisi]="store.marcheChoisi(c.code)">
+      <label class="app-wizard__choix-item" [class.app-wizard__choix-item--choisi]="store.marcheChoisi(c.code)">
         <input type="checkbox" class="stp-checkbox" [checked]="store.marcheChoisi(c.code)" (change)="store.basculerMarche(c.code)" />
         <span>
-          <span class="export-wizard__code">{{ c.code }}{{ c.libelle ? ' — ' + c.libelle : '' }}</span>
-          <span class="export-wizard__meta">{{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés</span>
+          <span class="app-wizard__code">{{ c.code }}{{ c.libelle ? ' — ' + c.libelle : '' }}</span>
+          <span class="app-wizard__meta">{{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés</span>
         </span>
       </label>
     } @empty {
       @if (!store.chantiersEnCours()) {
-        <p class="export-wizard__legende">Aucun marché ne correspond à cette recherche.</p>
+        <p class="app-wizard__legende">Aucun marché ne correspond à cette recherche.</p>
       }
     }
   </div>
-  <label class="export-wizard__option">
+  <label class="app-wizard__option">
     <input type="checkbox" class="stp-checkbox" [checked]="store.sansVueEnsemble()" (change)="store.basculerVueEnsemble()" />
     <span>
       Sans vue d'ensemble

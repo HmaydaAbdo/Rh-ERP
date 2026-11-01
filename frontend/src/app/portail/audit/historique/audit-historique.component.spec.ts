@@ -49,7 +49,7 @@ describe('AuditHistoriqueComponent', () => {
         expect(service.historique).toHaveBeenCalledTimes(1);
 
         expect(service.historique).toHaveBeenCalledWith('Paie', 42, { page: 0, size: 10 });
-        const entetes = Array.from(fixture.nativeElement.querySelectorAll('.audit-historique__entete strong')).map((e) => (e as HTMLElement).textContent);
+        const entetes = Array.from(fixture.nativeElement.querySelectorAll('.app-versions__head strong')).map((e) => (e as HTMLElement).textContent);
         expect(entetes).toEqual(['Modification', 'Ajout']);
         expect(fixture.nativeElement.textContent).toContain('par alice');
     });

@@ -1,6 +1,6 @@
 <div class="user-form app-page app-page--narrow">
   <a routerLink="/admin/users" class="app-back"><stp-icon name="arrow-left" /> Utilisateurs</a>
-  <div class="app-page__header">
+  <div class="app-page__header"><stp-dock-declencheur />
     <h1>{{ isEditMode() ? "Modifier l'utilisateur" : 'Nouvel utilisateur' }}</h1>
   </div>
 
@@ -75,20 +75,20 @@
       </div>
 
       @if (isEditMode() && displayedPermissions().length > 0) {
-        <section class="app-form__wide user-form__permissions" aria-labelledby="permissions-titre">
+        <section class="app-form__wide" aria-labelledby="permissions-titre">
           <div class="app-form__section">
             <h2 id="permissions-titre">Permissions de l’utilisateur</h2>
             <p>La liste couvre tout le catalogue des permissions. Les droits hérités des rôles peuvent être refusés explicitement à cet utilisateur ; une permission non héritée reste visible mais doit être ajoutée à un rôle pour devenir effective.</p>
           </div>
-          <div class="user-form__permission-domains">
+          <div class="app-stack">
             @for (group of permissionGroups(); track group.domaine) {
-              <section class="user-form__permission-domain" [attr.aria-labelledby]="'permissions-' + group.domaine">
+              <section class="app-columns" [attr.aria-labelledby]="'permissions-' + group.domaine">
                 <h3 [id]="'permissions-' + group.domaine">{{ group.domaine }}</h3>
-                <div class="user-form__permission-columns">
-                  <div class="user-form__permission-column user-form__permission-column--allowed">
+                <div class="app-columns__body">
+                  <div class="app-columns__col app-columns__col--allowed">
                     <h4>Autorisées <span>({{ group.autorisees.length }})</span></h4>
                     @for (permission of group.autorisees; track permission.id) {
-                      <label class="user-form__permission-item">
+                      <label class="app-check">
                         <input
                           type="checkbox"
                           class="stp-checkbox"
@@ -97,17 +97,17 @@
                           [checked]="true"
                           (change)="onTogglePermission(permission, $event)"
                         />
-                        <span class="user-form__code">{{ permission.code }}</span>
+                        <span class="app-check__code">{{ permission.code }}</span>
                         <small>{{ permission.description }}</small>
                       </label>
                     } @empty {
-                      <p class="user-form__permission-empty">Aucune permission autorisée.</p>
+                      <p class="app-muted">Aucune permission autorisée.</p>
                     }
                   </div>
-                  <div class="user-form__permission-column user-form__permission-column--denied">
+                  <div class="app-columns__col app-columns__col--denied">
                     <h4>Non autorisées <span>({{ group.nonAutorisees.length }})</span></h4>
                     @for (permission of group.nonAutorisees; track permission.id) {
-                      <label class="user-form__permission-item">
+                      <label class="app-check">
                         <input
                           type="checkbox"
                           class="stp-checkbox"
@@ -117,11 +117,11 @@
                           [disabled]="!permissionHeritee(permission)"
                           (change)="onTogglePermission(permission, $event)"
                         />
-                        <span class="user-form__code">{{ permission.code }}</span>
+                        <span class="app-check__code">{{ permission.code }}</span>
                         <small>{{ permission.description }}@if (!permissionHeritee(permission)) { · Non héritée par les rôles sélectionnés }</small>
                       </label>
                     } @empty {
-                      <p class="user-form__permission-empty">Toutes les permissions sont autorisées.</p>
+                      <p class="app-muted">Toutes les permissions sont autorisées.</p>
                     }
                   </div>
                 </div>

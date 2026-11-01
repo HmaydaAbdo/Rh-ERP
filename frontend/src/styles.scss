@@ -7,6 +7,12 @@
 @use 'styles/motion';
 @use 'styles/accessibility';
 @use 'styles/assistant';
+@use 'styles/wizard';
+@use 'styles/dashboard';
+@use 'styles/content';
+@use 'styles/datagrid';
+@use 'styles/map';
+@use 'styles/table';
 
 *,
 *::before,

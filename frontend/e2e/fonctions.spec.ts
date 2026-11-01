@@ -54,7 +54,7 @@ test.describe('Fonctions', () => {
     await expect(dialogue).toContainText('MACON');
     await dialogue.getByRole('button', { name: 'Supprimer' }).click();
 
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toHaveCount(0);
     expect(mock.calls).toContain('DELETE /functions/1');
   });
 
@@ -73,12 +73,12 @@ test.describe('Fonctions', () => {
   test('recherche en temps réel et trie par colonne', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: DROITS }, { 'POST /functions/search': () => pageDe([{ id: 1, libelle: 'MACON' }]) });
     await page.goto('/functions');
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toBeVisible();
 
     await page.getByRole('searchbox', { name: 'Libellé' }).fill('mac');
     await expect.poll(() => (mock.bodies['POST /functions/search'] ?? []).at(-1)).toEqual({ libelle: 'mac' });
 
-    await page.getByRole('button', { name: /Libellé/ }).click();
+    await page.getByRole('columnheader', { name: /Libellé/ }).click();
     await expect(page.getByRole('columnheader', { name: /Libellé/ })).toHaveAttribute('aria-sort', 'ascending');
   });
 
@@ -108,7 +108,7 @@ test.describe('Fonctions', () => {
 
     await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'MACON' });
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Paie · août 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
@@ -135,7 +135,7 @@ test.describe('Fonctions', () => {
     });
     await page.goto('/functions/cartes');
 
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'MACON' });
     await expect(carte).toBeVisible();
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');

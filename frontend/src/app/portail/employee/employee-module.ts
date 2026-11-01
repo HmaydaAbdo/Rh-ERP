@@ -1,6 +1,6 @@
 import { critereEmployesDe } from '../perimetre/perimetre';
 import { ModulePerimetre } from '../perimetre/perimetre-module';
-import { lireFiltres, versCriteres, versParametres } from './filtres/employee-filtres';
+import { lireFiltres, versCriteres } from './filtres/employee-filtres';
 
 /**
  * Ce que le module Employés apporte aux vues Cartes et Analytique partagées (voir `portail/perimetre/`). Il n'a pas de
@@ -17,7 +17,6 @@ export const MODULE_EMPLOYE: ModulePerimetre = {
   route: '/employees',
   permission: 'EMPLOYEE_READ',
   sansLienEmployes: true,
-  parametresListe: (params) => versParametres(lireFiltres(params)),
   critereEmployes: (params, portee) => ({ ...versCriteres(lireFiltres(params)), ...critereEmployesDe(portee) }),
   criterePaie: (params, portee, periode) => {
     const filtres = lireFiltres(params);

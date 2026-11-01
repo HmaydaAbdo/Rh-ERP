@@ -99,18 +99,18 @@ test.describe('Catalogue des composants', () => {
     await expect(ouvrir).toBeFocused();
   });
 
-  test('le tableau se trie, se pagine et se réordonne au clavier (Alt + flèche)', async ({ page }) => {
-    const tableau = page.getByRole('region', { name: 'Employés' });
+  test('le tableau se trie, se pagine et se réordonne au clavier (Maj + flèche)', async ({ page }) => {
+    const tableau = page.getByRole('grid', { name: 'Employés' });
     const entetes = tableau.getByRole('columnheader');
 
-    await tableau.getByRole('button', { name: /Nom/ }).click();
+    await entetes.filter({ hasText: 'Nom' }).click();
     await expect(entetes.filter({ hasText: 'Nom' })).toHaveAttribute('aria-sort', 'ascending');
 
     await page.getByRole('button', { name: 'Page suivante' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'page 2/3' })).toBeVisible();
 
-    await tableau.getByRole('button', { name: /Nom/ }).focus();
-    await page.keyboard.press('Alt+ArrowRight');
+    await entetes.filter({ hasText: 'Nom' }).focus();
+    await page.keyboard.press('Shift+ArrowRight');
     await expect(entetes.first()).toContainText('Fonction');
   });
 

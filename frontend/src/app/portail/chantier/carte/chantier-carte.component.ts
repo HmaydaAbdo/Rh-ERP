@@ -1,3 +1,4 @@
+import { ThemeService } from '../../../core/theme/theme.service';
 import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -50,7 +51,7 @@ const SEUIL_VUE_3D = 5;
 
 const SVG = 'http://www.w3.org/2000/svg';
 
-/** Hauteur de l'épingle (voir `.chantier-carte__epingle`) : la fiche s'ouvre au-dessus de sa tête, pas sur sa pointe. */
+/** Hauteur de l'épingle (voir `.app-map__pin`) : la fiche s'ouvre au-dessus de sa tête, pas sur sa pointe. */
 const HAUTEUR_EPINGLE_PX = 40;
 
 /** Message affiché pour chaque source indisponible, du plus grave au moins grave. */
@@ -70,17 +71,18 @@ const MESSAGES_SOURCE: Readonly<Record<string, string>> = {
  */
 @Component({
   selector: 'app-chantier-carte',
+  host: { class: 'app-map-host' },
   imports: [IconComponent, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  templateUrl: './chantier-carte.component.html',
-  styleUrl: './chantier-carte.component.scss'
+  templateUrl: './chantier-carte.component.html'
 })
 export class ChantierCarteComponent {
   readonly chantiers = input<readonly ChantierCarte[]>([]);
   private marqueurs: Marker[] = [];
   private readonly config = inject(CARTE_CONFIG);
   private readonly document = inject(DOCUMENT);
+  private readonly themeService = inject(ThemeService);
   private readonly conteneur = viewChild.required<ElementRef<HTMLElement>>('conteneur');
   private readonly commandes = viewChild.required<ElementRef<HTMLElement>>('commandes');
 
@@ -88,6 +90,7 @@ export class ChantierCarteComponent {
   private observateur?: ResizeObserver;
   /** Affichage du style en place ; le thème cartographique reste sombre et indépendant du thème applicatif. */
   private styleAffiche?: Affichage;
+  private styleTheme?: 'light' | 'dark';
 
   protected readonly idAide = `chantier-carte-aide-${compteur++}`;
 
@@ -110,9 +113,11 @@ export class ChantierCarteComponent {
 
     effect(() => {
       const affichage = this.affichage();
-      if (this.carte && affichage !== this.styleAffiche) {
+      const theme = this.themeService.theme();
+      if (this.carte && (affichage !== this.styleAffiche || theme !== this.styleTheme)) {
         this.styleAffiche = affichage;
-        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement)));
+        this.styleTheme = theme;
+        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement, theme), theme));
       }
     });
 
@@ -175,9 +180,10 @@ export class ChantierCarteComponent {
     preparerMapLibre(this.config, base);
 
     this.styleAffiche = this.affichage();
+    this.styleTheme = this.themeService.theme();
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
-      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement)),
+      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement, this.themeService.theme()), this.themeService.theme()),
       attributionControl: { compact: true, customAttribution: [] },
       maplibreLogo: false,
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.
@@ -225,7 +231,7 @@ export class ChantierCarteComponent {
     this.marqueurs = [...sites.values()].map((site) => {
       const bouton = this.document.createElement('button');
       bouton.type = 'button';
-      bouton.className = 'chantier-carte__marqueur';
+      bouton.className = 'app-map__marker';
       const detailSites = site.map((chantier) => `${chantier.code} · ${chantier.nom || chantier.designation}\n${NATURE_CHANTIER_LIBELLES[chantier.nature]}`).join('\n\n');
       bouton.setAttribute('aria-label', `Afficher ${detailSites.replaceAll('\n', ', ')}`);
       bouton.setAttribute('data-tooltip', detailSites);
@@ -233,16 +239,16 @@ export class ChantierCarteComponent {
       const fiche = this.document.createElement('div');
       site.forEach((chantier) => {
         const code = this.document.createElement('strong');
-        code.className = 'chantier-carte__fiche-code';
+        code.className = 'app-map__card-code';
         code.textContent = chantier.code;
         const nom = this.document.createElement('span');
-        nom.className = 'chantier-carte__fiche-nom';
+        nom.className = 'app-map__card-name';
         nom.textContent = chantier.nom || chantier.designation;
         const nature = this.document.createElement('p');
-        nature.className = 'chantier-carte__fiche-nature';
+        nature.className = 'app-map__card-kind';
         nature.textContent = NATURE_CHANTIER_LIBELLES[chantier.nature];
         const article = this.document.createElement('article');
-        article.className = 'chantier-carte__fiche-chantier';
+        article.className = 'app-map__card-site';
         article.append(code, nom, nature);
         fiche.append(article);
       });
@@ -295,14 +301,14 @@ export class ChantierCarteComponent {
   /** Épingle de localisation (tracé de l'icône Lucide `map-pin`, pleine), construite en SVG sans HTML injecté. */
   private creerEpingle(): SVGSVGElement {
     const svg = this.document.createElementNS(SVG, 'svg');
-    svg.setAttribute('class', 'chantier-carte__epingle');
+    svg.setAttribute('class', 'app-map__pin');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
     const contour = this.document.createElementNS(SVG, 'path');
-    contour.setAttribute('class', 'chantier-carte__epingle-corps');
+    contour.setAttribute('class', 'app-map__pin-body');
     contour.setAttribute('d', 'M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0');
     const centre = this.document.createElementNS(SVG, 'circle');
-    centre.setAttribute('class', 'chantier-carte__epingle-centre');
+    centre.setAttribute('class', 'app-map__pin-center');
     centre.setAttribute('cx', '12');
     centre.setAttribute('cy', '10');
     centre.setAttribute('r', '3');
@@ -328,7 +334,7 @@ export class ChantierCarteComponent {
       return;
     }
     const fiche = this.document.createElement('p');
-    fiche.className = 'chantier-carte__fiche';
+    fiche.className = 'app-map__card';
     fiche.textContent = nom;
     new Popup({ closeButton: false, maxWidth: '18rem', offset: 12 }).setLngLat(evenement.lngLat).setDOMContent(fiche).addTo(carte);
   }
@@ -352,7 +358,7 @@ export class ChantierCarteComponent {
     const nom = voie.properties[`name:${this.config.langue}`] ?? voie.properties['name'];
     const reference = voie.properties['ref'];
     const fiche = this.document.createElement('p');
-    fiche.className = 'chantier-carte__fiche';
+    fiche.className = 'app-map__card';
     fiche.textContent = [typeof nom === 'string' ? nom : undefined, typeof reference === 'string' ? reference : undefined]
       .filter(Boolean).join(' · ');
     new Popup({ closeButton: false, maxWidth: '18rem', offset: 12 }).setLngLat(evenement.lngLat).setDOMContent(fiche).addTo(carte);

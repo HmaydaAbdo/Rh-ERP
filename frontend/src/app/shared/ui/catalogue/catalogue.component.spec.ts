@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../testing/grille';
 import { TestBed } from '@angular/core/testing';
 
 import { fournirSignalForms } from '../../forms/signal-forms.config';
@@ -18,7 +19,7 @@ describe('CatalogueComponent', () => {
 
     expect(page.querySelector('h1')?.textContent).toBe('Catalogue Staport');
     expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual([
-      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', 'Dialogue', 'Masse salariale mensuelle', 'Tableau (mode mémoire)'
+      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', "Carte d'authentification", 'Dialogue', 'Masse salariale mensuelle', 'Tableau (mode mémoire)', 'Vocabulaire partagé'
     ]);
     expect(page.querySelector('details summary')?.textContent?.trim()).toBe('Afficher les données du graphique');
   });
@@ -43,6 +44,7 @@ describe('CatalogueComponent', () => {
     (Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Ouvrir') as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
 
     expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Résultat de l'import");
   });
@@ -51,7 +53,7 @@ describe('CatalogueComponent', () => {
     const { page } = afficher();
     const tableau = page.querySelectorAll('stp-table')[1];
 
-    expect(tableau.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(lignesGrille(tableau)).toHaveLength(10);
     expect(tableau.querySelector('.stp-table__report')?.textContent?.trim()).toBe('1 - 10 sur 27 — page 1/3');
   });
 

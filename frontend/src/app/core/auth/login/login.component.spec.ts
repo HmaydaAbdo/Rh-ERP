@@ -57,12 +57,12 @@ describe('LoginComponent', () => {
         const input = fixture.nativeElement.querySelector('#password') as HTMLInputElement;
         input.value = 'secret';
         input.dispatchEvent(new Event('input'));
-        fixture.nativeElement.querySelector('.auth-card__password-toggle').click();
+        fixture.nativeElement.querySelector('.stp-password__toggle').click();
         fixture.detectChanges();
 
         expect(input.type).toBe('text');
         expect(input.value).toBe('secret');
-        expect(fixture.nativeElement.querySelector('.auth-card__password-toggle').getAttribute('aria-pressed')).toBe('true');
+        expect(fixture.nativeElement.querySelector('.stp-password__toggle').getAttribute('aria-pressed')).toBe('true');
     });
 
     it('navigue vers la destination demandée après authentification', async () => {

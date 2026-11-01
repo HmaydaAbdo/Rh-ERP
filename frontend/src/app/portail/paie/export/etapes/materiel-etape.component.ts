@@ -9,7 +9,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-materiel',
   imports: [CountUpDirective, IconComponent],
   templateUrl: './materiel-etape.component.html',
-  styleUrl: './materiel-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapeMaterielComponent {

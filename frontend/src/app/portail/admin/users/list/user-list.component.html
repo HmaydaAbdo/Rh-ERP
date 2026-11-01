@@ -1,6 +1,6 @@
 <stp-dialog header="Réinitialiser le mot de passe" width="420px" [(open)]="showResetDialog" (closed)="onCloseReset()">
   @if (resetDialogUser(); as user) {
-    <form [formRoot]="resetForm" class="user-list__reset-form">
+    <form [formRoot]="resetForm" class="flex flex-col gap-2">
       <p>Nouveau mot de passe pour <strong>{{ user.username }}</strong> :</p>
       <label for="nouveau-mot-de-passe">Nouveau mot de passe</label>
       <stp-password-input inputId="nouveau-mot-de-passe" autocomplete="new-password" [formField]="resetForm.nouveauMotDePasse" />
@@ -11,7 +11,7 @@
 </stp-dialog>
 
 <div class="user-list app-page">
-  <div class="app-page__header">
+  <div class="app-page__header"><stp-dock-declencheur />
     <h1>Utilisateurs</h1>
     <div class="app-page__actions app-page__actions--liste">
       <button stp-button icon="plus" type="button" routerLink="/admin/users/new">Nouvel utilisateur</button>
@@ -65,7 +65,7 @@
         }
         @case ('roles') {
           @for (role of user.roles; track role.id) {
-            <stp-badge [value]="role.nom" severity="info" class="user-list__role-tag"></stp-badge>
+            <stp-badge [value]="role.nom" severity="info" class="user-list__role-tag me-1"></stp-badge>
           }
         }
         @case ('actif') {
@@ -76,7 +76,18 @@
 
     <ng-template stpRowActions let-user>
       <button stp-button variant="text" icon="pencil" iconOnly type="button" title="Modifier" [attr.aria-label]="'Modifier ' + user.username" (click)="onEdit(user)"></button>
+      @if (peutRegler()) {
+        <button stp-button variant="text" icon="house" iconOnly type="button" title="Régler l’accueil" [attr.aria-label]="'Régler l’accueil de ' + user.username" (click)="onOuvrirAccueil(user)"></button>
+      }
       <button stp-button variant="text" icon="key-round" iconOnly type="button" title="Réinitialiser le mot de passe" [attr.aria-label]="'Réinitialiser le mot de passe de ' + user.username" (click)="onOpenReset(user)"></button>
     </ng-template>
   </stp-table>
 </div>
+
+<stp-dialog [header]="'Accueil de ' + (accueilCible()?.username ?? '')" width="46rem" [(open)]="accueilOuvert">
+  @if (accueilEdite(); as accueil) {
+    <app-accueil-editeur [accueil]="accueil" [enregistrement]="accueilEnregistrement()" (enregistrer)="onEnregistrerAccueil($event)" (reinitialiser)="onReinitialiserAccueil()" />
+  } @else {
+    <p class="app-muted" role="status">Chargement de l’accueil…</p>
+  }
+</stp-dialog>

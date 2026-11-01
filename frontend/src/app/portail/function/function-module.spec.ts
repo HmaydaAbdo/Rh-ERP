@@ -18,7 +18,7 @@ describe('moduleFunction', () => {
     expect(module).toMatchObject({
       cle: 'function', dimension: 'FONCTION', route: '/functions', permission: 'FUNCTION_READ',
       sourcesAnalytique: ['PAIE'], ordreAnalytique: ['PAIE'], periodePaieRecenteFixe: true,
-      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true,
+      sansRaccourciCartes: true, sansLienEmployes: true,
       lienEmployesPresDuNiveau: true, resumeCartesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
       sansOrphelinsDansCartes: true, afficherQualiteOrphelins: true,
       triCartesPaie: ['masse', 'effectif']
@@ -43,7 +43,6 @@ describe('moduleFunction', () => {
   it('revient à la vue Tabulaire avec son filtre propre, et passe le périmètre aux fiches et à la paie', () => {
     const portee = { chantierIds: [3], equipeIds: undefined, fonctionIds: [7] };
 
-    expect(module.parametresListe(params({ libelle: 'mac', fonctionIds: '7' }))).toEqual({ libelle: 'mac' });
     expect(module.critereEmployes(params({}), portee)).toEqual({ chantierIds: [3], equipeIds: undefined, fonctionIds: [7] });
     expect(module.criterePaie(params({}), portee, null)).toEqual({ periode: undefined, chantierIds: [3], equipeIds: undefined, fonctionIds: [7] });
   });
