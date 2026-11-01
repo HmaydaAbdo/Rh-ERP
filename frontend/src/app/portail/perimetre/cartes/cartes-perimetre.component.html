@@ -114,7 +114,8 @@
             @for (groupe of groupesVisibles(); track groupe.id; let i = $index) {
               <li [style.animation-delay.ms]="i < 12 ? i * 35 : 0">
                 <article class="app-entity">
-                  <button type="button" class="app-entity__body" [attr.aria-label]="'Ouvrir ' + titre(groupe)" (click)="ouvrir(groupe)">
+                  <button type="button" class="app-entity__body" (click)="ouvrir(groupe)">
+                    <span class="sr-only">Ouvrir </span>
                     <span class="app-entity__head">
                       <span class="app-entity__name">{{ titre(groupe) }}</span>
                       @if (groupe.statut; as statut) {
@@ -190,7 +191,7 @@
                     }
                     <a stp-button variant="text" icon="chart-column"
                       [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge"
-                      [attr.aria-label]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)"
+                      [attr.aria-label]="'Analytique : ' + (voitPaie() && periode() ? 'voir l’historique Paie de ' : 'voir l’analyse de ') + titre(groupe)"
                       [attr.title]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)">Analytique</a>
                     @if (actionsCarte(); as modele) {
                       <ng-container [ngTemplateOutlet]="modele" [ngTemplateOutletContext]="{ $implicit: groupe, niveau: niveau(), periode: moisDe(groupe), portee: resultat().portee }"></ng-container>
