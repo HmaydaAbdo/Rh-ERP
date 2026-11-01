@@ -397,10 +397,7 @@ Les formulaires de modification et les fiches distinguent chargement, donnée di
 Un formulaire n'est pas enregistrable avant la lecture de l'enregistrement demandé. Une recherche échouée ne se présente
 pas comme une liste vide. Les vues partagées gardent les sources disponibles et nomment celles qui sont indisponibles.
 
-Les exports individuels des tableaux et graphiques utilisent `PdfImpressionService` : titre, période de référence,
-filtres lisibles, graphiques et tableau de données complet. Les composants qui présentent plusieurs graphiques les
-incluent tous avec leur légende et le fond de leur thème afin que les libellés restent lisibles. La table conserve ses en-têtes sur chaque page imprimée; la fenêtre d'impression
-permet l'enregistrement en PDF. Le rapport métier Paie conserve son export PDF serveur et son assistant dédié.
+Aucun tableau, graphique ni carte n'exporte ses données depuis le navigateur (décision du 2026-11-01). Seuls les exports produits par le backend subsistent, comme le rapport métier Paie (PDF ou Excel serveur) et son assistant dédié.
 
 - **Signal Forms** pour tous les formulaires (2026-10-10) : modèle `signal` typé, `form(modele, schema, { submission })`, `<form [formRoot]>`,
   `[formField]` sur les champs, `<stp-field-error>` pour le message sous le champ (une fois touché) ; les champs obligatoires portent une

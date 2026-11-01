@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
+import { StepperComponent, StepperEtape } from '../../../shared/ui/stepper/stepper.component';
+import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
@@ -24,9 +26,8 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
   templateUrl: './heures-supp-import.component.html',
-  styleUrl: './heures-supp-import.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppImportComponent {
@@ -34,6 +35,12 @@ export class HeuresSuppImportComponent {
   protected readonly fonctions = inject(FunctionReferenceService);
   protected readonly employes = inject(EmployeeReferenceService);
   protected readonly etape = signal(1);
+  protected readonly etapes: readonly StepperEtape[] = [
+    { id: '1', libelle: 'Période et chantier' },
+    { id: '2', libelle: 'Pointage' },
+    { id: '3', libelle: 'Forfaits' },
+    { id: '4', libelle: 'Contrôle et import' }
+  ];
   protected readonly mois = signal<Date | null>(null);
   protected readonly chantierId = signal<number | null>(null);
   protected readonly chantierLibelle = signal('');
@@ -156,5 +163,11 @@ export class HeuresSuppImportComponent {
   private lancer<T>(source: import('rxjs').Observable<T>, succes: (valeur: T) => void): void {
     this.erreur.set(null); this.chargement.set(true);
     source.subscribe({ next: (valeur) => { this.chargement.set(false); succes(valeur); }, error: (e: { error?: { message?: string }; message?: string }) => { this.chargement.set(false); this.erreur.set(e.error?.message ?? e.message ?? 'L’opération a échoué. Réessayez.'); } });
+  }
+
+  /** Revient à une étape déjà franchie (jamais en avant : chaque étape valide la précédente) ; sans effet une fois l'import terminé. */
+  protected allerEtape(id: string): void {
+    const cible = Number(id);
+    if (this.resultat() === null && cible < this.etape()) this.etape.set(cible);
   }
 }

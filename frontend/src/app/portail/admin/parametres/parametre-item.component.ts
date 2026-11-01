@@ -11,12 +11,12 @@ import { Parametre, ParametreService } from '../services/parametre.service';
   selector: 'app-parametre-item',
   imports: [FormField, FormRoot, ButtonComponent, FieldErrorComponent],
   template: `
-    <section class="parametre-item">
-      <div class="parametre-item__description">
+    <section class="app-setting">
+      <div class="app-setting__text">
         <h2>{{ parametre().libelle }}</h2>
         <p>{{ parametre().description }}</p>
       </div>
-      <form [formRoot]="form" class="parametre-item__form">
+      <form [formRoot]="form" class="app-setting__form">
         <div class="field">
           <label [for]="'parametre-' + parametre().id">Valeur @if (parametre().unite) { ({{ parametre().unite }}) }</label>
           <input
@@ -31,9 +31,9 @@ import { Parametre, ParametreService } from '../services/parametre.service';
           />
           <stp-field-error [field]="form.valeur" />
           @if (parametre().type === 'ENTIER' && parametre().minimum !== null && parametre().maximum !== null) {
-            <small class="parametre-item__hint">Valeur comprise entre {{ parametre().minimum }} et {{ parametre().maximum }}.</small>
+            <small class="app-setting__hint">Valeur comprise entre {{ parametre().minimum }} et {{ parametre().maximum }}.</small>
           } @else if (parametre().type === 'CRON') {
-            <small class="parametre-item__hint">Expression Spring à six champs, secondes comprises.</small>
+            <small class="app-setting__hint">Expression Spring à six champs, secondes comprises.</small>
           }
         </div>
         @if (editable()) {
@@ -42,8 +42,7 @@ import { Parametre, ParametreService } from '../services/parametre.service';
       </form>
     </section>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './parametre-item.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ParametreItemComponent implements OnInit {
   private readonly parametreService = inject(ParametreService);

@@ -255,7 +255,7 @@ domaines Employé et Paie. Les valeurs de filtre restent synchronisées dans l'U
   leur code reste un repère secondaire. Les cartes prennent leurs indicateurs exclusivement des bulletins du
   dernier mois de paie enregistré. Le résumé indique le nombre d'équipes référencées, l'effectif en personnes et
   la masse salariale en DH; il ne présente pas de décompte fondé sur les fiches Employé. Le mois Paie est aligné
-  sur le titre du niveau; résumé et export PDF des résultats sont regroupés dans le même en-tête. Les bulletins sans équipe
+  sur le titre du niveau; le résumé des résultats est dans le même en-tête. Les bulletins sans équipe
   ne sont pas présentés comme une carte Équipe. Le mois est déterminé par la base,
   sans sélecteur de période. La navigation
   par onglets remplace le raccourci vers le Tabulaire; l'accès aux employés est une icône avec infobulle à droite du titre de
@@ -315,7 +315,6 @@ reste un modèle d'import, pas un export.
 | Orphelins proposés dans les filtres d'équipe, présents dans la répartition et suivis dans l'historique | `reference-services.spec.ts`, `paie-option.sources.spec.ts`, `employee-filtres.component.spec.ts`, `analytique-perimetre.component.spec.ts` |
 | Orphelins absents du Tabulaire et des Cartes; graphique en anneau uniquement dans la section qualité Analytique si leur nombre est supérieur à zéro, filtres Chantier/Fonction et accès protégé par `PAIE_READ` | `cartes-perimetre.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
-| PDF autonome par composant et contenu échappé | `pdf-export-button.component.spec.ts`, `pdf-impression.service.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
 
 Les commandes et prérequis des suites sont décrits dans [la documentation des tests](../testing.md).

@@ -1,11 +1,11 @@
-<form [formRoot]="formulaire" class="paie-filtres" aria-label="Filtres de la paie">
-  <div class="paie-filtres__periode" role="group" aria-label="Mois">
+<form [formRoot]="formulaire" class="app-toolbar" aria-label="Filtres de la paie">
+  <div class="app-toolbar__period" role="group" aria-label="Mois">
     <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois plus ancien" [disabled]="!plusAncien()" (click)="choisir(plusAncien())"></button>
     <button
       stp-button
       variant="text"
       icon="calendar"
-      class="paie-filtres__mois"
+      class="app-toolbar__period-month"
       type="button"
       cdkOverlayOrigin
       #origine="cdkOverlayOrigin"
@@ -14,7 +14,7 @@
       [attr.aria-expanded]="panneauMoisOuvert()"
       (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
     >
-      <span class="paie-filtres__capitale">{{ libelle() }}</span>
+      <span class="app-capitalize">{{ libelle() }}</span>
     </button>
     <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois plus récent" [disabled]="!plusRecent()" (click)="choisir(plusRecent())"></button>
     @if (periode() && !moisObligatoire()) {
@@ -35,7 +35,7 @@
     </ng-template>
   </div>
 
-  <span class="paie-filtres__champ">
+  <span class="app-toolbar__search">
     <stp-icon name="search" />
     <input class="stp-input" type="text" [formField]="formulaire.nomPrenom" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" />
   </span>
@@ -43,25 +43,25 @@
     stp-button
     variant="secondary"
     type="button"
-    class="paie-filtres__bascule"
+    class="app-toolbar__toggle"
     aria-controls="paie-filtres-secondaires"
     [attr.aria-expanded]="secondairesOuverts()"
     (click)="basculerSecondaires()"
   >
     Filtres
     @if (nombreSecondaires() > 0) {
-      <span class="paie-filtres__badge">{{ nombreSecondaires() }}</span>
+      <span class="app-toolbar__badge">{{ nombreSecondaires() }}</span>
     }
     <stp-icon [name]="secondairesOuverts() ? 'chevron-up' : 'chevron-down'" />
   </button>
 
-  <div id="paie-filtres-secondaires" class="paie-filtres__secondaires" [class.paie-filtres__secondaires--ouvert]="secondairesOuverts()">
-    <input type="text" [formField]="formulaire.cin" class="stp-input paie-filtres__cin" placeholder="CIN" aria-label="CIN" />
+  <div id="paie-filtres-secondaires" class="app-toolbar__secondary" [class.app-toolbar__secondary--open]="secondairesOuverts()">
+    <input type="text" [formField]="formulaire.cin" class="stp-input " placeholder="CIN" aria-label="CIN" />
 
     @if (peutChoisirChantiers()) {
       @for (source of sourcesChantiers(); track source) {
         <app-lazy-select
-          class="paie-filtres__selecteur"
+          class=""
           [formField]="formulaire.chantierIds"
           [multiple]="true"
           [bulkFilterActions]="true"
@@ -77,7 +77,7 @@
     @if (peutChoisirEquipes()) {
       @for (source of sourcesEquipes(); track source) {
         <app-lazy-select
-          class="paie-filtres__selecteur"
+          class=""
           [formField]="formulaire.equipeIds"
           [multiple]="true"
           [bulkFilterActions]="true"
@@ -92,7 +92,7 @@
     }
     @if (peutChoisirFonctions()) {
       <app-lazy-select
-        class="paie-filtres__selecteur"
+        class=""
         [formField]="formulaire.fonctionIds"
         [multiple]="true"
         [bulkFilterActions]="true"
@@ -105,5 +105,5 @@
     }
   </div>
 
-  <button stp-button variant="text" icon="x" class="paie-filtres__effacer" type="button" aria-label="Effacer les filtres" [disabled]="!aDesFiltres()" (click)="reinitialiser()"><span class="paie-filtres__effacer-libelle">Effacer</span></button>
+  <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" aria-label="Effacer les filtres" [disabled]="!aDesFiltres()" (click)="reinitialiser()"><span class="app-toolbar__clear-label">Effacer</span></button>
 </form>

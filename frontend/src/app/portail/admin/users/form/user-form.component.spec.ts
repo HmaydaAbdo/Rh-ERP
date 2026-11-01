@@ -215,13 +215,13 @@ describe('UserFormComponent', () => {
     it('affiche tout le catalogue par domaine et sépare les droits hérités des droits refusés ou non hérités', async () => {
       await afficher('4');
 
-      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
-      expect(racine().querySelectorAll('.user-form__permission-domain')).toHaveLength(2);
-      expect(Array.from(racine().querySelectorAll('.user-form__permission-domain h3')).map((h3) => h3.textContent)).toEqual(['EMPLOYEE', 'PAIE']);
+      expect(Array.from(racine().querySelectorAll('.app-check__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
+      expect(racine().querySelectorAll('.app-columns')).toHaveLength(2);
+      expect(Array.from(racine().querySelectorAll('.app-columns h3')).map((h3) => h3.textContent)).toEqual(['EMPLOYEE', 'PAIE']);
       expect(permission('PAIE_READ')!.checked).toBe(true);
-      expect(permission('PAIE_READ')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--allowed');
+      expect(permission('PAIE_READ')!.closest('.app-columns__col')?.classList).toContain('app-columns__col--allowed');
       expect(permission('PAIE_WRITE')!.checked).toBe(false);
-      expect(permission('PAIE_WRITE')!.closest('.user-form__permission-column')?.classList).toContain('user-form__permission-column--denied');
+      expect(permission('PAIE_WRITE')!.closest('.app-columns__col')?.classList).toContain('app-columns__col--denied');
       expect(permission('EMPLOYEE_READ')!.checked).toBe(false);
       expect(permission('EMPLOYEE_READ')!.disabled).toBe(true);
     });
@@ -232,7 +232,7 @@ describe('UserFormComponent', () => {
       formulaire().roleIds().value.set([11]);
       await stabiliser();
 
-      expect(Array.from(racine().querySelectorAll('.user-form__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
+      expect(Array.from(racine().querySelectorAll('.app-check__code')).map((c) => c.textContent)).toEqual(['EMPLOYEE_READ', 'PAIE_READ', 'PAIE_WRITE']);
       formulaire().roleIds().value.set([10, 11]);
       await stabiliser();
       expect(permission('PAIE_WRITE')!.checked).toBe(true);

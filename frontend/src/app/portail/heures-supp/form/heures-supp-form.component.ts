@@ -37,7 +37,6 @@ function periodeTexte(periode: Date | null): string | null {
   selector: 'app-heures-supp-form',
   imports: [DecimalPipe, FormField, FormRoot, RouterLink, LazySelectComponent, MessageComponent, MonthInputComponent, ButtonComponent, FieldErrorComponent, IconComponent, NumberInputComponent],
   templateUrl: './heures-supp-form.component.html',
-  styleUrl: './heures-supp-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppFormComponent {

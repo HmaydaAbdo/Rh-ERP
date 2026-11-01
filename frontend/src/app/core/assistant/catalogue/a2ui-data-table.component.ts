@@ -1,9 +1,9 @@
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { injectA2UIComponentContext } from '@copilotkit/angular/a2ui';
-import { LucideArrowDown, LucideArrowUp, LucideDownload, LucideMaximize2, LucideMinimize2, LucideSearch } from '@lucide/angular';
+import { LucideArrowDown, LucideArrowUp, LucideMaximize2, LucideMinimize2, LucideSearch } from '@lucide/angular';
 
-import { type FormatColonne, comparer, formater, versCsv } from './formats';
+import { type FormatColonne, comparer, formater } from './formats';
 
 interface Colonne {
   key: string;
@@ -17,12 +17,12 @@ const HAUTEUR_LIGNE = 40;
 
 /**
  * Tableau de données du catalogue ERP (surface A2UI) : défilement virtualisé (CDK) pour les listes longues, tri par colonne,
- * recherche sur tout le texte, export CSV des lignes affichées et plein écran. Les lignes viennent du modèle de données de
+ * recherche sur tout le texte et plein écran. Les lignes viennent du modèle de données de
  * la surface (`{ path }`) : le modèle de langage ne les recopie pas.
  */
 @Component({
   selector: 'app-a2ui-data-table',
-  imports: [ScrollingModule, LucideArrowDown, LucideArrowUp, LucideDownload, LucideMaximize2, LucideMinimize2, LucideSearch],
+  imports: [ScrollingModule, LucideArrowDown, LucideArrowUp, LucideMaximize2, LucideMinimize2, LucideSearch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.plein-ecran]': 'pleinEcran()', '(document:keydown.escape)': 'pleinEcran.set(false)' },
   template: `
@@ -52,9 +52,6 @@ const HAUTEUR_LIGNE = 40;
           (input)="recherche.set($any($event.target).value)"
         />
       </label>
-      <button type="button" class="action" (click)="exporter()" aria-label="Exporter en CSV" title="Exporter en CSV">
-        <svg lucideDownload aria-hidden="true"></svg>
-      </button>
       <button
         type="button"
         class="action"
@@ -306,12 +303,4 @@ export class A2uiDataTableComponent {
     return tri?.cle !== colonne.key ? 'none' : tri.sens === 'asc' ? 'ascending' : 'descending';
   }
 
-  protected exporter(): void {
-    const fichier = new Blob([versCsv(this.colonnes(), this.affichees())], { type: 'text/csv;charset=utf-8' });
-    const lien = document.createElement('a');
-    lien.href = URL.createObjectURL(fichier);
-    lien.download = `${(this.props().title ?? 'tableau').toLocaleLowerCase('fr').replace(/[^a-z0-9]+/g, '-')}.csv`;
-    lien.click();
-    URL.revokeObjectURL(lien.href);
-  }
 }

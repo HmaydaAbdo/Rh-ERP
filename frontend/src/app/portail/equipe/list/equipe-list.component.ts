@@ -10,12 +10,9 @@ import { ConfirmDialogService, NotificationService } from '../../../shared/ui/fe
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
-import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
-import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
 import { EquipeFiltres, lireFiltresEquipe, memesFiltresEquipe } from '../filtres/equipe-filtres';
-import { chargerToutLeReferentiel } from '../../perimetre/perimetre-module';
 
 const CONFIGURATION_TABLE_EQUIPE: CollectionTableConfig = {
   countLabel: (total) => `${total} équipe${total > 1 ? 's' : ''}`,
@@ -25,7 +22,7 @@ const CONFIGURATION_TABLE_EQUIPE: CollectionTableConfig = {
 
 @Component({
   selector: 'app-equipe-list',
-  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective, PdfExportButtonComponent],
+  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './equipe-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -58,20 +55,6 @@ export class EquipeListComponent {
   private lastSize = 10;
   private lastSort = 'code,asc';
 
-  protected readonly documentVide: PdfImpressionDocument = { titre: 'Équipes', contexte: '', colonnes: [], lignes: [] };
-  protected readonly chargerExport = () => {
-    const filtres = this.filtres;
-    const colonnes = this.columns.visible;
-    return chargerToutLeReferentiel((page, taille) => this.equipeService.search({
-      code: filtres.code || undefined,
-      libelle: filtres.libelle || undefined
-    }, { page, size: taille, sort: this.lastSort })).pipe(map((equipes) => ({
-      titre: 'Équipes',
-      contexte: `Filtres actifs · ${filtres.code || filtres.libelle ? 'résultat filtré' : 'toutes les équipes'}`,
-      colonnes: colonnes.map((colonne) => colonne.header),
-      lignes: equipes.map((equipe) => colonnes.map((colonne) => String(equipe[colonne.field as keyof Equipe] ?? '')))
-    })));
-  };
 
   constructor() {
     this.route.queryParamMap

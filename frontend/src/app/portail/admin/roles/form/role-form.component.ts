@@ -22,8 +22,7 @@ interface PermissionGroup {
   selector: 'app-role-form',
   imports: [FormField, FormRoot, RouterLink, IconComponent, ButtonComponent, FieldErrorComponent],
   templateUrl: './role-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './role-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleFormComponent {
   private readonly roleService = inject(RoleService);

@@ -138,7 +138,7 @@ describe('HeuresSuppImportComponent', () => {
     const boutonImporter = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Confirmer l’import')) as HTMLButtonElement;
     boutonImporter.click();
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('IMPORT TERMINÉ');
+    expect(document.body.textContent).toContain('lignes importées');
   });
 
   it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {

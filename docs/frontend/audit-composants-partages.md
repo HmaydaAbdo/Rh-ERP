@@ -27,7 +27,6 @@ Ils doivent être ajoutés à `/catalogue` et au registre documentaire :
 | `app-column-chooser` | Choix, ordre et visibilité des colonnes, clavier | État de colonnes local |
 | `app-lazy-select` | Recherche et chargement progressif sans backend réel | Source mémoire déterministe conforme à `LazySelectSource` |
 | `app-month-picker` | Sélection de mois, navigation d'année et mois indisponibles | Valeurs locales incluant une période vide et limitée |
-| `app-pdf-export-button` | États prêt, chargement, indisponible et export déclenché | Document PDF de démonstration, sans donnée métier réelle |
 | `app-vue-switcher` | États actif/inactif et navigation conservant les paramètres | Routes de démonstration disponibles |
 
 Ces composants sont déjà dans `shared/ui/` et ont des usages de production. Leur ajout au catalogue ne signifie pas

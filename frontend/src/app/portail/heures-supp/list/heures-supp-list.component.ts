@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, forkJoin, map } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
 import { ColumnState } from '../../../shared/table/table-columns';
@@ -14,15 +14,12 @@ import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
-import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
-import { chargerToutLeReferentiel } from '../../perimetre/perimetre-module';
 
 const TABLE: CollectionTableConfig = { countLabel: (n) => `${n} ligne${n > 1 ? 's' : ''}`, accessibleLabel: 'Liste des heures supplémentaires', emptyMessage: 'Aucune heure supplémentaire ou forfait sur ce périmètre.' };
 
 @Component({
   selector: 'app-heures-supp-list',
-  imports: [DecimalPipe, CollectionTableComponent, TableCellDirective, ButtonComponent, DialogComponent, NumberInputComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, CollectionTableComponent, TableCellDirective, ButtonComponent, DialogComponent, NumberInputComponent],
   templateUrl: './heures-supp-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -53,20 +50,6 @@ export class HeuresSuppListComponent {
   private dernierEvenement: TableLazyLoadEvent | null = null;
   private dernierCritereAnalytique = '';
 
-  protected readonly documentVide: PdfImpressionDocument = { titre: 'Heures supplémentaires', contexte: '', colonnes: [], lignes: [] };
-  protected readonly chargerExport = () => {
-    const criteres = { ...this.criteres };
-    const colonnes = this.columns.visible.filter((colonne) => colonne.field !== 'actions');
-    return forkJoin({
-      lignes: chargerToutLeReferentiel((page, taille) => this.service.search(criteres, page, taille)),
-      analytique: this.service.analyser(criteres)
-    }).pipe(map(({ lignes, analytique }) => ({
-      titre: 'Heures supplémentaires',
-      contexte: `${this.contexteFiltres()} · Total net à payer : ${analytique.indicateurs.netAPayerDh.toFixed(2)} DH`,
-      colonnes: colonnes.map((colonne) => colonne.header),
-      lignes: [...lignes.map((ligne) => colonnes.map((colonne) => this.valeurExport(ligne, colonne.field))), colonnes.map((colonne) => colonne.field === 'employe' ? 'TOTAL NET À PAYER' : colonne.field === 'netAPayerDh' ? `${analytique.indicateurs.netAPayerDh.toFixed(2)} DH` : '')]
-    })));
-  };
 
   protected canDelete(): boolean { return this.auth.hasPermission('HEURES_SUP_DELETE'); }
   protected canPurge(): boolean { return this.auth.hasPermission('HEURES_SUP_PURGE'); }

@@ -344,3 +344,124 @@
     color: var(--color-primary-hover);
   }
 }
+
+// ---- Cases à cocher groupées (droits, options) : groupe titré, case + code + description, panneau à deux colonnes ----
+.app-callout {
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  font-size: var(--text-base);
+}
+
+.app-group {
+  margin-block-end: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-sm);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  &__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    gap: var(--space-sm) var(--space-md);
+  }
+}
+
+// Un choix : case, code en chasse fixe, puis sa description dessous
+.app-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-sm);
+  padding-block: var(--space-xs);
+  font-size: var(--text-sm);
+
+  small {
+    grid-column: 2;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  &:has(input:disabled) {
+    opacity: 0.7;
+  }
+
+  &__code {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+}
+
+// Panneau titré à deux colonnes : ce qui est autorisé, ce qui est refusé
+.app-columns {
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+
+  > h3 {
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  &__body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  &__col {
+    min-width: 0;
+    padding: var(--space-md);
+
+    + .app-columns__col {
+      border-inline-start: 1px solid var(--color-border);
+    }
+
+    h4 {
+      margin: 0 0 var(--space-sm);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+
+      span {
+        font-weight: var(--weight-regular);
+      }
+    }
+
+    &--allowed {
+      background: var(--color-success-bg);
+    }
+
+    &--denied {
+      background: var(--color-warning-bg);
+    }
+  }
+
+  @include bp.form-compact {
+    &__body {
+      grid-template-columns: 1fr;
+    }
+
+    &__col + &__col {
+      border-block-start: 1px solid var(--color-border);
+      border-inline-start: 0;
+    }
+  }
+}
+

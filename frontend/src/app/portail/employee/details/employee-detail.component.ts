@@ -35,8 +35,7 @@ function duree(depuis: string, aujourdhui: Date): { annees: number; mois: number
   selector: 'app-employee-detail',
   imports: [DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent, MessageComponent, PaieParcoursComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './employee-detail.component.html',
-  styleUrl: './employee-detail.component.scss'
+  templateUrl: './employee-detail.component.html'
 })
 export class EmployeeDetailComponent {
   protected readonly libelleStatut = libelleStatutEmploye;

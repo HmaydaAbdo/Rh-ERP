@@ -36,7 +36,6 @@ export interface CollectionTableConfig {
         </div>
         <div class="app-table-bar__tools">
           <app-column-chooser class="en-ligne" [state]="columnState()"></app-column-chooser>
-          <ng-content select="[table-export]"></ng-content>
         </div>
       </div>
       <stp-table

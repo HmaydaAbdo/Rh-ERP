@@ -20,6 +20,9 @@
   --color-surface-alt: var(--color-surface-alt);
   --color-canvas: var(--color-canvas);
   --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-primary-strong: var(--color-primary-strong);
   --color-text: var(--color-text);
   --color-muted: var(--color-text-muted);
   --color-success: var(--color-success);

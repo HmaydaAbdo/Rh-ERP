@@ -25,17 +25,17 @@
         <stp-field-error [field]="form.description" />
       </div>
 
-      <div class="app-form__wide role-form__permissions">
+      <div class="app-form__wide">
         <div class="app-form__section"><h2>Permissions</h2></div>
         @if (protege()) {
-          <p class="role-form__protege">
+          <p class="app-callout">
             Rôle d’administration : son nom et ses permissions sont verrouillés (le retirer ou l’amputer laisserait le système sans
             administrateur). Seule sa description peut être modifiée.
           </p>
         }
         @for (group of permissionGroups(); track group.domaine) {
-          <div class="role-form__group">
-            <div class="role-form__group-header">
+          <div class="app-group">
+            <div class="app-group__header">
               <input
                 type="checkbox"
                 class="stp-checkbox"
@@ -47,9 +47,9 @@
               />
               <strong>{{ group.domaine }}</strong>
             </div>
-            <div class="role-form__group-items">
+            <div class="app-group__items">
               @for (permission of group.permissions; track permission.id) {
-                <label class="role-form__permission">
+                <label class="app-check">
                   <input
                     type="checkbox"
                     class="stp-checkbox"
@@ -58,7 +58,7 @@
                     [disabled]="protege()"
                     (change)="onToggle(permission, $event)"
                   />
-                  <span class="role-form__code">{{ permission.code }}</span>
+                  <span class="app-check__code">{{ permission.code }}</span>
                   <small>{{ permission.description }}</small>
                 </label>
               }

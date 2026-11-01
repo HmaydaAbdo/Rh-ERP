@@ -57,12 +57,12 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes export-wizard-avant {
+@keyframes stp-entree {
   from { opacity: 0; transform: translateX(24px); }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes export-wizard-arriere {
+@keyframes stp-entree-arriere {
   from { opacity: 0; transform: translateX(-24px); }
   to { opacity: 1; transform: none; }
 }

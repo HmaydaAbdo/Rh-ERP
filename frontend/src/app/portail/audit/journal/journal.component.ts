@@ -52,8 +52,7 @@ const filtresVides = () => ({
     DialogComponent
   ],
   templateUrl: './journal.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './journal.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JournalComponent {
   protected readonly columns = new ColumnState([

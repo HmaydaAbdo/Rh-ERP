@@ -70,7 +70,7 @@ describe('RoleFormComponent', () => {
       await stabiliser();
 
       expect(racine().querySelector('form')).not.toBeNull();
-      expect(racine().querySelectorAll('.role-form__code')).toHaveLength(4);
+      expect(racine().querySelectorAll('.app-check__code')).toHaveLength(4);
     });
 
     it('applique les mêmes bornes que l’API pour le nom et la description', async () => {
@@ -89,8 +89,8 @@ describe('RoleFormComponent', () => {
       await afficher();
 
       expect(racine().querySelector('h1')?.textContent).toBe('Nouveau rôle');
-      expect(Array.from(racine().querySelectorAll('.role-form__group-header strong')).map((e) => e.textContent)).toEqual(['EMPLOYEE', 'PAIE']);
-      expect(Array.from(racine().querySelectorAll('.role-form__code')).map((e) => e.textContent)).toEqual(['EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'PAIE_READ', 'PAIE_WRITE']);
+      expect(Array.from(racine().querySelectorAll('.app-group__header strong')).map((e) => e.textContent)).toEqual(['EMPLOYEE', 'PAIE']);
+      expect(Array.from(racine().querySelectorAll('.app-check__code')).map((e) => e.textContent)).toEqual(['EMPLOYEE_READ', 'EMPLOYEE_WRITE', 'PAIE_READ', 'PAIE_WRITE']);
       expect(Array.from(racine().querySelectorAll('input[type="checkbox"]')).every((c) => !(c as HTMLInputElement).checked)).toBe(true);
     });
 
@@ -197,7 +197,7 @@ describe('RoleFormComponent', () => {
       expect((racine().querySelector('#nom') as HTMLInputElement).disabled).toBe(true);
       expect(case_('PAIE_READ').disabled).toBe(true);
       expect(groupe('PAIE').disabled).toBe(true);
-      expect(racine().querySelector('.role-form__protege')?.textContent).toContain('Seule sa description peut être modifiée');
+      expect(racine().querySelector('.app-callout')?.textContent).toContain('Seule sa description peut être modifiée');
     });
 
     it('ne change pas les permissions même si une case est actionnée', async () => {

@@ -13,12 +13,10 @@ import { EquipeReferenceService } from '../../../shared/reference-data/equipe-re
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ChartComponent } from '../../../shared/ui/chart/chart.component';
-import { PdfExportButtonComponent } from '../../../shared/ui/pdf-export-button/pdf-export-button.component';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { MODULE_EMPLOYE } from '../../employee/employee-module';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
-import { formaterMontant } from '../../paie/paie-format';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
@@ -215,21 +213,11 @@ describe('AnalytiquePerimetreComponent', () => {
     harness = await RouterTestingHarness.create();
   });
 
-  it('applique nom et CIN aux mouvements et les inscrit avec le périmètre dans les exports complets', async () => {
+  it('applique nom et CIN aux mouvements de paie', async () => {
     await harness.navigateByUrl('/employees/analytique?nom=Ali&cin=AB&chantierIds=1&statut=ACTIF', HoteEmployeComponent);
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(paie.effectifs).toHaveBeenLastCalledWith({ nomPrenom: 'Ali', cin: 'AB', periode: undefined, chantierIds: [1], equipeIds: undefined, fonctionIds: undefined });
-    const documents = harness.fixture.debugElement.queryAll(By.directive(PdfExportButtonComponent))
-      .map((debug) => (debug.componentInstance as PdfExportButtonComponent).document());
-    const evolution = documents.find((document) => document.titre.startsWith('Évolution mensuelle'))!;
-    expect(evolution.contexte).toContain('Nom : Ali');
-    expect(evolution.contexte).toContain('CIN : AB');
-    expect(evolution.contexte).toContain('Chantier : C168');
-    expect(evolution.contexte).toContain('Statut des fiches : En poste (ne filtre pas la paie)');
-    expect(evolution.colonnes).toEqual(['Mois', 'Masse (DH)', 'Effectif payé', 'STC (personnes)', 'STC (DH)']);
-    expect(evolution.lignes).toHaveLength(2);
-    expect(evolution.lignes[1]).toEqual(['août 2026', formaterMontant(4500), 1, 1, formaterMontant(1000)]);
   });
 
   it('annonce une source en erreur, conserve les autres et permet une reprise sans présenter l’erreur comme un résultat vide', async () => {
@@ -277,7 +265,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.querySelector('div[hidden]')).toBeNull();
   });
 
-  it('retire la répartition et son export pendant le chargement d’une nouvelle dimension', async () => {
+  it('retire la répartition pendant le chargement d’une nouvelle dimension', async () => {
     const page = await ouvrir();
     const attente = new Subject<{ id: number; code: string; libelle: string; effectif: number; actifs: number }[]>();
     employes.regrouper.mockReturnValue(attente);
@@ -287,13 +275,11 @@ describe('AnalytiquePerimetreComponent', () => {
     harness.detectChanges();
     const section = page.querySelector('[aria-labelledby="pa-fiches-repartition"]')!;
     expect(section.textContent).toContain('Chargement de la répartition…');
-    expect(section.querySelector('app-pdf-export-button')).toBeNull();
     expect(section.querySelector('tbody')?.textContent).not.toContain('Nador');
     attente.next([{ id: 5, code: 'CH', libelle: 'Chauffeurs', effectif: 2, actifs: 2 }]);
     attente.complete();
     await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(section.querySelector('app-pdf-export-button')).not.toBeNull();
     expect(section.querySelector('tbody')?.textContent).toContain('Chauffeurs');
   });
 
@@ -309,15 +295,13 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('affiche les chiffres de la paie avec leur variation et des graphiques accompagnés de leur tableau de données', async () => {
     const page = await ouvrir();
-    const tuiles = Array.from(page.querySelectorAll('.perimetre-analytique__tuile')).map((t) => t.textContent ?? '');
+    const tuiles = Array.from(page.querySelectorAll('.app-kpi')).map((t) => t.textContent ?? '');
 
     expect(page.textContent).toContain('Paie · août 2026');
     expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500,00\sDH\s*\+12,5 % sur le mois précédent/);
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
-    expect(page.querySelectorAll('.perimetre-analytique__section--exportable > app-pdf-export-button').length).toBeGreaterThanOrEqual(4);
-    expect(page.querySelector('.perimetre-analytique__section--exportable app-pdf-export-button button[aria-label="Exporter l’évolution mensuelle en PDF"]')).not.toBeNull();
     expect(page.querySelector('a.stp-button[href="/chantiers/cartes"]')).not.toBeNull();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: undefined }));
   });
@@ -332,22 +316,21 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(page.textContent).not.toContain('Ancienneté');
     expect(page.querySelector('#pa-evolution')).toBeNull();
     expect(page.querySelector('#pa-repartition')).toBeNull();
-    expect(page.querySelector('.perimetre-analytique__periode')).toBeNull();
+    expect(page.querySelector('.app-field-label')).toBeNull();
     expect(page.querySelector('a[href="/equipes/cartes"]')).toBeNull();
-    expect(page.querySelectorAll('.perimetre-analytique__section--exportable app-pdf-export-button')).toHaveLength(2);
     expect(page.textContent).toContain('juillet 2026');
     expect(page.textContent).toContain('août 2026');
-    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+    expect(page.querySelectorAll('.app-data-details[open]')).toHaveLength(0);
     expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de la répartition par équipe"]')).toHaveLength(1);
     expect(page.querySelectorAll('stp-select input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]')).toHaveLength(1);
-    expect(page.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(page.querySelectorAll('.app-chart-indicator')).toHaveLength(2);
     expect(page.querySelector('stp-select input[aria-label="Chantier"]')?.getAttribute('placeholder')).toBe('Tous les chantiers');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', equipeIds: [0, 1, 2] }));
     expect(paie.analyser).not.toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-07' }));
     expect(employes.analyser).not.toHaveBeenCalled();
     expect(employes.regrouper).not.toHaveBeenCalled();
-    expect(page.querySelector('.perimetre-analytique__qualite')).toBeNull();
+    expect(page.querySelector('.app-quality')).toBeNull();
   });
 
   it.each([
@@ -356,28 +339,27 @@ describe('AnalytiquePerimetreComponent', () => {
   ] as const)('affiche les orphelins uniquement dans une section Analytique dédiée pour %s', async (_domaine, ouvrirVue) => {
     paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
     const page = await ouvrirVue();
-    const section = page.querySelector('.perimetre-analytique__qualite');
+    const section = page.querySelector('.app-quality');
     const graphique = harness.fixture.debugElement.queryAll(By.directive(ChartComponent))
       .map((debug) => debug.componentInstance as ChartComponent<'doughnut'>)
       .find((component) => component.type() === 'doughnut');
 
     expect(section).not.toBeNull();
     expect(section?.querySelectorAll('app-lazy-select')).toHaveLength(2);
-    expect(section?.querySelector('[aria-label="Exporter le graphique des bulletins sans équipe en PDF"]')).not.toBeNull();
     expect(graphique?.data().labels).toEqual(['Orphelins']);
     expect(graphique?.data().datasets[0]?.data).toEqual([2]);
-    expect(page.querySelector('.perimetre-analytique__note--qualite')).toBeNull();
+    expect(page.querySelector('.app-note-box')).toBeNull();
   });
 
   it('applique les filtres Chantier et Fonction du graphique qualité à sa requête Paie dédiée', async () => {
     paie.analyser.mockReturnValue(of({ ...ANALYSE, qualite: { sansEquipe: 2, sansObservation: 0 } }));
     await ouvrirEquipe();
-    const section = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'));
+    const section = harness.fixture.debugElement.query(By.css('.app-quality'));
     const filtres = section.queryAll(By.directive(LazySelectComponent));
     (filtres[0].componentInstance as LazySelectComponent).value.set([1]);
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
-    const filtresActualises = harness.fixture.debugElement.query(By.css('.perimetre-analytique__qualite'))
+    const filtresActualises = harness.fixture.debugElement.query(By.css('.app-quality'))
       .queryAll(By.directive(LazySelectComponent));
     (filtresActualises[1].componentInstance as LazySelectComponent).value.set([2]);
     await harness.fixture.whenStable();
@@ -398,7 +380,7 @@ describe('AnalytiquePerimetreComponent', () => {
       qualite: { ...ANALYSE.qualite, sansEquipe: 2 }
     }));
     const page = await ouvrirEquipe();
-    const tableau = [...page.querySelectorAll('.perimetre-analytique__section details')]
+    const tableau = [...page.querySelectorAll('.app-panel details')]
       .find((details) => details.textContent?.includes('données des'))!;
 
     expect(tableau.textContent).toContain('Orphelins');
@@ -431,7 +413,7 @@ describe('AnalytiquePerimetreComponent', () => {
 
   it('filtre la répartition et l’évolution par chantier et conserve le choix du chantier dans les options', async () => {
     const page = await ouvrirEquipe();
-    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+    const evolution = [...page.querySelectorAll('.app-panel')]
       .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'));
     const chantier = evolution?.querySelector('input[aria-label="Chantier"]') as HTMLInputElement;
     await choisirOption(chantier, 'Nador');
@@ -440,15 +422,15 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(TestBed.inject(Router).url).toContain('chantierIds=1');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1] }));
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', chantierIds: [1], equipeIds: [1] }));
-    expect([...page.querySelectorAll('.perimetre-analytique__section input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'C168 · Nador')).toBe(true);
-    expect(page.querySelectorAll('.perimetre-analytique__donnees[open]')).toHaveLength(0);
+    expect([...page.querySelectorAll('.app-panel input[aria-label="Chantier"]')].every((input) => (input as HTMLInputElement).value === 'C168 · Nador')).toBe(true);
+    expect(page.querySelectorAll('.app-data-details[open]')).toHaveLength(0);
   });
 
   it('permet de sélectionner plusieurs indicateurs indépendamment et affiche un graphique par indicateur', async () => {
     const page = await ouvrirEquipe();
-    const repartition = [...page.querySelectorAll('.perimetre-analytique__section')]
+    const repartition = [...page.querySelectorAll('.app-panel')]
       .find((section) => section.textContent?.includes('Répartition de la paie par équipe'))!;
-    const evolution = [...page.querySelectorAll('.perimetre-analytique__section')]
+    const evolution = [...page.querySelectorAll('.app-panel')]
       .find((section) => section.textContent?.includes('Évolution mensuelle par équipe'))!;
     await choisirValeur(repartition, 'Indicateurs de la répartition par équipe', ['effectif', 'masse']);
     await choisirValeur(evolution, 'Indicateurs de l’évolution mensuelle par équipe', ['effectif', 'stc']);
@@ -456,8 +438,8 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect((repartition.querySelector('input[aria-label="Indicateurs de la répartition par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
     expect((evolution.querySelector('input[aria-label="Indicateurs de l’évolution mensuelle par équipe"]') as HTMLInputElement).value).toBe('2 indicateurs');
-    expect(repartition.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
-    expect(evolution.querySelectorAll('.perimetre-analytique__graphique-indicateur')).toHaveLength(2);
+    expect(repartition.querySelectorAll('.app-chart-indicator')).toHaveLength(2);
+    expect(evolution.querySelectorAll('.app-chart-indicator')).toHaveLength(2);
   });
 
   it('change la mesure de l’évolution et celle de la répartition', async () => {
@@ -476,7 +458,7 @@ describe('AnalytiquePerimetreComponent', () => {
   it('répartit par une autre dimension sans relancer la paie, STC compris dans le tableau', async () => {
     const page = await ouvrir();
     const appelsPaie = paie.analyser.mock.calls.length;
-    const bouton = Array.from(page.querySelectorAll('.perimetre-analytique__choix button')).find((b) => b.textContent?.trim() === 'Fonction') as HTMLButtonElement;
+    const bouton = Array.from(page.querySelectorAll('.app-chips button')).find((b) => b.textContent?.trim() === 'Fonction') as HTMLButtonElement;
     bouton.click();
     harness.fixture.detectChanges();
     await harness.fixture.whenStable();
@@ -494,9 +476,9 @@ describe('AnalytiquePerimetreComponent', () => {
     harness.fixture.detectChanges();
 
     expect(TestBed.inject(Router).url).toContain('chantierIds=1');
-    expect(page.querySelector('.perimetre-analytique__etape')?.textContent).toContain('C168');
+    expect(page.querySelector('.app-trail__step')?.textContent).toContain('C168');
     expect(paie.analyser).toHaveBeenLastCalledWith(expect.objectContaining({ chantierIds: [1] }));
-    const tuiles = Array.from(page.querySelectorAll('.perimetre-analytique__tuile')).map((t) => t.textContent ?? '');
+    const tuiles = Array.from(page.querySelectorAll('.app-kpi')).map((t) => t.textContent ?? '');
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(false);
   });
 
