@@ -36,7 +36,7 @@ export class EmployeeListComponent {
 
   /** Le salaire est une donnée de paie : sa colonne n'existe que pour qui a `PAIE_READ` (le serveur ne l'envoie qu'à lui). */
   protected readonly columns = new ColumnState([
-    { field: 'nomPrenom', header: 'Nom & prénom' },
+    { field: 'nomPrenom', header: 'Nom & prénom', minWidth: 200 },
     { field: 'cin', header: 'CIN' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
