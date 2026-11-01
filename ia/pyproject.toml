@@ -2,7 +2,7 @@
 name = "erp-rh-ia"
 version = "0.1.0"
 description = "Service IA d'ERP-RH : graphe LangGraph, client MCP vers Spring, AG-UI vers Angular, modèles via LiteLLM"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi",
     "uvicorn",
@@ -16,6 +16,8 @@ dependencies = [
     "ag-ui-langgraph==0.0.47",
     "langchain[mcp]>=1.4.7",
     "langchain-litellm>=0.11.2",
+    # Préversion adoptée sur décision du propriétaire (2026-11-01) : seule à lever la borne openai<3 (plan IA, § 3).
+    "litellm==1.109.0.dev2",
     "copilotkit>=0.1.96",
     "opentelemetry-distro==0.66b1",
     "opentelemetry-exporter-otlp-proto-http==1.45.1",
@@ -49,7 +51,7 @@ required-version = ">=0.12"
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
@@ -58,7 +60,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
 "tests/**" = ["S101"]
 
 [tool.pyright]
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 typeCheckingMode = "strict"
 include = ["src", "tests"]
 venvPath = "."
