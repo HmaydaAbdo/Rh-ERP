@@ -14,7 +14,7 @@ from langchain_core.tools import BaseTool, StructuredTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from erp_rh_ia.agent import SYSTEME, creer_agent
-from erp_rh_ia.agui import ERREUR_PUBLIQUE, FabriqueAgent
+from erp_rh_ia.agui import FabriqueAgent
 from erp_rh_ia.app import creer_app
 from erp_rh_ia.config import Settings
 
@@ -182,7 +182,7 @@ def test_la_reponse_de_l_utilisateur_a_une_question_de_l_agent_reprend_le_run() 
     assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 422
 
 
-def test_une_panne_devient_un_run_error_sans_detail() -> None:
+def test_une_panne_d_outil_est_expliquee_par_le_modele_sans_detail_interne() -> None:
     def panne(**_: Any) -> str:
         raise RuntimeError("détail interne : CIN AB123456")
 
@@ -192,7 +192,9 @@ def test_une_panne_devient_un_run_error_sans_detail() -> None:
     reponse = _poster(_masse(), AccesSimule([outil_en_panne]), _corps())
 
     recus = _lire(reponse.text)
-    assert recus[-1] == {"type": "RUN_ERROR", "message": ERREUR_PUBLIQUE, "code": "AGENT_INDISPONIBLE"}
+    # `ToolErrorMiddleware` : le run continue, le modèle voit le type de l'erreur et jamais son message brut.
+    assert recus[-1]["type"] == EventType.RUN_FINISHED
+    assert "RuntimeError" in reponse.text
     assert "AB123456" not in reponse.text
 
 
