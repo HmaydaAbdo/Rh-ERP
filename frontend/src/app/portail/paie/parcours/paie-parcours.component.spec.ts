@@ -1,3 +1,4 @@
+import { attendreGrille } from '../../../shared/testing/grille';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
@@ -67,10 +68,11 @@ describe('PaieParcoursComponent', () => {
     ]);
   });
 
-  it('liste les bulletins, chacun ouvrant sa fiche', () => {
+  it('liste les bulletins, chacun ouvrant sa fiche', async () => {
     afficher(PARCOURS);
+    await attendreGrille(fixture);
 
-    const liens = Array.from(racine().querySelectorAll('tbody a')).map((a) => [a.textContent, a.getAttribute('href')]);
+    const liens = Array.from(racine().querySelectorAll('.ag-cell a')).map((a) => [a.textContent, a.getAttribute('href')]);
     expect(liens).toEqual([
       ['septembre 2026', '/paie/33'],
       ['août 2026', '/paie/22'],

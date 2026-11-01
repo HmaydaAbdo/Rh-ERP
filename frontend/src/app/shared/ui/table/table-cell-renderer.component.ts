@@ -27,19 +27,28 @@ export interface TableCellParams extends ICellRendererParams {
   template: `
     @if (modele(); as m) {
       <ng-container [ngTemplateOutlet]="m.template" [ngTemplateOutletContext]="m.contexte" />
+    } @else {
+      {{ texte() }}
     }
   `
 })
 export class TableCellRendererComponent implements ICellRendererAngularComp {
   protected readonly modele = signal<TableCellModele | null>(null);
+  /** Sans gabarit projeté, la cellule affiche la valeur de la colonne telle que la grille l'a formatée. */
+  protected readonly texte = signal('');
 
   agInit(params: TableCellParams): void {
-    this.modele.set(params.resoudre(params));
+    this.charger(params);
   }
 
   refresh(params: TableCellParams): boolean {
-    this.modele.set(params.resoudre(params));
+    this.charger(params);
     return true;
+  }
+
+  private charger(params: TableCellParams): void {
+    this.modele.set(params.resoudre(params));
+    this.texte.set(params.valueFormatted ?? '');
   }
 }
 

@@ -87,21 +87,18 @@
               <stp-select class="app-grow" [ariaLabel]="'Indicateurs de la répartition par ' + libelleDimensionVue()" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" bulkMode="loaded" [options]="optionsMesuresEquipe" [value]="mesureRepartitionEquipe()" (valueChange)="modifierMesureRepartitionEquipe($event)" />
             </div>
             @if (equipesEffectif().length > 0) {
-              @for (graphique of graphiquesRepartitionEquipe(); track graphique.mesure) {
-                <section class="app-chart-indicator" [attr.aria-label]="'Répartition par ' + libelleDimensionVue() + ' — ' + libelleMesureEquipe(graphique.mesure)">
-                  <h4>{{ libelleMesureEquipe(graphique.mesure) }}</h4>
-                  <div class="app-chart app-chart--tall" [style.height.rem]="hauteurPourLignes(graphique.data.labels?.length ?? 0)">
-                    <stp-chart type="bar" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' par ' + libelleDimensionVue() + ', le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
+              @if (graphiqueRepartitionEquipe(); as graphique) {
+                <section class="app-chart-indicator" [attr.aria-label]="'Répartition par ' + libelleDimensionVue() + ' — ' + libellesMesures(mesureRepartitionEquipe())">
+                  <div class="app-chart app-chart--tall" [style.height.rem]="graphique.hauteur">
+                    <stp-chart type="bar" [ariaLabel]="libellesMesures(mesureRepartitionEquipe()) + ' par ' + libelleDimensionVue() + ', le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
                   </div>
                 </section>
+              } @else {
+                <p class="app-muted" role="status">Sélectionnez au moins un indicateur à afficher.</p>
               }
-              @if (graphiquesRepartitionEquipe().length === 0) { <p class="app-muted" role="status">Sélectionnez au moins un indicateur à afficher.</p> }
               <details class="app-data-details">
                 <summary>Voir les données des {{ tableauEquipes().length }} groupes</summary>
-                <table class="app-static-table">
-                  <thead><tr><th scope="col">{{ libelleDimensionVueMaj() }}</th><th scope="col">Effectif (personnes)</th><th scope="col">Masse salariale (DH)</th><th scope="col">STC (personnes)</th><th scope="col">STC (DH)</th></tr></thead>
-                  <tbody>@for (equipe of tableauEquipes(); track equipe.id) { <tr><td>{{ equipe.libelle }}</td><td>{{ equipe.effectif }}</td><td>{{ formaterMontant(equipe.masse) }}</td><td>{{ equipe.stc }}</td><td>{{ formaterMontant(equipe.stcMontant) }}</td></tr> }</tbody>
-                </table>
+                <stp-table label="Données de la répartition par groupe" [value]="tableauEquipes()" [columns]="colonnesEquipes()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('masse') { {{ formaterMontant(l.masse) }} } @case ('stcMontant') { {{ formaterMontant(l.stcMontant) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
               </details>
             } @else {
               <p class="app-muted" role="status">Aucun groupe ne correspond à ces filtres.</p>
@@ -135,21 +132,18 @@
               <stp-select class="app-grow" [ariaLabel]="'Indicateurs de l’évolution mensuelle par ' + libelleDimensionVue()" placeholder="Indicateurs" summaryLabel="{0} indicateurs" [multiple]="true" bulkMode="loaded" [options]="optionsMesuresEquipe" [value]="mesureEvolutionEquipe()" (valueChange)="modifierMesureEvolutionEquipe($event)" />
             </div>
             @if (evolutionEquipe().length > 0) {
-              @for (graphique of graphiquesEvolutionEquipe(); track graphique.mesure) {
-                <section class="app-chart-indicator" [attr.aria-label]="'Évolution mensuelle par ' + libelleDimensionVue() + ' — ' + libelleMesureEquipe(graphique.mesure)">
-                  <h4>{{ libelleMesureEquipe(graphique.mesure) }}</h4>
+              @if (graphiqueEvolutionEquipe(); as graphique) {
+                <section class="app-chart-indicator" [attr.aria-label]="'Évolution mensuelle par ' + libelleDimensionVue() + ' — ' + libellesMesures(mesureEvolutionEquipe())">
                   <div class="app-chart app-chart--tall">
-                    <stp-chart type="line" [ariaLabel]="libelleMesureEquipe(graphique.mesure) + ' mensuel pour le groupe sélectionné, le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
+                    <stp-chart type="line" [ariaLabel]="libellesMesures(mesureEvolutionEquipe()) + ' mensuel pour le groupe sélectionné, le détail complet est dans le tableau des données.'" [data]="graphique.data" [options]="graphique.options"></stp-chart>
                   </div>
                 </section>
+              } @else {
+                <p class="app-muted" role="status">Sélectionnez au moins un indicateur à afficher.</p>
               }
-              @if (graphiquesEvolutionEquipe().length === 0) { <p class="app-muted" role="status">Sélectionnez au moins un indicateur à afficher.</p> }
               <details class="app-data-details">
                 <summary>Voir les données ({{ evolutionEquipe().length }})</summary>
-                <table class="app-static-table">
-                  <thead><tr><th scope="col">Mois</th><th scope="col">Effectif (personnes)</th><th scope="col">Masse salariale (DH)</th><th scope="col">STC (personnes)</th><th scope="col">STC (DH)</th></tr></thead>
-                  <tbody>@for (mois of evolutionEquipe(); track mois.periode) { <tr><td>{{ libellePeriode(mois.periode) }}</td><td>{{ mois.effectif }}</td><td>{{ formaterMontant(mois.masse) }}</td><td>{{ mois.stc }}</td><td>{{ formaterMontant(mois.stcMontant) }}</td></tr> }</tbody>
-                </table>
+                <stp-table label="Données de l’évolution mensuelle du groupe" [value]="evolutionEquipe()" [columns]="colonnesEvolutionEquipe" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('periode') { {{ libellePeriode(l.periode) }} } @case ('masse') { {{ formaterMontant(l.masse) }} } @case ('stcMontant') { {{ formaterMontant(l.stcMontant) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
               </details>
             } @else {
               <p class="app-muted" role="status">Aucun historique disponible pour ce groupe.</p>
@@ -197,13 +191,7 @@
             </div>
             <details class="app-data-details">
               <summary>Voir les données</summary>
-              <table class="app-static-table">
-                <thead><tr><th scope="col">Rattachement</th><th scope="col">Bulletins</th></tr></thead>
-                <tbody>
-                  <tr><td>Avec équipe</td><td>{{ bulletinsAvecEquipe() }}</td></tr>
-                  <tr><td>Sans équipe (orphelins)</td><td>{{ analyseQualite.qualite.sansEquipe }}</td></tr>
-                </tbody>
-              </table>
+              <stp-table label="Rattachement des bulletins à une équipe" [value]="[{ rattachement: 'Avec équipe', bulletins: bulletinsAvecEquipe() }, { rattachement: 'Sans équipe (orphelins)', bulletins: analyseQualite.qualite.sansEquipe }]" [columns]="colonnesQualite" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"></stp-table>
             </details>
           } @else {
             <p class="app-muted" role="status">Aucun bulletin sans équipe ne correspond aux filtres choisis.</p>
@@ -235,14 +223,7 @@
         </section>
         <section class="app-panel" aria-labelledby="hs-repartition-titre">
           <h4 id="hs-repartition-titre">Répartition par {{ libelleDimensionVue() }}</h4>
-          <table class="app-static-table">
-            <thead><tr><th scope="col">{{ libelleDimensionVueMaj() }}</th><th scope="col">Effectif</th><th scope="col">Heures</th><th scope="col">Montant (DH)</th><th scope="col">STC (DH)</th><th scope="col">Forfait (DH)</th><th scope="col">Net (DH)</th></tr></thead>
-            <tbody>
-              @for (groupe of groupesHeuresSupp(); track groupe.id) {
-                <tr><th scope="row">{{ groupe.libelle }}</th><td>{{ groupe.effectif }}</td><td>{{ groupe.heures | number: '1.0-1' }}</td><td>{{ formaterMontant(groupe.montantDh) }}</td><td>{{ formaterMontant(groupe.stcDh) }}</td><td>{{ formaterMontant(groupe.forfaitDh) }}</td><td>{{ formaterMontant(groupe.netAPayerDh) }}</td></tr>
-              } @empty { <tr><td colspan="7">Aucune donnée sur ce périmètre.</td></tr> }
-            </tbody>
-          </table>
+          <stp-table label="Répartition des heures supplémentaires" [value]="groupesHeuresSupp()" [columns]="colonnesHeuresSupp()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" emptyMessage="Aucune donnée sur ce périmètre."><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('heures') { {{ l.heures | number: '1.0-1' }} } @case ('montantDh') { {{ formaterMontant(l.montantDh) }} } @case ('stcDh') { {{ formaterMontant(l.stcDh) }} } @case ('forfaitDh') { {{ formaterMontant(l.forfaitDh) }} } @case ('netAPayerDh') { {{ formaterMontant(l.netAPayerDh) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
         </section>
       </section>
     } @else if (!chargement()) {
@@ -293,14 +274,7 @@
           </div>
           <details class="app-data-details">
             <summary>Voir les données</summary>
-            <table class="app-static-table">
-              <thead><tr><th scope="col">Mois</th><th scope="col">Masse (DH)</th><th scope="col">Effectif payé</th><th scope="col">STC</th><th scope="col">Montant STC (DH)</th></tr></thead>
-              <tbody>
-                @for (e of a.evolution; track e.periode) {
-                  <tr><td>{{ libellePeriode(e.periode) }}</td><td>{{ formaterMontant(e.masse) }}</td><td>{{ e.effectif }}</td><td>{{ e.stc }}</td><td>{{ formaterMontant(e.stcMontant) }}</td></tr>
-                }
-              </tbody>
-            </table>
+            <stp-table label="Évolution mensuelle de la paie" [value]="a.evolution" [columns]="colonnesEvolutionPaie" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('periode') { {{ libellePeriode(l.periode) }} } @case ('masse') { {{ formaterMontant(l.masse) }} } @case ('stcMontant') { {{ formaterMontant(l.stcMontant) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
           </details>
         </section>
 
@@ -322,17 +296,7 @@
           }
           <details class="app-data-details">
             <summary>Voir les données ({{ lignesRepartitionPaie().length }})</summary>
-            <table class="app-static-table">
-              <thead><tr><th scope="col">{{ libelles[dimension()] }}</th><th scope="col">Payés</th><th scope="col">Masse (DH)</th><th scope="col">STC</th><th scope="col">Approfondir</th></tr></thead>
-              <tbody>
-                @for (ligne of lignesRepartitionPaie(); track ligne.id) {
-                  <tr>
-                    <td>{{ nomLigne(ligne) }}</td><td>{{ ligne.effectif }}</td><td>{{ formaterMontant(ligne.masse) }}</td><td>{{ ligne.stc }} · {{ formaterMontant(ligne.stcMontant) }} DH</td>
-                    <td><button type="button" class="app-link-button" [attr.aria-label]="'Approfondir ' + nomLigne(ligne)" (click)="approfondir(ligne)">Voir</button></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+            <stp-table label="Répartition de la paie par groupe" [value]="lignesRepartitionPaie()" [columns]="colonnesRepartitionPaie()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('libelle') { {{ nomLigne(l) }} } @case ('masse') { {{ formaterMontant(l.masse) }} } @case ('stc') { {{ l.stc }} · {{ formaterMontant(l.stcMontant) }} DH } @case ('approfondir') { <button type="button" class="app-link-button" [attr.aria-label]="'Approfondir ' + nomLigne(l)" (click)="approfondir(l)">Voir</button> } @default { {{ l[col.field] }} } }</ng-template></stp-table>
           </details>
         </section>
 
@@ -344,12 +308,7 @@
             </div>
             <details class="app-data-details">
               <summary>Voir les données</summary>
-              <table class="app-static-table">
-                <thead><tr><th scope="col">Tranche</th><th scope="col">Bulletins</th></tr></thead>
-                <tbody>
-                  @for (t of a.tranches; track t.min) { <tr><td>{{ libelleTrancheTotal(t) }}</td><td>{{ t.effectif }}</td></tr> }
-                </tbody>
-              </table>
+              <stp-table label="Bulletins par tranche de salaire" [value]="a.tranches" [columns]="colonnesTranches" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@if (col.field === 'tranche') { {{ libelleTrancheTotal(l) }} } @else { {{ l.effectif }} }</ng-template></stp-table>
             </details>
           </section>
         }
@@ -371,14 +330,7 @@
             </div>
             <details class="app-data-details">
               <summary>Voir les données</summary>
-              <table class="app-static-table">
-                <thead><tr><th scope="col">Mois</th><th scope="col">Payés</th><th scope="col">Entrées</th><th scope="col">Sorties</th><th scope="col">Mutations</th></tr></thead>
-                <tbody>
-                  @for (m of mouvements(); track m.periode) {
-                    <tr><td>{{ libellePeriode(m.periode) }}</td><td>{{ m.effectif }}</td><td>{{ m.entrees ?? '—' }}</td><td>{{ m.sorties }}</td><td>{{ m.mutations ?? '—' }}</td></tr>
-                  }
-                </tbody>
-              </table>
+              <stp-table label="Mouvements mois par mois" [value]="mouvements()" [columns]="colonnesMouvements" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('periode') { {{ libellePeriode(l.periode) }} } @case ('entrees') { {{ l.entrees ?? '—' }} } @case ('mutations') { {{ l.mutations ?? '—' }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
             </details>
           </section>
         }
@@ -416,10 +368,7 @@
               </div>
               <details class="app-data-details">
                 <summary>Voir les données</summary>
-                <table class="app-static-table">
-                  <thead><tr><th scope="col">Âge</th><th scope="col">Employés</th></tr></thead>
-                  <tbody>@for (t of f.parAge; track t.min) { <tr><td>{{ libelleTranche(t, 'age') }}</td><td>{{ t.effectif }}</td></tr> }</tbody>
-                </table>
+                <stp-table label="Employés par tranche d’âge" [value]="f.parAge" [columns]="colonnesAge" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@if (col.field === 'tranche') { {{ libelleTranche(l, 'age') }} } @else { {{ l.effectif }} }</ng-template></stp-table>
               </details>
             </section>
             <section class="app-panel" aria-labelledby="pa-anciennete">
@@ -429,10 +378,7 @@
               </div>
               <details class="app-data-details">
                 <summary>Voir les données</summary>
-                <table class="app-static-table">
-                  <thead><tr><th scope="col">Ancienneté</th><th scope="col">Employés</th></tr></thead>
-                  <tbody>@for (t of f.parAnciennete; track t.min) { <tr><td>{{ libelleTranche(t, 'anciennete') }}</td><td>{{ t.effectif }}</td></tr> }</tbody>
-                </table>
+                <stp-table label="Employés par tranche d’ancienneté" [value]="f.parAnciennete" [columns]="colonnesAnciennete" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@if (col.field === 'tranche') { {{ libelleTranche(l, 'anciennete') }} } @else { {{ l.effectif }} }</ng-template></stp-table>
               </details>
             </section>
           </div>
@@ -452,12 +398,7 @@
             </div>
             <details class="app-data-details">
               <summary>Voir les données ({{ repartitionFiches().length }})</summary>
-              <table class="app-static-table">
-                <thead><tr><th scope="col">{{ libelles[dimension()] }}</th><th scope="col">Employés</th><th scope="col">En poste</th></tr></thead>
-                <tbody>
-                  @for (g of repartitionFiches(); track g.id) { <tr><td>{{ nomLigne(g) }}</td><td>{{ g.effectif }}</td><td>{{ g.actifs }}</td></tr> }
-                </tbody>
-              </table>
+              <stp-table label="Employés par groupe" [value]="repartitionFiches()" [columns]="colonnesFiches()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false"><ng-template stpCell let-l let-col="col">@if (col.field === 'libelle') { {{ nomLigne(l) }} } @else { {{ l[col.field] }} }</ng-template></stp-table>
             </details>
             </div>
           </section>

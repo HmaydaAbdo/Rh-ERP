@@ -337,9 +337,8 @@ Tous les tableaux de données — **sans exception** — offrent :
 
 **Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
 son propre style de tableau. Un en-tête peut déclarer `shortHeader` pour afficher un libellé compact ; son `header` complet reste annoncé aux technologies d'assistance, visible au survol et utilisé dans le sélecteur de colonnes. Les en-têtes ne sont pas tronqués. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
-`emptyMessage` et présenté dans le tableau. Les seuls tableaux hors `stp-table` sont des listes courtes de lignes d'import ignorées :
-elles utilisent `app-static-table-scroll` / `app-static-table` (`styles/_page.scss`), une région de défilement focusable, une légende
-accessible et des en-têtes `scope="col"`.
+`emptyMessage` et présenté dans le tableau. **Aucun tableau HTML natif** n'existe hors du kit : même les petites listes (lignes d'import ignorées, données d'accompagnement
+des graphiques) passent par `stp-table` avec `[paginated]="false"`, `[reorderable]="false"` et `[rowActionsVisible]="false"`.
 
 Les libellés d'en-tête et d'option restent intégralement visibles : le texte passe à la ligne et ne dépend pas d'une infobulle pour
 être lu. Le sélecteur expose toutes les colonnes déclarées dans `ColumnState`, y compris celles temporairement masquées. Les

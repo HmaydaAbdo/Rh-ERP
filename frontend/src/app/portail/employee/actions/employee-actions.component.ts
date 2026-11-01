@@ -6,6 +6,8 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableComponent } from '../../../shared/ui/table/table.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
@@ -19,11 +21,12 @@ import { EmployeeService } from '../services/employee.service';
  */
 @Component({
   selector: 'app-employee-actions',
-  imports: [RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
+  imports: [TableComponent, RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
   templateUrl: './employee-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeActionsComponent {
+  protected readonly colonnesIgnorees: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'cin', header: 'CIN' }, { field: 'nomPrenom', header: 'Nom & prénom' }, { field: 'raison', header: 'Raison' }];
   /** Des employés ont été importés : la vue affichée doit se recharger. */
   readonly importe = output<void>();
 

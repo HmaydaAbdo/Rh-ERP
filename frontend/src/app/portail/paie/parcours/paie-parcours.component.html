@@ -67,36 +67,18 @@
 
       <section class="app-panel" aria-labelledby="parcours-bulletins">
         <h2 id="parcours-bulletins">Bulletins</h2>
-        <div class="app-static-table-scroll" role="region" tabindex="0" aria-labelledby="parcours-bulletins">
-          <table class="app-static-table">
-            <thead>
-              <tr>
-                <th scope="col">Mois</th>
-                <th scope="col">Chantier</th>
-                <th scope="col">Fonction</th>
-                <th scope="col">Équipe</th>
-                <th scope="col" class="text-end tabular-nums">Jours</th>
-                <th scope="col" class="text-end tabular-nums">Salaire</th>
-                <th scope="col" class="text-end tabular-nums">Total</th>
-                <th scope="col">Observation</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (mois of p.mois; track mois.bulletinId) {
-                <tr>
-                  <td><a class="app-link" [routerLink]="['/paie', mois.bulletinId]">{{ libellePeriode(mois.periode) }}</a></td>
-                  <td>{{ mois.chantier }}</td>
-                  <td>{{ mois.fonction }}</td>
-                  <td>{{ mois.equipe ?? '—' }}</td>
-                  <td class="text-end tabular-nums">{{ mois.nombreJoursTravailles | number: '1.0-2' }}</td>
-                  <td class="text-end tabular-nums">{{ mois.salaireMensuel | number: '1.2-2' }}</td>
-                  <td class="text-end tabular-nums"><strong>{{ mois.salaireTotal | number: '1.2-2' }}</strong></td>
-                  <td>{{ mois.observation ?? '' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <stp-table label="Bulletins" [value]="p.mois" [columns]="colonnesBulletins" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
+          <ng-template stpCell let-mois let-col="col">
+            @switch (col.field) {
+              @case ('periode') { <a class="app-link" [routerLink]="['/paie', mois.bulletinId]">{{ libellePeriode(mois.periode) }}</a> }
+              @case ('equipe') { {{ mois.equipe ?? '—' }} }
+              @case ('nombreJoursTravailles') { {{ mois.nombreJoursTravailles | number: '1.0-2' }} }
+              @case ('salaireMensuel') { {{ mois.salaireMensuel | number: '1.2-2' }} }
+              @case ('salaireTotal') { <strong>{{ mois.salaireTotal | number: '1.2-2' }}</strong> }
+              @default { {{ mois[col.field] ?? '' }} }
+            }
+          </ng-template>
+        </stp-table>
       </section>
     }
   </div>
