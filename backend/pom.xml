@@ -35,7 +35,7 @@
 		<!-- Correctif officiel GHSA-ccrj-gw8r-854m (parsing W3C tracestate quadratique),
 		     la BOM Spring Boot 4.1.2 gère encore OpenTelemetry 1.62.0. -->
 		<opentelemetry.version>1.67.0</opentelemetry.version>
-		<jacoco.version>0.8.15</jacoco.version>
+		<jacoco.version>0.8.16</jacoco.version>
 		<cyclonedx.version>2.9.3</cyclonedx.version>
 		<!-- Correctifs de sécurité plus récents que ceux de la BOM de Spring Boot 4.1.1 (analyse OSV du 2026-10-11) :
 		     à retirer quand la BOM les rattrape. Tomcat : contournement d'authentification et
@@ -46,7 +46,7 @@
 		<jsoup.version>1.23.2</jsoup.version>
 		<!-- Batik arrive par openhtmltopdf-svg-support 1.0.10 en 1.14 (plusieurs SSRF et exécution de code, corrigés en 1.17) ;
 		     Xalan 2.7.2 par Batik (GHSA-9339-86wc-4qgf, corrigé en 2.7.3). -->
-		<batik.version>1.19</batik.version>
+		<batik.version>1.20</batik.version>
 		<xalan.version>2.7.3</xalan.version>
 	</properties>
 	<dependencyManagement>
@@ -182,12 +182,12 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
-            <version>5.5.1</version>
+            <version>6.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.5.1</version>
+            <version>6.0.0</version>
         </dependency>
         <!-- Rapport PDF (staport.rh.paie.report, PaieReportHtmlPdfService) : pipeline HTML/CSS pur
              (jsoup + openhtmltopdf), voir docs/report/README.md — remplace JasperReports (retiré le
@@ -275,7 +275,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.1.1</version>
+			<version>3.2.0</version>
 		</dependency>
 
 		<dependency>
