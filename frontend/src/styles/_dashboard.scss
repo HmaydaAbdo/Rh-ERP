@@ -399,13 +399,16 @@
 }
 
 // ---- Niveau courant d'un parcours : titre, résumé et actions ----
+.app-level__summary {
+  margin: 0;
+}
+
 .app-level {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  padding: var(--space-sm) 0;
-  border-block-end: 1px solid var(--color-border);
+  padding: 0;
 
   @include bp.phone {
     align-items: flex-start;
@@ -448,6 +451,22 @@
   }
 }
 
+// Une vue Cartes est une colonne de sections (barre d'actions, niveau, résultats) séparées par le seul écart du kit de page.
+.app-entitys,
+.app-busy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.app-entitys .app-bar-actions:empty,
+.app-entitys .app-bar-actions:has(> .app-actions-row:only-child:empty),
+.app-entitys .app-actions-row:empty,
+.app-entitys .app-level__title:empty {
+  display: none;
+}
+
 .app-bar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -464,23 +483,16 @@
 
 // ---- Résultats : cadre qui réagit au survol, avec son en-tête ----
 .app-results {
-  padding: var(--space-xs);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
-
-  &:hover,
-  &:focus-within {
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-md);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
 
   &__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    margin-block-end: var(--space-sm);
   }
 }
 
@@ -493,7 +505,7 @@
 // ---- Grilles de cartes ----
 .app-entity-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-md);
   margin: 0;
   padding: 0;
@@ -612,14 +624,14 @@
   }
 
   &__name {
-    font-size: var(--text-md);
+    font-size: var(--text-lg);
     font-weight: var(--weight-semibold);
     overflow-wrap: anywhere;
   }
 
   &__label {
     color: var(--color-text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     overflow-wrap: anywhere;
   }
 
@@ -654,7 +666,7 @@
   &__facts dt {
     min-width: 0;
     color: var(--color-text);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -670,7 +682,7 @@
 
   &__period {
     color: var(--color-text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
 
   &__indicator {
@@ -686,7 +698,7 @@
     }
 
     strong {
-      font-size: var(--text-sm);
+      font-size: var(--text-md);
       overflow-wrap: anywhere;
     }
   }
@@ -695,7 +707,7 @@
     max-width: 100%;
     min-block-size: 2lh;
     color: var(--color-text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-regular);
     line-height: 1.35;
     overflow-wrap: anywhere;
@@ -710,7 +722,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: var(--space-xs);
     width: 100%;
     padding: var(--space-xs) var(--space-md) var(--space-sm);
@@ -720,9 +732,7 @@
     > a,
     > button {
       display: inline-flex;
-      flex: 0 0 var(--control-height);
       justify-content: center;
-      width: var(--control-height);
     }
   }
 }

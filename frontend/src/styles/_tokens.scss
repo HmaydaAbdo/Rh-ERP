@@ -41,13 +41,6 @@
   --color-focus-soft: color-mix(in srgb, var(--color-focus) 14%, transparent);
 
   // Rail de navigation
-  --color-sidebar-bg: #141413;
-  --color-sidebar-text: #d6d3ca;
-  --color-sidebar-active-bg: #3a3937;
-  --color-sidebar-active-text: #f5f4ef;
-  --color-sidebar-hover-bg: #2b2a28;
-  --color-sidebar-border: #3a3937;
-  --color-sidebar-accent: var(--color-sidebar-active-text);
 
   // Statuts : texte sur fond teinté, jamais confondus avec l'action.
   --color-success: #9be3b8;
@@ -72,9 +65,49 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
   --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.48);
-  --shadow-sidebar: 0 12px 36px rgba(0, 0, 0, 0.3);
 
   --map-icon-filter: none;
+
+  // Interface de la carte en thème sombre
+  --map-ui-surface: #2b2a28;
+  --map-ui-canvas: #1f1e1d;
+  --map-ui-border: #6b6962;
+  --map-ui-text: #f5f4ef;
+  --map-ui-text-muted: #bdbab1;
+  --map-ui-icon: #eceae3;
+  --map-ui-primary: #eceae3;
+  --map-ui-focus: #f5f4ef;
+  --map-ui-focus-soft: color-mix(in srgb, var(--map-ui-focus) 14%, transparent);
+  --map-ui-highlight: #ffffff;
+  --map-ui-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.48);
+  --map-ui-primary-glow: none;
+  --map-marker-tooltip-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.5);
+  --map-tooltip-surface: #2b2a28;
+  --map-tooltip-border: #8a877f;
+  --map-tooltip-text: #f5f4ef;
+  --map-tooltip-muted: #bdbab1;
+
+  // Plan de la carte en thème sombre
+  --map-plan-background: #1a1918;
+  --map-plan-earth: #211f1e;
+  --map-plan-water: #141312;
+  --map-plan-boundary: #6b6962;
+  --map-plan-road-other: #2f2d2b;
+  --map-plan-road-minor: #3c3a37;
+  --map-plan-road-link: #55524c;
+  --map-plan-road-major: #76726a;
+  --map-plan-road-highway: #9a958a;
+  --map-plan-label: #edebe4;
+  --map-plan-label-muted: #bdbab1;
+  --map-plan-label-halo: #141413;
+  --map-plan-ocean-label: #a9a59a;
+  --map-plan-landcover-grass: rgba(34, 34, 31, 1);
+  --map-plan-landcover-barren: rgba(36, 34, 31, 1);
+  --map-plan-landcover-urban: rgba(35, 34, 33, 1);
+  --map-plan-landcover-farmland: rgba(35, 34, 31, 1);
+  --map-plan-landcover-glacier: rgba(50, 49, 47, 1);
+  --map-plan-landcover-scrub: rgba(36, 34, 31, 1);
+  --map-plan-landcover-forest: rgba(30, 34, 31, 1);
 }
 
 :root {
@@ -107,13 +140,6 @@
   --color-focus-soft: color-mix(in srgb, var(--color-focus) 12%, transparent);
 
   // ---- Rail de navigation ----
-  --color-sidebar-bg: #111827;
-  --color-sidebar-text: #d1d5db;
-  --color-sidebar-active-bg: #2a3447;
-  --color-sidebar-active-text: #ffffff;
-  --color-sidebar-hover-bg: #1f2937;
-  --color-sidebar-border: #374151;
-  --color-sidebar-accent: var(--color-sidebar-active-text);
 
   // ---- Statuts : texte sur fond teinté, contraste ≥ 7:1 ----
   --color-success: #14532d;
@@ -150,7 +176,6 @@
   --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06);
   --shadow-md: 0 2px 8px rgba(17, 24, 39, 0.08);
   --shadow-lg: 0 12px 32px rgba(17, 24, 39, 0.16);
-  --shadow-sidebar: 0 12px 36px rgba(17, 24, 39, 0.2);
 
   // ---- Typographie : Inter embarquée (@fontsource-variable/inter), chiffres tabulaires pour les montants ----
   --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -221,51 +246,51 @@
   --assistant-accent-soft: color-mix(in srgb, var(--color-primary) 14%, transparent);
   --assistant-accent-contrast: var(--color-primary-contrast);
 
-  // ---- Contrôle cartographique : chrome sombre constant (repris en E0.7 avec la carte) ----
-  --map-ui-surface: #2b2a28;
-  --map-ui-canvas: #1f1e1d;
-  --map-ui-border: #6b6962;
-  --map-ui-text: #f5f4ef;
-  --map-ui-text-muted: #bdbab1;
-  --map-ui-icon: #eceae3;
-  --map-ui-primary: #eceae3;
-  --map-ui-focus: #f5f4ef;
+  // ---- Contrôle cartographique : l'interface de la carte suit le thème (le fond de carte reste sombre, voir fond-de-carte.ts) ----
+  --map-ui-surface: #ffffff;
+  --map-ui-canvas: #f3f4f6;
+  --map-ui-border: #6b7280;
+  --map-ui-text: #111827;
+  --map-ui-text-muted: #4b5563;
+  --map-ui-icon: #1f2937;
+  --map-ui-primary: #1e40af;
+  --map-ui-focus: #1e40af;
   --map-ui-focus-soft: color-mix(in srgb, var(--map-ui-focus) 14%, transparent);
-  --map-ui-highlight: #ffffff;
+  --map-ui-highlight: #1e40af;
   --map-filter-width: 14rem;
-  --map-ui-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.48);
+  --map-ui-shadow: 0 0.5rem 1.5rem rgba(17, 24, 39, 0.22);
   --map-ui-primary-glow: none;
   --map-marker-core: #f5b942;
   --map-marker-halo: color-mix(in srgb, var(--map-marker-core) 34%, transparent);
   --map-marker-ring: color-mix(in srgb, var(--map-marker-core) 72%, white);
   --map-marker-hover-glow: 0 0 0 0.35rem var(--map-marker-halo), 0 0 1.35rem var(--map-marker-core);
-  --map-marker-tooltip-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.5);
-  --map-tooltip-surface: #2b2a28;
-  --map-tooltip-border: #8a877f;
-  --map-tooltip-text: #f5f4ef;
-  --map-tooltip-muted: #bdbab1;
+  --map-marker-tooltip-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+  --map-tooltip-surface: #ffffff;
+  --map-tooltip-border: #6b7280;
+  --map-tooltip-text: #111827;
+  --map-tooltip-muted: #4b5563;
 
-  // Palette du Plan vectoriel : territoire gris chaud, routes en gris plus clairs.
-  --map-plan-background: #1a1918;
-  --map-plan-earth: #211f1e;
-  --map-plan-water: #141312;
-  --map-plan-boundary: #6b6962;
-  --map-plan-road-other: #2f2d2b;
-  --map-plan-road-minor: #3c3a37;
-  --map-plan-road-link: #55524c;
-  --map-plan-road-major: #76726a;
-  --map-plan-road-highway: #9a958a;
-  --map-plan-label: #edebe4;
-  --map-plan-label-muted: #bdbab1;
-  --map-plan-label-halo: #141413;
-  --map-plan-ocean-label: #a9a59a;
-  --map-plan-landcover-grass: rgba(34, 34, 31, 1);
-  --map-plan-landcover-barren: rgba(36, 34, 31, 1);
-  --map-plan-landcover-urban: rgba(35, 34, 33, 1);
-  --map-plan-landcover-farmland: rgba(35, 34, 31, 1);
-  --map-plan-landcover-glacier: rgba(50, 49, 47, 1);
-  --map-plan-landcover-scrub: rgba(36, 34, 31, 1);
-  --map-plan-landcover-forest: rgba(30, 34, 31, 1);
+  // Palette du Plan vectoriel (thème clair) : territoire gris clair, routes blanches, libellés sombres.
+  --map-plan-background: #e9e8e3;
+  --map-plan-earth: #f1efe9;
+  --map-plan-water: #b8cbd6;
+  --map-plan-boundary: #8a877f;
+  --map-plan-road-other: #ffffff;
+  --map-plan-road-minor: #ffffff;
+  --map-plan-road-link: #fbfaf6;
+  --map-plan-road-major: #f7e9c4;
+  --map-plan-road-highway: #f2cf86;
+  --map-plan-label: #1f1e1d;
+  --map-plan-label-muted: #55524c;
+  --map-plan-label-halo: #ffffff;
+  --map-plan-ocean-label: #4a6577;
+  --map-plan-landcover-grass: rgba(214, 226, 200, 1);
+  --map-plan-landcover-barren: rgba(232, 226, 210, 1);
+  --map-plan-landcover-urban: rgba(228, 226, 220, 1);
+  --map-plan-landcover-farmland: rgba(232, 232, 208, 1);
+  --map-plan-landcover-glacier: rgba(250, 250, 250, 1);
+  --map-plan-landcover-scrub: rgba(220, 226, 204, 1);
+  --map-plan-landcover-forest: rgba(196, 214, 190, 1);
 }
 
 :root[data-theme='dark'] {

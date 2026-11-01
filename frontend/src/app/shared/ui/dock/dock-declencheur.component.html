@@ -1,0 +1,26 @@
+<button
+  #bouton
+  type="button"
+  class="stp-declencheur"
+  cdkOverlayOrigin
+  #origine="cdkOverlayOrigin"
+  aria-haspopup="true"
+  [attr.aria-expanded]="etat.ouvert()"
+  [attr.aria-label]="etat.ouvert() ? 'Fermer la barre Staport' : 'Ouvrir la barre Staport'"
+  (click)="etat.basculer()"
+>
+  <stp-icon name="menu" size="1.25rem" />
+</button>
+
+<ng-template
+  [cdkConnectedOverlay]="{ origin: origine, usePopover: 'inline' }"
+  [cdkConnectedOverlayOpen]="etat.ouvert()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  (overlayOutsideClick)="surClicExterieur($event)"
+  (overlayKeydown)="surTouche($event)"
+  (detach)="etat.fermer()"
+>
+  <stp-dock />
+</ng-template>

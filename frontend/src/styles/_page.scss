@@ -9,25 +9,58 @@
 //     <div class="app-table-bar">          total à gauche, outils à droite (du moins au plus important)
 //     <stp-table …>
 
+// Les sections d'un écran se suivent dans une colonne : un seul écart (`--space-lg`) entre elles, jamais de marge propre à une section.
+// Un `.app-page` imbriqué (tableau d'une vue) ne double ni le retrait ni l'écart.
 .app-page {
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
   min-width: 0;
+  padding: var(--space-lg);
+
+  .app-page {
+    padding: 0;
+  }
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
 }
 
 // Formulaires et consultations ont une surface contenue; les listes gardent le canevas libre pour leurs données.
 .app-page--narrow,
 .app-page--wide {
-  padding: var(--space-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+}
 
-  @include bp.phone {
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
+.app-vues .app-page {
+  padding: 0;
+}
+
+// Le point d'insertion du routeur est un élément sans taille : il ne doit pas compter comme une section (il doublerait l'écart).
+.app-vues > router-outlet,
+.app-page > router-outlet {
+  display: none;
+}
+
+// Barre du tableau et tableau : une seule suite de sections, au même écart que le reste de l'écran
+.app-collection-table__surface > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+
+  &[hidden] {
+    display: none;
   }
+}
+
+// Un en-tête équipé du bouton Staport (`stp-dock-declencheur`, premier enfant) lui réserve la marge de début.
+.app-page__header:has(> stp-dock-declencheur),
+.app-vues__header:has(> stp-dock-declencheur) {
+  position: relative;
+  padding-inline-start: calc(var(--control-height) + var(--space-md));
 }
 
 .app-page__header {
@@ -36,9 +69,6 @@
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
 
   h1 {
     margin: 0;
@@ -54,7 +84,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
   padding: var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -261,7 +290,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  margin-bottom: var(--space-sm);
 
   @include bp.phone {
     flex-wrap: wrap;
@@ -332,11 +360,12 @@
 // et les actions à droite (`.app-vues__actions`, sur l'hôte du composant d'actions).
 .app-vues {
   min-width: 0;
-  border: 1px solid var(--color-border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  box-shadow: var(--shadow-sm);
 
   @include bp.phone {
     padding: var(--space-md);
@@ -344,40 +373,53 @@
 }
 
 .app-vues__header {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
   gap: var(--space-xl);
-  margin-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
 
   h1 {
     margin: 0;
-    padding-bottom: var(--space-sm);
     font-size: var(--text-page-title);
     font-weight: 600;
     line-height: 1.15;
   }
 
-  // Les actions à droite, au niveau du titre et des onglets, sans toucher au filet qui porte les onglets
+  // Titre à gauche, onglets de vue au milieu, actions à droite : trois colonnes, les onglets restent centrés sur la page
   .app-vues__actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-sm);
-    margin-inline-start: auto;
+    grid-column: 3;
     align-self: center;
-    padding-bottom: var(--space-xs);
+  }
+
+  // Écran moyen : titre et actions sur la première ligne, onglets centrés sur la seconde (rien ne se chevauche, rien ne passe à la ligne)
+  @media (max-width: 72rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    app-vue-switcher {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      justify-self: center;
+    }
+
+    .app-vues__actions {
+      grid-column: 2;
+      grid-row: 1;
+    }
   }
 
   // Téléphone : le titre au-dessus, les onglets se partagent la largeur, puis les actions
   @include bp.phone {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     gap: 0;
 
     .app-vues__actions {
-      margin-inline-start: 0;
+      grid-column: 1;
       align-self: stretch;
       padding-block: var(--space-sm);
     }

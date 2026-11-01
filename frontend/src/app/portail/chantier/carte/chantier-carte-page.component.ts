@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal, ViewEncapsulation } from '@angular/core';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -14,7 +15,7 @@ import { ChantierCarteComponent } from './chantier-carte.component';
 /** Page « Carte des chantiers » : la carte occupe toute la zone de contenu. Accès réservé à `CARTE_READ` (voir `chantier.routes.ts`). */
 @Component({
   selector: 'app-chantier-carte-page',
-  imports: [ChantierCarteComponent, ButtonComponent, IconComponent, SelectComponent, FormField, FormRoot],
+  imports: [DockDeclencheurComponent, ChantierCarteComponent, ButtonComponent, IconComponent, SelectComponent, FormField, FormRoot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   templateUrl: './chantier-carte-page.component.html'

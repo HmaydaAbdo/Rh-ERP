@@ -5,7 +5,7 @@ import { mockApi, page as pageDe } from './support/api-mock';
 
 /**
  * E0.8 : l'arabe n'est pas livré, mais l'interface est prête à être lue de droite à gauche. Ces essais passent le document en
- * `dir="rtl"` : rien ne déborde, le rail passe à droite, aucune violation d'accessibilité.
+ * `dir="rtl"` : rien ne déborde, le menu s'ouvre à droite, aucune violation d'accessibilité.
  */
 test.describe('Lecture de droite à gauche (préparation)', () => {
   for (const theme of ['light', 'dark'] as const) {
@@ -23,7 +23,7 @@ test.describe('Lecture de droite à gauche (préparation)', () => {
     });
   }
 
-  test('le rail passe à droite et la page ne déborde pas', async ({ page }) => {
+  test('la navigation s’ouvre du côté du hamburger, à droite, et la page ne déborde pas', async ({ page }) => {
     await mockApi(page, { username: 'rh', permissions: ['PAIE_READ'] }, {
       'POST /paie/search': () => pageDe([{
         id: 1, version: 0, periode: '2026-08', nomPrenom: 'Ali Alaoui', cin: 'AB1', chantier: 'C168', fonction: 'MACON', equipe: null,
@@ -34,9 +34,11 @@ test.describe('Lecture de droite à gauche (préparation)', () => {
     await page.goto('/paie');
     await page.evaluate(() => document.documentElement.setAttribute('dir', 'rtl'));
 
-    const rail = page.locator('stp-app-shell nav, stp-app-shell .app-rail').first();
-    await expect(rail).toBeVisible();
-    const boite = await rail.boundingBox();
+    await page.getByRole('button', { name: 'Ouvrir la barre Staport' }).click();
+    const barre = page.locator('.stp-dock');
+    await expect(barre).toBeVisible();
+    // En lecture de droite à gauche, le hamburger est à droite de l'en-tête et la navigation s'ouvre de son côté.
+    const boite = await barre.boundingBox();
     const largeur = page.viewportSize()!.width;
     expect(boite!.x + boite!.width).toBeGreaterThan(largeur / 2);
 

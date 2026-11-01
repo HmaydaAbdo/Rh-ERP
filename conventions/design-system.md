@@ -65,7 +65,6 @@ jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais
 | Texte secondaire (`--color-text-muted`) | `#4B5563` | `#BDBAB1` |
 | Action (`--color-primary`) | `#1E40AF` | `#ECEAE3` (blanc cassé) |
 | Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#1F1E1D` |
-| Rail de navigation | `#111827` | `#141413` |
 | Bordure franche (`--color-border-strong`) | `#7F8796` | `#8A877F` |
 | Bordure de ligne (`--color-border`) | `#A9B0BC` | `#6B6962` |
 | Succès / avertissement / erreur | texte sur fond teinté, contraste ≥ 7:1 | idem |
@@ -99,7 +98,7 @@ est corrigée avant d'être adoptée.
   `inset-inline-end`, `text-align: start|end`, `ms-*`, `me-*`, `text-end`. Les glissements horizontaux multiplient leur
   décalage par `--sens-ecriture` (`1`, ou `-1` sous `dir="rtl"`, défini dans `_motion.scss`). Les options de bibliothèques
   (`left`/`right` de Chart.js ou de MapLibre) ne sont pas du CSS et ne sont pas concernées. `e2e/rtl.spec.ts` essaie le catalogue
-  et la paie en `dir="rtl"` (aucun débordement, aucune violation axe, rail à droite).
+  et la paie en `dir="rtl"` (aucun débordement, aucune violation axe, navigation du côté du hamburger).
 
 ## Composants partagés
 
@@ -130,11 +129,7 @@ ses données depuis le navigateur (ni PDF d'impression, ni CSV). Seuls subsisten
 paie, lancés depuis l'action « Exporter » de l'écran ou de son assistant. Le survol et le focus d'un conteneur mettent en évidence sa
 bordure, avec les jetons de couleur, d'ombre et de durée du design system. Le mouvement reste discret et respecte `prefers-reduced-motion`.
 
-Sur `/carte` en grand écran, le rail latéral habituel s'efface au profit d'un hamburger fixe juste avant le filtre. Le
-survol ou le focus du bouton révèle le volet ; celui-ci reste visible pendant le survol ou le focus du bouton ou du volet,
-puis se replie à la sortie. Un court glissement et une révélation en cascade des liens indiquent l'entrée dans la navigation
-sans déplacer la carte ni ses contrôles. `prefers-reduced-motion` supprime ces effets. Téléphone et tablette gardent le
-tiroir piloté par la barre supérieure.
+La navigation est unifiée dans la barre Staport (voir « Kit de page ») : aucun rail ni menu latéral ; sur `/carte` le hamburger est dans la barre de recherche, la carte occupe tout l'écran.
 
 Pour préparer ou contrôler une évolution visuelle, utiliser les skills de design et d'accessibilité
 pertinentes disponibles (par exemple Impeccable ou UI/UX Pro Max) et un outil de navigateur adapté
@@ -171,12 +166,32 @@ troisième palette de marque qui dupliquerait les thèmes.
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
 * Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
 
+## Kit de page : alignement et rythme
+
+*Décision du propriétaire, 2026-11-01.* Un écran est une colonne de sections qui occupent toute la largeur disponible :
+
+* **Un seul écart vertical** entre sections, `--space-lg` : `.app-page`, `.app-vues`, `.app-entitys` et `.app-busy` sont des colonnes
+  (`display: flex; flex-direction: column; gap: var(--space-lg)`). Aucune section ne porte de marge propre ; un gabarit de domaine ne
+  pose ni `mt-*`, `mb-*`, `my-*`, `m-N`, `space-y-*` ni `margin` en ligne. `npm run check:espacement`
+  (`scripts/check-espacement.mjs`, dans la CI) le refuse.
+* **Un seul bord de début et de fin** : le retrait vient de la page seule (`.app-page`), un `.app-page` imbriqué n'ajoute ni retrait ni
+  écart. Un bloc vide (`:empty`) ne compte pas comme une section.
+* **En-tête de page** : le bouton hamburger de la barre Staport (`stp-dock-declencheur`, bordure franche, sans animation) en premier, puis le titre à
+  gauche ; les onglets de vue au milieu ; les actions à droite, sur une seule ligne.
+* **Navigation unifiée, barre Staport** (`stp-dock`) : un seul panneau, ouvert à côté du hamburger de l'en-tête (overlay du CDK) ;
+  commandes directes en haut (Accueil, indisponible jusqu'à la définition des fiches de poste ; AI = Staport Intelligence ; thème ;
+  fermer), destinations autorisées dessous, utilisateur et déconnexion en pied. Pas de menu latéral, pas de lanceur flottant.
+* **Cartes** : grille `auto-fit` à partir de 20 rem, texte courant de 14 px au moins ; les onglets de vue gardent le contexte des
+  filtres, donc pas de boutons « Voir la liste » ni « Voir les employés ».
+* **Garde de rythme** : `e2e/domaines-rendu.spec.ts` mesure, pour chaque écran, les bords de début et de fin de ses sections et l'écart
+  vertical entre elles.
+
 ## Thème sombre
 
 Le thème sombre suit les valeurs du tableau « Palette » : fond gris chaud très sombre, cartes un cran plus clair, texte blanc cassé,
 action blanc cassé. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une simple
 inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification métier dans
-les deux thèmes. La carte des chantiers adopte un chrome sombre constant ; ses vues Satellite et Relief gardent leur matière propre.
+les deux thèmes. **Thème par défaut : sombre** (décision du propriétaire, 2026-11-01) ; le choix de l'utilisateur est gardé dans le stockage local du navigateur. La carte des chantiers suit le thème : plan clair ou sombre (jetons `--map-plan-*`, jeu d'icônes `light` ou `dark`), interface de la carte en jetons `--map-ui-*` par thème ; le satellite garde son imagerie et le jeu d'icônes sombre. Pages sans cadre ni marge extérieure : l'écran occupe toute la zone à droite du rail, sans filet sous l'en-tête ; titre, onglets de vue et actions sont alignés sur une même ligne.
 
 ---
 

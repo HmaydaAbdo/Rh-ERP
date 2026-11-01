@@ -58,7 +58,6 @@ function module(): ModulePerimetre {
     ordre: ['CHANTIER', 'EQUIPE', 'FONCTION'],
     route: '/chantiers',
     permission: 'CHANTIER_READ',
-    parametresListe: () => ({}),
     critereEmployes: (_params, portee) => critereEmployesDe(portee),
     criterePaie: (_params, portee, periode) => criterePaieDe(portee, periode),
     noteMouvements: (params) => (params.get('code') ? 'Le code ne s’applique pas ici.' : null),

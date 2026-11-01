@@ -76,7 +76,8 @@ test.describe('Employés — Cartes et Analytique', () => {
     const accessibilite = await new AxeBuilder({ page }).include('.app-entitys').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
 
-    await page.getByRole('link', { name: 'Voir la liste' }).click();
+    // Les onglets de vue gardent le périmètre : la vue Tabulaire reprend les mêmes filtres.
+    await page.getByRole('navigation', { name: /Vues? des employés/ }).getByRole('link', { name: 'Tabulaire' }).click();
     await expect(page).toHaveURL(/\/employees\?(?=.*chantierIds=3)(?=.*equipeIds=5)(?=.*fonctionIds=2).*$/);
   });
 

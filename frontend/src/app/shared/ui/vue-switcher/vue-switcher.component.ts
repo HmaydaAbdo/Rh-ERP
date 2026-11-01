@@ -85,6 +85,9 @@ export interface VueOnglet {
     .vue-switcher__lien--active:hover {
       color: var(--color-primary);
       border-bottom-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      border-start-start-radius: var(--radius-md);
+      border-start-end-radius: var(--radius-md);
       font-weight: 600;
     }
   `

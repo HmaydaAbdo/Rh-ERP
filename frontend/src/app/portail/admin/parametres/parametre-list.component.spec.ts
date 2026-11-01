@@ -67,7 +67,7 @@ describe('ParametreListComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les paramètres');
     expect(fixture.nativeElement.textContent).not.toContain('Aucun paramètre disponible.');
 
-    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    (Array.from<HTMLButtonElement>((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer')) as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

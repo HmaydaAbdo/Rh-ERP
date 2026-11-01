@@ -1,0 +1,77 @@
+<div class="stp-dock">
+  <div class="stp-dock__barre" role="toolbar" aria-label="Barre Staport">
+    <button
+      type="button"
+      class="stp-dock__bouton"
+      [class.stp-dock__bouton--indisponible]="!etat.accueilActif()"
+      [attr.aria-disabled]="!etat.accueilActif()"
+      [attr.title]="etat.accueilActif() ? null : 'Accueil : disponible après la définition des fiches de poste'"
+      (click)="surAccueil()"
+    >
+      <stp-icon name="house" size="1.25rem" />
+      <span class="stp-dock__texte">Accueil</span>
+    </button>
+
+    @if (etat.assistantDisponible()) {
+      <button
+        type="button"
+        class="stp-dock__bouton"
+        aria-label="Staport Intelligence"
+        title="Staport Intelligence"
+        [attr.aria-pressed]="etat.assistantOuvert()"
+        (click)="etat.envoyer(etat.assistantOuvert() ? 'assistant-fermer' : 'assistant-ouvrir')"
+      >
+        <stp-icon name="brain" size="1.25rem" />
+        <span class="stp-dock__texte">AI</span>
+      </button>
+    }
+
+    <button
+      type="button"
+      class="stp-dock__bouton stp-dock__bouton--icone"
+      [attr.aria-label]="etat.theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'"
+      [attr.title]="etat.theme() === 'dark' ? 'Thème clair' : 'Thème sombre'"
+      (click)="etat.envoyer('theme')"
+    >
+      <stp-icon [name]="etat.theme() === 'dark' ? 'sun' : 'moon'" size="1.25rem" />
+    </button>
+
+    <button type="button" class="stp-dock__bouton stp-dock__bouton--icone" aria-label="Fermer la barre Staport" (click)="etat.fermer()">
+      <stp-icon name="x" size="1.25rem" />
+    </button>
+  </div>
+
+  <nav class="stp-dock__nav" aria-label="Navigation principale">
+    @for (entree of entrees(); track $index) {
+      @if (entree.type === 'groupe') {
+        <details class="stp-dock__groupe" [open]="groupeOuvert(entree.groupe, entree.enfants)" (toggle)="changerGroupe(entree.groupe, $event)">
+          <summary class="stp-dock__lien stp-dock__groupe-titre">
+            <stp-icon [name]="entree.groupe.icon" size="1.25rem" />
+            <span>{{ entree.groupe.label }}</span>
+            <stp-icon class="stp-dock__chevron" name="chevron-down" size="1rem" />
+          </summary>
+          @for (enfant of entree.enfants; track enfant.route) {
+            <a class="stp-dock__lien stp-dock__lien--enfant" [class.stp-dock__lien--actif]="estActif(enfant)" [attr.aria-current]="estActif(enfant) ? 'page' : null" [routerLink]="enfant.ouverture ?? enfant.route">
+              <stp-icon [name]="enfant.icon" size="1.25rem" />
+              <span>{{ enfant.label }}</span>
+            </a>
+          }
+        </details>
+      } @else {
+        <a class="stp-dock__lien" [class.stp-dock__lien--actif]="estActif(entree.item)" [attr.aria-current]="estActif(entree.item) ? 'page' : null" [routerLink]="entree.item.ouverture ?? entree.item.route">
+          <stp-icon [name]="entree.item.icon" size="1.25rem" />
+          <span>{{ entree.item.label }}</span>
+        </a>
+      }
+    }
+  </nav>
+
+  <div class="stp-dock__pied">
+    @if (etat.utilisateur(); as nom) {
+      <span class="stp-dock__utilisateur">{{ nom }}</span>
+    }
+    <button type="button" class="stp-dock__bouton stp-dock__bouton--icone" aria-label="Se déconnecter" title="Se déconnecter" (click)="etat.envoyer('deconnexion')">
+      <stp-icon name="log-out" size="1.25rem" />
+    </button>
+  </div>
+</div>

@@ -2,7 +2,7 @@ import { map } from 'rxjs';
 
 import { critereEmployesDe, criterePaieDe } from '../perimetre/perimetre';
 import { chargerToutLeReferentiel, ModulePerimetre } from '../perimetre/perimetre-module';
-import { filtreChantierActif, lireFiltresChantier, versCriteresChantier, versParametresChantier } from './filtres/chantier-filtres';
+import { filtreChantierActif, lireFiltresChantier, versCriteresChantier } from './filtres/chantier-filtres';
 import { libelleStatutChantier } from './models/chantier-statut';
 import { ChantierService } from './services/chantier.service';
 
@@ -19,7 +19,6 @@ export function moduleChantier(chantierService: ChantierService): ModulePerimetr
     vueEffectifParDimension: true,
     introAnalytique: 'Répartition de la paie par chantier et évolution mensuelle des indicateurs sélectionnés.',
     periodePaieRecenteFixe: true,
-    sansRaccourciListe: true,
     sansRaccourciCartes: true,
     sansLienEmployes: true,
     lienEmployesPresDuNiveau: true,
@@ -30,7 +29,6 @@ export function moduleChantier(chantierService: ChantierService): ModulePerimetr
     triCartesPaie: ['masse', 'effectif'],
     route: '/chantiers',
     permission: 'CHANTIER_READ',
-    parametresListe: (params) => versParametresChantier(lireFiltresChantier(params)),
     critereEmployes: (_params, portee) => critereEmployesDe(portee),
     criterePaie: (_params, portee, periode) => criterePaieDe(portee, periode),
     catalogue: {

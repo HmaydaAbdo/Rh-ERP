@@ -1,13 +1,13 @@
 <div class="app-page app-page--wide">
   <a routerLink="/heures-supp" class="app-back"><stp-icon name="arrow-left" /> Heures supplémentaires</a>
-  <div class="app-page__header"><h1>{{ edition() ? 'Modifier la ligne d’heures supplémentaires' : 'Ajouter une ligne d’heures supplémentaires' }}</h1></div>
+  <div class="app-page__header"><stp-dock-declencheur /><h1>{{ edition() ? 'Modifier la ligne d’heures supplémentaires' : 'Ajouter une ligne d’heures supplémentaires' }}</h1></div>
   @if (loading()) {
     <stp-message text="Chargement de la ligne…" />
   } @else if (erreur() && !ligne() && edition()) {
     <stp-message severity="error" [text]="erreur()!" />
   } @else {
     @if (ligne(); as actuelle) {
-      <dl class="app-facts mb-4" aria-label="Informations conservées de la ligne">
+      <dl class="app-facts" aria-label="Informations conservées de la ligne">
         <div><dt>Employé</dt><dd>{{ actuelle.nomPrenom }}</dd></div><div><dt>CIN</dt><dd>{{ actuelle.cin }}</dd></div>
         <div><dt>Fonction</dt><dd>{{ actuelle.fonction }}</dd></div><div><dt>Chantier</dt><dd>{{ actuelle.codeChantier }} · {{ actuelle.chantier }}</dd></div>
         <div><dt>Salaire de référence</dt><dd>{{ actuelle.salaireReferenceDh === null ? '—' : (actuelle.salaireReferenceDh | number:'1.2-2') + ' DH' }}</dd></div>
@@ -19,7 +19,7 @@
         <div><dt>Forfait actuel</dt><dd>{{ actuelle.forfaitDh === null ? '—' : (actuelle.forfaitDh | number:'1.2-2') + ' DH' }}</dd></div>
         <div><dt>Net à payer actuel</dt><dd>{{ actuelle.netAPayerDh | number:'1.2-2' }} DH</dd></div>
       </dl>
-        @if (actuelle.stcOuSortie) { <stp-message class="mb-4" severity="warn" text="La paie du mois est marquée STC/sortie ; le forfait est interdit." /> }
+        @if (actuelle.stcOuSortie) { <stp-message severity="warn" text="La paie du mois est marquée STC/sortie ; le forfait est interdit." /> }
     }
     @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
     <form [formRoot]="form" class="app-form__grid app-form__grid--2">

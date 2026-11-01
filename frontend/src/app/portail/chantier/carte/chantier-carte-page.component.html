@@ -2,6 +2,7 @@
   <app-chantier-carte class="app-map-page__map" [chantiers]="chantiersFiltres()" />
 
   <form [formRoot]="formulaire" class="app-map-page__search" aria-label="Recherche sur la carte">
+    <stp-dock-declencheur [enLigne]="true" />
     <stp-icon class="app-map-page__search-icon" name="search" aria-hidden="true" />
     <input
       class="app-map-page__input"

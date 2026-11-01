@@ -6,8 +6,10 @@
   [utilisateur]="user()?.username ?? null"
   [theme]="theme.theme()"
   [navigationVisible]="navigationVisible()"
-  [modeCarte]="estCarte()"
+  [assistantDisponible]="assistantVisible()"
+  [assistantOuvert]="assistantEtat.ouvert()"
   (basculerTheme)="theme.basculer()"
+  (modeAssistant)="assistantEtat.ouvert.set($event)"
   (deconnecter)="onLogout()"
 >
   <router-outlet></router-outlet>

@@ -19,7 +19,7 @@ describe('moduleEquipe', () => {
     expect(module.ordre).toEqual(['EQUIPE', 'CHANTIER', 'FONCTION']);
     expect(module).toMatchObject({
       sourcesAnalytique: ['PAIE'], vueEffectifParDimension: true, periodePaieRecenteFixe: true,
-      sansRaccourciListe: true, sansRaccourciCartes: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true,
+      sansRaccourciCartes: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true,
       resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true, afficherQualiteOrphelins: true
     });
   });
@@ -41,7 +41,6 @@ describe('moduleEquipe', () => {
   it('revient à la vue Tabulaire avec ses filtres propres, et passe le périmètre aux fiches et à la paie', () => {
     const portee = { chantierIds: undefined, equipeIds: [0], fonctionIds: undefined };
 
-    expect(module.parametresListe(params({ code: 'CH', equipeIds: '5' }))).toEqual({ code: 'CH', libelle: null });
     expect(module.critereEmployes(params({}), portee)).toEqual({ chantierIds: undefined, equipeIds: [0], fonctionIds: undefined });
     expect(module.criterePaie(params({}), portee, '2026-08')).toEqual({ periode: '2026-08', chantierIds: undefined, equipeIds: [0], fonctionIds: undefined });
   });

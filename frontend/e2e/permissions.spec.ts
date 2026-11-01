@@ -43,6 +43,7 @@ test.describe('Permissions', () => {
   test('ne propose dans le menu que les écrans autorisés', async ({ page }) => {
     await mockApi(page, { username: 'lecteur', permissions: ['FUNCTION_READ', 'EQUIPE_READ'] }, { 'POST /functions/search': () => FONCTIONS });
     await page.goto('/functions');
+    await page.getByRole('button', { name: 'Ouvrir la barre Staport' }).click();
 
     const menu = page.getByRole('navigation', { name: 'Navigation principale' });
     await expect(menu.getByRole('link', { name: 'Fonctions' })).toBeVisible();
@@ -51,7 +52,7 @@ test.describe('Permissions', () => {
     await expect(menu.getByRole('link', { name: 'Rôles' })).toHaveCount(0);
   });
 
-  test('ouvre la carte à qui a CARTE_READ et révèle la navigation au survol du hamburger', async ({ page }) => {
+  test('ouvre la carte à qui a CARTE_READ et révèle la navigation par le bouton Menu de la barre Staport', async ({ page }) => {
     await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
     await page.goto('/');
 
@@ -59,16 +60,11 @@ test.describe('Permissions', () => {
     await expect(page.getByRole('heading', { name: 'Carte des chantiers' })).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
 
-    const hamburger = page.getByRole('button', { name: 'Ouvrir la navigation' });
-    const sidebar = page.locator('.app-sidebar');
-    await expect(hamburger).toBeVisible();
-    await expect(sidebar).toHaveCSS('visibility', 'hidden');
-    await hamburger.hover();
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ouvrir la barre Staport' }).click();
     await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Carte' })).toBeVisible();
-    await sidebar.hover();
-    await expect(sidebar).toHaveCSS('visibility', 'visible');
-    await page.mouse.move(640, 360);
-    await expect(sidebar).toHaveCSS('visibility', 'hidden');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toHaveCount(0);
   });
 
   test('refuse la carte à qui n’a pas CARTE_READ', async ({ page }) => {
@@ -83,9 +79,6 @@ test.describe('Permissions', () => {
     await mockApi(page, { username: 'direction', permissions: ['CARTE_READ'] });
     await page.goto('/carte');
     await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
-    // Vérifie l'état replié stable : sur la carte, le sidebar est hors champ et seul le hamburger reste visible.
-    await page.mouse.move(640, 360);
-    await expect(page.locator('.app-sidebar')).toHaveCSS('visibility', 'hidden');
 
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(
