@@ -49,6 +49,11 @@
     white-space: nowrap;
   }
 
+  // Défilement horizontal en surimpression (barre invisible) : sa bande de 16 px ne masque plus le bas de la dernière ligne
+  .ag-scrollbar-invisible .ag-body-horizontal-scroll-viewport {
+    background: transparent;
+  }
+
   .stp-table__row--clickable {
     cursor: pointer;
   }

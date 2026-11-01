@@ -12,6 +12,8 @@ export interface TableColumn {
   sortable?: boolean;
   /** Classes appliquées à l'en-tête ET aux cellules de la colonne (ex. `text-center`, `text-end`). */
   align?: string;
+  /** Largeur minimale en pixels (90 par défaut) : à donner aux colonnes de texte, pour que le nom ne soit pas coupé. */
+  minWidth?: number;
   /** Classes appliquées aux seules cellules de la colonne (ex. troncature d'un texte long). */
   cellClass?: string;
 }
