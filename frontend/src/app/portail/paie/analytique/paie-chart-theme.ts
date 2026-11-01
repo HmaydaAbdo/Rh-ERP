@@ -33,8 +33,8 @@ export function libelleMesure(mesure: MesureGraphique): string {
 export function libelleEvolutionMesure(mesure: MesureEvolution): string {
   switch (mesure) {
     case 'masse': return 'Masse (DH)';
-    case 'effectif': return 'Effectif (personnes)';
-    case 'stc': return 'STC (personnes)';
+    case 'effectif': return 'Bulletins de paie';
+    case 'stc': return 'STC (bulletins)';
     case 'stcMontant': return 'STC (DH)';
   }
 }

@@ -97,15 +97,15 @@ test.describe('Équipes', () => {
     await expect(carteOperateurs).not.toContainText('en poste');
     const indicateurs = mesures.locator('.app-entity__indicator');
     await expect(indicateurs).toHaveCount(4);
-    await expect(indicateurs.nth(0).locator('dt')).toHaveText('Effectif (personnes)');
+    await expect(indicateurs.nth(0).locator('dt')).toHaveText('Bulletins de paie');
     await expect(indicateurs.nth(0).locator('strong')).toHaveText('1');
-    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 personne (−50,0 %) · vs juillet 2026');
+    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 bulletin (−50,0 %) · vs juillet 2026');
     await expect(indicateurs.nth(1).locator('dt')).toHaveText('Masse salariale (DH)');
     await expect(indicateurs.nth(1).locator('strong')).toContainText('4');
     await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7,1 %\) · vs juillet 2026$/);
-    await expect(indicateurs.nth(2).locator('dt')).toHaveText('STC (personnes)');
+    await expect(indicateurs.nth(2).locator('dt')).toHaveText('STC (bulletins)');
     await expect(indicateurs.nth(2).locator('strong')).toHaveText('1');
-    await expect(indicateurs.nth(2).locator('.app-entity__variation')).toHaveText('+1 personne · vs juillet 2026');
+    await expect(indicateurs.nth(2).locator('.app-entity__variation')).toHaveText('+1 bulletin · vs juillet 2026');
     await expect(indicateurs.nth(3).locator('dt')).toHaveText('STC (DH)');
     await expect(indicateurs.nth(3).locator('strong')).toContainText('1');
     await expect(indicateurs.nth(3).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH · vs juillet 2026$/);
@@ -127,7 +127,7 @@ test.describe('Équipes', () => {
     await expect(page.getByRole('option')).toHaveCount(4);
     await page.getByRole('option', { name: 'Masse salariale (DH)' }).click();
     await indicateursEvolution.click();
-    await page.getByRole('option', { name: 'STC (personnes)' }).click();
+    await page.getByRole('option', { name: 'STC (bulletins)' }).click();
     // Les deux indicateurs choisis sont groupés dans un seul graphique par bloc.
     await expect(repartition.locator('.app-chart-indicator')).toHaveCount(1);
     await expect(evolution.locator('.app-chart-indicator')).toHaveCount(1);

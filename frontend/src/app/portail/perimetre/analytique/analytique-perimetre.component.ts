@@ -117,16 +117,16 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleEvolutionMesure = libelleEvolutionMesure;
   protected readonly colonnesEquipes = computed<TableColumn[]>(() => [
     { field: 'libelle', header: this.libelleDimensionVueMaj() },
-    { field: 'effectif', header: 'Effectif (personnes)', align: 'text-end' },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
     { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
-    { field: 'stc', header: 'STC (personnes)', align: 'text-end' },
+    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
     { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
   ]);
   protected readonly colonnesEvolutionEquipe: TableColumn[] = [
     { field: 'periode', header: 'Mois' },
-    { field: 'effectif', header: 'Effectif (personnes)', align: 'text-end' },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
     { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
-    { field: 'stc', header: 'STC (personnes)', align: 'text-end' },
+    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
     { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
   ];
   protected readonly colonnesQualite: TableColumn[] = [
@@ -145,7 +145,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly colonnesEvolutionPaie: TableColumn[] = [
     { field: 'periode', header: 'Mois' },
     { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
-    { field: 'effectif', header: 'Effectif payé', align: 'text-end' },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
     { field: 'stc', header: 'STC', align: 'text-end' },
     { field: 'stcMontant', header: 'Montant STC (DH)', align: 'text-end' }
   ];
@@ -248,7 +248,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
       moisPrecedent && precedent !== undefined ? `${courant - precedent > 0 ? '+' : ''}${FORMAT_ENTIER.format(courant - precedent)}` : null;
     const tuiles: Tuile[] = [
       { libelle: 'Masse salariale', valeur: `${formaterMontant(kpis.masse)} DH`, variation: pourcent(kpis.masse, moisPrecedent?.masse) },
-      { libelle: 'Effectif payé', valeur: String(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) },
+      { libelle: 'Bulletins de paie', valeur: String(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) },
       { libelle: 'Coût moyen par personne', valeur: kpis.coutMoyen === null ? '—' : `${formaterMontant(kpis.coutMoyen)} DH`, variation: pourcent(kpis.coutMoyen, moisPrecedent?.coutMoyen) },
       { libelle: 'Soldes de tout compte', valeur: `${kpis.stc} · ${formaterMontant(kpis.stcMontant)} DH`, variation: absolu(kpis.stc, moisPrecedent?.stc) }
     ];
@@ -322,9 +322,9 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly mesureEvolutionEquipe = signal<MesureEvolution[]>(['effectif']);
   protected readonly libelleMesureEquipe = (mesure: MesureEvolution): string => {
     switch (mesure) {
-      case 'effectif': return 'Effectif (personnes)';
+      case 'effectif': return 'Bulletins de paie';
       case 'masse': return 'Masse salariale (DH)';
-      case 'stc': return 'STC (personnes)';
+      case 'stc': return 'STC (bulletins)';
       case 'stcMontant': return 'STC (DH)';
     }
   };
@@ -434,7 +434,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
       data: {
         labels: lignes.map((l) => nomGroupe(this.dimension(), l)),
         datasets: [{
-          label: mesure === 'masse' ? 'Masse (DH)' : 'Effectif payé',
+          label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins de paie',
           data: lignes.map((l) => l[mesure]),
           backgroundColor: jeton(mesure === 'masse' ? '--chart-1' : '--chart-2'),
           borderRadius: 4

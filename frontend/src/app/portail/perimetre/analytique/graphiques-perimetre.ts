@@ -107,7 +107,7 @@ function axeValeurs(unite: UniteMesure, choix: { principal: boolean; deuxUnites:
     grid: choix.principal ? grille() : { display: false },
     border: { display: false },
     title: choix.deuxUnites
-      ? { display: true, text: unite === 'dh' ? 'Montants (DH)' : 'Personnes', color: jeton('--color-text-muted'), font: police() }
+      ? { display: true, text: unite === 'dh' ? 'Montants (DH)' : 'Bulletins', color: jeton('--color-text-muted'), font: police() }
       : { display: false }
   };
 }

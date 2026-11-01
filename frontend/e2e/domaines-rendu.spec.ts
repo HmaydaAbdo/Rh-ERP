@@ -50,6 +50,7 @@ for (const theme of ['light', 'dark'] as const) {
             'POST /users/search': () => pageDe([]),
             'POST /roles/search': () => pageDe([]),
             'POST /paie/search': () => pageDe([]),
+            'POST /logs/search': () => pageDe([]),
             'GET /paie/periodes': () => [],
             'GET /accueil': () => ({ version: null, personnalise: false, indicateurs: [], disponibles: [] }),
             'GET /parametres': () => []

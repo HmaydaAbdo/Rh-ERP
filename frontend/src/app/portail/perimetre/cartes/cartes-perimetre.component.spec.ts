@@ -219,11 +219,11 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).not.toContain('en poste');
     expect(cartes[0].textContent).toContain('Paie · août 2026');
     expect(Array.from(cartes[0].querySelectorAll('.app-entity__indicator dt')).map((dt) => dt.textContent?.trim())).toEqual([
-      'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'
+      'Bulletins de paie', 'Masse salariale (DH)', 'STC (bulletins)', 'STC (DH)'
     ]);
     expect(cartes[0].querySelectorAll('.app-entity__indicator')).toHaveLength(4);
     expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
-    expect(cartes[0].textContent).toContain('+1 personne · vs juillet 2026');
+    expect(cartes[0].textContent).toContain('+1 bulletin · vs juillet 2026');
     expect(cartes[0].textContent?.replace(/\s/g, ' ')).toContain('+1 000,00 DH · vs juillet 2026');
     expect(cartes[0].textContent).toMatch(/4\s500,00 DH/);
     expect(cartes[0].textContent).toContain('+12,5 %');

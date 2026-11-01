@@ -90,7 +90,7 @@ describe('variations', () => {
   it('compare au mois contigu : écart dans l’unité de la grandeur et en pourcentage', () => {
     const v = variations(groupe({ effectif: 3, masse: 4500, stc: 1, stcMontant: 1000 }, { effectif: 1, masse: 4000, stc: 0, stcMontant: 800 }));
 
-    expect(v).toEqual({ masse: '+500,00 DH (+12,5 %)', effectif: '+2 personnes (+200,0 %)', stc: '+1 personne', stcMontant: '+200,00 DH (+25,0 %)' });
+    expect(v).toEqual({ masse: '+500,00 DH (+12,5 %)', effectif: '+2 bulletins (+200,0 %)', stc: '+1 bulletin', stcMontant: '+200,00 DH (+25,0 %)' });
   });
 
   it('signale l’absence de comparaison, la stabilité et une base nulle (écart en unité sans pourcentage)', () => {
@@ -100,6 +100,6 @@ describe('variations', () => {
   });
 
   it('écrit une baisse avec le vrai signe moins', () => {
-    expect(variations(groupe({ effectif: 1, masse: 90, stc: 0, stcMontant: 0 }, { effectif: 3, masse: 100, stc: 0, stcMontant: 0 }))).toMatchObject({ effectif: '−2 personnes (−66,7 %)', masse: '−10,00 DH (−10,0 %)' });
+    expect(variations(groupe({ effectif: 1, masse: 90, stc: 0, stcMontant: 0 }, { effectif: 3, masse: 100, stc: 0, stcMontant: 0 }))).toMatchObject({ effectif: '−2 bulletins (−66,7 %)', masse: '−10,00 DH (−10,0 %)' });
   });
 });

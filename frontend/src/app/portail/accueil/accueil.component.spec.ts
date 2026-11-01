@@ -18,7 +18,7 @@ const ACCUEIL: Accueil = {
   indicateurs: ['paie.masse', 'paie.effectif', 'employe.en-poste'],
   disponibles: [
     { code: 'paie.masse', libelle: 'Masse salariale', description: '' },
-    { code: 'paie.effectif', libelle: 'Effectif payé', description: '' },
+    { code: 'paie.effectif', libelle: 'Bulletins de paie', description: '' },
     { code: 'employe.en-poste', libelle: 'Employés en poste', description: '' }
   ]
 };
@@ -54,7 +54,7 @@ describe('AccueilComponent', () => {
 
     const tuiles = Array.from(racine.querySelectorAll('.app-kpi')).map((t) => Array.from(t.children).map((e) => e.textContent?.trim()).join(' | '));
     expect(tuiles[0]).toMatch(/^Masse salariale \| 4\s500,00 DH \| \+12,5 % sur le mois précédent$/);
-    expect(tuiles[1]).toMatch(/^Effectif payé \| 3 \| \+1 sur le mois précédent$/);
+    expect(tuiles[1]).toMatch(/^Bulletins de paie \| 3 \| \+1 sur le mois précédent$/);
     expect(tuiles[2]).toMatch(/^Employés en poste \| 3 \| 75 % de l’effectif$/);
     expect(paieService.analyser).toHaveBeenCalledWith({ periode: '2026-08' });
   });

@@ -144,7 +144,7 @@
                           <div><dt>Paie</dt><dd class="app-entity__unavailable">Indisponible</dd></div>
                         } @else if (moisDe(groupe); as mois) {
                           <div class="app-entity__indicator">
-                            <dt>Effectif (personnes)</dt>
+                            <dt>Bulletins de paie</dt>
                             <dd>
                               <strong>{{ groupe.paie?.effectif ?? 0 }}</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'effectif', mois) }}</small>
@@ -158,7 +158,7 @@
                             </dd>
                           </div>
                           <div class="app-entity__indicator">
-                            <dt>STC (personnes)</dt>
+                            <dt>STC (bulletins)</dt>
                             <dd>
                               <strong>{{ groupe.paie?.stc ?? 0 }}</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'stc', mois) }}</small>
