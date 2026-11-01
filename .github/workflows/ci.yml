@@ -286,6 +286,11 @@ jobs:
         working-directory: frontend
         run: npm run check:composants
 
+      # Propriétés logiques seulement : aucune position ni marge gauche/droite en dur, pour préparer l'arabe (E0.8).
+      - name: Check logical properties
+        working-directory: frontend
+        run: npm run check:logique
+
       # Vitest (runner Angular) dans un vrai Chromium : le navigateur est installé par Playwright.
       - name: Install Chromium for tests
         working-directory: frontend

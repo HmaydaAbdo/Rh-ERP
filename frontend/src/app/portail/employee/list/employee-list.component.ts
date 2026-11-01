@@ -41,7 +41,7 @@ export class EmployeeListComponent {
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
     { field: 'equipe', header: 'Équipe', sortField: 'equipe.libelle' },
-    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-right' }] : []),
+    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-end' }] : []),
     { field: 'dateEmbauche', header: "Date d'embauche" },
     { field: 'statut', header: 'Statut' }
   ]);

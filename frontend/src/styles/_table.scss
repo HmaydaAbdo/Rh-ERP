@@ -18,12 +18,20 @@
     align-items: center;
   }
 
-  .ag-cell.text-right,
   .ag-cell.text-end {
     justify-content: flex-end;
   }
 
   .ag-cell.text-center {
+    justify-content: center;
+  }
+
+  // L'en-tête d'une colonne alignée suit la colonne : chiffres et libellé sur la même arête
+  .ag-header-cell.text-end .ag-header-cell-label {
+    justify-content: flex-end;
+  }
+
+  .ag-header-cell.text-center .ag-header-cell-label {
     justify-content: center;
   }
 
