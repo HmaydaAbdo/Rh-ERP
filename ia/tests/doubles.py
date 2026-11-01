@@ -26,7 +26,7 @@ class ModeleScripte(FakeMessagesListChatModel):
     vus: list[list[BaseMessage]] = Field(default_factory=lambda: list[list[BaseMessage]]())
     outils_lies: list[list[str]] = Field(default_factory=lambda: list[list[str]]())
 
-    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> "ModeleScripte":
+    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> ModeleScripte:
         self.outils_lies.append([_nom(t) for t in tools])
         return self
 
