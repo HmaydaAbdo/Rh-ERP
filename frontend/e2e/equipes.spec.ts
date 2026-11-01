@@ -82,10 +82,10 @@ test.describe('Équipes', () => {
     await expect(page.locator('.app-tag')).toHaveText('Paie · août 2026');
     await expect(page.getByRole('link', { name: 'Voir la liste' })).toHaveCount(0);
     await expect(page.locator('.app-actions-row').getByRole('link', { name: 'Voir les employés' })).toHaveCount(0);
-    await expect(page.locator('.app-level').getByRole('link', { name: 'Voir les employés de ce périmètre' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voir les employés de ce périmètre' })).toHaveCount(0);
     await expect(carte.getByRole('link', { name: 'Consulter Chauffeurs' })).toBeVisible();
     await expect(carte.getByRole('link', { name: 'Voir l’historique Paie de Chauffeurs' })).toBeVisible();
-    await expect(carte.locator('.app-entity__footer')).toHaveCSS('justify-content', 'space-between');
+    await expect(carte.locator('.app-entity__footer')).toHaveCSS('justify-content', 'flex-start');
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Paie · août 2026');
     const mesures = carte.locator('.app-entity__metrics');
@@ -99,16 +99,16 @@ test.describe('Équipes', () => {
     await expect(indicateurs).toHaveCount(4);
     await expect(indicateurs.nth(0).locator('dt')).toHaveText('Effectif (personnes)');
     await expect(indicateurs.nth(0).locator('strong')).toHaveText('1');
-    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 personne · vs juillet 2026');
+    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 personne (−50,0 %) · vs juillet 2026');
     await expect(indicateurs.nth(1).locator('dt')).toHaveText('Masse salariale (DH)');
     await expect(indicateurs.nth(1).locator('strong')).toContainText('4');
-    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText('+7,1 % · vs juillet 2026');
+    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7,1 %\) · vs juillet 2026$/);
     await expect(indicateurs.nth(2).locator('dt')).toHaveText('STC (personnes)');
     await expect(indicateurs.nth(2).locator('strong')).toHaveText('1');
     await expect(indicateurs.nth(2).locator('.app-entity__variation')).toHaveText('+1 personne · vs juillet 2026');
     await expect(indicateurs.nth(3).locator('dt')).toHaveText('STC (DH)');
     await expect(indicateurs.nth(3).locator('strong')).toContainText('1');
-    await expect(indicateurs.nth(3).locator('.app-entity__variation')).toHaveText('Base précédente nulle · vs juillet 2026');
+    await expect(indicateurs.nth(3).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH · vs juillet 2026$/);
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 
     // Le filtre suit dans l'Analytique et borne le périmètre analysé (mêmes équipes que les deux autres vues).

@@ -2,13 +2,16 @@
 // posées par le code qui construit les marqueurs et les fiches (éléments créés hors des gabarits).
 @use 'breakpoints' as bp;
 
+.app-map-page.app-page {
+  padding: 0;
+}
+
 .app-map-page {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: calc(100% + 2 * var(--space-xl));
+  width: 100%;
   height: max(26rem, 100svh);
-  margin: calc(-1 * var(--space-xl));
 }
 
 .app-map-page__map { flex: 1 1 auto; min-height: 0; }
@@ -89,50 +92,14 @@
   font-size: var(--text-xs);
 }
 
-// En mode carte, le hamburger et la recherche partagent la ligne supérieure avec un espacement constant.
-@include bp.desktop {
-  .app-shell--carte .app-map-page {
-    width: 100%;
-    height: max(26rem, 100svh);
-    margin: 0;
-    isolation: auto;
-  }
-
-  .app-shell--carte .app-map-page__search,
-  .app-shell--carte .app-map-page__retry,
-  .app-shell--carte .app-map-page__empty {
-    inset-inline-start: calc(var(--space-md) + 3.25rem);
-  }
-
-  .app-shell--carte .app-map-page__search { z-index: 110; width: min(23rem, calc(100% - 6rem)); }
-  .app-shell--carte .app-map__controls {
-    inset-inline-start: var(--space-md);
-    top: calc(var(--space-md) + 3.5rem);
-  }
-}
-
-@include bp.compact-nav {
-  .app-map-page {
-    width: calc(100% + 2 * var(--space-xl));
-    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
-    margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-xl)) calc(-1 * var(--space-md));
-  }
-}
-
+// La carte occupe tout l'écran ; la recherche et les commandes se posent dans son angle de début (la barre Staport a le menu).
 @include bp.phone {
-  .app-map-page {
-    width: calc(100% + 2 * var(--space-md));
-    height: max(26rem, calc(100svh - var(--topbar-height) - env(safe-area-inset-top)));
-    margin: calc(-1 * var(--space-md));
-  }
-
   .app-map-page__search {
     top: var(--space-sm);
     inset-inline-start: var(--space-sm);
     width: calc(100% - 2 * var(--space-sm));
   }
 }
-
 
 // L'élément racine appartient à MapLibre : il le place en `position: absolute` et le déplace par `transform` à chaque image.
 // Ne jamais y toucher (ni position, ni transform, ni transition) : le marqueur glisserait hors de son site au zoom.

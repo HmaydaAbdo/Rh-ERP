@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, FormRoot, maxLength, required, hidden, pattern, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -16,7 +17,7 @@ import { NatureChantier, NATURE_CHANTIER_OPTIONS } from '../models/chantier.mode
 
 @Component({
   selector: 'app-chantier-form',
-  imports: [FormField, FormRoot, RouterLink, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent],
+  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chantier-form.component.html'
 })

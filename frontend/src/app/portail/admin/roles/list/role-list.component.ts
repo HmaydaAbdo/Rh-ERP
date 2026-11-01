@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
@@ -20,7 +21,7 @@ const filtresVides = () => ({ nom: '', description: '' });
 
 @Component({
   selector: 'app-role-list',
-  imports: [ColumnChooserComponent, FormField, FormRoot, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
+  imports: [DockDeclencheurComponent, ColumnChooserComponent, FormField, FormRoot, RouterLink, ButtonComponent, BadgeComponent, TableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './role-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

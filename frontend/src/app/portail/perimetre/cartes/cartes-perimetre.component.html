@@ -37,24 +37,22 @@
           <stp-select ariaLabel="Période de paie" placeholder="Période de paie" [options]="optionsPeriodes()" [value]="periode()" (valueChange)="changerPeriode($event)" />
         </label>
       }
-      @if (!module().sansRaccourciListe) {
-        <a stp-button variant="secondary" icon="table" [routerLink]="module().route" [queryParams]="parametresListe()">Voir la liste</a>
-      }
-      @if (voitEmployes() && !module().sansLienEmployes) {
-        <a stp-button variant="secondary" icon="users" routerLink="/employees" [queryParams]="parametresEmployes()">Voir les employés</a>
-      }
     </div>
   </div>
 
   <div class="app-level" aria-live="polite">
     <div class="app-level__content">
       <div class="app-level__title">
-        <h2>{{ progression().libelle }}</h2>
+        @if (niveau() !== 'PERIODE') {
+          <h2>{{ progression().libelle }}</h2>
+        }
         @if (voitPaie() && module().periodePaieRecenteFixe && periode() && module().resumeCartesPresDuNiveau) {
           <span class="app-tag">Paie · {{ libellePeriode(periode()!) }}</span>
         }
       </div>
-      @if (module().resumeCartesPresDuNiveau && niveau() !== 'EMPLOYES' && !chargement() && !resultat().erreur) {
+      @if (niveau() === 'PERIODE' && couverturePaie(); as couverture) {
+        <p class="app-level__summary" role="status">{{ couverture }}</p>
+      } @else if (module().resumeCartesPresDuNiveau && niveau() !== 'EMPLOYES' && !chargement() && !resultat().erreur) {
         <div class="app-level__summary">
           <p class="app-muted" role="status">
             {{ libelleGroupesResume(groupes() ?? []) }}
@@ -67,12 +65,6 @@
             @if (voitPaie() && !periode() && niveau() !== 'PERIODE' && !erreurPeriodes() && !chargementPeriodes()) { · aucun mois de paie disponible }
           </p>
         </div>
-      }
-    </div>
-    <div class="app-level__actions">
-      @if (voitEmployes() && module().lienEmployesPresDuNiveau) {
-        <a stp-button variant="text" icon="users" [iconOnly]="true" routerLink="/employees" [queryParams]="parametresEmployes()"
-          aria-label="Voir les employés de ce périmètre" title="Voir les employés de ce périmètre"></a>
       }
     </div>
   </div>
@@ -101,7 +93,7 @@
     } @else if (niveau() !== 'EMPLOYES') {
       @if (groupes(); as liste) {
         <section class="app-results" aria-label="Résultats du périmètre">
-          @if (!module().resumeCartesPresDuNiveau) {
+          @if (!module().resumeCartesPresDuNiveau && niveau() !== 'PERIODE') {
             <div class="app-results__head">
               <p class="app-muted" role="status">
                 {{ libelleGroupesResume(liste) }}
@@ -143,7 +135,7 @@
                         <div class="app-entity__fact-row"><dt>Employés sur les fiches récentes</dt><dd>{{ fiches.effectif }}</dd></div>
                       </dl>
                     }
-                    @if (voitPaie() && moisDe(groupe); as mois) {
+                    @if (niveau() !== 'PERIODE' && voitPaie() && moisDe(groupe); as mois) {
                       <span class="app-entity__period">Paie · {{ libellePeriode(mois) }}</span>
                     }
                     <dl class="app-entity__metrics">
@@ -193,13 +185,13 @@
                   </button>
                   <div class="app-entity__footer">
                     @if (groupe.lien; as lien) {
-                      <a stp-button variant="text" icon="eye" [iconOnly]="true" [routerLink]="lien"
-                        [attr.aria-label]="'Consulter ' + titre(groupe)" [attr.title]="'Consulter ' + titre(groupe)"></a>
+                      <a stp-button variant="text" icon="eye" [routerLink]="lien"
+                        [attr.aria-label]="'Consulter ' + titre(groupe)" [attr.title]="'Consulter ' + titre(groupe)">Consulter</a>
                     }
-                    <a stp-button variant="text" icon="chart-column" [iconOnly]="true"
+                    <a stp-button variant="text" icon="chart-column"
                       [routerLink]="[module().route, 'analytique']" [queryParams]="parametresAnalytique(groupe)" queryParamsHandling="merge"
                       [attr.aria-label]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)"
-                      [attr.title]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)"></a>
+                      [attr.title]="(voitPaie() && periode() ? 'Voir l’historique Paie de ' : 'Voir l’analyse de ') + titre(groupe)">Analytique</a>
                     @if (actionsCarte(); as modele) {
                       <ng-container [ngTemplateOutlet]="modele" [ngTemplateOutletContext]="{ $implicit: groupe, niveau: niveau(), periode: moisDe(groupe), portee: resultat().portee }"></ng-container>
                     }

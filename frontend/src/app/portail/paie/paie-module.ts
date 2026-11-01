@@ -1,6 +1,6 @@
 import { cleIds, DIMENSIONS } from '../perimetre/perimetre';
 import { ModulePerimetre } from '../perimetre/perimetre-module';
-import { lireFiltres, versCriteres, versParametres } from './filtres/paie-filtres';
+import { lireFiltres, versCriteres } from './filtres/paie-filtres';
 
 /**
  * Ce que le module Paie apporte aux vues Cartes et Analytique partagées (voir `portail/perimetre/`). Il n'a pas de référentiel
@@ -17,7 +17,6 @@ export const MODULE_PAIE: ModulePerimetre = {
   route: '/paie',
   permission: 'PAIE_READ',
   niveauPeriode: true,
-  parametresListe: (params) => versParametres(lireFiltres(params)),
   critereEmployes: (params, portee) => {
     const filtres = lireFiltres(params);
     return {

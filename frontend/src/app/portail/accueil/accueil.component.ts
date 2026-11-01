@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
@@ -31,7 +32,7 @@ const FORMAT_DECIMAL = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1
  */
 @Component({
   selector: 'app-accueil',
-  imports: [ButtonComponent, DialogComponent, IconComponent, AccueilEditeurComponent],
+  imports: [DockDeclencheurComponent, ButtonComponent, DialogComponent, IconComponent, AccueilEditeurComponent],
   templateUrl: './accueil.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

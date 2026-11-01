@@ -1,34 +1,17 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, input, output, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { filter, map, startWith } from 'rxjs';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
 
-import { IconComponent } from '../icon/icon.component';
+import { DockEtatService, ShellNavGroupe, ShellNavItem } from '../dock/dock-etat.service';
 
-/** Destination du menu : l'icône est le nom d'une icône de `stp-icon`. `groupe` rattache l'entrée à un groupe repliable. */
-export interface ShellNavItem {
-  readonly label: string;
-  readonly icon: string;
-  readonly route: string;
-  readonly groupe?: string;
-}
-
-/** Groupe repliable du menu (placé à l'endroit de sa première entrée). */
-export interface ShellNavGroupe {
-  readonly id: string;
-  readonly label: string;
-  readonly icon: string;
-}
-
-type EntreeMenu =
-  | { readonly type: 'lien'; readonly item: ShellNavItem; readonly index: number }
-  | { readonly type: 'groupe'; readonly groupe: ShellNavGroupe; readonly enfants: readonly ShellNavItem[]; readonly index: number };
+export type { ShellNavGroupe, ShellNavItem } from '../dock/dock-etat.service';
 
 /**
- * Coque de l'application : rail de navigation iconique qui se déploie au survol ou au focus, barre du haut et tiroir sur
- * téléphone et tablette tactile, mode carte (le rail cède la largeur à la carte, un bouton ouvre le volet), lien d'évitement
- * et zone de contenu. Le contenu de l'écran courant est projeté ; la navigation, le thème et la déconnexion sont pilotés
- * par l'application (entrées et sorties), jamais codés ici.
+ * Coque de l'application : toute la largeur au contenu, le lien d'évitement et la zone de contenu. La navigation est unifiée dans
+ * la barre Staport (`stp-dock`), que le bouton hamburger de l'en-tête de chaque page ouvre : la coque lui donne ce qu'elle montre
+ * (destinations, utilisateur, thème, assistant) et traite ses commandes. Le contenu de l'écran courant est projeté ; la navigation,
+ * le thème, le mode de l'assistant et la déconnexion sont pilotés par l'application (entrées et sorties), jamais codés ici.
  *
  *   <stp-app-shell [items]="…" [groupes]="…" [utilisateur]="…" [theme]="…" (basculerTheme)="…" (deconnecter)="…">
  *     <router-outlet />
@@ -36,14 +19,13 @@ type EntreeMenu =
  */
 @Component({
   selector: 'stp-app-shell',
-  imports: [RouterLink, RouterLinkActive, IconComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppShellComponent {
   private readonly router = inject(Router);
-  private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly dock = inject(DockEtatService);
 
   readonly items = input<readonly ShellNavItem[]>([]);
   readonly groupes = input<readonly ShellNavGroupe[]>([]);
@@ -51,71 +33,52 @@ export class AppShellComponent {
   readonly theme = input<'light' | 'dark'>('light');
   /** Faux sur les écrans publics (connexion…) : seul le contenu est affiché, sans navigation. */
   readonly navigationVisible = input(true);
-  /** Vrai sur l'écran carte : le rail se replie derrière un bouton. */
-  readonly modeCarte = input(false);
+  /** Staport Intelligence est proposée à cet utilisateur : la barre montre alors le bouton AI. */
+  readonly assistantDisponible = input(false);
+  readonly assistantOuvert = input(false);
+  /** Faux tant que l'Accueil n'est pas proposé : la barre le montre alors indisponible. */
+  readonly accueilActif = input(false);
 
+  readonly allerAccueil = output<void>();
   readonly basculerTheme = output<void>();
+  /** `true` : ouvrir Staport Intelligence ; `false` : la refermer. */
+  readonly modeAssistant = output<boolean>();
   readonly deconnecter = output<void>();
 
-  /** Menu en tiroir (téléphone, tablette tactile) : ouvert par le bouton de la barre du haut, fermé par le fond, Échap ou un choix. */
-  protected readonly menuOuvert = signal(false);
-  protected readonly menuCarteOuvert = signal(false);
-  private readonly groupesRepliesParUtilisateur = signal<ReadonlyMap<string, boolean>>(new Map());
-  private fermetureMenuCarte?: number;
-
-  private readonly urlCourante = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map((event) => event.urlAfterRedirects.split(/[?#]/, 1)[0] ?? ''),
-      startWith((this.router.url.split(/[?#]/, 1)[0]) ?? '')
-    ),
-    { initialValue: this.router.url.split(/[?#]/, 1)[0] ?? '' }
-  );
-
-  protected readonly entrees = computed<readonly EntreeMenu[]>(() => {
-    const groupes = this.groupes();
-    const resultat: EntreeMenu[] = [];
-    this.items().forEach((item, index) => {
-      const groupe = groupes.find((g) => g.id === item.groupe);
-      if (!groupe) {
-        resultat.push({ type: 'lien', item, index });
-      } else if (!resultat.some((e) => e.type === 'groupe' && e.groupe.id === groupe.id)) {
-        resultat.push({ type: 'groupe', groupe, enfants: this.items().filter((i) => i.groupe === groupe.id), index });
-      }
-    });
-    return resultat;
-  });
-
   constructor() {
+    // Choisir une destination (ou toute navigation) referme la barre.
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd), takeUntilDestroyed()).subscribe(() => this.dock.fermer());
+
+    // La barre montre l'état que la coque lui donne…
     effect(() => {
-      if (!this.modeCarte()) {
-        this.menuCarteOuvert.set(false);
-        this.annulerFermetureMenuCarte();
+      this.dock.items.set(this.items());
+      this.dock.groupes.set(this.groupes());
+      this.dock.utilisateur.set(this.utilisateur());
+      this.dock.assistantDisponible.set(this.assistantDisponible());
+      this.dock.assistantOuvert.set(this.assistantOuvert());
+      this.dock.theme.set(this.theme());
+      this.dock.accueilActif.set(this.accueilActif());
+    });
+    // … et lui renvoie ses commandes.
+    this.dock.commandes.pipe(takeUntilDestroyed()).subscribe((commande) => {
+      switch (commande) {
+        case 'accueil':
+          this.allerAccueil.emit();
+          break;
+        case 'assistant-ouvrir':
+          this.modeAssistant.emit(true);
+          break;
+        case 'assistant-fermer':
+          this.modeAssistant.emit(false);
+          break;
+        case 'theme':
+          this.basculerTheme.emit();
+          break;
+        case 'deconnexion':
+          this.deconnecter.emit();
+          break;
       }
     });
-    inject(DestroyRef).onDestroy(() => this.annulerFermetureMenuCarte());
-  }
-
-  /** Un groupe est ouvert quand l'écran courant en fait partie, sauf si l'utilisateur l'a replié ou déplié lui-même depuis. */
-  protected groupeOuvert(groupe: ShellNavGroupe, enfants: readonly ShellNavItem[]): boolean {
-    const choix = this.groupesRepliesParUtilisateur().get(groupe.id);
-    if (choix !== undefined) return choix;
-    const url = this.urlCourante();
-    return enfants.some((e) => url === e.route || url.startsWith(`${e.route}/`));
-  }
-
-  protected changerGroupe(groupe: ShellNavGroupe, evenement: Event): void {
-    const ouvert = (evenement.currentTarget as HTMLDetailsElement).open;
-    this.groupesRepliesParUtilisateur.update((m) => new Map(m).set(groupe.id, ouvert));
-  }
-
-  protected basculerMenu(): void {
-    this.menuOuvert.update((ouvert) => !ouvert);
-  }
-
-  protected fermerMenu(): void {
-    this.menuOuvert.set(false);
-    this.menuCarteOuvert.set(false);
   }
 
   /** Lien d'évitement : le focus passe au contenu (un `href="#…"` suivrait la balise `<base>` et rechargerait l'accueil). */
@@ -123,47 +86,5 @@ export class AppShellComponent {
     evenement.preventDefault();
     const lien = evenement.currentTarget as HTMLElement | null;
     lien?.closest('.app-shell')?.querySelector<HTMLElement>('main#contenu')?.focus();
-  }
-
-  protected ouvrirMenuCarteAuSurvol(evenement: PointerEvent): void {
-    if (evenement.pointerType === 'mouse') this.ouvrirMenuCarte();
-  }
-
-  protected cliquerMenuCarte(): void {
-    const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
-    if (fenetre?.matchMedia('(hover: hover)').matches) this.ouvrirMenuCarte();
-    else this.menuCarteOuvert.update((ouvert) => !ouvert);
-  }
-
-  protected reporterFermetureMenuCarteAuPointeur(evenement: PointerEvent): void {
-    if (evenement.pointerType === 'mouse') this.reporterFermetureMenuCarte();
-  }
-
-  protected ouvrirMenuCarte(): void {
-    if (!this.modeCarte()) return;
-    this.annulerFermetureMenuCarte();
-    this.menuCarteOuvert.set(true);
-  }
-
-  protected reporterFermetureMenuCarte(): void {
-    if (!this.modeCarte()) return;
-    const fenetre = this.hote.nativeElement.ownerDocument.defaultView;
-    if (!fenetre) return;
-    this.annulerFermetureMenuCarte();
-    this.fermetureMenuCarte = fenetre.setTimeout(() => {
-      const racine = this.hote.nativeElement;
-      const bouton = racine.querySelector('.app-carte-menu');
-      const rail = racine.querySelector('.app-sidebar');
-      const pointeurDansZone = bouton?.matches(':hover') || rail?.matches(':hover');
-      const focusDansZone = bouton?.matches(':focus-visible') || rail?.matches(':focus-within');
-      if (!pointeurDansZone && !focusDansZone) this.menuCarteOuvert.set(false);
-      this.fermetureMenuCarte = undefined;
-    }, 140);
-  }
-
-  private annulerFermetureMenuCarte(): void {
-    if (this.fermetureMenuCarte === undefined) return;
-    this.hote.nativeElement.ownerDocument.defaultView?.clearTimeout(this.fermetureMenuCarte);
-    this.fermetureMenuCarte = undefined;
   }
 }

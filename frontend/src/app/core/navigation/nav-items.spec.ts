@@ -13,9 +13,8 @@ describe('NAV_ITEMS', () => {
     expect(NAV_ITEMS.every((i) => i.route.startsWith('/'))).toBe(true);
   });
 
-  it('l’accueil est le premier écran du menu, la paie le premier écran métier', () => {
-    expect(NAV_ITEMS[0]).toMatchObject({ label: 'Accueil', route: '/accueil', permission: 'ACCUEIL_READ' });
-    expect(NAV_ITEMS[1]).toMatchObject({ label: 'Paie', route: '/paie', permission: 'PAIE_READ' });
+  it('la paie est le premier écran du menu (écran d’arrivée de qui y a accès)', () => {
+    expect(NAV_ITEMS[0]).toMatchObject({ label: 'Paie', route: '/paie', permission: 'PAIE_READ' });
   });
 
   it('l’administration et le journal passent après les écrans métier', () => {

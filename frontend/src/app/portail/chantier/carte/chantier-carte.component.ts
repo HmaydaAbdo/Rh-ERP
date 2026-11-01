@@ -1,3 +1,4 @@
+import { ThemeService } from '../../../core/theme/theme.service';
 import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -81,6 +82,7 @@ export class ChantierCarteComponent {
   private marqueurs: Marker[] = [];
   private readonly config = inject(CARTE_CONFIG);
   private readonly document = inject(DOCUMENT);
+  private readonly themeService = inject(ThemeService);
   private readonly conteneur = viewChild.required<ElementRef<HTMLElement>>('conteneur');
   private readonly commandes = viewChild.required<ElementRef<HTMLElement>>('commandes');
 
@@ -88,6 +90,7 @@ export class ChantierCarteComponent {
   private observateur?: ResizeObserver;
   /** Affichage du style en place ; le thème cartographique reste sombre et indépendant du thème applicatif. */
   private styleAffiche?: Affichage;
+  private styleTheme?: 'light' | 'dark';
 
   protected readonly idAide = `chantier-carte-aide-${compteur++}`;
 
@@ -110,9 +113,11 @@ export class ChantierCarteComponent {
 
     effect(() => {
       const affichage = this.affichage();
-      if (this.carte && affichage !== this.styleAffiche) {
+      const theme = this.themeService.theme();
+      if (this.carte && (affichage !== this.styleAffiche || theme !== this.styleTheme)) {
         this.styleAffiche = affichage;
-        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement)));
+        this.styleTheme = theme;
+        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement, theme), theme));
       }
     });
 
@@ -175,9 +180,10 @@ export class ChantierCarteComponent {
     preparerMapLibre(this.config, base);
 
     this.styleAffiche = this.affichage();
+    this.styleTheme = this.themeService.theme();
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
-      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement)),
+      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement, this.themeService.theme()), this.themeService.theme()),
       attributionControl: { compact: true, customAttribution: [] },
       maplibreLogo: false,
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.

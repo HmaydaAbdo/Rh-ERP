@@ -52,7 +52,6 @@ function module(avecCatalogue = true): ModulePerimetre {
     ordre: ['CHANTIER', 'EQUIPE', 'FONCTION'],
     route: '/chantiers',
     permission: 'CHANTIER_READ',
-    parametresListe: (params) => ({ code: params.get('code') }),
     critereEmployes: (_params, portee) => critereEmployesDe(portee),
     criterePaie: (_params, portee, periode) => criterePaieDe(portee, periode),
     catalogue: avecCatalogue
@@ -85,7 +84,7 @@ class HoteEquipeComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
-    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
+    sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
     resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true
   };
 }
@@ -100,7 +99,7 @@ class HoteEquipePaieComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'equipe', libellePluriel: 'équipes', libelleRacine: 'Toutes les équipes', dimension: 'EQUIPE',
     ordre: ['EQUIPE', 'CHANTIER', 'FONCTION'], route: '/equipes', periodePaieRecenteFixe: true,
-    sansRaccourciListe: true, sansLienEmployes: true, sansEffectifFichesDansCartes: true,
+    sansLienEmployes: true, sansEffectifFichesDansCartes: true,
     resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true,
     catalogue: {
       filtreActif: (params) => params.get('code') !== null,
@@ -120,7 +119,7 @@ class HoteFonctionComponent {
   module: ModulePerimetre = {
     ...module(), cle: 'function', libellePluriel: 'fonctions', libelleRacine: 'Toutes les fonctions', dimension: 'FONCTION',
     ordre: ['FONCTION', 'CHANTIER', 'EQUIPE'], route: '/functions', periodePaieRecenteFixe: true,
-    sansRaccourciListe: true, sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
+    sansLienEmployes: true, lienEmployesPresDuNiveau: true, sansEffectifFichesDansCartes: true,
     resumeCartesPresDuNiveau: true, sansOrphelinsDansCartes: true, triCartesPaie: ['masse', 'effectif'],
     sourcesAnalytique: ['PAIE'],
     catalogue: {
@@ -225,7 +224,7 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].querySelectorAll('.app-entity__indicator')).toHaveLength(4);
     expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
     expect(cartes[0].textContent).toContain('+1 personne · vs juillet 2026');
-    expect(cartes[0].textContent).toContain('Base précédente nulle · vs juillet 2026');
+    expect(cartes[0].textContent?.replace(/\s/g, ' ')).toContain('+1 000,00 DH · vs juillet 2026');
     expect(cartes[0].textContent).toMatch(/4\s500,00 DH/);
     expect(cartes[0].textContent).toContain('+12,5 %');
     expect(cartes[1].textContent).toContain('Clôturé');
@@ -464,7 +463,7 @@ describe('CartesPerimetreComponent', () => {
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
     expect(page.querySelector('a[href="/equipes"]')).toBeNull();
     expect(page.querySelector('.app-actions-row a[href^="/employees"]')).toBeNull();
-    expect(page.querySelector('.app-level a[href="/employees"][aria-label="Voir les employés de ce périmètre"]')).not.toBeNull();
+    expect(page.querySelector('a[aria-label="Voir les employés de ce périmètre"]')).toBeNull();
     expect(page.querySelector('.app-entity__footer a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
     expect(page.querySelector('.app-entity__footer a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
   });
@@ -485,7 +484,7 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.app-results__head')).toBeNull();
     expect(page.querySelector('a[href="/functions"]')).toBeNull();
     expect(page.querySelector('.app-actions-row a[href^="/employees"]')).toBeNull();
-    expect(page.querySelector('.app-level a[href="/employees"][aria-label="Voir les employés de ce périmètre"]')).not.toBeNull();
+    expect(page.querySelector('a[aria-label="Voir les employés de ce périmètre"]')).toBeNull();
     expect(employes.regrouper).not.toHaveBeenCalled();
     expect(employes.search).not.toHaveBeenCalled();
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
@@ -528,10 +527,9 @@ describe('CartesPerimetreComponent', () => {
     expect(racine.disabled).toBe(false);
   });
 
-  it('renvoie à la vue Tabulaire avec les filtres du module, et aux employés avec le périmètre', async () => {
+  it('ne propose plus « Voir les employés » : les onglets de vue gardent le contexte des filtres', async () => {
     const page = await ouvrir('/chantiers/cartes?code=C1&equipeIds=5&periode=2026-08');
 
-    expect(page.querySelector('a[href="/chantiers?code=C1"]')).not.toBeNull();
-    expect(page.querySelector('a[href="/employees?equipeIds=5"]')).not.toBeNull();
+    expect(page.querySelector('a[href^="/employees"]')).toBeNull();
   });
 });

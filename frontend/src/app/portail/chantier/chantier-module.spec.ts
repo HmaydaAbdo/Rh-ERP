@@ -45,9 +45,6 @@ describe('moduleChantier', () => {
     expect(module.catalogue!.lien(2)).toEqual(['/chantiers', 2]);
   });
 
-  it('revient à la vue Tabulaire avec ses filtres propres seulement', () => {
-    expect(module.parametresListe(params({ code: 'C1', actif: 'false', chantierIds: '3' }))).toEqual({ code: 'C1', designation: null, actif: 'false' });
-  });
 
   it('ne passe aux fiches et à la paie que le périmètre et le mois', () => {
     const portee = { chantierIds: [1], equipeIds: undefined, fonctionIds: [7] };

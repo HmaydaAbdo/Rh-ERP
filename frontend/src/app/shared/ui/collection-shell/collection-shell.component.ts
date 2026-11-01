@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
@@ -13,10 +14,10 @@ export interface CollectionShellConfig {
 /** Structure commune des pages de collection; les actions et filtres métier sont projetés par le domaine. */
 @Component({
   selector: 'app-collection-shell',
-  imports: [RouterOutlet, VueSwitcherComponent],
+  imports: [DockDeclencheurComponent, RouterOutlet, VueSwitcherComponent],
   template: `
     <div class="app-vues">
-      <div class="app-vues__header">
+      <div class="app-vues__header"><stp-dock-declencheur />
         <h1>{{ configuration().titre }}</h1>
         <app-vue-switcher [label]="configuration().libelleVue" [vues]="configuration().vues"></app-vue-switcher>
         <div class="app-vues__actions"><ng-content select="[collection-actions]"></ng-content></div>

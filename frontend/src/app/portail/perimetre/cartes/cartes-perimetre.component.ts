@@ -22,7 +22,7 @@ import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
 import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
-  Portee, porteeDe, porteeVide, versParametresPerimetre
+  Portee, porteeDe, porteeVide
 } from '../perimetre';
 import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
@@ -86,16 +86,13 @@ export class CartesPerimetreComponent implements OnInit {
   protected readonly nomGroupe = nomGroupe;
   protected readonly libelleStatutEmploye = libelleStatutEmploye;
 
-  /** Compare chaque indicateur au mois contigu et conserve son unité de lecture. */
+  /** Compare chaque indicateur au mois contigu : l'écart dans son unité et en pourcentage. */
   protected variationPaie(groupe: GroupeCarte, indicateur: keyof NonNullable<GroupeCarte['paie']>, periode: string): string {
     const valeur = variations(groupe)?.[indicateur];
     if (valeur === undefined) {
       return 'Comparaison indisponible';
     }
     const contexte = ` · vs ${libellePeriode(periodePrecedente(periode))}`;
-    if (valeur === null) {
-      return `Base précédente nulle${contexte}`;
-    }
     return `${valeur}${contexte}`;
   }
 
@@ -211,12 +208,20 @@ export class CartesPerimetreComponent implements OnInit {
   }
   protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie());
 
-  /** Les paramètres de la vue Tabulaire du module : ses filtres propres, sans les étapes du périmètre. */
-  protected readonly parametresListe = computed<Params>(() => this.module().parametresListe(this.params()));
-  /** Les employés du même périmètre dans leur vue Tabulaire. */
-  protected readonly parametresEmployes = computed<Params>(() => {
-    const { periode: _periode, ...ids } = versParametresPerimetre(this.perimetre());
-    return ids;
+  /**
+   * Niveau « Mois » : la durée couverte par la paie et le nombre de bulletins de paie (un bulletin = un employé payé pour un mois),
+   * par exemple « Sur 3 ans et 2 mois, 15 623 bulletins de paie ». `null` tant que les mois ne sont pas chargés ou s'il n'y en a aucun.
+   */
+  protected readonly couverturePaie = computed<string | null>(() => {
+    const mois = this.groupes();
+    if (this.niveau() !== 'PERIODE' || !mois || mois.length === 0 || this.chargement()) {
+      return null;
+    }
+    const annees = Math.floor(mois.length / 12);
+    const reste = mois.length % 12;
+    const duree = [annees > 0 ? `${annees} an${annees > 1 ? 's' : ''}` : '', reste > 0 ? `${reste} mois` : ''].filter(Boolean).join(' et ');
+    const bulletins = this.totaux().payes;
+    return `Sur ${duree}, ${new Intl.NumberFormat('fr-FR').format(bulletins)} bulletin${bulletins > 1 ? 's' : ''} de paie`;
   });
 
   ngOnInit(): void {

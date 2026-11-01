@@ -1,7 +1,7 @@
 import { EmployeeRegroupement } from '../employee/models/employee.model';
 import { PaieAnalytique } from '../paie/models/paie.model';
 import { HeuresSuppAnalytique, HeuresSuppGroupe } from '../heures-supp/models/heures-supp.model';
-import { formaterVariation } from '../paie/paie-format';
+import { formaterMontant, formaterVariation } from '../paie/paie-format';
 import { ItemCatalogue } from './perimetre-module';
 import { Dimension } from './perimetre';
 
@@ -155,31 +155,32 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
   return [...parId.values()].sort((a, b) => nomGroupe(dimension, a).localeCompare(nomGroupe(dimension, b), 'fr', { numeric: true }));
 }
 
-/** Les quatre comparaisons d'une carte avec le mois contigu : en pourcentage pour les montants, en écart pour les personnes. */
+/** Les quatre comparaisons d'une carte avec le mois contigu : chacune donne l'écart dans son unité (personnes, DH) et en pourcentage. */
 export interface Variations {
-  masse: string | null;
-  effectif: string | null;
-  stc: string | null;
-  stcMontant: string | null;
+  masse: string;
+  effectif: string;
+  stc: string;
+  stcMontant: string;
 }
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
-function ecartPersonnes(courant: number, precedent: number): string {
+/**
+ * Écart signé en unité puis en pourcentage : « +40 personnes (+4,1 %) », « −8 765,43 DH (−0,2 %) ». Sans écart : « Stable ».
+ * Sans base de comparaison (mois précédent à zéro), le pourcentage n'existe pas : l'écart en unité seul, jamais une division par zéro.
+ */
+function ecart(courant: number, precedent: number, unite: (valeurAbsolue: number) => string): string {
   const difference = courant - precedent;
   if (difference === 0) {
     return 'Stable';
   }
-  const unite = Math.abs(difference) === 1 ? 'personne' : 'personnes';
-  return `${difference > 0 ? '+' : '−'}${FORMAT_ENTIER.format(Math.abs(difference))} ${unite}`;
+  const signe = difference > 0 ? '+' : '−';
+  const enUnite = `${signe}${unite(Math.abs(difference))}`;
+  return precedent > 0 ? `${enUnite} (${formaterVariation((difference / precedent) * 100).replace('-', '−')})` : enUnite;
 }
 
-function pourcent(courant: number, precedent: number): string | null {
-  if (courant === precedent) {
-    return 'Stable';
-  }
-  return precedent > 0 ? formaterVariation(((courant - precedent) / precedent) * 100) : null;
-}
+const personnes = (n: number): string => `${FORMAT_ENTIER.format(n)} ${n === 1 ? 'personne' : 'personnes'}`;
+const dirhams = (n: number): string => `${formaterMontant(n)} DH`;
 
 /** Les variations d'une carte par rapport au mois contigu ; `null` sans comparaison possible (jamais un zéro ni une division par zéro). */
 export function variations(groupe: GroupeCarte): Variations | null {
@@ -189,9 +190,9 @@ export function variations(groupe: GroupeCarte): Variations | null {
     return null;
   }
   return {
-    masse: pourcent(courant.masse, precedent.masse),
-    effectif: ecartPersonnes(courant.effectif, precedent.effectif),
-    stc: ecartPersonnes(courant.stc, precedent.stc),
-    stcMontant: pourcent(courant.stcMontant, precedent.stcMontant)
+    masse: ecart(courant.masse, precedent.masse, dirhams),
+    effectif: ecart(courant.effectif, precedent.effectif, personnes),
+    stc: ecart(courant.stc, precedent.stc, personnes),
+    stcMontant: ecart(courant.stcMontant, precedent.stcMontant, dirhams)
   };
 }

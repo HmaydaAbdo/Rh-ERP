@@ -1,4 +1,4 @@
-import { ParamMap, Params } from '@angular/router';
+import { ParamMap } from '@angular/router';
 import { EMPTY, expand, Observable, reduce } from 'rxjs';
 
 import { Page } from '../../shared/models/page.model';
@@ -70,7 +70,6 @@ export interface ModulePerimetre {
   /** Permission qui ouvre le module. */
   permission: string;
   /** Les paramètres d'URL des filtres propres au module, pour revenir à sa vue Tabulaire (jamais les étapes du périmètre). */
-  parametresListe(params: ParamMap): Params;
   /** Critères Employés : le périmètre, plus les filtres propres au module qui s'appliquent aux fiches (nom, CIN, statut…). */
   critereEmployes(params: ParamMap, portee: Portee): EmployeeSearchCriteria;
   /** Critères Paie : le périmètre et le mois (`null` = tous les mois), plus les filtres propres au module qui s'appliquent aux bulletins (nom, CIN…). */
@@ -85,7 +84,6 @@ export interface ModulePerimetre {
   /** Désactive les agrégats et l'étape des fiches dans Cartes si la source des effectifs est exclusivement Paie. */
   sansEffectifFichesDansCartes?: boolean;
   /** Masque le raccourci vers le Tabulaire, lorsque les onglets suffisent à changer de vue. */
-  sansRaccourciListe?: boolean;
   /** Masque le raccourci vers Cartes dans Analytique, lorsque les onglets suffisent à changer de vue. */
   sansRaccourciCartes?: boolean;
   /** Place l'accès aux employés à côté du titre de niveau dans Cartes, au lieu de l'en-tête de la vue. */

@@ -23,18 +23,19 @@
   (openChange)="$event || annulerSuppression()"
 >
   @if (suppression(); as s) {
-    <p class="m-0 mb-2">
+    <div class="app-stack">
+    <p>
       Vous allez supprimer <strong>{{ s.nombre }} bulletin(s)</strong> :
     </p>
-    <ul class="mb-4 ps-6">
+    <ul>
       <li>{{ s.cible }}</li>
       @for (filtre of s.filtres; track filtre) {
         <li>{{ filtre }}</li>
       }
     </ul>
-    <stp-message severity="error" class="mb-4">Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
+    <stp-message severity="error">Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
       réimporté depuis son fichier Excel.</stp-message>
-    <label class="block mb-1" for="confirmation-suppression">
+    <label for="confirmation-suppression">
       Pour confirmer, saisissez le nombre de bulletins : <strong>{{ s.nombre }}</strong>
     </label>
     <input
@@ -46,6 +47,7 @@
       [formField]="confirmationForm.nombre"
       (keydown.enter)="confirmerSuppression()"
     />
+    </div>
   }
   <div stpDialogFooter>
     <button stp-button variant="text" type="button" [disabled]="suppressionEnCours()" (click)="annulerSuppression()">Annuler</button>

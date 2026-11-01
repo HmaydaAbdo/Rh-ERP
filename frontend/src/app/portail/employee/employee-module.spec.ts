@@ -23,9 +23,6 @@ describe('MODULE_EMPLOYE', () => {
     });
   });
 
-  it('revient à la vue Tabulaire avec les filtres de la barre', () => {
-    expect(MODULE_EMPLOYE.parametresListe(params({ nom: 'ali', chantierIds: '3,4' }))).toMatchObject({ nom: 'ali', chantierIds: '3,4' });
-  });
 
   it('prévient que seul le statut courant ne s’applique pas aux mouvements historiques', () => {
     expect(MODULE_EMPLOYE.noteMouvements?.(params({ nom: 'ali', cin: 'AB1' }))).toBeNull();
