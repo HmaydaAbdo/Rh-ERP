@@ -99,7 +99,7 @@ est corrigée avant d'être adoptée.
 
 Tout écran est composé de composants du dossier partagé (`shared/ui/`). Si un besoin n'y est pas couvert, on **ajoute le
 composant au dossier partagé** (ou on étend un existant) avant de l'utiliser ; on n'écrit jamais un composant dans le dossier
-d'un domaine pour un usage visuel. Les tableaux utilisent **AG Grid Community** et les graphiques **`ng2-charts`**, habillés
+d'un domaine pour un usage visuel. Les tableaux utilisent **AG Grid Community** (`stp-table` ; au clavier : flèches pour les cellules, Maj + flèche gauche ou droite pour déplacer une colonne, Alt + flèche pour la redimensionner) et les graphiques **`ng2-charts`**, habillés
 par les jetons de cette charte (décision du 2026-10-31).
 
 **Règle vérifiée en CI** : aucun composant situé hors de `shared/ui/` ne porte de styles propres (`styleUrl`, `styles`). Un écran de domaine
@@ -273,7 +273,7 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
 
 # Graphiques
 
-Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`shared/ui/chart/chart-theme.ts`) et lit les jetons.
+Les graphiques sont dessinés par **`ng2-charts`** (directive `baseChart` sur Chart.js, enveloppée par `stp-chart`). Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`shared/ui/chart/chart-theme.ts`) et lit les jetons.
 Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
 son interprétation.
 
