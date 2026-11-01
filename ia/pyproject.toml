@@ -2,7 +2,7 @@
 name = "erp-rh-ia"
 version = "0.1.0"
 description = "Service IA d'ERP-RH : graphe LangGraph, client MCP vers Spring, AG-UI vers Angular, modèles via LiteLLM"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi",
     "uvicorn",
@@ -51,7 +51,7 @@ required-version = ">=0.12"
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
