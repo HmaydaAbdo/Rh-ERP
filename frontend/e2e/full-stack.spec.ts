@@ -53,7 +53,11 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await ouvrirBarre.click();
     const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
     const lien = navigation.locator(`a[href^="${url}"]`).first();
-    if (!(await lien.isVisible())) {
+    // L'état du groupe est lu sur l'élément <details> une fois le panneau affiché : tester la visibilité du lien pendant
+    // l'ouverture du panneau faisait cliquer le titre d'un groupe déjà ouvert et le refermait.
+    const groupe = navigation.locator('details.stp-dock__groupe');
+    await expect(groupe).toBeVisible();
+    if (!(await groupe.evaluate((element: HTMLDetailsElement) => element.open)) && !(await lien.isVisible())) {
       await navigation.getByText('Administration système', { exact: true }).click();
     }
     await lien.click();
