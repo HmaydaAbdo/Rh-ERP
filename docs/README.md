@@ -55,6 +55,7 @@ limites connues. Sa skill renvoie à ces sources ; son TODO ne contient que le t
 | **Heures supplémentaires** | Import mensuel par chantier, heures, montants, STC et forfaits | [README](heures-supp/README.md) · [skill IA](heures-supp/skills/SKILL.md) | [rbac/heures-supp.md](rbac/heures-supp.md) |
 | **Rapport** | Assistant d'export, export Excel et rapport PDF BI de la paie | [README](report/README.md) · [skill IA](report/skills/SKILL.md) | (`PAIE_EXPORT`, voir [rbac/paie.md](rbac/paie.md)) |
 | **Auth** | Comptes, rôles, permissions, sessions | [README](auth/README.md) · [skill IA](auth/skills/SKILL.md) | [rbac/auth.md](rbac/auth.md) |
+| **Accueil** | Écran d'arrivée personnalisé : indicateurs choisis par utilisateur | [README](accueil/README.md) | [rbac/accueil.md](rbac/accueil.md) |
 | **Paramètres** | Valeurs de fonctionnement administrables | [README](parametre/README.md) | [rbac/parametre.md](rbac/parametre.md) |
 | **Audit** | Journal d'audit, historique des enregistrements, événements de sécurité | [README](audit/README.md) · [skill IA](audit/skills/SKILL.md) | [rbac/audit.md](rbac/audit.md) |
 

@@ -1,0 +1,54 @@
+<div class="app-page">
+  <div class="app-page__header">
+    <div>
+      <h1>Accueil</h1>
+      <p>Les indicateurs de {{ utilisateur() }}.</p>
+    </div>
+    @if (accueil()) {
+      <button stp-button variant="secondary" icon="sliders-horizontal" type="button" (click)="edition.set(true)">Personnaliser</button>
+    }
+  </div>
+
+  @if (chargement()) {
+    <div class="app-skeleton-grid" role="status" aria-busy="true">
+      <span class="app-lecteur">Chargement de l’accueil…</span>
+      @for (ligne of [1, 2, 3, 4]; track ligne) {
+        <span class="app-skeleton block h-32 rounded-md"></span>
+      }
+    </div>
+  } @else if (erreur()) {
+    <div class="app-empty" role="alert">
+      <stp-icon name="triangle-alert" size="1.25rem" />
+      <span>Impossible de charger l’accueil. Vérifiez la connexion puis réessayez.</span>
+      <button stp-button variant="secondary" type="button" (click)="charger()">Réessayer</button>
+    </div>
+  } @else if (tuiles().length === 0) {
+    <div class="app-empty" role="status">
+      <stp-icon name="chart-column" size="1.25rem" />
+      @if (accueil()?.disponibles?.length === 0) {
+        <span>Aucun indicateur n’est disponible avec vos droits actuels.</span>
+      } @else {
+        <span>Votre accueil est vide. Choisissez les indicateurs à afficher.</span>
+        <button stp-button variant="secondary" type="button" (click)="edition.set(true)">Personnaliser</button>
+      }
+    </div>
+  } @else {
+    <section class="app-kpis" aria-label="Indicateurs de l’accueil">
+      @for (tuile of tuiles(); track tuile.code) {
+        <div class="app-kpi">
+          <span>{{ tuile.libelle }}</span>
+          <strong>{{ tuile.valeur }}</strong>
+          @if (tuile.variation) {
+            <small>{{ tuile.variation }}</small>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>
+
+@if (accueil(); as accueil) {
+  <stp-dialog header="Personnaliser l’accueil" width="46rem" [(open)]="edition">
+    <app-accueil-editeur [accueil]="accueil" [enregistrement]="enregistrement()" (enregistrer)="enregistrer($event)" (reinitialiser)="reinitialiser()" />
+  </stp-dialog>
+}

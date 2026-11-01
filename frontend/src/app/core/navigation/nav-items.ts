@@ -1,6 +1,6 @@
 export interface NavItem {
   label: string;
-  icon: 'wallet' | 'users' | 'building' | 'map-pinned' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'settings' | 'history' | 'clock-3';
+  icon: 'house' | 'wallet' | 'users' | 'building' | 'map-pinned' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'settings' | 'history' | 'clock-3';
   route: string;
   /** Permission de lecture qui donne accès à l'écran (jamais un rôle codé en dur). */
   permission: string;
@@ -8,8 +8,9 @@ export interface NavItem {
   group?: 'administration-systeme';
 }
 
-/** Priorité de l'écran d'accueil (premier écran autorisé, voir `homeGuard`). */
+/** Entrées du menu, dans l'ordre : l'écran d'arrivée est le premier auquel l'utilisateur a accès, l'Accueil d'abord (voir `homeGuard`). */
 export const NAV_ITEMS: NavItem[] = [
+  { label: 'Accueil', icon: 'house', route: '/accueil', permission: 'ACCUEIL_READ' },
   { label: 'Paie', icon: 'wallet', route: '/paie', permission: 'PAIE_READ' },
   { label: 'Heures sup.', icon: 'clock-3', route: '/heures-supp', permission: 'HEURES_SUP_READ' },
   { label: 'Employés', icon: 'users', route: '/employees', permission: 'EMPLOYEE_READ' },

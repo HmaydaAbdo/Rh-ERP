@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, map, Subscription } from 'rxjs';
 
+import { AuthService } from '../../../../core/auth/services/auth.service';
+import { AccueilEditeurComponent } from '../../../accueil/editeur/accueil-editeur.component';
+import { Accueil, AccueilService } from '../../../accueil/services/accueil.service';
 import { ColumnChooserComponent } from '../../../../shared/ui/column-chooser/column-chooser.component';
 import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { surChangementDesFiltres } from '../../../../shared/forms/filtres';
@@ -27,6 +30,7 @@ const DEBOUNCE_FILTRE_MS = 300;
 @Component({
   selector: 'app-user-list',
   imports: [
+    AccueilEditeurComponent,
     ColumnChooserComponent,
     FormField,
     FormRoot,
@@ -48,6 +52,8 @@ export class UserListComponent {
   private readonly userService = inject(UserService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly accueilService = inject(AccueilService);
   private readonly politique = inject(PolitiqueMotDePasseService);
   private readonly destroyRef = inject(DestroyRef);
   private recherche?: Subscription;
@@ -57,6 +63,13 @@ export class UserListComponent {
   protected readonly loading = signal(false);
   protected readonly erreur = signal(false);
   protected readonly first = signal(0);
+
+  /** Régler l'accueil d'un autre utilisateur est un droit propre (ACCUEIL_ADMIN), distinct de la gestion des comptes. */
+  protected readonly peutRegler = computed(() => this.authService.hasPermission('ACCUEIL_ADMIN'));
+  protected readonly accueilCible = signal<AdminUser | null>(null);
+  protected readonly accueilEdite = signal<Accueil | null>(null);
+  protected readonly accueilOuvert = signal(false);
+  protected readonly accueilEnregistrement = signal(false);
 
   protected readonly showResetDialog = signal(false);
   protected readonly resetDialogUser = signal<AdminUser | null>(null);
@@ -123,6 +136,46 @@ export class UserListComponent {
 
   protected onEdit(user: AdminUser): void {
     this.router.navigate(['/admin/users', user.id, 'edit']);
+  }
+
+  protected onOuvrirAccueil(user: AdminUser): void {
+    this.accueilCible.set(user);
+    this.accueilEdite.set(null);
+    this.accueilOuvert.set(true);
+    this.accueilService
+      .lireDe(user.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (accueil) => this.accueilEdite.set(accueil), error: () => this.accueilOuvert.set(false) });
+  }
+
+  protected onEnregistrerAccueil(indicateurs: string[]): void {
+    const cible = this.accueilCible();
+    if (!cible) {
+      return;
+    }
+    this.accueilEnregistrement.set(true);
+    this.accueilService
+      .enregistrerDe(cible.id, { version: this.accueilEdite()?.version ?? null, indicateurs })
+      .pipe(finalize(() => this.accueilEnregistrement.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe((accueil) => this.apresAccueil(accueil, `Accueil de ${cible.username} enregistré`));
+  }
+
+  protected onReinitialiserAccueil(): void {
+    const cible = this.accueilCible();
+    if (!cible) {
+      return;
+    }
+    this.accueilEnregistrement.set(true);
+    this.accueilService
+      .reinitialiserDe(cible.id)
+      .pipe(finalize(() => this.accueilEnregistrement.set(false)), takeUntilDestroyed(this.destroyRef))
+      .subscribe((accueil) => this.apresAccueil(accueil, `Accueil de ${cible.username} rétabli`));
+  }
+
+  private apresAccueil(accueil: Accueil, message: string): void {
+    this.accueilEdite.set(accueil);
+    this.accueilOuvert.set(false);
+    this.messageService.add({ severity: 'success', summary: message, life: 4000 });
   }
 
   protected onOpenReset(user: AdminUser): void {

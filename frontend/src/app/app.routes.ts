@@ -37,6 +37,13 @@ export const routes: Routes = [
     loadComponent: () => import('./core/auth/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent)
   },
   {
+    path: 'accueil',
+    title: 'Accueil',
+    canActivate: [permissionGuard],
+    data: { permission: 'ACCUEIL_READ' },
+    loadComponent: () => import('./portail/accueil/accueil.component').then((m) => m.AccueilComponent)
+  },
+  {
     path: 'employees',
     title: 'Employés',
     canActivate: [authGuard],
