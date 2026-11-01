@@ -1,4 +1,4 @@
-# Inventaire des composants visuels hors `shared/ui/` (E0.2)
+# Composants visuels hors `shared/ui/` (E0.2, terminé le 2026-11-01)
 
 Mesure du 2026-10-31 par `npm run check:composants` (script `scripts/check-composants-partages.mjs`). Règle du propriétaire : tout écran
 est composé de composants de `shared/ui/` ; aucun composant visuel ne vit dans un dossier de domaine.
@@ -44,3 +44,25 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 
 Chaque lot : composants ajoutés à `shared/ui/` et montrés dans le catalogue (`/catalogue`, E0.3), vérification des deux thèmes sur
 ordinateur et téléphone, tests, liste de référence mise à jour dans le même commit.
+
+## Résultat
+
+**Zéro infraction** : `npm run check:composants` passe sans liste de référence (`scripts/composants-hors-ui.baseline.json` est vide), donc
+toute infraction nouvelle fait échouer le contrôle de la CI. De 51 infractions au départ, elles ont été résorbées ainsi :
+
+| Famille | Remplacée par |
+|---|---|
+| Dossiers `shared/components`, `shared/feedback` | Déplacés dans `shared/ui/` |
+| Authentification | `stp-auth-card`, classes `app-form` et `app-link` |
+| Coquille d'application | `stp-app-shell` |
+| Assistants d'import et d'export | `stp-stepper`, `stp-wizard-state`, `styles/_wizard.scss` |
+| Tableaux de bord, cartes, fil d'étapes | `styles/_dashboard.scss` (`app-trail`, `app-kpi`, `app-panel`, `app-chart`, `app-entity`, `app-person`, `app-level`) |
+| Fiches, administration, audit, réglages | `styles/_content.scss`, `styles/_forms.scss` (`app-profile`, `app-facts`, `app-setting`, `app-group`, `app-check`, `app-columns`, `app-timeline`) |
+| Filtres de la paie | `styles/_page.scss` (`app-toolbar__period`, `__search`, `__toggle`, `__secondary`) |
+| Assistant IA | classes `app-ask`, `app-choice-btn`, `app-datagrid`, tuiles et panneaux du tableau de bord |
+| Carte des chantiers | `styles/_map.scss` (`app-map`, `app-map-page`) |
+
+Les feuilles `styles/*.scss` sont le vocabulaire partagé du système de design : un écran de domaine les compose, il ne les redéfinit pas.
+
+**Exports supprimés** (décision du 2026-11-01) : le bouton d'export PDF par composant, `PdfImpressionService` et l'export CSV du tableau de
+l'assistant sont retirés ; seuls les exports produits par le backend subsistent, dont le rapport de paie.

@@ -24,14 +24,14 @@ const HAUTEUR_LIGNE = 40;
   selector: 'app-a2ui-data-table',
   imports: [ScrollingModule, LucideArrowDown, LucideArrowUp, LucideMaximize2, LucideMinimize2, LucideSearch],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.plein-ecran]': 'pleinEcran()', '(document:keydown.escape)': 'pleinEcran.set(false)' },
+  host: { class: 'app-datagrid', '[class.app-datagrid--fullscreen]': 'pleinEcran()', '(document:keydown.escape)': 'pleinEcran.set(false)' },
   template: `
-    <header class="barre">
-      <div class="titres">
+    <header class="app-datagrid__bar">
+      <div class="app-datagrid__titles">
         @if (props().title) {
-          <h3 class="titre">{{ props().title }}</h3>
+          <h3 class="app-datagrid__title">{{ props().title }}</h3>
         }
-        <p class="meta">
+        <p class="app-datagrid__meta">
           {{ affichees().length }}
           @if (affichees().length !== lignes().length) {
             sur {{ lignes().length }}
@@ -42,7 +42,7 @@ const HAUTEUR_LIGNE = 40;
           }
         </p>
       </div>
-      <label class="recherche">
+      <label class="app-datagrid__search">
         <svg lucideSearch aria-hidden="true"></svg>
         <input
           type="search"
@@ -54,7 +54,7 @@ const HAUTEUR_LIGNE = 40;
       </label>
       <button
         type="button"
-        class="action"
+        class="app-datagrid__action"
         (click)="pleinEcran.set(!pleinEcran())"
         [attr.aria-label]="pleinEcran() ? 'Quitter le plein écran' : 'Plein écran'"
         [attr.title]="pleinEcran() ? 'Quitter le plein écran' : 'Plein écran'"
@@ -66,14 +66,14 @@ const HAUTEUR_LIGNE = 40;
         }
       </button>
     </header>
-    <div class="grille" role="table" [attr.aria-rowcount]="affichees().length + 1" [style.--colonnes]="colonnes().length">
-      <div class="ligne entete" role="row">
+    <div class="app-datagrid__grid" role="table" [attr.aria-rowcount]="affichees().length + 1" [style.--colonnes]="colonnes().length">
+      <div class="app-datagrid__row app-datagrid__row--head" role="row">
         @for (colonne of colonnes(); track colonne.key) {
           <button
             type="button"
-            class="cellule tri"
+            class="app-datagrid__cell app-datagrid__sort"
             role="columnheader"
-            [class.numerique]="numerique(colonne)"
+            [class.app-datagrid__cell--num]="numerique(colonne)"
             [attr.aria-sort]="ariaTri(colonne)"
             (click)="trier(colonne)"
           >
@@ -88,130 +88,22 @@ const HAUTEUR_LIGNE = 40;
           </button>
         }
       </div>
-      <cdk-virtual-scroll-viewport class="corps" [itemSize]="hauteurLigne" [style.height.px]="hauteurCorps()">
-        <div class="ligne" role="row" *cdkVirtualFor="let ligne of affichees(); trackBy: suivre">
+      <cdk-virtual-scroll-viewport class="app-datagrid__body" [itemSize]="hauteurLigne" [style.height.px]="hauteurCorps()">
+        <div class="app-datagrid__row" role="row" *cdkVirtualFor="let ligne of affichees(); trackBy: suivre">
           @for (colonne of colonnes(); track colonne.key) {
-            <div class="cellule" role="cell" [class.numerique]="numerique(colonne)">
+            <div class="app-datagrid__cell" role="cell" [class.app-datagrid__cell--num]="numerique(colonne)">
               @if (colonne.bar && maximum(colonne) > 0) {
-                <span class="barre-valeur" [style.width.%]="largeur(ligne[colonne.key], colonne)"></span>
+                <span class="app-datagrid__bar-value" [style.width.%]="largeur(ligne[colonne.key], colonne)"></span>
               }
-              <span class="valeur">{{ texte(ligne[colonne.key], colonne) }}</span>
+              <span class="app-datagrid__value">{{ texte(ligne[colonne.key], colonne) }}</span>
             </div>
           }
         </div>
       </cdk-virtual-scroll-viewport>
     </div>
     @if (affichees().length === 0) {
-      <p class="vide">Aucune ligne ne correspond à la recherche.</p>
+      <p class="app-datagrid__empty">Aucune ligne ne correspond à la recherche.</p>
     }
-  `,
-  styles: `
-    :host {
-      display: block;
-      min-width: 0;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
-      overflow: hidden;
-    }
-    :host(.plein-ecran) {
-      position: fixed;
-      inset: var(--space-md);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 24px 80px color-mix(in srgb, var(--color-text) 30%, transparent);
-    }
-    .barre {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-      padding: var(--space-sm) var(--space-md);
-      border-bottom: 1px solid var(--color-border);
-    }
-    .titres { flex: 1; min-width: 0; }
-    .titre { margin: 0; font-size: var(--text-base); font-weight: 600; color: var(--color-text); }
-    .meta { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
-    .recherche {
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-      padding: 0 var(--space-sm);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-pill);
-      background: var(--color-surface-alt);
-      color: var(--color-text-muted);
-      svg { width: 0.875rem; height: 0.875rem; flex: none; }
-      input {
-        width: 8rem;
-        min-width: 0;
-        padding: var(--space-xs) 0;
-        border: 0;
-        outline: 0;
-        background: transparent;
-        font: inherit;
-        font-size: var(--text-sm);
-        color: var(--color-text);
-      }
-      &:focus-within { border-color: var(--color-primary); }
-    }
-    .action {
-      display: grid;
-      place-items: center;
-      width: 2rem;
-      height: 2rem;
-      border: 0;
-      border-radius: var(--radius-md);
-      background: transparent;
-      color: var(--color-text-muted);
-      cursor: pointer;
-      svg { width: 1rem; height: 1rem; }
-      &:hover { background: var(--color-surface-alt); color: var(--color-text); }
-      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-    }
-    .grille { display: flex; flex-direction: column; min-height: 0; flex: 1; font-size: var(--text-sm); }
-    .ligne {
-      display: grid;
-      grid-template-columns: repeat(var(--colonnes), minmax(5rem, 1fr));
-      height: 2.5rem;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .entete { background: var(--color-surface-alt); }
-    .cellule {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: var(--space-xs);
-      min-width: 0;
-      padding: 0 var(--space-md);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      &.numerique { justify-content: flex-end; font-variant-numeric: tabular-nums; }
-    }
-    .tri {
-      border: 0;
-      background: transparent;
-      font: inherit;
-      font-size: var(--text-xs);
-      font-weight: 600;
-      color: var(--color-text-muted);
-      cursor: pointer;
-      svg { width: 0.75rem; height: 0.75rem; flex: none; }
-      &:hover { color: var(--color-text); }
-      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-    }
-    .corps { flex: 1; }
-    .corps .ligne:hover { background: var(--color-primary-soft); }
-    .valeur { position: relative; overflow: hidden; text-overflow: ellipsis; color: var(--color-text); }
-    .barre-valeur {
-      position: absolute;
-      inset-block: 0.5rem;
-      right: var(--space-md);
-      border-radius: var(--radius-sm);
-      background: color-mix(in srgb, var(--color-primary) 16%, transparent);
-    }
-    .vide { margin: 0; padding: var(--space-md); text-align: center; color: var(--color-text-muted); }
   `
 })
 export class A2uiDataTableComponent {

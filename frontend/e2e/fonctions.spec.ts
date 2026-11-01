@@ -108,7 +108,7 @@ test.describe('Fonctions', () => {
 
     await page.getByRole('navigation', { name: 'Vues des fonctions' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/functions\/cartes\?libelle=mac$/);
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'MACON' });
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).toContainText('Paie · août 2026');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
@@ -135,7 +135,7 @@ test.describe('Fonctions', () => {
     });
     await page.goto('/functions/cartes');
 
-    const carte = page.locator('.perimetre-carte').filter({ hasText: 'MACON' });
+    const carte = page.locator('.app-entity').filter({ hasText: 'MACON' });
     await expect(carte).toBeVisible();
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
     await expect(carte).not.toContainText('Payés');

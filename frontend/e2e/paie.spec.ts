@@ -198,7 +198,7 @@ test.describe('Paie', () => {
 
     await expect(dialogue.getByText('Fiches différentes du fichier')).toBeVisible();
     await expect(dialogue.getByRole('button', { name: 'Continuer' })).toBeDisabled();
-    const accessibilite = await new AxeBuilder({ page }).include('.import-wizard').analyze();
+    const accessibilite = await new AxeBuilder({ page }).include('.app-wizard').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
     await dialogue.getByRole('button', { name: 'Mettre à jour la fiche de ALAMI Karim' }).click();
     await expect(dialogue.getByText('Aucun problème')).toBeVisible();
@@ -235,7 +235,7 @@ test.describe('Paie', () => {
 
     await expect(dialogue.getByRole('heading', { name: 'Chantiers clôturés' })).toBeVisible();
     await expect(dialogue.getByRole('button', { name: 'Continuer' })).toBeDisabled();
-    const accessibilite = await new AxeBuilder({ page }).include('.import-wizard').analyze();
+    const accessibilite = await new AxeBuilder({ page }).include('.app-wizard').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
     await dialogue.getByRole('button', { name: 'Rouvrir le chantier C168' }).click();
 
