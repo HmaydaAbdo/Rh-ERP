@@ -589,6 +589,7 @@
   }
 
   &__body {
+    position: relative; // contient le texte masqué « Ouvrir » (sr-only, positionné en absolu)
     display: flex;
     flex: 1;
     flex-direction: column;
