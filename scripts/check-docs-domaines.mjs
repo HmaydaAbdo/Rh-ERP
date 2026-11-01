@@ -18,7 +18,8 @@ const domaines = {
   heuresupp: 'heures-supp',
   audit: 'audit',
   parametre: 'parametre',
-  auth: 'auth'
+  auth: 'auth',
+  accueil: 'accueil'
 };
 
 // Préfixe d'un outil MCP → domaine documenté.
@@ -33,7 +34,8 @@ const prefixesOutils = [
   ['audit_', 'audit'],
   ['parametres_', 'parametre'],
   ['roles_', 'auth'],
-  ['systeme_', 'auth']
+  ['systeme_', 'auth'],
+  ['accueil_', 'accueil']
 ];
 
 function fichiers(dossier, filtre) {
