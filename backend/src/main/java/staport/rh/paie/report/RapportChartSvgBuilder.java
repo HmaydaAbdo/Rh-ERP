@@ -44,7 +44,7 @@ final class RapportChartSvgBuilder {
     /** Hauteur minimale d'une ligne : celle que garantit la pagination de {@link RapportPageModelBuilder} (au plus 16 lignes
      * par page dans {@value #HAUTEUR_TOTALE_CHART} pt). Une ligne dont le libellé occupe plusieurs lignes est plus haute. */
     static final double HAUTEUR_RANGEE_MIN = 19;
-    /** Largeur des 4 colonnes de valeurs (Masse, Effectif, STC personnes, STC DH), dans l'ordre des séries. */
+    /** Largeur des 4 colonnes de valeurs (Masse, Bulletins, STC bulletins, STC DH), dans l'ordre des séries. */
     private static final double[] LARGEUR_COLONNES = {86, 58, 62, 86};
     /** Palette métier limitée à cinq couleurs : les quatre indicateurs et le parc matériel. */
     static final String COULEUR_MASSE = "#2563EB";
@@ -78,8 +78,8 @@ final class RapportChartSvgBuilder {
 
     private static final List<Serie> SERIES = List.of(
             new Serie("Masse (DH)", "Masse", COULEUR_MASSE),
-            new Serie("Effectif (personnes)", "Effectif", COULEUR_EFFECTIF),
-            new Serie("STC (personnes)", "STC pers.", COULEUR_STC_PERSONNES),
+            new Serie("Bulletins de paie", "Bulletins", COULEUR_EFFECTIF),
+            new Serie("STC (bulletins)", "STC bul.", COULEUR_STC_PERSONNES),
             new Serie("STC (DH)", "STC DH", COULEUR_STC_DH)
     );
 

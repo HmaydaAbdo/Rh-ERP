@@ -282,7 +282,7 @@ final class PaieReportHtmlBuilder {
         tableFonction.appendElement("col").addClass("stc-montant");
         Element theadFonction = tableFonction.appendElement("thead").appendElement("tr");
         theadFonction.appendElement("th").text("FONCTION");
-        theadFonction.appendElement("th").text("EFFECTIF");
+        theadFonction.appendElement("th").text("BULLETINS");
         theadFonction.appendElement("th").text("STC (PERS.)");
         theadFonction.appendElement("th").text("STC (DH)");
         Element tbodyFonction = tableFonction.appendElement("tbody");

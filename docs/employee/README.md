@@ -46,7 +46,7 @@ Employé a **deux** sources de chiffres, à ne pas confondre :
 | Source | Contenu | Où |
 |---|---|---|
 | **Fiches courantes** | Effectif, en poste, sortis, âge et ancienneté moyens, embauches des douze derniers mois, tranches d'âge et d'ancienneté ; groupes par chantier, équipe ou fonction ; **aucun salaire** | \`POST /employees/analytique\` et \`POST /employees/regroupements\` (\`EMPLOYEE_READ\`) |
-| **Bulletins du mois** | Effectif payé, masse, STC, mouvements (entrées, plus payés, sorties) | \`POST /paie/analytique\` et le domaine Paie (\`PAIE_READ\`) |
+| **Bulletins du mois** | Bulletins de paie, masse, STC, mouvements (entrées, plus payés, sorties) | \`POST /paie/analytique\` et le domaine Paie (\`PAIE_READ\`) |
 
 - **Cartes** : chantier → équipe → fonction → employés ; l'effectif et la part en poste viennent des fiches, les
   indicateurs de paie sont identifiés par leur période.

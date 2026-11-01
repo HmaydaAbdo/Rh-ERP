@@ -22,7 +22,7 @@ Le catalogue est fixe, dans `IndicateurAccueil` ; chaque indicateur exige la per
 | Code | Libellé | Permission | Source de la valeur |
 |---|---|---|---|
 | `paie.masse` | Masse salariale | `PAIE_READ` | `POST /paie/analytique`, dernier mois de paie, variation sur le mois précédent |
-| `paie.effectif` | Effectif payé | `PAIE_READ` | idem |
+| `paie.effectif` | Bulletins de paie | `PAIE_READ` | idem |
 | `paie.cout-moyen` | Coût moyen par personne | `PAIE_READ` | idem |
 | `paie.stc` | Soldes de tout compte | `PAIE_READ` | idem |
 | `employe.effectif` | Employés | `EMPLOYEE_READ` | `POST /employees/analytique` |

@@ -38,7 +38,7 @@ Tous les sélecteurs d'équipe de filtre proposent également l'option « Orphel
 Dans un formulaire d'affectation, ce choix est converti en `null`; l'identifiant synthétique n'est jamais envoyé pour écriture.
 Elle présente la répartition par équipe
 sur ce mois et son évolution mensuelle pour une équipe sélectionnée. Chaque graphique propose un multisélecteur déroulant d'Effectif
-(personnes), Masse salariale (DH), STC (personnes) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
+(personnes), Masse salariale (DH), STC (bulletins) et STC (DH); chaque indicateur coché s'affiche dans son propre graphique.
 Tous ces multisélecteurs et filtres permettent la recherche et le chargement des options au défilement, conformément à la convention frontend commune.
 Le filtre Chantier est présent dans chacune des deux cartes de graphique, s'applique aux deux et reste synchronisé dans l'URL.
 Elle ne présente pas les indicateurs génériques des
@@ -48,7 +48,7 @@ propre au domaine ni permettre de changer librement l'ordre du parcours; suivre 
 [convention frontend](../../../conventions/frontend.md) et la
 [référence technique des vues partagées](../../frontend/vues-perimetre.md).
 
-Chaque carte affiche séparément Effectif (personnes), Masse salariale (DH), STC (personnes) et STC (DH), avec
+Chaque carte affiche séparément Bulletins de paie, Masse salariale (DH), STC (bulletins) et STC (DH), avec
 le libellé et la valeur du dernier mois enregistré. La comparaison porte sur le mois calendaire précédent : écart
 en personnes et pourcentage en DH. Un groupe sans ligne au mois précédent enregistré est comparé à zéro; si aucune
 paie n'est enregistrée sur ce mois, ou si la lecture échoue, la comparaison reste indisponible. Ne pas afficher une

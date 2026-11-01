@@ -1,7 +1,7 @@
 import { EmployeeRegroupement } from '../employee/models/employee.model';
 import { PaieAnalytique } from '../paie/models/paie.model';
 import { HeuresSuppAnalytique, HeuresSuppGroupe } from '../heures-supp/models/heures-supp.model';
-import { formaterMontant, formaterVariation } from '../paie/paie-format';
+import { formaterBulletins, formaterDirhams, formaterEcart } from '../paie/paie-format';
 import { ItemCatalogue } from './perimetre-module';
 import { Dimension } from './perimetre';
 
@@ -163,24 +163,9 @@ export interface Variations {
   stcMontant: string;
 }
 
-const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-
-/**
- * Écart signé en unité puis en pourcentage : « +40 bulletins (+4,1 %) », « −8 765,43 DH (−0,2 %) ». Sans écart : « Stable ».
- * Sans base de comparaison (mois précédent à zéro), le pourcentage n'existe pas : l'écart en unité seul, jamais une division par zéro.
- */
-function ecart(courant: number, precedent: number, unite: (valeurAbsolue: number) => string): string {
-  const difference = courant - precedent;
-  if (difference === 0) {
-    return 'Stable';
-  }
-  const signe = difference > 0 ? '+' : '−';
-  const enUnite = `${signe}${unite(Math.abs(difference))}`;
-  return precedent > 0 ? `${enUnite} (${formaterVariation((difference / precedent) * 100).replace('-', '−')})` : enUnite;
-}
-
-const personnes = (n: number): string => `${FORMAT_ENTIER.format(n)} ${n === 1 ? 'bulletin' : 'bulletins'}`;
-const dirhams = (n: number): string => `${formaterMontant(n)} DH`;
+const ecart = formaterEcart;
+const personnes = formaterBulletins;
+const dirhams = formaterDirhams;
 
 /** Les variations d'une carte par rapport au mois contigu ; `null` sans comparaison possible (jamais un zéro ni une division par zéro). */
 export function variations(groupe: GroupeCarte): Variations | null {

@@ -329,7 +329,7 @@ final class RapportPageModelBuilder {
     }
 
     private void ajouterEvolutionStc(List<PageModel.Bloc> blocs, List<RepartitionBean> evolution) {
-        blocs.add(new PageModel.BlocTitreRubrique(2, "Effectif rémunéré et sorties du personnel (personnes)"));
+        blocs.add(new PageModel.BlocTitreRubrique(2, "Bulletins de paie et sorties du personnel (bulletins)"));
         blocs.add(new PageModel.BlocGraphiqueEvolution(evolution, PageModel.GroupeEvolution.EFFECTIFS,
                 HAUTEUR_EVOLUTION_PAIREE));
     }
@@ -586,14 +586,14 @@ final class RapportPageModelBuilder {
         cartes.add(new CarteKpi("MASSE SALARIALE", masse.valeurCourante() + " DH", "montant",
                 masse.ecart()));
         cartes.add(new CarteKpi("MASSE MOIS PRECEDENT", montantAvecDevise(masse.valeurPrecedente()).strip(), "montant"));
-        cartes.add(new CarteKpi("EFFECTIF", String.valueOf(effectif.valeurCourante()), "compte",
-                libelleEcartCompte(effectif, "personne", "personnes")));
+        cartes.add(new CarteKpi("BULLETINS DE PAIE", String.valueOf(effectif.valeurCourante()), "compte",
+                libelleEcartCompte(effectif, "bulletin", "bulletins")));
         if (nombreChantiers != null) {
             cartes.add(new CarteKpi("CHANTIERS", String.valueOf(nombreChantiers.valeurCourante()), "compte",
                     libelleEcartCompte(nombreChantiers, "chantier", "chantiers")));
         }
-        cartes.add(new CarteKpi("STC / SORTIES (PERSONNES)", String.valueOf(stc.valeurCourante()), "compte",
-                libelleEcartCompte(stc, "personne", "personnes")));
+        cartes.add(new CarteKpi("STC / SORTIES (BULLETINS)", String.valueOf(stc.valeurCourante()), "compte",
+                libelleEcartCompte(stc, "bulletin", "bulletins")));
         cartes.add(new CarteKpi("STC / SORTIES (DH)", stcMontant.valeurCourante() + " DH", "montant",
                 stcMontant.ecart()));
         return cartes;

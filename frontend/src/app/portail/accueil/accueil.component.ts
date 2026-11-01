@@ -1,7 +1,7 @@
 import { DockDeclencheurComponent } from '../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../core/auth/services/auth.service';
 import { ButtonComponent } from '../../shared/ui/button/button.directive';
@@ -11,7 +11,7 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { EmployeeAnalytique } from '../employee/models/employee.model';
 import { EmployeeService } from '../employee/services/employee.service';
 import { PaieAnalytique } from '../paie/models/paie.model';
-import { formaterMontant, formaterVariation } from '../paie/paie-format';
+import { formaterBulletins, formaterDirhams, formaterEcart } from '../paie/paie-format';
 import { PaieService } from '../paie/services/paie.service';
 import { AccueilEditeurComponent } from './editeur/accueil-editeur.component';
 import { Accueil, AccueilService } from './services/accueil.service';
@@ -131,7 +131,6 @@ export class AccueilComponent implements OnInit {
   private lirePaie() {
     return this.paieService.listerPeriodes().pipe(
       switchMap((periodes) => (periodes.length === 0 ? of(null) : this.paieService.analyser({ periode: periodes[0].periode }))),
-      map((analyse) => analyse),
       catchError(() => of(null))
     );
   }
@@ -145,19 +144,20 @@ export class AccueilComponent implements OnInit {
         return vide;
       }
       const { kpis, moisPrecedent } = paie;
-      const pourcent = (courant: number | null, precedent: number | null | undefined): string | null =>
-        moisPrecedent && courant !== null && precedent ? `${formaterVariation(((courant - precedent) / precedent) * 100)} sur le mois précédent` : null;
-      const absolu = (courant: number, precedent: number | undefined): string | null =>
-        moisPrecedent && precedent !== undefined ? `${courant - precedent > 0 ? '+' : ''}${FORMAT_ENTIER.format(courant - precedent)} sur le mois précédent` : null;
+      const ecart = (courant: number, precedent: number | null | undefined, unite: (valeurAbsolue: number) => string): string | null =>
+        moisPrecedent && precedent !== null && precedent !== undefined ? `${formaterEcart(courant, precedent, unite)} sur le mois précédent` : null;
       switch (code) {
         case 'paie.masse':
-          return { valeur: `${formaterMontant(kpis.masse)} DH`, variation: pourcent(kpis.masse, moisPrecedent?.masse) };
+          return { valeur: formaterDirhams(kpis.masse), variation: ecart(kpis.masse, moisPrecedent?.masse, formaterDirhams) };
         case 'paie.effectif':
-          return { valeur: FORMAT_ENTIER.format(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) };
+          return { valeur: formaterBulletins(kpis.effectif), variation: ecart(kpis.effectif, moisPrecedent?.effectif, formaterBulletins) };
         case 'paie.cout-moyen':
-          return { valeur: kpis.coutMoyen === null ? '—' : `${formaterMontant(kpis.coutMoyen)} DH`, variation: pourcent(kpis.coutMoyen, moisPrecedent?.coutMoyen) };
+          return {
+            valeur: kpis.coutMoyen === null ? '—' : formaterDirhams(kpis.coutMoyen),
+            variation: kpis.coutMoyen === null ? null : ecart(kpis.coutMoyen, moisPrecedent?.coutMoyen, formaterDirhams)
+          };
         case 'paie.stc':
-          return { valeur: `${kpis.stc} · ${formaterMontant(kpis.stcMontant)} DH`, variation: absolu(kpis.stc, moisPrecedent?.stc) };
+          return { valeur: `${formaterBulletins(kpis.stc)} · ${formaterDirhams(kpis.stcMontant)}`, variation: ecart(kpis.stc, moisPrecedent?.stc, formaterBulletins) };
         default:
           return vide;
       }

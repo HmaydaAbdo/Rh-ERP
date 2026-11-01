@@ -433,7 +433,7 @@ tous les paramètres métier.
   seule ; le fil ne montre jamais un identifiant technique. Les fiches Employé forment le dernier niveau lorsque le droit de
   lecture est accordé.
 - Chaque carte réunit les **fiches Employé** (dernier état importé) et, lorsque `PAIE_READ` est accordée, les quatre mesures du
-  mois : **Effectif (personnes)**, **Masse salariale (DH)**, **STC (personnes)** et **STC (DH)**. Chaque mesure présente son
+  mois : **Bulletins de paie**, **Masse salariale (DH)**, **STC (bulletins)** et **STC (DH)**. Chaque mesure présente son
   libellé, sa valeur et sa comparaison au mois calendaire précédent : écart en personnes, pourcentage en DH. La comparaison
   utilise uniquement ce mois contigu, jamais un mois antérieur plus ancien. Un groupe absent du mois précédent vaut zéro si
   des données y sont enregistrées; si le mois n'existe pas, la comparaison est indiquée comme indisponible. Un montant dont

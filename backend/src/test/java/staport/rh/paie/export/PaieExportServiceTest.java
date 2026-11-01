@@ -138,7 +138,7 @@ class PaieExportServiceTest {
             // Table "effectif par fonction" : en-tête à la ligne 10, donnée OPERATEUR à la ligne 11
             // (4 lignes d'en-tête + 3 lignes employé + 2 lignes de total + 1 ligne vide, voir PaieSheetWriter).
             assertThat(feuilleGlobale.getRow(10).getCell(0).getStringCellValue()).isEqualTo("FONCTION");
-            assertThat(feuilleGlobale.getRow(10).getCell(1).getStringCellValue()).isEqualTo("EFFECTIF");
+            assertThat(feuilleGlobale.getRow(10).getCell(1).getStringCellValue()).isEqualTo("BULLETINS DE PAIE");
             assertThat(feuilleGlobale.getRow(10).getCell(2).getStringCellValue()).isEqualTo("STC");
 
             assertThat(feuilleGlobale.getRow(11).getCell(0).getStringCellValue()).isEqualTo("OPERATEUR");
