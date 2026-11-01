@@ -170,6 +170,9 @@ describe('CartesPerimetreComponent', () => {
     await harness.fixture.whenStable();
   }
 
+  const corps = (page: HTMLElement, titre: string) =>
+    [...page.querySelectorAll<HTMLButtonElement>('.app-entity__body')].find((b) => b.textContent?.replace(/\s+/g, ' ').trim().startsWith(`Ouvrir ${titre}`)) ?? null;
+
   beforeEach(async () => {
     permissions = (code) => ['CHANTIER_READ', 'EMPLOYEE_READ', 'PAIE_READ'].includes(code);
     employes = {
@@ -241,7 +244,7 @@ describe('CartesPerimetreComponent', () => {
 
   it('ouvrir une carte l’ajoute au fil et descend à la dimension suivante dans le périmètre choisi', async () => {
     const page = await ouvrir();
-    (page.querySelector('button[aria-label="Ouvrir C168"]') as HTMLButtonElement).click();
+    corps(page, 'C168')!.click();
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
 
@@ -465,7 +468,7 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.app-actions-row a[href^="/employees"]')).toBeNull();
     expect(page.querySelector('a[aria-label="Voir les employés de ce périmètre"]')).toBeNull();
     expect(page.querySelector('.app-entity__footer a[aria-label="Consulter Nador"].stp-button--text')).not.toBeNull();
-    expect(page.querySelector('.app-entity__footer a[aria-label="Voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
+    expect(page.querySelector('.app-entity__footer a[aria-label="Analytique : voir l’historique Paie de Nador"].stp-button--text')).not.toBeNull();
   });
 
   it('centre les cartes Fonction sur la paie récente, retire les raccourcis redondants et trie par masse puis effectif', async () => {
@@ -512,7 +515,7 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('.app-muted')?.textContent).toContain('Effectif : 1 personnes');
     expect(page.querySelector('.app-muted')?.textContent).toMatch(/Masse salariale : 50[.,]00 DH/);
     expect(page.querySelector('.app-muted')?.textContent).not.toMatch(/employé|fiche|payé/i);
-    expect(page.querySelector('button[aria-label="Ouvrir Orphelins"]')).toBeNull();
+    expect(corps(page, 'Orphelins')).toBeNull();
     expect(page.textContent).not.toContain('Orphelins');
     expect(employes.regrouper).not.toHaveBeenCalled();
   });
