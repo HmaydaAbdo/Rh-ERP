@@ -36,13 +36,33 @@ function routes() {
 
 /** Flux AG-UI tel que le runtime CopilotKit le relaie, en SSE : raisonnement, outil, surface A2UI et réponse. */
 function flux(): string {
+  // Surface telle que l'agent la produit : catalogue de l'ERP, données dans le modèle de la surface (`{ path }`).
   const surface = {
     a2ui_operations: [
-      { version: 'v0.9', createSurface: { surfaceId: 's1', catalogId: 'https://a2ui.org/specification/v0_9/basic_catalog.json' } },
+      { version: 'v0.9', createSurface: { surfaceId: 's1', catalogId: 'erp-rh://a2ui/catalogue-erp' } },
       {
         version: 'v0.9',
-        updateComponents: { surfaceId: 's1', components: [{ id: 'root', component: 'Text', text: 'Masse salariale 2026-08 : 4 800 MAD' }] }
-      }
+        updateComponents: {
+          surfaceId: 's1',
+          components: [
+            { id: 'root', component: 'Column', children: ['titre', 'kpis', 'tableau', 'graphique'] },
+            { id: 'titre', component: 'Text', text: 'Masse salariale 2026-08 : 4 800 MAD' },
+            { id: 'kpis', component: 'KpiGrid', items: [{ label: 'Masse salariale', value: '4 800 MAD', detail: 'Août 2026' }] },
+            {
+              id: 'tableau',
+              component: 'DataTable',
+              title: 'Chantiers',
+              columns: [
+                { key: 'code', label: 'Code', format: 'texte' },
+                { key: 'masse', label: 'Masse', format: 'montant' }
+              ],
+              rows: { path: '/lignes' }
+            },
+            { id: 'graphique', component: 'Chart', title: 'Masse par chantier', type: 'bar', labels: ['C168'], series: [{ name: 'Masse', values: [4800] }] }
+          ]
+        }
+      },
+      { version: 'v0.9', updateDataModel: { surfaceId: 's1', path: '/', value: { lignes: [{ code: 'C168', masse: 4800 }] } } }
     ]
   };
   const evenements = [
@@ -154,6 +174,10 @@ test.describe('Staport Intelligence', () => {
 
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
     await expect(assistant.getByText('Masse salariale 2026-08 : 4 800 MAD')).toBeVisible();
+    await expect(assistant.locator('.app-kpi strong')).toHaveText('4 800 MAD');
+    await expect(assistant.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
+    await expect(assistant.getByRole('cell', { name: 'C168' })).toBeVisible();
+    await expect(assistant.getByRole('heading', { name: 'Masse par chantier' })).toBeVisible();
     // Pas de consultation d'outil en brut (nom technique) dans la discussion.
     await expect(assistant.getByText('paie_indicateurs')).toHaveCount(0);
     expect(runtime.autorisations).toEqual(['Bearer jeton-test']);
