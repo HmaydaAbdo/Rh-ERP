@@ -48,9 +48,9 @@ html .copilot-sidebar-host .copilot-sidebar-backdrop {
 
 html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
   top: var(--space-sm-md);
-  right: var(--space-sm-md);
+  inset-inline-end: var(--space-sm-md);
+  inset-inline-start: auto;
   bottom: var(--space-sm-md);
-  left: auto;
   width: min(var(--copilot-sidebar-width, 27.5rem), calc(100vw - 2 * var(--space-sm-md)));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);

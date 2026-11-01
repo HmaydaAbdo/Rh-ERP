@@ -93,7 +93,13 @@ est corrigée avant d'être adoptée.
   jamais de CDN. Pas de police d'affichage décorative.
 * Échelle à jetons uniquement ; corps de texte courant de 15 à 16 px, interligne de 1,5 ; titres en graisse 600.
 * Prévoir dès maintenant l'arabe de droite à gauche : propriétés logiques (`margin-inline-start`, `inset-inline`) au lieu de
-  gauche/droite ; police arabe à choisir au moment de livrer l'arabe.
+  gauche/droite ; police arabe à choisir au moment de livrer l'arabe. **Contrôle automatisé** : `npm run check:logique`
+  (`scripts/check-proprietes-logiques.mjs`, branché dans la CI) refuse `margin-left`, `padding-right`, `left:`, `right:`,
+  `text-align: left|right`, `float`, les classes `ml-*`, `mr-*`, `text-left`, `text-right`… ; on écrit `margin-inline-start`,
+  `inset-inline-end`, `text-align: start|end`, `ms-*`, `me-*`, `text-end`. Les glissements horizontaux multiplient leur
+  décalage par `--sens-ecriture` (`1`, ou `-1` sous `dir="rtl"`, défini dans `_motion.scss`). Les options de bibliothèques
+  (`left`/`right` de Chart.js ou de MapLibre) ne sont pas du CSS et ne sont pas concernées. `e2e/rtl.spec.ts` essaie le catalogue
+  et la paie en `dir="rtl"` (aucun débordement, aucune violation axe, rail à droite).
 
 ## Composants partagés
 

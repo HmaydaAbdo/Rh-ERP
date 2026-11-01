@@ -63,7 +63,7 @@ export class JournalComponent {
     { field: 'utilisateurNom', header: 'Utilisateur' },
     { field: 'origine', header: 'Origine' },
     { field: 'cible', header: 'Cible', sortField: 'entiteType' },
-    { field: 'nombreElements', header: 'Éléments', align: 'text-right' },
+    { field: 'nombreElements', header: 'Éléments', align: 'text-end' },
     { field: 'motif', header: 'Motif', cellClass: 'text-truncate' }
   ]);
 

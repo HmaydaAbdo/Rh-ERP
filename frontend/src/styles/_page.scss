@@ -91,7 +91,7 @@
   }
 
   .app-toolbar__clear {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
 
   // Compteur de filtres actifs d'un bouton « Plus de filtres » ou « Filtres »
@@ -201,7 +201,7 @@
 
     .app-toolbar__clear {
       grid-column: 1 / -1;
-      margin-left: 0;
+      margin-inline-start: 0;
     }
 
     .app-toolbar__period {
@@ -365,7 +365,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-sm);
-    margin-left: auto;
+    margin-inline-start: auto;
     align-self: center;
     padding-bottom: var(--space-xs);
   }
@@ -377,7 +377,7 @@
     gap: 0;
 
     .app-vues__actions {
-      margin-left: 0;
+      margin-inline-start: 0;
       align-self: stretch;
     }
   }

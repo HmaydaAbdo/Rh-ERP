@@ -101,7 +101,7 @@
 .app-datagrid__bar-value {
   position: absolute;
   inset-block: 0.5rem;
-  right: var(--space-md);
+  inset-inline-end: var(--space-md);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--color-primary) 16%, transparent);
 }

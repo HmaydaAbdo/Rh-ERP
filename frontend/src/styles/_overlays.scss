@@ -10,7 +10,7 @@ input[type='file'] {
 
   &::file-selector-button {
     height: var(--control-height);
-    margin-right: var(--space-sm);
+    margin-inline-end: var(--space-sm);
     padding: 0 var(--space-md);
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-md);

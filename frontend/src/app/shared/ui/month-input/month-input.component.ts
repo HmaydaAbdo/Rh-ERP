@@ -63,7 +63,7 @@ function toPeriod(date: Date): string {
       align-items: center;
       justify-content: space-between;
       gap: var(--space-sm);
-      text-align: left;
+      text-align: start;
       cursor: pointer;
     }
 

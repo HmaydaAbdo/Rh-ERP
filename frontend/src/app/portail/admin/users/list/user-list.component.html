@@ -65,7 +65,7 @@
         }
         @case ('roles') {
           @for (role of user.roles; track role.id) {
-            <stp-badge [value]="role.nom" severity="info" class="user-list__role-tag mr-1"></stp-badge>
+            <stp-badge [value]="role.nom" severity="info" class="user-list__role-tag me-1"></stp-badge>
           }
         }
         @case ('actif') {

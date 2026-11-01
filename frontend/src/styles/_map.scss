@@ -17,7 +17,7 @@
   position: absolute;
   z-index: 3;
   top: var(--space-md);
-  left: var(--space-md);
+  inset-inline-start: var(--space-md);
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -77,7 +77,7 @@
   position: absolute;
   z-index: 2;
   top: calc(var(--space-md) + 3.5rem);
-  left: var(--space-md);
+  inset-inline-start: var(--space-md);
 }
 
 .app-map-page__empty {
@@ -101,12 +101,12 @@
   .app-shell--carte .app-map-page__search,
   .app-shell--carte .app-map-page__retry,
   .app-shell--carte .app-map-page__empty {
-    left: calc(var(--space-md) + 3.25rem);
+    inset-inline-start: calc(var(--space-md) + 3.25rem);
   }
 
   .app-shell--carte .app-map-page__search { z-index: 110; width: min(23rem, calc(100% - 6rem)); }
   .app-shell--carte .app-map__controls {
-    left: var(--space-md);
+    inset-inline-start: var(--space-md);
     top: calc(var(--space-md) + 3.5rem);
   }
 }
@@ -128,7 +128,7 @@
 
   .app-map-page__search {
     top: var(--space-sm);
-    left: var(--space-sm);
+    inset-inline-start: var(--space-sm);
     width: calc(100% - 2 * var(--space-sm));
   }
 }
@@ -149,7 +149,7 @@
   &::after {
     position: absolute;
     z-index: 2;
-    left: calc(100% + 0.75rem);
+    inset-inline-start: calc(100% + 0.75rem);
     top: 50%;
     width: max-content;
     max-width: min(18rem, 62vw);
@@ -240,7 +240,7 @@
 .app-map__error {
   position: absolute;
   top: var(--space-md);
-  right: var(--space-md);
+  inset-inline-end: var(--space-md);
   z-index: 2;
   width: min(28rem, calc(100% - 2 * var(--space-md)));
   box-shadow: var(--shadow-md);
@@ -250,7 +250,7 @@
 // Commandes sans panneau : une colonne légère, immédiatement sous la recherche de la page.
 .app-map__controls {
   position: absolute;
-  left: var(--space-md);
+  inset-inline-start: var(--space-md);
   top: calc(var(--space-md) + 3.5rem);
   z-index: 2;
   display: flex;

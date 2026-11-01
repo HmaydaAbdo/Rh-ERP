@@ -2,6 +2,7 @@
   @for (notification of notifications(); track notification.id) {
     <div class="feedback-toast" [class]="'feedback-toast feedback-toast--' + notification.severity"
       [attr.role]="notification.severity === 'error' ? 'alert' : 'status'">
+      <stp-icon class="feedback-toast__icon" [name]="icone(notification.severity)" />
       <div class="feedback-toast__content">
         <strong>{{ notification.summary }}</strong>
         @if (notification.detail) { <p>{{ notification.detail }}</p> }
