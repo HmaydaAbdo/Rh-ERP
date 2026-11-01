@@ -35,7 +35,7 @@ export class DockEtatService {
   readonly assistantDisponible = signal(false);
   readonly assistantOuvert = signal(false);
   readonly theme = signal<'light' | 'dark'>('dark');
-  /** Faux : l'Accueil est affiché mais indisponible (en attente de la définition des fiches de poste, plan E0.5b-suite). */
+  /** Faux : l'Accueil est affiché mais indisponible (en attente de la définition des fiches de poste, plan E6.8). */
   readonly accueilActif = signal(false);
 
   private readonly flux = new Subject<DockCommande>();

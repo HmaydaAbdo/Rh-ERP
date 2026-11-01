@@ -145,7 +145,7 @@ class PaieSheetWriter {
     private void ecrireEffectifParFonction(Sheet sheet, PaieExcelStyles styles, int ligneDepart, List<Paie> lignes) {
         Row entete = sheet.createRow(ligneDepart);
         ecrireTexte(entete, 0, "FONCTION", styles.entete);
-        ecrireTexte(entete, 1, "EFFECTIF", styles.entete);
+        ecrireTexte(entete, 1, "BULLETINS DE PAIE", styles.entete);
         ecrireTexte(entete, 2, "STC", styles.entete);
 
         Map<String, List<Paie>> lignesParFonction = lignes.stream()

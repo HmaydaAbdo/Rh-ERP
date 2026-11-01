@@ -103,4 +103,14 @@ class AccueilServiceTest extends AuditIntegrationTestBase {
 
         assertThat(accueil.lire(compte.username()).indicateurs()).containsExactly("paie.masse");
     }
+
+    @Test
+    void un_choix_vide_par_la_perte_des_droits_retombe_sur_tous_les_indicateurs_autorises() {
+        UserResponseDto compte = compteAvec("PAIE_READ", "EMPLOYEE_READ");
+        accueil.enregistrer(compte.username(), new AccueilUpdateRequestDto(null, List.of("employe.effectif")));
+        jdbc.update("DELETE FROM role_permission WHERE permission_id = (SELECT id FROM permission WHERE code = 'EMPLOYEE_READ') "
+                + "AND role_id IN (SELECT role_id FROM utilisateur_role WHERE utilisateur_id = ?)", compte.id());
+
+        assertThat(accueil.lire(compte.username()).indicateurs()).containsExactly("paie.masse", "paie.effectif", "paie.cout-moyen", "paie.stc");
+    }
 }

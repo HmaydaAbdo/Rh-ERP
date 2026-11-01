@@ -4,7 +4,7 @@ import { IconComponent } from '../icon/icon.component';
 
 /**
  * Écran d'un assistant qui n'attend plus de saisie : « en cours » (icône qui tourne, barre indéterminée) ou « terminé »
- * (coche dessinée). Le texte d'accompagnement (`<p>`) et les actions de fin sont projetés.
+ * (icône de coche). Le texte d'accompagnement (`<p>`) et les actions de fin sont projetés.
  *
  *   <stp-wizard-state etat="termine" titre="Fichier prêt"> <p>Paie_2026-08.xlsx</p> <button stp-button>…</button> </stp-wizard-state>
  */
@@ -15,7 +15,7 @@ import { IconComponent } from '../icon/icon.component';
   host: { role: 'status' },
   template: `
     @if (etat() === 'termine') {
-      <svg class="stp-wizard-state__coche" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" /><path d="M20 33l8 8 16-17" /></svg>
+      <stp-icon name="circle-check" class="stp-wizard-state__coche" size="3rem" />
     } @else {
       <stp-icon name="settings" class="stp-spin stp-wizard-state__rouage" size="2rem" />
     }
@@ -55,27 +55,9 @@ import { IconComponent } from '../icon/icon.component';
     }
 
     .stp-wizard-state__coche {
-      width: 4rem;
-      height: 4rem;
       margin-bottom: var(--space-sm);
-    }
-
-    .stp-wizard-state__coche circle,
-    .stp-wizard-state__coche path {
-      fill: none;
-      stroke: var(--color-success);
-      stroke-linecap: round;
-      stroke-linejoin: round;
+      color: var(--color-success);
       animation: stp-wizard-confirme var(--duration-slow) var(--ease-out) backwards;
-    }
-
-    .stp-wizard-state__coche circle {
-      stroke-width: 3;
-    }
-
-    .stp-wizard-state__coche path {
-      stroke-width: 3.5;
-      animation-delay: var(--duration-fast);
     }
 
     .stp-wizard-state__barre {

@@ -90,12 +90,12 @@ class PaieReportHtmlPdfServiceTest {
                     .isGreaterThan(20);
             String texte = new PDFTextStripper().getText(document);
             assertThat(texte).contains("1. Masse salariale et montants des STC (DH)",
-                    "2. Effectif rémunéré et sorties du personnel (personnes)", "3. Répartition par chantier",
+                    "2. Bulletins de paie et sorties du personnel (bulletins)", "3. Répartition par chantier",
                     "4. Liste des employés");
             assertThat(texte).doesNotContain("Périmètre : Tous les marchés", "Historique disponible :", "12 mois");
             int pageEvolution = pageContenantTexte(document, "1. Masse salariale et montants des STC (DH)");
             assertThat(textePage(document, pageEvolution))
-                    .contains("2. Effectif rémunéré et sorties du personnel (personnes)");
+                    .contains("2. Bulletins de paie et sorties du personnel (bulletins)");
             int pageFonction = pageContenantTexte(document, "3. Répartition par fonction");
             BufferedImage repartitionFonction = new PDFRenderer(document).renderImage(pageFonction);
             assertThat(nombrePixelsBleus(repartitionFonction))

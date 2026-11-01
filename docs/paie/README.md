@@ -100,7 +100,7 @@ Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonct
 
 | Indicateur | Définition |
 |---|---|
-| Effectif payé | Nombre de bulletins du mois (un par employé) |
+| Bulletins de paie | Nombre de bulletins du mois (un par employé) |
 | Masse salariale | Somme des salaires totaux du mois, en DH |
 | Coût moyen | Masse ÷ effectif ; indisponible sans bulletin |
 | STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (`ObservationStc.estStcOuSortie`, règle du rapport) et leur montant |
@@ -546,8 +546,8 @@ changement de filtre relance l'analyse (une demande encore en cours est abandonn
 | Bloc | Contenu |
 |---|---|
 | Synthèse | Le mois, puis masse salariale, effectif payé, coût moyen par personne, STC (nombre et montant) et chantiers — avec la variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : aucune variation, jamais un zéro ni une division par zéro |
-| Évolution | **Une seule mesure à la fois, sur un seul axe** : Masse (DH), Effectif (personnes), STC (personnes) ou STC (DH). Les montants et les effectifs n'ont pas la même échelle, ils ne partagent jamais un graphique. Les données couvrent **tous** les mois qui ont de la paie dans le périmètre ; le mois analysé est agrandi |
-| Répartition | Barres par chantier, équipe ou fonction (« Répartir par », dimension pas encore choisie), mesure Masse (DH) ou Effectif payé ; les catégories à zéro sont exclues, aucune n'est regroupée sous « Autres ». **Un clic sur une barre ajoute ce groupe au périmètre** et approfondit l'analyse. Le tableau de données donne tous les groupes avec leurs STC |
+| Évolution | **Une seule mesure à la fois, sur un seul axe** : Masse (DH), Bulletins de paie, STC (bulletins) ou STC (DH). Les montants et les effectifs n'ont pas la même échelle, ils ne partagent jamais un graphique. Les données couvrent **tous** les mois qui ont de la paie dans le périmètre ; le mois analysé est agrandi |
+| Répartition | Barres par chantier, équipe ou fonction (« Répartir par », dimension pas encore choisie), mesure Masse (DH) ou Bulletins de paie ; les catégories à zéro sont exclues, aucune n'est regroupée sous « Autres ». **Un clic sur une barre ajoute ce groupe au périmètre** et approfondit l'analyse. Le tableau de données donne tous les groupes avec leurs STC |
 | Qualité des données | Bulletins sans équipe et sans observation, pour suivre la tâche « Qualité des données » du TODO |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte |
 | Mouvements | Employés payés, entrées, sorties et mutations mois par mois (`POST /paie/effectifs`) |

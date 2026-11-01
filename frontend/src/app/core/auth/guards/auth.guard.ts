@@ -40,7 +40,7 @@ export const permissionGuard: CanActivateFn = (route) => {
 /**
  * Arrivée (`/`) : redirige vers le premier écran du menu auquel l'utilisateur a accès, ou vers la page « accès refusé » s'il n'en
  * a aucun. Évite toute boucle de redirection : un écran dont la permission manque n'est jamais l'arrivée. L'Accueil
- * personnalisé deviendra l'arrivée quand les fiches de poste seront définies (plan, E0.5b-suite).
+ * personnalisé deviendra l'arrivée quand les fiches de poste seront définies (plan, E6.8).
  */
 export const homeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);

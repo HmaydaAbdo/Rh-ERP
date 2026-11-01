@@ -1,5 +1,6 @@
 package staport.rh.accueil.services;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import staport.rh.accueil.dtos.request.AccueilUpdateRequestDto;
@@ -15,6 +16,7 @@ import staport.rh.audit.entities.TypeOperation;
 import staport.rh.auth.dtos.response.UserResponseDto;
 import staport.rh.auth.services.interfaces.IUserService;
 import staport.rh.common.VersionOptimiste;
+import staport.rh.common.exception.ConflitModificationException;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -102,7 +104,12 @@ public class AccueilService implements IAccueilService {
             VersionOptimiste.verifier(dto.version(), preference.getVersion());
         }
         preference.setIndicateurs(String.join(SEPARATEUR, dto.indicateurs()));
-        return reponse(utilisateur, Optional.of(repository.saveAndFlush(preference)));
+        try {
+            return reponse(utilisateur, Optional.of(repository.saveAndFlush(preference)));
+        } catch (DataIntegrityViolationException e) {
+            // Deux premiers enregistrements simultanés du même utilisateur : le second perd, comme une version périmée.
+            throw new ConflitModificationException();
+        }
     }
 
     private AccueilResponseDto reinitialiserDe(UserResponseDto utilisateur) {
@@ -111,12 +118,15 @@ public class AccueilService implements IAccueilService {
         return reponse(utilisateur, Optional.empty());
     }
 
-    /** Sans choix enregistré : tous les indicateurs autorisés, dans l'ordre du catalogue ; sinon le choix, amputé de ce qui n'est plus autorisé. */
+    /** Sans choix enregistré : tous les indicateurs autorisés, dans l'ordre du catalogue ; sinon le choix, amputé de ce qui n'est plus autorisé (un choix vidé par la perte de droits retombe sur tous). */
     private AccueilResponseDto reponse(UserResponseDto utilisateur, Optional<PreferenceAccueil> preference) {
         Set<String> autorises = codesAutorises(utilisateur);
-        List<String> indicateurs = preference
-                .map(p -> Arrays.stream(p.getIndicateurs().split(SEPARATEUR)).filter(code -> autorises.contains(code)).toList())
-                .orElseGet(() -> Arrays.stream(IndicateurAccueil.values()).map(IndicateurAccueil::code).filter(autorises::contains).toList());
+        List<String> tous = Arrays.stream(IndicateurAccueil.values()).map(IndicateurAccueil::code).filter(autorises::contains).toList();
+        List<String> choisis = preference
+                .map(p -> Arrays.stream(p.getIndicateurs().split(SEPARATEUR)).filter(autorises::contains).toList())
+                .orElse(tous);
+        // Un choix que les permissions ont vidé (droit retiré depuis) ne laisse pas un accueil blanc : retour à tout ce qui est autorisé.
+        List<String> indicateurs = choisis.isEmpty() && !preference.map(p -> p.getIndicateurs().isEmpty()).orElse(false) ? tous : choisis;
         List<IndicateurDisponibleDto> disponibles = Arrays.stream(IndicateurAccueil.values())
                 .filter(indicateur -> autorises.contains(indicateur.code()))
                 .map(indicateur -> new IndicateurDisponibleDto(indicateur.code(), indicateur.libelle(), indicateur.description()))

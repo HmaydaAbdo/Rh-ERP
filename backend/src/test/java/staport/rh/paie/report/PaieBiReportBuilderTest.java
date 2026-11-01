@@ -196,10 +196,10 @@ class PaieBiReportBuilderTest {
         PageModel.BlocKpi kpiGlobal = (PageModel.BlocKpi) new RapportPageModelBuilder().construire(vue).get(0)
                 .blocs().stream().filter(PageModel.BlocKpi.class::isInstance).findFirst().orElseThrow();
         CarteKpi kpiEffectif = kpiGlobal.cartes().stream()
-                .filter(carte -> carte.label().equals("EFFECTIF")).findFirst().orElseThrow();
-        assertThat(kpiEffectif.sousTexte()).isEqualTo("Écart : +1 personne vs mois précédent");
-        assertThat(kpiGlobal.cartes().stream().filter(carte -> carte.label().equals("STC / SORTIES (PERSONNES)"))
-                .findFirst().orElseThrow().sousTexte()).isEqualTo("Écart : +1 personne vs mois précédent");
+                .filter(carte -> carte.label().equals("BULLETINS DE PAIE")).findFirst().orElseThrow();
+        assertThat(kpiEffectif.sousTexte()).isEqualTo("Écart : +1 bulletin vs mois précédent");
+        assertThat(kpiGlobal.cartes().stream().filter(carte -> carte.label().equals("STC / SORTIES (BULLETINS)"))
+                .findFirst().orElseThrow().sousTexte()).isEqualTo("Écart : +1 bulletin vs mois précédent");
     }
 
     /** Une masse salariale est toujours arrondie à l'unité (0,5 vers le haut), sans décimales — jamais « 1 001,50 ». */

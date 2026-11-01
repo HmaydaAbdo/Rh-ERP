@@ -37,3 +37,28 @@ export function formaterPart(part: number): string {
 export function formaterMontant(valeur: number): string {
   return FORMAT_MONTANT.format(valeur);
 }
+
+const FORMAT_ENTIER_ECART = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+
+/** Un nombre de bulletins de paie : `1 bulletin`, `15 623 bulletins`. */
+export function formaterBulletins(nombre: number): string {
+  return `${FORMAT_ENTIER_ECART.format(nombre)} ${Math.abs(nombre) === 1 ? 'bulletin' : 'bulletins'}`;
+}
+
+/** Un montant en dirhams : `1 234,50 DH`. */
+export function formaterDirhams(montant: number): string {
+  return `${formaterMontant(montant)} DH`;
+}
+
+/**
+ * Écart signé en unité puis en pourcentage : « +40 bulletins (+4,1 %) », « −8 765,43 DH (−0,2 %) ». Sans écart : « Stable ».
+ * Sans base de comparaison (valeur précédente à zéro), le pourcentage n'existe pas : l'écart en unité seul, jamais une division par zéro.
+ */
+export function formaterEcart(courant: number, precedent: number, unite: (valeurAbsolue: number) => string): string {
+  const difference = courant - precedent;
+  if (difference === 0) {
+    return 'Stable';
+  }
+  const enUnite = `${difference > 0 ? '+' : '−'}${unite(Math.abs(difference))}`;
+  return precedent > 0 ? `${enUnite} (${formaterVariation((difference / precedent) * 100).replace('-', '−')})` : enUnite;
+}
