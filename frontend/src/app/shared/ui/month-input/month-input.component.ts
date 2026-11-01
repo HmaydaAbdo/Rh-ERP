@@ -32,7 +32,7 @@ function toPeriod(date: Date): string {
       aria-haspopup="dialog"
       [attr.id]="inputId()"
       [attr.aria-expanded]="open()"
-      [attr.aria-label]="ariaLabel()"
+      [attr.aria-label]="nomAccessible()"
       [disabled]="disabled()"
       (click)="open.set(!open())"
     >
@@ -85,6 +85,11 @@ export class MonthInputComponent implements FormValueControl<Date | null> {
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
 
   protected readonly period = computed(() => (this.value() ? toPeriod(this.value()!) : null));
+  /** WCAG 2.5.3 : le nom accessible reprend le texte visible du bouton. */
+  protected readonly nomAccessible = computed(() => {
+    const nom = this.ariaLabel();
+    return nom ? `${nom} : ${this.label() || this.placeholder()}` : null;
+  });
   protected readonly label = computed(() => {
     const value = this.value();
     return value ? `${String(value.getMonth() + 1).padStart(2, '0')}/${value.getFullYear()}` : '';

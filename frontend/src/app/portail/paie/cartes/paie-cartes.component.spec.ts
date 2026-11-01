@@ -53,6 +53,9 @@ describe('PaieCartesComponent', () => {
 
   const bouton = (page: HTMLElement, libelle: string) => page.querySelector(`button[aria-label="${libelle}"]`) as HTMLButtonElement | null;
 
+  const corps = (page: HTMLElement, titre: string) =>
+    [...page.querySelectorAll<HTMLButtonElement>('.app-entity__body')].find((b) => b.textContent?.replace(/\s+/g, ' ').trim().startsWith(`Ouvrir ${titre}`)) ?? null;
+
   beforeEach(async () => {
     autorise = () => true;
     paie = {
@@ -101,7 +104,7 @@ describe('PaieCartesComponent', () => {
 
   it('ouvrir un mois le choisit, puis descend aux chantiers du mois', async () => {
     const page = await ouvrir('/paie/cartes');
-    (page.querySelector('button[aria-label="Ouvrir août 2026"]') as HTMLButtonElement).click();
+    corps(page, 'août 2026')!.click();
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
 
