@@ -13,8 +13,8 @@
 ## Réutilisation et harmonisation des domaines
 
 - [ ] Ajouter au catalogue `/catalogue` les composants partagés existants absents de sa démo :
-  `app-collection-shell`, `app-collection-table`, `app-column-chooser`, `app-lazy-select`, `app-month-picker`,
-  `app-pdf-export-button` et `app-vue-switcher`.
+  `app-collection-shell`, `app-collection-table`, `app-column-chooser`, `app-lazy-select`, `app-month-picker`
+  et `app-vue-switcher`.
 - [ ] Référencer et démontrer Cartes et Analytique partagées avec un jeu de données déterministe.
 - [ ] Concevoir, cataloguer puis adopter un cockpit de filtres commun pour Paie, Heures supplémentaires, Employés,
   Chantiers, Équipes, Fonctions, Utilisateurs, Rôles et Journal d'audit.

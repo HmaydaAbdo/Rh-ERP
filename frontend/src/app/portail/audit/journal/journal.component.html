@@ -85,7 +85,7 @@
           {{ libelleAction(ligne.action) }}
         }
         @case ('resultat') {
-          <span [class]="'journal__resultat journal__resultat--' + ligne.resultat.toLowerCase()">{{ libelleResultat(ligne.resultat) }}</span>
+          <span [class]="'app-outcome app-outcome--' + ligne.resultat.toLowerCase()">{{ libelleResultat(ligne.resultat) }}</span>
         }
         @case ('utilisateurNom') {
           {{ ligne.utilisateurNom }}
@@ -121,7 +121,7 @@
     </div>
   }
   @if (entree(); as e) {
-    <dl class="journal__contexte">
+    <dl class="app-dl-grid">
       <div>
         <dt>Date</dt>
         <dd>{{ formaterHorodatage(e.horodatage) }}</dd>
@@ -129,7 +129,7 @@
       <div>
         <dt>Résultat</dt>
         <dd>
-          <span [class]="'journal__resultat journal__resultat--' + e.resultat.toLowerCase()">{{ libelleResultat(e.resultat) }}</span>
+          <span [class]="'app-outcome app-outcome--' + e.resultat.toLowerCase()">{{ libelleResultat(e.resultat) }}</span>
           @if (e.motif) {
             — {{ e.motif }}
           }
@@ -186,7 +186,7 @@
 
     @if (perimetreEntrees().length > 0) {
       <h3>Périmètre</h3>
-      <dl class="journal__contexte">
+      <dl class="app-dl-grid">
         @for (element of perimetreEntrees(); track element[0]) {
           <div>
             <dt>{{ element[0] }}</dt>
@@ -206,22 +206,22 @@
           <button stp-button variant="secondary" type="button" (click)="reessayerChangements()">Réessayer</button>
         </div>
       } @else if (changements().length === 0) {
-        <p class="journal__vide">Aucun changement enregistré par cette opération.</p>
+        <p class="app-muted">Aucun changement enregistré par cette opération.</p>
       }
       @for (changement of changements(); track changement.entiteType + changement.entiteId + changement.operation) {
-        <section class="journal__changement">
+        <section class="app-card mb-4">
           <h4>
             {{ changement.operation === 'AJOUT' ? 'Ajout' : changement.operation === 'SUPPRESSION' ? 'Suppression' : 'Modification' }} —
             {{ libelleEntite(changement.entiteType) }} n° {{ changement.entiteId }}
             @if (changement.libelle) {
-              <span class="journal__libelle">({{ changement.libelle }})</span>
+              <span class="text-muted">({{ changement.libelle }})</span>
             }
           </h4>
           <app-audit-champs [champs]="changement.champs"></app-audit-champs>
         </section>
       }
       @if (totalChangements() > 10) {
-        <div class="journal__pagination">
+        <div class="app-row-between">
           <button stp-button variant="secondary" icon="chevron-left" iconOnly type="button" aria-label="Page précédente" [disabled]="pageChangements() === 0 || chargementDetail() || erreurChangements()" (click)="changementsPrecedents()"></button>
           <span>Page {{ pageChangements() + 1 }} / {{ nombrePagesChangements() }} — {{ totalChangements() }} élément(s)</span>
           <button stp-button variant="secondary" icon="chevron-right" iconOnly type="button" aria-label="Page suivante" [disabled]="pageChangements() + 1 >= nombrePagesChangements() || chargementDetail() || erreurChangements()" (click)="changementsSuivants()"></button>

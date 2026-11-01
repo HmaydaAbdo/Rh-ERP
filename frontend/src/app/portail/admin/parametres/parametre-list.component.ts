@@ -12,8 +12,7 @@ import { ParametreItemComponent } from './parametre-item.component';
   selector: 'app-parametre-list',
   imports: [ButtonComponent, IconComponent, ParametreItemComponent],
   templateUrl: './parametre-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './parametre-list.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ParametreListComponent {
   private readonly parametreService = inject(ParametreService);

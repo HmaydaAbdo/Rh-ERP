@@ -79,17 +79,17 @@ describe('PaieCartesComponent', () => {
 
   it('affiche les mois qui ont de la paie tant qu’aucun mois n’est choisi, du plus récent au plus ancien', async () => {
     const page = await ouvrir('/paie/cartes?nom=ali');
-    const cartes = Array.from(page.querySelectorAll('.perimetre-carte'));
+    const cartes = Array.from(page.querySelectorAll('.app-entity'));
 
-    expect(cartes.map((c) => c.querySelector('.perimetre-carte__nom')?.textContent?.trim())).toEqual(['septembre 2026', 'août 2026', 'juin 2026']);
+    expect(cartes.map((c) => c.querySelector('.app-entity__name')?.textContent?.trim())).toEqual(['septembre 2026', 'août 2026', 'juin 2026']);
     expect(paie.rechercherPeriodes).toHaveBeenCalledWith(expect.objectContaining({ nomPrenom: 'ali', periode: undefined }));
     expect(paie.analyser).not.toHaveBeenCalled();
-    expect(page.querySelector('.perimetre-cartes__periode')).toBeNull();
+    expect(page.querySelector('.app-field-label')).toBeNull();
   });
 
   it('compare chaque mois au mois contigu, et seulement à lui', async () => {
     const page = await ouvrir('/paie/cartes');
-    const [septembre, aout, juin] = Array.from(page.querySelectorAll('.perimetre-carte')).map((c) => c.textContent ?? '');
+    const [septembre, aout, juin] = Array.from(page.querySelectorAll('.app-entity')).map((c) => c.textContent ?? '');
 
     // Septembre se compare à août, le mois contigu.
     expect(septembre).toContain('+12,5 %');
@@ -106,16 +106,16 @@ describe('PaieCartesComponent', () => {
     harness.fixture.detectChanges();
 
     expect(TestBed.inject(Router).url).toContain('periode=2026-08');
-    expect(page.querySelector('.perimetre-cartes__etape')?.textContent).toContain('août 2026');
+    expect(page.querySelector('.app-trail__step')?.textContent).toContain('août 2026');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
-    expect(page.querySelector('.perimetre-cartes__niveau h2')?.textContent).toContain('Chantier');
+    expect(page.querySelector('.app-level h2')?.textContent).toContain('Chantier');
   });
 
   it('transmet les filtres de la barre à chaque niveau et ajoute « Orphelins » parmi les équipes', async () => {
     const page = await ouvrir('/paie/cartes?periode=2026-08&nom=ali&cin=AB1&fonctionIds=5&chantierIds=1');
 
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', cin: 'AB1', fonctionIds: [5], chantierIds: [1] }));
-    expect(Array.from(page.querySelectorAll('.perimetre-carte__nom')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Orphelins']);
+    expect(Array.from(page.querySelectorAll('.app-entity__name')).map((c) => c.textContent?.trim())).toEqual(['Chauffeurs', 'Orphelins']);
   });
 
   describe('suppression en groupe', () => {

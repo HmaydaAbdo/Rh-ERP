@@ -121,6 +121,72 @@
     }
   }
 
+  // Mois : flèches vers le mois précédent / suivant autour du mois courant, ouvert en grille dans un panneau
+  .app-toolbar__period {
+    display: inline-flex;
+    align-items: stretch;
+    height: var(--control-height);
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+
+    .stp-button {
+      height: 100%;
+      border-radius: 0;
+      font-size: var(--text-sm);
+    }
+
+    .stp-button--icon-only {
+      width: 2rem;
+      padding: 0;
+    }
+  }
+
+  .app-toolbar__period-month {
+    min-width: 9.5rem;
+    justify-content: center;
+    border-inline: 1px solid var(--color-border) !important;
+  }
+
+  // Recherche : champ précédé d'une loupe
+  .app-toolbar__search {
+    position: relative;
+    flex: 1 1 11rem;
+    max-width: 15rem;
+
+    input {
+      width: 100%;
+      padding-inline-start: 2.25rem;
+    }
+
+    stp-icon {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 0.75rem;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+  }
+
+  // Filtres secondaires : toujours dans la ligne sur grand écran, repliés derrière « Filtres » sur téléphone
+  .app-toolbar__toggle {
+    display: none;
+  }
+
+  .app-toolbar__secondary {
+    display: contents;
+
+    > input.stp-input,
+    > stp-select,
+    > app-lazy-select {
+      flex: 1 1 8rem;
+      max-width: 14rem;
+      min-width: 0;
+    }
+  }
+
   // Téléphone : deux contrôles par ligne
   @include bp.phone {
     display: grid;
@@ -136,6 +202,45 @@
     .app-toolbar__clear {
       grid-column: 1 / -1;
       margin-left: 0;
+    }
+
+    .app-toolbar__period {
+      grid-column: 1 / -1;
+
+      .stp-button--icon-only {
+        width: 2.75rem;
+      }
+    }
+
+    .app-toolbar__period-month {
+      flex: 1;
+    }
+
+    .app-toolbar__toggle {
+      display: inline-flex;
+    }
+
+    .app-toolbar__secondary {
+      display: none;
+      grid-column: 1 / -1;
+      flex-direction: column;
+      gap: var(--space-sm);
+
+      &--open {
+        display: flex;
+      }
+
+      > input.stp-input,
+      > stp-select,
+      > app-lazy-select {
+        flex: none;
+        width: 100%;
+        max-width: none;
+      }
+    }
+
+    .app-toolbar__clear-label {
+      display: none;
     }
 
     .app-toolbar__more {

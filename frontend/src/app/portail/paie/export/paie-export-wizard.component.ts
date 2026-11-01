@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, model, un
 
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
-import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { StepperComponent } from '../../../shared/ui/stepper/stepper.component';
 import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { PaieExportEtapeEquipesComponent } from './etapes/equipes-etape.component';
@@ -28,7 +27,6 @@ import { PaieExportStore } from './paie-export.store';
   imports: [StepperComponent, WizardStateComponent, 
     ButtonComponent,
     DialogComponent,
-    IconComponent,
     PaieExportEtapePeriodeComponent,
     PaieExportEtapeFormatComponent,
     PaieExportEtapeChantierComponent,

@@ -39,8 +39,7 @@ interface PermissionGroup {
   imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
   providers: [RoleReferenceService],
   templateUrl: './user-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './user-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserFormComponent {
   private readonly userService = inject(UserService);

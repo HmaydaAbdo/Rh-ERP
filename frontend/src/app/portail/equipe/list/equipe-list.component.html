@@ -8,9 +8,6 @@
     [loading]="loading()"
     (lazyLoad)="onLazyLoad($event)"
   >
-    @if (totalRecords() > 0) {
-      <app-pdf-export-button table-export [document]="documentVide" [chargerDocument]="chargerExport" [iconOnly]="true" ariaLabel="Exporter les équipes filtrées en PDF" />
-    }
 
     <ng-template stpCell let-equipe let-col="col">
       @switch (col.field) {

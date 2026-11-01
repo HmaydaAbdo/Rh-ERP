@@ -114,13 +114,10 @@ compacts au pied d'une carte (par exemple l'accès à l'analyse de cette équipe
 permanente, avec un nom accessible et une infobulle qui décrivent la destination. Les liens de lecture ou de retour
 conservent une apparence de lien identifiable.
 
-L'action d'export d'un composant est une icône sans bordure permanente dans son coin supérieur droit ou sa barre d'outils,
-avec un nom accessible et une infobulle explicites. Pour une carte qui comporte d'autres actions, l'export rejoint leur
-rangée d'icônes dans le pied de carte, répartie sur toute la largeur disponible. Le survol et le focus mettent en évidence la
-bordure du conteneur concerné, avec les jetons de couleur, d'ombre et de durée du design system.
-Préserver l'espace du bouton pour éviter les chevauchements et les déplacements de mise en page.
-L'action reste disponible au clavier et sur écran tactile ; sa découverte ne dépend pas du survol.
-Le mouvement reste discret et respecte `prefers-reduced-motion`.
+**Aucun bouton d'export par composant** (décision du propriétaire, 2026-11-01) : un tableau, un graphique ou une carte n'exporte jamais
+ses données depuis le navigateur (ni PDF d'impression, ni CSV). Seuls subsistent les exports produits par le backend, comme le rapport de
+paie, lancés depuis l'action « Exporter » de l'écran ou de son assistant. Le survol et le focus d'un conteneur mettent en évidence sa
+bordure, avec les jetons de couleur, d'ombre et de durée du design system. Le mouvement reste discret et respecte `prefers-reduced-motion`.
 
 Sur `/carte` en grand écran, le rail latéral habituel s'efface au profit d'un hamburger fixe juste avant le filtre. Le
 survol ou le focus du bouton révèle le volet ; celui-ci reste visible pendant le survol ou le focus du bouton ou du volet,
@@ -192,7 +189,7 @@ et obligations de leur contrat métier. Le panneau reste utilisable au clavier, 
 sur téléphone et en couleurs forcées. Un changement de source recharge les options autorisées.
 
 Chaque graphique de répartition trie ses catégories selon sa propre mesure et masque les valeurs nulles.
-Son tableau complet reste accessible à la demande et dans l'export. Les tableaux larges défilent dans
+Son tableau complet reste accessible à la demande. Les tableaux larges défilent dans
 leur conteneur sans élargir la page.
 Le canvas reste borné à la largeur de son conteneur, y compris après passage du bureau au téléphone.
 Les cartes alignent leurs indicateurs avec des espacements explicites; ne pas réserver de place pour
@@ -304,7 +301,7 @@ des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni 
 | `app-page__header` | Le titre éditorial (`--text-page-title`) de l'écran et, à droite, ses actions |
 | `app-page__header` + `app-page__actions app-page__actions--liste` | Les actions d'un écran de liste (Importer, Synchroniser, Exporter, puis l'action principale « Nouveau … » en dernier), à droite du titre ; en une grille sur téléphone. Les écrans qui ont des onglets de vue (la paie) les posent au même niveau que les onglets |
 | `app-toolbar` | Les filtres regroupés dans une bande secondaire, sans ajouter une carte lourde : contrôles de même hauteur (`--control-height`), deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
-| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils du tableau à droite (`app-table-bar__tools`) : choix des colonnes et export propre au tableau lorsqu'il est proposé |
+| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils du tableau à droite (`app-table-bar__tools`) : choix des colonnes |
 | `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
 
 Formulaires et consultations (`src/styles/_forms.scss`) :

@@ -23,21 +23,18 @@
   (openChange)="$event || annulerSuppression()"
 >
   @if (suppression(); as s) {
-    <p class="paie-cartes__suppression-titre">
+    <p class="m-0 mb-2">
       Vous allez supprimer <strong>{{ s.nombre }} bulletin(s)</strong> :
     </p>
-    <ul class="paie-cartes__suppression-liste">
+    <ul class="mb-4 ps-6">
       <li>{{ s.cible }}</li>
       @for (filtre of s.filtres; track filtre) {
         <li>{{ filtre }}</li>
       }
     </ul>
-    <p class="paie-cartes__suppression-alerte">
-      <stp-icon name="triangle-alert" />
-      Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
-      réimporté depuis son fichier Excel.
-    </p>
-    <label class="paie-cartes__suppression-champ" for="confirmation-suppression">
+    <stp-message severity="error" class="mb-4">Cette action est irréversible. Les bulletins supprimés ne peuvent pas être restaurés ; un mois entier peut seulement être
+      réimporté depuis son fichier Excel.</stp-message>
+    <label class="block mb-1" for="confirmation-suppression">
       Pour confirmer, saisissez le nombre de bulletins : <strong>{{ s.nombre }}</strong>
     </label>
     <input

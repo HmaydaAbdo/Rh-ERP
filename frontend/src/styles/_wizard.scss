@@ -28,10 +28,10 @@
 
   // Le panneau entre dans le sens de la navigation (avant ou arrière)
   &__panneau {
-    animation: export-wizard-avant var(--duration-base) var(--ease-out);
+    animation: stp-entree var(--duration-base) var(--ease-out);
 
     &--arriere {
-      animation-name: export-wizard-arriere;
+      animation-name: stp-entree-arriere;
     }
   }
 
@@ -293,7 +293,7 @@
     padding: var(--space-md);
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-md);
-    animation: export-wizard-avant var(--duration-base) var(--ease-out);
+    animation: stp-entree var(--duration-base) var(--ease-out);
 
     p {
       margin: var(--space-2xs) 0 0;
@@ -349,7 +349,7 @@
       padding: var(--space-sm-md) var(--space-md);
       border-block-end: 1px solid var(--color-border);
       font-size: var(--text-sm);
-      animation: export-wizard-avant var(--duration-base) var(--ease-out) backwards;
+      animation: stp-entree var(--duration-base) var(--ease-out) backwards;
 
       &:last-child {
         border-block-end: none;
@@ -856,7 +856,7 @@
 
 // ---- Contrôle d'un fichier avant import : bilan, cartes à corriger, écarts avant / après ----
 .app-controle {
-  animation: export-wizard-avant var(--duration-base) var(--ease-out);
+  animation: stp-entree var(--duration-base) var(--ease-out);
 
   &__bilan {
     display: flex;
@@ -991,5 +991,89 @@
       flex: 1 1 10rem;
       max-width: 13rem;
     }
+  }
+}
+
+// ---- Pointage d'heures : totaux, forfaits, corrections (assistant d'import) ----
+.app-wizard {
+  &__totaux {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+
+    > * {
+      padding: var(--space-xs) var(--space-sm);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-pill);
+      background: var(--color-surface);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__forfaits {
+    display: grid;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+  }
+
+  &__forfait {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+
+    div {
+      display: grid;
+      gap: var(--space-2xs);
+    }
+
+    span {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+  }
+
+  &__vide {
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+  }
+
+  &__correction {
+    display: grid;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    background: var(--color-warning-bg);
+
+    span {
+      display: block;
+      color: var(--color-text-muted);
+    }
+  }
+
+  &__aligner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-sm) 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    background: var(--color-warning-bg);
+    cursor: pointer;
   }
 }

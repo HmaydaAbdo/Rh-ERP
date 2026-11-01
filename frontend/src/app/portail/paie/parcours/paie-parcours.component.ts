@@ -35,7 +35,6 @@ const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 
   selector: 'app-paie-parcours',
   imports: [DecimalPipe, RouterLink, ChartComponent, IconComponent],
   templateUrl: './paie-parcours.component.html',
-  styleUrl: './paie-parcours.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieParcoursComponent {

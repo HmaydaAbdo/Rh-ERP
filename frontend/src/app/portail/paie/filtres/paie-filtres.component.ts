@@ -37,8 +37,7 @@ const DEBOUNCE_FILTRES_MS = 300;
   selector: 'app-paie-filtres',
   imports: [FormField, FormRoot, CdkConnectedOverlay, CdkOverlayOrigin, MonthPickerComponent, LazySelectComponent, IconComponent, ButtonComponent],
   templateUrl: './paie-filtres.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './paie-filtres.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieFiltresComponent {
   private readonly paieService = inject(PaieService);
