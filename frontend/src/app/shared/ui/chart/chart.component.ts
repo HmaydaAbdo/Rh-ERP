@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
-import type { Chart, ChartData, ChartOptions, ChartType, Plugin } from 'chart.js';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, output, signal, viewChild } from '@angular/core';
+import type { ChartData, ChartOptions, ChartType, Plugin } from 'chart.js';
+import { BaseChartDirective, provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 /** Barre ou point cliqué d'un graphique : indice de la donnée et de la série. */
 export interface ChartSelection {
@@ -9,25 +10,35 @@ export interface ChartSelection {
 }
 
 /**
- * Graphique Chart.js dans un `<canvas>` (`role="img"` : le détail est donné par le tableau de données voisin, voir
- * `conventions/design-system.md`, section Graphiques). Chart.js n'est chargé qu'à la première création d'un graphique.
- * Le graphique est recréé quand `type`, `data` ou `options` changent (ex. à la bascule du thème, qui recalcule les options).
+ * Graphique Chart.js dessiné par `ng2-charts` (directive `baseChart`, qui gère la création, la mise à jour et la destruction du
+ * graphique) dans un `<canvas>` (`role="img"` : le détail est donné par le tableau de données voisin, voir
+ * `conventions/design-system.md`, section Graphiques). Les options sont recalculées à la bascule du thème et en contraste forcé ;
+ * ce composant ajoute la navigation au clavier et l'annonce de la donnée sélectionnée.
  */
 @Component({
   selector: 'stp-chart',
+  imports: [BaseChartDirective],
+  providers: [provideCharts(withDefaultRegisterables())],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'stp-chart' },
   template: `
-    <canvas
-      #canvas
-      role="img"
-      tabindex="0"
-      aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space"
-      [attr.aria-label]="ariaLabel() + '. Utilisez les flèches pour parcourir les données, puis Entrée pour sélectionner.'"
-      (focus)="initialiserSelection()"
-      (keydown)="onKeydown($event)"
-      (click)="onClick($event)"
-    ></canvas>
+    <!-- Le graphique est recréé quand le contraste forcé change : Chart.js garde sinon les couleurs de l'ancien mode. -->
+    @for (mode of [forcedColors()]; track mode) {
+      <canvas
+        baseChart
+        [type]="type()"
+        [data]="data()"
+        [options]="optionsEffectives()"
+        [plugins]="plugins()"
+        role="img"
+        tabindex="0"
+        aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space"
+        [attr.aria-label]="ariaLabel() + '. Utilisez les flèches pour parcourir les données, puis Entrée pour sélectionner.'"
+        (focus)="initialiserSelection()"
+        (keydown)="onKeydown($event)"
+        (click)="onClick($event)"
+      ></canvas>
+    }
     <span class="app-lecteur" aria-live="polite">{{ annonceSelection() }}</span>
   `,
   styles: `
@@ -64,46 +75,25 @@ export class ChartComponent<T extends ChartType = ChartType> {
     return `${String(label ?? '')}, ${dataset?.label ?? `série ${selection.datasetIndex + 1}`}, ${valeurFormatee}`;
   });
 
-  private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly graphique = viewChild.required(BaseChartDirective);
   private readonly document = inject(DOCUMENT);
-  private readonly forcedColors = signal(false);
-  private chart: Chart | null = null;
-  private generation = 0;
+  protected readonly forcedColors = signal(false);
+
+  protected readonly optionsEffectives = computed<ChartOptions<T>>(() => {
+    const options = this.options();
+    return this.forcedColors() ? this.optionsEnContrasteForce(options, this.type()) : options;
+  });
+
+  private get chart() {
+    return this.graphique().chart ?? null;
+  }
 
   constructor() {
     const forcedColorsQuery = this.document.defaultView?.matchMedia?.('(forced-colors: active)');
     const onForcedColorsChange = (event: MediaQueryListEvent) => this.forcedColors.set(event.matches);
     this.forcedColors.set(forcedColorsQuery?.matches ?? false);
     forcedColorsQuery?.addEventListener('change', onForcedColorsChange);
-
-    const destroyRef = inject(DestroyRef);
-    destroyRef.onDestroy(() => {
-      forcedColorsQuery?.removeEventListener('change', onForcedColorsChange);
-      this.generation++;
-      this.chart?.destroy();
-    });
-
-    effect(() => {
-      const forcedColors = this.forcedColors();
-      const type = this.type();
-      const options = this.options();
-      const plugins = this.plugins();
-      const config = {
-        type,
-        data: this.data(),
-        options: forcedColors ? this.optionsEnContrasteForce(options, type) : options,
-        plugins
-      };
-      const generation = ++this.generation;
-      import('chart.js/auto').then(({ default: ChartJs }) => {
-        // Une création plus récente a pris le relais pendant le chargement du module.
-        if (generation !== this.generation) {
-          return;
-        }
-        this.chart?.destroy();
-        this.chart = new ChartJs(this.canvas().nativeElement, config as never);
-      });
-    });
+    inject(DestroyRef).onDestroy(() => forcedColorsQuery?.removeEventListener('change', onForcedColorsChange));
   }
 
   /** Chart.js peint sur canvas : les couleurs forcées du navigateur ne touchent pas les pixels déjà dessinés. */
