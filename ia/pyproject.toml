@@ -60,7 +60,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
 "tests/**" = ["S101"]
 
 [tool.pyright]
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 typeCheckingMode = "strict"
 include = ["src", "tests"]
 venvPath = "."
