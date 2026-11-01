@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../testing/grille';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -49,14 +50,15 @@ describe('CollectionTableComponent', () => {
     const harness = await RouterTestingHarness.create();
     const hote = await harness.navigateByUrl('/', TableauHote);
     await harness.fixture.whenStable();
+    await attendreGrille(harness.fixture);
     harness.detectChanges();
     const page = harness.routeNativeElement as HTMLElement;
 
     expect(page.querySelector('[role="status"]')?.textContent?.trim()).toBe('2 collaborateurs');
     expect(page.querySelector('.app-table-bar__summary')?.textContent).toContain('Net à payer 20 DH');
     expect(page.querySelector('app-column-chooser')).not.toBeNull();
-    expect(page.querySelector('[role="region"]')?.getAttribute('aria-label')).toBe('Liste des collaborateurs');
-    expect(Array.from(page.querySelectorAll('tbody td')).map((cell) => cell.textContent?.trim())).toEqual(['Ali', 'Zahra']);
+    expect(page.querySelector('[role="grid"]')?.getAttribute('aria-label')).toBe('Liste des collaborateurs');
+    expect(lignesGrille(page).map((l) => l.cells[0]?.textContent?.trim())).toEqual(['Ali', 'Zahra']);
     expect(hote.loads[0]).toMatchObject({ first: 0, rows: 10, sortOrder: 1 });
   });
 

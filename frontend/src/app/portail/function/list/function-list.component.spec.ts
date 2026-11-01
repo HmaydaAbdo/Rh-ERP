@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { EMPTY, of } from 'rxjs';
@@ -25,7 +26,7 @@ describe('FunctionListComponent', () => {
   let service: { search: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
-  const lignes = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
+  const lignes = () => lignesGrille(racine()).map((l) => l.cells[0]?.textContent?.trim());
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement | null;
 
   async function afficher(permissions: string[] = TOUTES, query: Record<string, string> = {}): Promise<void> {
@@ -36,6 +37,7 @@ describe('FunctionListComponent', () => {
     fixture = TestBed.createComponent(FunctionListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -76,7 +78,7 @@ describe('FunctionListComponent', () => {
       fixture.componentInstance['onSearch']();
       fixture.detectChanges();
 
-      expect(racine().querySelector('.stp-table__empty')?.textContent).toBe('Aucune fonction ne correspond à ces critères.');
+      expect(racine().querySelector('.stp-table__empty-state')?.textContent).toBe('Aucune fonction ne correspond à ces critères.');
     });
   });
 

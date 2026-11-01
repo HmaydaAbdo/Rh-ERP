@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -35,6 +36,7 @@ describe('ChantierListComponent', () => {
     fixture = TestBed.createComponent(ChantierListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -50,7 +52,7 @@ describe('ChantierListComponent', () => {
     await afficher();
 
     expect(pagination()).toEqual({ page: 0, size: 10, sort: 'code,asc' });
-    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).map((td) => td.textContent?.trim());
+    const ligne = (i: number) => lignesGrille(racine())[i].cells.map((td) => td.textContent?.trim());
     expect(ligne(0).slice(0, 7)).toEqual(['C168', '-', 'Nador', 'À qualifier', 'Non', 'ERP', 'En cours']);
     expect(ligne(1).slice(0, 7)).toEqual(['C196', 'Nord', 'Marrakech', 'À qualifier', 'Non', 'Manuel', 'Clôturé']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 chantiers');

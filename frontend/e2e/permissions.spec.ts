@@ -14,7 +14,7 @@ test.describe('Permissions', () => {
     await page.goto('/functions');
 
     await expect(page.getByRole('heading', { name: 'Fonctions' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Nouvelle fonction' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Supprimer la fonction/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Modifier la fonction/ })).toHaveCount(0);
@@ -96,7 +96,7 @@ test.describe('Permissions', () => {
   test('la liste des fonctions est accessible (axe)', async ({ page }) => {
     await mockApi(page, { username: 'gestionnaire', permissions: ['FUNCTION_READ', 'FUNCTION_WRITE', 'FUNCTION_DELETE', 'FUNCTION_IMPORT'] }, { 'POST /functions/search': () => FONCTIONS });
     await page.goto('/functions');
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toBeVisible();
 
     const resultats = await new AxeBuilder({ page }).analyze();
     expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
