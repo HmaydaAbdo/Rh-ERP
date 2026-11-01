@@ -1,6 +1,6 @@
-<section class="export-wizard__panneau" [class.export-wizard__panneau--arriere]="store.sens() === 'arriere'">
+<section class="app-wizard__panneau" [class.app-wizard__panneau--arriere]="store.sens() === 'arriere'">
   @if (store.periodes().length === 0 && !store.periodesEnCours()) {
-    <div class="export-wizard__carte export-wizard__carte--attention">
+    <div class="app-wizard__carte app-wizard__carte--attention">
       <stp-icon name="triangle-alert" />
       <div>
         <strong>Aucune paie enregistrée</strong>
@@ -9,13 +9,13 @@
     </div>
   } @else {
     <app-month-picker [value]="store.periode()" [disponibles]="store.disponibles()" (valueChange)="store.choisirPeriode($event)"></app-month-picker>
-    <p class="export-wizard__legende">Seuls les mois qui contiennent des bulletins sont proposés.</p>
+    <p class="app-wizard__legende">Seuls les mois qui contiennent des bulletins sont proposés.</p>
     @if (store.resume(); as r) {
-      <div class="export-wizard__carte export-wizard__carte--ok" role="status">
+      <div class="app-wizard__carte app-wizard__carte--ok" role="status">
         <stp-icon name="circle-check" />
         <div>
-          <strong class="export-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} contient de la paie</strong>
-          <dl class="export-wizard__chiffres">
+          <strong class="app-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} contient de la paie</strong>
+          <dl class="app-wizard__chiffres">
             <div><dt>bulletins</dt><dd [appCountUp]="r.nombreBulletins"></dd></div>
             <div><dt>chantiers</dt><dd [appCountUp]="r.nombreChantiers"></dd></div>
             <div><dt>masse salariale</dt><dd>{{ store.formaterMontant(r.masse) }} DH</dd></div>
@@ -25,5 +25,5 @@
       </div>
     }
   }
-  <p class="export-wizard__erreur" role="alert">{{ store.erreur() }}</p>
+  <p class="app-wizard__erreur" role="alert">{{ store.erreur() }}</p>
 </section>

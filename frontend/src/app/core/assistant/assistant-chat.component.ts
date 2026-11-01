@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { CopilotChat, injectAgentStore, provideCopilotChatLabels } from '@copilotkit/angular';
 
+import { MessageComponent } from '../../shared/ui/message/message.component';
 import { FilAssistant } from './fil-assistant.service';
 
 
@@ -11,7 +12,8 @@ import { FilAssistant } from './fil-assistant.service';
  */
 @Component({
   selector: 'app-assistant-chat',
-  imports: [CopilotChat],
+  host: { class: 'flex h-full min-h-0 flex-col' },
+  imports: [CopilotChat, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideCopilotChatLabels({
@@ -37,26 +39,9 @@ import { FilAssistant } from './fil-assistant.service';
   ],
   template: `
     @if (erreur()) {
-      <p class="erreur" role="alert">Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant.</p>
+      <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
     }
     <copilot-chat [threadId]="fil.fil()" />
-  `,
-  styles: `
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      min-height: 0;
-    }
-
-    .erreur {
-      margin: 0.75rem 1rem;
-      border: 1px solid var(--color-error, #b42318);
-      border-radius: 0.75rem;
-      padding: 0.75rem 1rem;
-      color: var(--color-error, #b42318);
-      font-size: 0.875rem;
-    }
   `
 })
 export class AssistantChatComponent {

@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { FunctionService } from '../services/function.service';
 import { FunctionActionsComponent } from './function-actions.component';
@@ -71,7 +71,10 @@ describe('FunctionActionsComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Libellé vide');
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(document.querySelector('[role="dialog"] .ag-row')?.textContent).toContain('Libellé vide');
+    }, { timeout: 5000 });
     expect(TestBed.inject(NotificationService).notifications()).toEqual([]);
     expect(importe).not.toHaveBeenCalled();
   });

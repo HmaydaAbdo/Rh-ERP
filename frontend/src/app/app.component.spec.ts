@@ -1,7 +1,8 @@
+import { DockEtatService } from './shared/ui/dock/dock-etat.service';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ConfirmDialogService, NotificationService } from '@shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '@shared/ui/feedback/feedback.service';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { CurrentUser } from './core/auth/models/auth.model';
@@ -97,7 +98,8 @@ describe('AppComponent', () => {
       const compiled = fixture.nativeElement as HTMLElement;
       expect(compiled.querySelector('.app-sidebar__brand')).toBeNull();
       expect(compiled.querySelector('.app-topbar__logo')).toBeNull();
-      expect(compiled.querySelector('.app-sidebar__nav')?.getAttribute('aria-label')).toBe('Navigation principale');
+      // La navigation est dans la barre Staport (ouverte par le hamburger de l'en-tête) : la coque lui donne les destinations.
+      expect(TestBed.inject(DockEtatService).items()).toEqual(fixture.componentInstance.menu());
     });
   });
 });

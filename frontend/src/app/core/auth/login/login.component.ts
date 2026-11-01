@@ -6,14 +6,17 @@ import { catchError, lastValueFrom, map, of } from 'rxjs';
 
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
+import { AuthCardComponent } from '../../../shared/ui/auth-card/auth-card.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { MessageComponent } from '../../../shared/ui/message/message.component';
+import { PasswordInputComponent } from '../../../shared/ui/password-input/password-input.component';
 import { AuthService } from '../services/auth.service';
 
 @Component({
     selector: 'app-login',
-    imports: [FormField, FormRoot, RouterLink, FieldErrorComponent],
+    imports: [AuthCardComponent, ButtonComponent, FieldErrorComponent, FormField, FormRoot, MessageComponent, PasswordInputComponent, RouterLink],
     templateUrl: './login.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrl: './login.component.scss'
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
   private readonly authService = inject(AuthService);
@@ -21,7 +24,6 @@ export class LoginComponent {
   private readonly route = inject(ActivatedRoute);
 
   readonly errorMessage = signal<string | null>(null);
-  readonly passwordVisible = signal(false);
 
   private readonly modele = signal({ username: '', password: '' });
   readonly form = form(
@@ -39,10 +41,6 @@ export class LoginComponent {
     if (this.authService.isAuthenticated()) {
       this.router.navigateByUrl('/');
     }
-  }
-
-  togglePasswordVisibility(): void {
-    this.passwordVisible.update((visible) => !visible);
   }
 
   private async connecter(): Promise<void> {

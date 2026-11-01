@@ -30,7 +30,7 @@ class RapportEvolutionSvgBuilderTest {
                 .contains("Masse salariale et Montants des STC");
         assertThat(corps.select(".evolution-container line[stroke-dasharray='2 2']")).hasSize(8);
         assertThat(corps.select(".evolution-container text").eachText())
-                .contains("DH").doesNotContain("personnes");
+                .contains("DH").doesNotContain("bulletins");
         assertThat(corps.select(".evolution-container svg text[x^=74]")).hasSize(5);
         assertThat(corps.select(".evolution-container line[stroke='#40566B']")).hasSize(2);
         assertThat(corps.select(".evolution-container path").eachAttr("stroke"))
@@ -50,11 +50,11 @@ class RapportEvolutionSvgBuilderTest {
         assertThat(corps.select(".evolution-container path").eachAttr("stroke"))
                 .containsExactly("#D97706", "#B91C1C");
         assertThat(corps.text().replace('\u00A0', ' '))
-                .contains("Effectif rémunéré · personnes", "Sorties du personnel (STC) · personnes", "12", "2/2026");
+                .contains("Bulletins de paie · bulletins", "Sorties du personnel (STC) · bulletins", "12", "2/2026");
         assertThat(corps.select(".evolution-container svg").attr("aria-label"))
-                .contains("Effectif rémunéré et Sorties du personnel");
+                .contains("Bulletins de paie et Sorties du personnel");
         assertThat(corps.select(".evolution-container text").eachText())
-                .contains("personnes").doesNotContain("DH");
+                .contains("bulletins").doesNotContain("DH");
         assertThat(corps.select(".evolution-container svg text[x^=74]")).hasSize(5);
         // L'effectif maximal (12) fixe aussi la position de 6 sorties à la moitié de la hauteur utile.
         Element labelEffectif = corps.selectFirst("text.evolution-valeur[data-serie=0][data-index=1]");

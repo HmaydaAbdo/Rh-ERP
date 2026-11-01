@@ -13,8 +13,6 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
-import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { Employee } from '../../employee/models/employee.model';
 import { libelleStatutEmploye } from '../../employee/models/employee-statut';
 import { EmployeeService } from '../../employee/services/employee.service';
@@ -24,10 +22,10 @@ import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
 import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
-  Portee, porteeDe, porteeVide, versParametresPerimetre
+  Portee, porteeDe, porteeVide
 } from '../perimetre';
 import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
-import { chargerToutLeReferentiel, ItemCatalogue, ModulePerimetre } from '../perimetre-module';
+import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 
 const TAILLE_PAGE = 24;
 type SourceCarte = 'FICHES' | 'PAIE' | 'COMPARAISON' | 'HEURES_SUP';
@@ -60,9 +58,8 @@ interface Chargement {
  */
 @Component({
   selector: 'app-cartes-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, MessageComponent, SelectComponent, PdfExportButtonComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, BadgeComponent, ButtonComponent, IconComponent, MessageComponent, SelectComponent],
   templateUrl: './cartes-perimetre.component.html',
-  styleUrl: './cartes-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CartesPerimetreComponent implements OnInit {
@@ -89,16 +86,13 @@ export class CartesPerimetreComponent implements OnInit {
   protected readonly nomGroupe = nomGroupe;
   protected readonly libelleStatutEmploye = libelleStatutEmploye;
 
-  /** Compare chaque indicateur au mois contigu et conserve son unité de lecture. */
+  /** Compare chaque indicateur au mois contigu : l'écart dans son unité et en pourcentage. */
   protected variationPaie(groupe: GroupeCarte, indicateur: keyof NonNullable<GroupeCarte['paie']>, periode: string): string {
     const valeur = variations(groupe)?.[indicateur];
     if (valeur === undefined) {
       return 'Comparaison indisponible';
     }
     const contexte = ` · vs ${libellePeriode(periodePrecedente(periode))}`;
-    if (valeur === null) {
-      return `Base précédente nulle${contexte}`;
-    }
     return `${valeur}${contexte}`;
   }
 
@@ -213,54 +207,21 @@ export class CartesPerimetreComponent implements OnInit {
     return `${nombre} ${nombre === 1 ? singulier[niveau] : this.pluriel(niveau)}`;
   }
   protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie());
-  protected readonly documentGroupes = computed<PdfImpressionDocument>(() => {
-    const groupes = this.groupes() ?? [];
-    const avecFiches = !this.module().sansEffectifFichesDansCartes;
-    const colonnes = ['Groupe', 'Statut', ...(avecFiches ? ['Employés', 'En poste'] : []), 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'];
-    return {
-      titre: `Cartes · ${this.module().libellePluriel}`,
-      contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()} · ${this.periode() ? libellePeriode(this.periode()!) : 'toutes périodes'}`,
-      colonnes,
-      lignes: groupes.map((groupe) => [
-        this.titre(groupe), groupe.statut?.libelle ?? '',
-        ...(avecFiches ? [groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? ''] : []),
-        groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
-      ])
-    };
-  });
-  protected documentCarte(groupe: GroupeCarte): PdfImpressionDocument {
-    const periode = this.moisDe(groupe);
-    const avecFiches = !this.module().sansEffectifFichesDansCartes;
-    return {
-      titre: this.titre(groupe),
-      contexte: `${LIBELLES_DIMENSIONS[this.niveau() as Dimension] ?? this.niveau()}${periode ? ` · ${libellePeriode(periode)}` : ''}`,
-      colonnes: ['Groupe', 'Statut', ...(avecFiches ? ['Employés', 'En poste'] : []), 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
-      lignes: [[
-        this.titre(groupe), groupe.statut?.libelle ?? '', ...(avecFiches ? [groupe.fiches?.effectif ?? '', groupe.fiches?.actifs ?? ''] : []),
-        groupe.paie?.effectif ?? '', groupe.paie?.masse ?? '', groupe.paie?.stc ?? '', groupe.paie?.stcMontant ?? ''
-      ]]
-    };
-  }
-  protected readonly documentEmployesVide: PdfImpressionDocument = { titre: 'Employés', colonnes: [], lignes: [] };
-  protected readonly chargerExportEmployes = () => {
-    const params = this.params();
-    const portee = this.porteeCourante();
-    return chargerToutLeReferentiel((page, taille) => this.employeeService.search(
-      this.module().critereEmployes(params, portee), { page, size: taille, sort: 'nomPrenom,asc' }
-    )).pipe(map((employes) => ({
-      titre: 'Employés',
-      contexte: `${this.module().libellePluriel} · ${this.periode() ? libellePeriode(this.periode()!) : 'périmètre courant'}`,
-      colonnes: ['Nom et prénom', 'CIN', 'Fonction', 'Chantier', 'Équipe', 'Statut'],
-      lignes: employes.map((e) => [e.nomPrenom, e.cin, e.fonction.libelle, e.chantier?.code ?? 'Sans chantier', e.equipe?.libelle ?? '', libelleStatutEmploye(e.statut)])
-    })));
-  };
 
-  /** Les paramètres de la vue Tabulaire du module : ses filtres propres, sans les étapes du périmètre. */
-  protected readonly parametresListe = computed<Params>(() => this.module().parametresListe(this.params()));
-  /** Les employés du même périmètre dans leur vue Tabulaire. */
-  protected readonly parametresEmployes = computed<Params>(() => {
-    const { periode: _periode, ...ids } = versParametresPerimetre(this.perimetre());
-    return ids;
+  /**
+   * Niveau « Mois » : la durée couverte par la paie et le nombre de bulletins de paie (un bulletin = un employé payé pour un mois),
+   * par exemple « Sur 3 ans et 2 mois, 15 623 bulletins de paie ». `null` tant que les mois ne sont pas chargés ou s'il n'y en a aucun.
+   */
+  protected readonly couverturePaie = computed<string | null>(() => {
+    const mois = this.groupes();
+    if (this.niveau() !== 'PERIODE' || !mois || mois.length === 0 || this.chargement()) {
+      return null;
+    }
+    const annees = Math.floor(mois.length / 12);
+    const reste = mois.length % 12;
+    const duree = [annees > 0 ? `${annees} an${annees > 1 ? 's' : ''}` : '', reste > 0 ? `${reste} mois` : ''].filter(Boolean).join(' et ');
+    const bulletins = this.totaux().payes;
+    return `Sur ${duree}, ${new Intl.NumberFormat('fr-FR').format(bulletins)} bulletin${bulletins > 1 ? 's' : ''} de paie`;
   });
 
   ngOnInit(): void {

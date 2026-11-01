@@ -1,8 +1,9 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, ActivatedRoute, convertToParamMap } from '@angular/router';
-import { EMPTY, firstValueFrom, of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { Function } from '../models/function.model';
 import { FunctionService } from '../services/function.service';
@@ -25,7 +26,7 @@ describe('FunctionListComponent', () => {
   let service: { search: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
-  const lignes = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
+  const lignes = () => lignesGrille(racine()).map((l) => l.cells[0]?.textContent?.trim());
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement | null;
 
   async function afficher(permissions: string[] = TOUTES, query: Record<string, string> = {}): Promise<void> {
@@ -36,6 +37,7 @@ describe('FunctionListComponent', () => {
     fixture = TestBed.createComponent(FunctionListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -57,7 +59,6 @@ describe('FunctionListComponent', () => {
       expect(lignes()).toEqual(['MACON', 'PLOMBIER']);
       expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 fonctions');
       expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
-      expect(racine().querySelector('app-pdf-export-button[table-export] button[aria-label="Exporter les fonctions filtrées en PDF"]')).not.toBeNull();
     });
 
     it('accorde le singulier à une seule fonction', async () => {
@@ -77,7 +78,7 @@ describe('FunctionListComponent', () => {
       fixture.componentInstance['onSearch']();
       fixture.detectChanges();
 
-      expect(racine().querySelector('.stp-table__empty')?.textContent).toBe('Aucune fonction ne correspond à ces critères.');
+      expect(racine().querySelector('.stp-table__empty-state')?.textContent).toBe('Aucune fonction ne correspond à ces critères.');
     });
   });
 
@@ -113,28 +114,6 @@ describe('FunctionListComponent', () => {
     });
   });
 
-  describe('export PDF', () => {
-    it('exporte toutes les fonctions qui correspondent au filtre et garde les colonnes visibles', async () => {
-      await afficher(TOUTES, { libelle: 'mac' });
-      service.search.mockImplementation((_criteria: unknown, demande: { page: number; size: number; sort: string }) => of({
-        content: demande.page === 0 ? [FONCTIONS[0]] : [{ id: 3, version: 0, libelle: 'MACONNERIE' }],
-        page: { size: demande.size, number: demande.page, totalElements: 2, totalPages: 2 }
-      }));
-
-      const document = await firstValueFrom(fixture.componentInstance['chargerExport']());
-
-      expect(service.search.mock.calls.slice(-2)).toEqual([
-        [{ libelle: 'mac' }, { page: 0, size: 200, sort: 'libelle,asc' }],
-        [{ libelle: 'mac' }, { page: 1, size: 200, sort: 'libelle,asc' }]
-      ]);
-      expect(document).toEqual({
-        titre: 'Référentiel des fonctions',
-        contexte: 'Recherche par libellé : mac',
-        colonnes: ['Libellé'],
-        lignes: [['MACON'], ['MACONNERIE']]
-      });
-    });
-  });
 
   describe('actions sur une ligne', () => {
     it('ouvre la consultation et la modification', async () => {

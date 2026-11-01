@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
 
+import { AssistantEtatService } from './assistant-etat.service';
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
@@ -11,7 +12,7 @@ import { contexteEcran } from './ecran-assistant';
 import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtilisateurComponent } from './question-utilisateur.component';
 
 /**
- * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
+ * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par le mode Staport Intelligence de la barre Staport.
  * L'écran ouvert (domaine et filtres) part avec chaque question comme indice de contexte.
  */
 @Component({
@@ -37,7 +38,8 @@ export class AssistantComponent {
 
   protected readonly chat = AssistantChatComponent;
   protected readonly entete = AssistantEnteteComponent;
-  readonly ouvert = signal(false);
+  protected readonly etat = inject(AssistantEtatService);
+  readonly ouvert = this.etat.ouvert;
 
   private readonly url = toSignal(
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd), map(() => this.router.url)),

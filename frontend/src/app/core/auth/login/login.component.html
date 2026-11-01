@@ -1,36 +1,25 @@
-<div class="auth-page">
-  <form [formRoot]="form" class="auth-card" aria-labelledby="connexion-titre">
-    <div class="auth-card__intro">
-      <h1 id="connexion-titre">Bienvenue</h1>
-      <p>Connectez-vous à votre compte.</p>
-    </div>
-
+<stp-auth-card titre="Bienvenue" description="Connectez-vous à votre compte.">
+  <form [formRoot]="form" class="app-form">
     @if (errorMessage(); as message) {
-      <div class="auth-card__error" role="alert">{{ message }}</div>
+      <stp-message severity="error" [text]="message" />
     }
 
     <div class="field">
       <label for="username">Nom d'utilisateur</label>
-      <input id="username" type="text" [formField]="form.username" autocomplete="username" [attr.aria-invalid]="form.username().invalid() && form.username().touched()" aria-describedby="username-error" />
+      <input class="stp-input" id="username" type="text" [formField]="form.username" autocomplete="username" [attr.aria-invalid]="form.username().invalid() && form.username().touched()" aria-describedby="username-error" />
       <stp-field-error [field]="form.username" id="username-error" />
     </div>
 
     <div class="field">
       <label for="password">Mot de passe</label>
-      <div class="auth-card__password">
-        <input id="password" [type]="passwordVisible() ? 'text' : 'password'" [formField]="form.password" autocomplete="current-password" [attr.aria-invalid]="form.password().invalid() && form.password().touched()" aria-describedby="password-error" />
-        <button type="button" class="auth-card__password-toggle" [attr.aria-pressed]="passwordVisible()" aria-controls="password" (click)="togglePasswordVisibility()">
-          {{ passwordVisible() ? 'Masquer' : 'Afficher' }}
-          <span class="visually-hidden">le mot de passe</span>
-        </button>
-      </div>
+      <stp-password-input inputId="password" [formField]="form.password" autocomplete="current-password" />
       <stp-field-error [field]="form.password" id="password-error" />
     </div>
 
-    <button type="submit" [disabled]="form().submitting()" class="auth-card__submit">
+    <button type="submit" stp-button class="app-form__submit" [loading]="form().submitting()">
       @if (form().submitting()) { Connexion en cours… } @else { Se connecter }
     </button>
 
-    <a routerLink="/forgot-password" class="auth-card__forgot">Mot de passe oublié ?</a>
+    <a routerLink="/forgot-password" class="app-link">Mot de passe oublié ?</a>
   </form>
-</div>
+</stp-auth-card>

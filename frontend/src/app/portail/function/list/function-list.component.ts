@@ -4,14 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
-import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
-import { chargerToutLeReferentiel } from '../../perimetre/perimetre-module';
 import { Function } from '../models/function.model';
 import { FunctionFiltres, lireFiltresFunction, memesFiltresFunction } from '../filtres/function-filtres';
 import { FunctionService } from '../services/function.service';
@@ -25,7 +22,7 @@ const CONFIGURATION_TABLE_FUNCTION: CollectionTableConfig = {
 /** Vue tabulaire des fonctions. Le filtre vient de l'URL (voir `FunctionVuesComponent`) ; l'import et la création sont dans l'en-tête de la page. */
 @Component({
   selector: 'app-function-list',
-  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective, PdfExportButtonComponent],
+  imports: [ButtonComponent, CollectionTableComponent, TableCellDirective, TableRowActionsDirective],
   templateUrl: './function-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -56,20 +53,6 @@ export class FunctionListComponent {
   private lastSize = 10;
   private lastSort = 'libelle,asc';
 
-  protected readonly documentVide: PdfImpressionDocument = { titre: 'Fonctions', contexte: '', colonnes: [], lignes: [] };
-  protected readonly chargerExport = () => {
-    const filtres = this.filtres;
-    const colonnes = this.columns.visible;
-    return chargerToutLeReferentiel((page, taille) => this.functionService.search(
-      { libelle: filtres.libelle || undefined },
-      { page, size: taille, sort: this.lastSort }
-    )).pipe(map((fonctions) => ({
-      titre: 'Référentiel des fonctions',
-      contexte: filtres.libelle ? `Recherche par libellé : ${filtres.libelle}` : 'Toutes les fonctions',
-      colonnes: colonnes.map((colonne) => colonne.header),
-      lignes: fonctions.map((fonction) => colonnes.map((colonne) => String(fonction[colonne.field as keyof Function] ?? '')))
-    })));
-  };
 
   constructor() {
     this.route.queryParamMap

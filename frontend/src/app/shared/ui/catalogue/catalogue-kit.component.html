@@ -1,0 +1,197 @@
+<h2 class="mb-4 mt-12 text-xl font-semibold">Vocabulaire partagé</h2>
+
+<section class="mb-8" aria-labelledby="kit-messages">
+  <h3 id="kit-messages" class="mb-2 text-base font-semibold">Messages teintés et badges</h3>
+  <div class="flex flex-col gap-2">
+    <stp-message severity="info" text="Information : fond teinté, texte à fort contraste, icône de la couleur du statut." />
+    <stp-message severity="warn" text="Avertissement : la paie du mois est marquée STC ; le forfait est interdit." />
+    <stp-message severity="error" text="Erreur : le fichier contient des lignes à corriger avant l'import." />
+  </div>
+  <div class="mt-3 flex flex-wrap gap-2">
+    <stp-badge value="Actif" severity="success" />
+    <stp-badge value="Inactif" severity="danger" />
+    <stp-badge value="ERP" severity="info" />
+    <stp-badge value="Manuel" severity="neutral" />
+  </div>
+</section>
+
+<section class="mb-8" aria-labelledby="kit-assistant">
+  <h3 id="kit-assistant" class="mb-2 text-base font-semibold">Assistant en étapes</h3>
+  <div class="app-wizard max-w-2xl rounded-md border border-border-strong bg-surface p-4">
+    <p class="app-wizard__sous-titre">Exporter la paie · rapport de synthèse</p>
+    <stp-stepper
+      ariaLabel="Étapes de l'exemple"
+      [etapes]="etapes"
+      [courante]="etapeCourante()"
+      [indexCourant]="indexCourant()"
+      (choisir)="allerA($event)"
+    />
+    <div class="app-wizard__corps">
+      <section class="app-wizard__panneau">
+        <p class="app-wizard__consigne">Choisissez le format du fichier.</p>
+        <div class="app-wizard__formats">
+          <button type="button" class="app-wizard__format" [class.app-wizard__format--choisi]="format() === 'PDF'" (click)="format.set('PDF')">
+            <span class="app-wizard__apercu app-wizard__apercu--pdf"><span></span><span></span><span></span><span></span></span>
+            <strong><stp-icon name="file-text" /> Rapport PDF</strong>
+            <em>Synthèse pour la direction</em>
+            <ul><li>Indicateurs et graphiques</li><li>Une section par chantier</li></ul>
+          </button>
+          <button type="button" class="app-wizard__format" [class.app-wizard__format--choisi]="format() === 'EXCEL'" (click)="format.set('EXCEL')">
+            <span class="app-wizard__apercu app-wizard__apercu--excel"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
+            <strong><stp-icon name="file-spreadsheet" /> Classeur Excel</strong>
+            <em>Détail ligne par ligne</em>
+            <ul><li>Feuille globale et par chantier</li><li>Totaux et sorties STC</li></ul>
+          </button>
+        </div>
+        <div class="app-wizard__choix" role="group" aria-label="Chantiers de l'exemple">
+          <label class="app-wizard__choix-item" [class.app-wizard__choix-item--choisi]="choisis().includes('C168')">
+            <input type="checkbox" class="stp-checkbox" [checked]="choisis().includes('C168')" (change)="basculer('C168')" />
+            <span><span class="app-wizard__code">C168 — Route de Nador</span><span class="app-wizard__meta">42 employés</span></span>
+          </label>
+          <label class="app-wizard__choix-item" [class.app-wizard__choix-item--choisi]="choisis().includes('C196')">
+            <input type="checkbox" class="stp-checkbox" [checked]="choisis().includes('C196')" (change)="basculer('C196')" />
+            <span><span class="app-wizard__code">C196 — Autoroute Rabat–Fès</span><span class="app-wizard__meta">118 employés</span></span>
+          </label>
+        </div>
+        <div class="app-wizard__carte app-wizard__carte--ok" role="status">
+          <stp-icon name="circle-check" />
+          <div>
+            <strong>Octobre 2026 contient de la paie</strong>
+            <dl class="app-wizard__chiffres">
+              <div><dt>bulletins</dt><dd>160</dd></div>
+              <div><dt>chantiers</dt><dd>2</dd></div>
+              <div><dt>masse salariale</dt><dd>1 250 000,00 DH</dd></div>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </div>
+    <footer class="app-wizard__pied">
+      <button stp-button variant="text" icon="arrow-left" type="button">Retour</button>
+      <button stp-button type="button" icon="arrow-right">Continuer</button>
+    </footer>
+  </div>
+  <div class="mt-4 grid gap-4 md:grid-cols-2">
+    <div class="rounded-md border border-border-strong bg-surface"><stp-wizard-state etat="encours" titre="Génération en cours"><p class="m-0">Le téléchargement démarre dès que le fichier est prêt.</p></stp-wizard-state></div>
+    <div class="rounded-md border border-border-strong bg-surface"><stp-wizard-state etat="termine" titre="Fichier prêt"><p class="m-0">Paie_Rapport_2026-10.pdf</p><button stp-button variant="secondary" icon="download" type="button">Télécharger à nouveau</button></stp-wizard-state></div>
+  </div>
+</section>
+
+<section class="mb-8" aria-labelledby="kit-tableaux-bord">
+  <h3 id="kit-tableaux-bord" class="mb-2 text-base font-semibold">Tableau de bord</h3>
+  <div class="app-dashboard">
+    <nav class="app-trail" aria-label="Position dans les chantiers">
+      <button type="button" class="app-trail__root"><stp-icon name="layout-grid" /> Chantiers</button>
+      <stp-icon name="chevron-right" class="app-trail__sep" />
+      <span class="app-trail__step"><span class="app-trail__dimension">Équipe</span> Chauffeurs <button type="button" class="app-trail__remove" aria-label="Retirer l'étape Équipe"><stp-icon name="x" /></button></span>
+    </nav>
+    <div class="app-kpis">
+      <div class="app-kpi"><span>Masse salariale</span><strong>4 500,00 DH</strong><small>+12,5 % sur le mois précédent</small></div>
+      <div class="app-kpi app-kpi--positive"><span>Bulletins de paie</span><strong>78</strong><small>+3 personnes</small></div>
+      <div class="app-kpi app-kpi--negative"><span>Sorties STC</span><strong>2</strong><small>−1 sur le mois</small></div>
+    </div>
+    <div class="app-panel-pair">
+      <section class="app-panel">
+        <div class="app-panel__head"><h4>Répartition</h4>
+          <div class="app-chips" role="group" aria-label="Série affichée">
+            <button type="button" aria-pressed="true">Masse</button>
+            <button type="button" aria-pressed="false">Effectif</button>
+          </div>
+        </div>
+        <p class="app-muted">Un panneau regroupe un titre, ses choix et son contenu.</p>
+      </section>
+      <section class="app-panel">
+        <h4>Qualité des données</h4>
+        <p class="app-note-box">Tous les bulletins sont rattachés à une équipe.</p>
+      </section>
+    </div>
+    <div class="app-entity-grid">
+      <article class="app-entity">
+        <button type="button" class="app-entity__body">
+          <span class="app-entity__head"><span class="app-entity__code">CH</span><stp-badge value="Actif" severity="success" /></span>
+          <span class="app-entity__name">Chauffeurs</span>
+          <span class="app-entity__label">Équipe du chantier C168</span>
+          <dl class="app-entity__metrics">
+            <div class="app-entity__indicator"><dt>Effectif</dt><dd><strong>12</strong><span class="app-entity__variation">+1 personne · vs septembre 2026</span></dd></div>
+            <div class="app-entity__indicator"><dt>Masse (DH)</dt><dd><strong>48 200,00</strong><span class="app-entity__variation">+4,1 % · vs septembre 2026</span></dd></div>
+          </dl>
+        </button>
+        <div class="app-entity__footer">
+          <a stp-button variant="text" icon="chart-column" iconOnly href="/catalogue" aria-label="Voir l'analyse de Chauffeurs"></a>
+        </div>
+      </article>
+      <a class="app-person" href="/catalogue">
+        <span class="app-person__avatar" aria-hidden="true">AA</span>
+        <span class="app-person__who"><strong>Ali Alaoui</strong><small>CIN AB123456 · Chauffeur</small></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="mb-8" aria-labelledby="kit-fiche">
+  <h3 id="kit-fiche" class="mb-2 text-base font-semibold">Fiche, chronologie et listes</h3>
+  <div class="app-stack">
+    <header class="app-profile">
+      <span class="app-profile__avatar" aria-hidden="true">AA</span>
+      <div class="app-profile__identity"><h4 class="m-0 text-lg font-semibold">Ali Alaoui</h4><p><span>CIN AB123456</span><stp-badge value="Actif" severity="success" /></p></div>
+    </header>
+    <dl class="app-facts">
+      <div><dt>Fonction</dt><dd>Chauffeur camion</dd></div>
+      <div><dt>Salaire</dt><dd>5 500,00 DH<small>Mensuel</small></dd></div>
+      <div><dt>Embauche</dt><dd>12/03/2021</dd></div>
+    </dl>
+    <ul class="app-timeline" aria-label="Parcours de paie">
+      <li><span class="app-timeline__date">octobre 2026</span><ul><li class="app-timeline__event" data-type="RETOUR"><span class="app-timeline__bullet"><stp-icon name="user-check" /></span>Retour en poste</li></ul></li>
+      <li><span class="app-timeline__date">juillet 2026</span><ul><li class="app-timeline__event" data-type="DEPART"><span class="app-timeline__bullet"><stp-icon name="log-out" /></span>Départ (STC)</li></ul></li>
+    </ul>
+    <div class="app-empty-box"><stp-icon name="calendar" size="1.5rem" /><div><strong>Aucun bulletin pour l'instant</strong><p>Les mois importés apparaîtront ici.</p></div></div>
+    <div class="app-empty" role="status"><stp-icon name="circle-check" /> Aucun résultat pour ces filtres.</div>
+    <div class="app-empty" role="alert"><stp-icon name="circle-alert" /> Impossible de charger la liste. <button stp-button variant="secondary" type="button">Réessayer</button></div>
+  </div>
+</section>
+
+<section class="mb-8" aria-labelledby="kit-reglages">
+  <h3 id="kit-reglages" class="mb-2 text-base font-semibold">Réglages, droits et versions</h3>
+  <div class="app-stack">
+    <section class="app-setting">
+      <div class="app-setting__text"><h4>Délai de conservation</h4><p>Durée avant la purge automatique du journal.</p></div>
+      <form class="app-setting__form">
+        <div class="field"><label for="kit-valeur">Valeur (jours)</label><input id="kit-valeur" class="stp-input" type="text" value="90" /></div>
+        <button stp-button type="button">Enregistrer</button>
+      </form>
+    </section>
+    <p class="app-callout">Ce rôle est protégé : seule sa description peut être modifiée.</p>
+    <div class="app-group">
+      <div class="app-group__header"><strong>Employés</strong></div>
+      <div class="app-group__items">
+        <label class="app-check"><input type="checkbox" class="stp-checkbox" checked /><span class="app-check__code">EMPLOYEE_READ</span><small>Consulter les fiches</small></label>
+        <label class="app-check"><input type="checkbox" class="stp-checkbox" /><span class="app-check__code">EMPLOYEE_WRITE</span><small>Créer et modifier</small></label>
+      </div>
+    </div>
+    <section class="app-columns" aria-labelledby="kit-colonnes">
+      <h3 id="kit-colonnes">Paie</h3>
+      <div class="app-columns__body">
+        <div class="app-columns__col app-columns__col--allowed"><h4>Autorisées <span>(1)</span></h4><label class="app-check"><input type="checkbox" class="stp-checkbox" checked /><span class="app-check__code">PAIE_READ</span></label></div>
+        <div class="app-columns__col app-columns__col--denied"><h4>Refusées <span>(1)</span></h4><label class="app-check"><input type="checkbox" class="stp-checkbox" /><span class="app-check__code">PAIE_WRITE</span></label></div>
+      </div>
+    </section>
+    <ol class="app-versions">
+      <li class="app-card"><header class="app-versions__head"><strong>Version 3</strong><span class="app-versions__origin">Import Excel</span></header><p class="m-0"><span class="app-outcome app-outcome--succes">Succès</span> · 12 changements</p></li>
+      <li class="app-card"><header class="app-versions__head"><strong>Version 2</strong><span class="app-versions__origin">Saisie</span></header><p class="m-0"><span class="app-outcome app-outcome--echec">Échec</span> · accès refusé</p></li>
+    </ol>
+    <dl class="app-dl-grid"><div><dt>Utilisateur</dt><dd>rh</dd></div><div><dt>Adresse IP</dt><dd>10.0.0.12</dd></div><div><dt>Opération</dt><dd>Importer la paie</dd></div></dl>
+  </div>
+</section>
+
+<section class="mb-8" aria-labelledby="kit-filtres">
+  <h3 id="kit-filtres" class="mb-2 text-base font-semibold">Barre de filtres</h3>
+  <form class="app-toolbar" aria-label="Filtres de l'exemple" (submit)="$event.preventDefault()">
+    <div class="app-toolbar__period" role="group" aria-label="Mois">
+      <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois plus ancien"></button>
+      <button stp-button variant="text" icon="calendar" class="app-toolbar__period-month" type="button" aria-label="Choisir le mois"><span class="app-capitalize">octobre 2026</span></button>
+      <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois plus récent" disabled></button>
+    </div>
+    <span class="app-toolbar__search"><stp-icon name="search" /><input class="stp-input" type="text" placeholder="Nom &amp; prénom" aria-label="Nom et prénom" /></span>
+    <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" aria-label="Effacer les filtres"><span class="app-toolbar__clear-label">Effacer</span></button>
+  </form>
+</section>

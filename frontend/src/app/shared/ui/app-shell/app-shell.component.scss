@@ -1,0 +1,40 @@
+// Coque : le contenu occupe toute la largeur ; la navigation est dans la barre Staport (`stp-dock`), ouverte par le bouton de l'en-tête.
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-content {
+  // Toute la place pour le travail : c'est l'écran qui porte son propre espacement
+  padding: 0;
+  min-width: 0;
+}
+
+// Un seul outlet reste monté pendant la connexion : Angular Aria peut donc nettoyer les contrôles sans détruire
+// une ancienne arborescence de route au moment où la coque devient visible.
+.app-shell--auth .app-content {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+// Lien d'évitement : invisible, il apparaît au premier appui sur Tab pour passer directement au contenu
+.app-skip {
+  position: fixed;
+  inset-block-start: var(--space-sm);
+  inset-inline-start: var(--space-sm);
+  z-index: 200;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+
+  &:focus-visible {
+    transform: none;
+  }
+}
+
+.app-content:focus {
+  outline: none;
+}

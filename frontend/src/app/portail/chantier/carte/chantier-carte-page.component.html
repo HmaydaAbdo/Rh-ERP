@@ -1,19 +1,20 @@
-<div class="carte-page app-page">
-  <app-chantier-carte class="carte-page__carte" [chantiers]="chantiersFiltres()" />
+<div class="app-map-page app-page">
+  <app-chantier-carte class="app-map-page__map" [chantiers]="chantiersFiltres()" />
 
-  <form [formRoot]="formulaire" class="carte-page__filtre" aria-label="Recherche sur la carte">
-    <stp-icon class="carte-page__recherche-icone" name="search" aria-hidden="true" />
+  <form [formRoot]="formulaire" class="app-map-page__search" aria-label="Recherche sur la carte">
+    <stp-dock-declencheur [enLigne]="true" />
+    <stp-icon class="app-map-page__search-icon" name="search" aria-hidden="true" />
     <input
-      class="carte-page__recherche"
+      class="app-map-page__input"
       type="search"
       autocomplete="off"
       [formField]="formulaire.texte"
       aria-label="Rechercher par code ou nom de chantier"
       placeholder="Code ou nom…"
     />
-    <span class="carte-page__separateur" aria-hidden="true"></span>
+    <span class="app-map-page__sep" aria-hidden="true"></span>
     <stp-select
-      class="carte-page__nature"
+      class="app-map-page__kind"
       ariaLabel="Filtrer par nature"
       [options]="natures"
       [multiple]="true"
@@ -26,10 +27,10 @@
   </form>
 
   @if (erreur()) {
-    <button stp-button class="carte-page__reessayer" type="button" (click)="charger()">Réessayer</button>
+    <button stp-button class="app-map-page__retry" type="button" (click)="charger()">Réessayer</button>
   }
   @if (!chargement() && !erreur() && chantiersFiltres().length === 0) {
-    <p class="carte-page__vide" role="status">Aucun chantier ne correspond à cette recherche.</p>
+    <p class="app-map-page__empty" role="status">Aucun chantier ne correspond à cette recherche.</p>
   }
   @if (chargement()) {
     <span class="app-lecteur" role="status">Chargement des chantiers…</span>

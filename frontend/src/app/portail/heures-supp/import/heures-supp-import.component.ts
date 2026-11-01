@@ -2,19 +2,23 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
+import { StepperComponent, StepperEtape } from '../../../shared/ui/stepper/stepper.component';
+import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { EmployeeReferenceOption, EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { ConfirmDialogService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 
@@ -24,16 +28,31 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
   templateUrl: './heures-supp-import.component.html',
-  styleUrl: './heures-supp-import.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeuresSuppImportComponent {
+  protected readonly colonnesRecap: TableColumn[] = [
+    { field: 'cin', header: 'CIN' },
+    { field: 'nomPrenom', header: 'Employé' },
+    { field: 'heuresSupplementaires', header: 'P/H', align: 'text-end' },
+    { field: 'salaireHoraireDh', header: 'S/H (DH/h)', align: 'text-end' },
+    { field: 'montantDh', header: 'Montant', align: 'text-end' },
+    { field: 'stcDh', header: 'STC', align: 'text-end' },
+    { field: 'forfaitDh', header: 'Forfait', align: 'text-end' },
+    { field: 'netAPayerDh', header: 'Net à payer', align: 'text-end' }
+  ];
   protected readonly chantiers = inject(ChantierReferenceService);
   protected readonly fonctions = inject(FunctionReferenceService);
   protected readonly employes = inject(EmployeeReferenceService);
   protected readonly etape = signal(1);
+  protected readonly etapes: readonly StepperEtape[] = [
+    { id: '1', libelle: 'Période et chantier' },
+    { id: '2', libelle: 'Pointage' },
+    { id: '3', libelle: 'Forfaits' },
+    { id: '4', libelle: 'Contrôle et import' }
+  ];
   protected readonly mois = signal<Date | null>(null);
   protected readonly chantierId = signal<number | null>(null);
   protected readonly chantierLibelle = signal('');
@@ -156,5 +175,11 @@ export class HeuresSuppImportComponent {
   private lancer<T>(source: import('rxjs').Observable<T>, succes: (valeur: T) => void): void {
     this.erreur.set(null); this.chargement.set(true);
     source.subscribe({ next: (valeur) => { this.chargement.set(false); succes(valeur); }, error: (e: { error?: { message?: string }; message?: string }) => { this.chargement.set(false); this.erreur.set(e.error?.message ?? e.message ?? 'L’opération a échoué. Réessayez.'); } });
+  }
+
+  /** Revient à une étape déjà franchie (jamais en avant : chaque étape valide la précédente) ; sans effet une fois l'import terminé. */
+  protected allerEtape(id: string): void {
+    const cible = Number(id);
+    if (this.resultat() === null && cible < this.etape()) this.etape.set(cible);
   }
 }

@@ -2,7 +2,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { NotificationService } from '../../shared/feedback/feedback.service';
+import { NotificationService } from '../../shared/ui/feedback/feedback.service';
 import { errorInterceptor } from './error.interceptor';
 
 describe('errorInterceptor', () => {

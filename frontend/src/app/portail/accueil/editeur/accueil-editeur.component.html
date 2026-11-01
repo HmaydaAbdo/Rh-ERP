@@ -1,0 +1,45 @@
+<div class="app-stack">
+  <section class="app-stack" aria-labelledby="accueil-affiches">
+    <h3 id="accueil-affiches" class="app-section-title">Affichés sur l’accueil ({{ affiches().length }})</h3>
+    @if (affiches().length === 0) {
+      <p class="app-muted" role="status">Aucun indicateur : l’accueil sera vide.</p>
+    }
+    @for (indicateur of affiches(); track indicateur.code; let premier = $first; let dernier = $last) {
+      <div class="app-setting">
+        <div class="app-setting__text">
+          <h2>{{ indicateur.libelle }}</h2>
+          <p>{{ indicateur.description }}</p>
+        </div>
+        <div class="app-setting__form">
+          <button stp-button variant="text" icon="arrow-up" iconOnly type="button" [disabled]="premier" [attr.aria-label]="'Monter ' + indicateur.libelle" (click)="deplacer(indicateur.code, -1)"></button>
+          <button stp-button variant="text" icon="arrow-down" iconOnly type="button" [disabled]="dernier" [attr.aria-label]="'Descendre ' + indicateur.libelle" (click)="deplacer(indicateur.code, 1)"></button>
+          <button stp-button variant="secondary" icon="x" type="button" [attr.aria-label]="'Retirer ' + indicateur.libelle" (click)="retirer(indicateur.code)">Retirer</button>
+        </div>
+      </div>
+    }
+  </section>
+
+  @if (ajoutables().length > 0) {
+    <section class="app-stack" aria-labelledby="accueil-ajoutables">
+      <h3 id="accueil-ajoutables" class="app-section-title">Disponibles ({{ ajoutables().length }})</h3>
+      @for (indicateur of ajoutables(); track indicateur.code) {
+        <div class="app-setting">
+          <div class="app-setting__text">
+            <h2>{{ indicateur.libelle }}</h2>
+            <p>{{ indicateur.description }}</p>
+          </div>
+          <div class="app-setting__form">
+            <button stp-button variant="secondary" icon="plus" type="button" [attr.aria-label]="'Ajouter ' + indicateur.libelle" (click)="ajouter(indicateur.code)">Ajouter</button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <div class="app-wizard__pied">
+    <button stp-button variant="primary" type="button" [loading]="enregistrement()" [disabled]="!modifie()" (click)="valider()">Enregistrer</button>
+    @if (accueil().personnalise) {
+      <button stp-button variant="text" type="button" [disabled]="enregistrement()" (click)="reinitialiser.emit()">Rétablir tous les indicateurs</button>
+    }
+  </div>
+</div>

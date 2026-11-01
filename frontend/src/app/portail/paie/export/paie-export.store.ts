@@ -3,7 +3,7 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 
-import { NotificationService } from '../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
 import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
@@ -352,12 +352,12 @@ export class PaieExportStore {
   /** Entrée dans un champ de nombre : passe au champ suivant, puis au bouton « Continuer » après le dernier. */
   entreeSuivante(evenement: Event): void {
     evenement.preventDefault();
-    const champs = Array.from(document.querySelectorAll<HTMLInputElement>('.export-wizard__materiel-champ'));
+    const champs = Array.from(document.querySelectorAll<HTMLInputElement>('.app-wizard__materiel-champ'));
     const suivant = champs[champs.indexOf(evenement.target as HTMLInputElement) + 1];
     if (suivant) {
       suivant.focus();
     } else {
-      document.querySelector<HTMLButtonElement>('.export-wizard__pied button:last-child')?.focus();
+      document.querySelector<HTMLButtonElement>('.app-wizard__pied button:last-child')?.focus();
     }
   }
 

@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 
 import { fournirSignalForms } from '../../../shared/forms/signal-forms.config';
 import { fournirRoute } from '../../../shared/testing/ecrans';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { HeuresSupp } from '../models/heures-supp.model';

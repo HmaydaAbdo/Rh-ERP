@@ -19,10 +19,11 @@ test.describe('Téléphone', () => {
   test('le menu s’ouvre et se ferme avec le bouton et Échap', async ({ page }) => {
     await page.goto('/functions');
 
-    await page.getByRole('button', { name: 'Ouvrir le menu' }).click();
-    await expect(page.getByRole('button', { name: 'Fermer le menu' })).toBeVisible();
+    const declencheur = page.getByRole('button', { name: 'Ouvrir la barre Staport' });
+    await declencheur.click();
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: 'Ouvrir le menu' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toHaveCount(0);
   });
 
   test('les boutons d’action ont une cible tactile d’au moins 44 px', async ({ page }) => {

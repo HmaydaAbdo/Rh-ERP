@@ -1,7 +1,7 @@
-<div class="chantier-carte">
+<div class="app-map">
   <div
     #conteneur
-    class="chantier-carte__carte"
+    class="app-map__canvas"
     role="region"
     aria-label="Carte des chantiers"
     [attr.aria-describedby]="idAide"
@@ -10,20 +10,20 @@
     Carte du monde. Flèches du clavier pour déplacer la carte, plus et moins pour zoomer, Maj et flèches pour pivoter et incliner.
   </p>
 
-  <div #commandes class="chantier-carte__commandes" role="group" aria-label="Outils de la carte">
-    <div class="chantier-carte__modes" role="group" aria-label="Style de carte">
-      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().fond === 'plan'" (click)="choisirFond('plan')">
+  <div #commandes class="app-map__controls" role="group" aria-label="Outils de la carte">
+    <div class="app-map__modes" role="group" aria-label="Style de carte">
+      <button type="button" class="app-map__tool" [attr.aria-pressed]="affichage().fond === 'plan'" (click)="choisirFond('plan')">
         <stp-icon name="map" aria-hidden="true" /><span>Plan</span>
       </button>
-      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().fond === 'satellite'" (click)="choisirFond('satellite')">
+      <button type="button" class="app-map__tool" [attr.aria-pressed]="affichage().fond === 'satellite'" (click)="choisirFond('satellite')">
         <stp-icon name="satellite" aria-hidden="true" /><span>Satellite</span>
       </button>
-      <button type="button" class="chantier-carte__outil" [attr.aria-pressed]="affichage().relief" (click)="basculerRelief()">
+      <button type="button" class="app-map__tool" [attr.aria-pressed]="affichage().relief" (click)="basculerRelief()">
         <stp-icon name="mountain" aria-hidden="true" /><span>Relief</span>
       </button>
       <button
         type="button"
-        class="chantier-carte__outil"
+        class="app-map__tool"
         [attr.aria-pressed]="vue3d()"
         [attr.aria-label]="vue3d() ? 'Remettre la carte à plat' : 'Incliner la carte en 3D'"
         (click)="basculerVue3d()"
@@ -31,20 +31,20 @@
         <stp-icon [name]="vue3d() ? 'map' : 'box'" aria-hidden="true" /><span>3D</span>
       </button>
     </div>
-    <span class="chantier-carte__separateur" aria-hidden="true"></span>
-    <button type="button" class="chantier-carte__outil" aria-label="Zoom avant" title="Zoom avant" (click)="zoomer(1)">
+    <span class="app-map__sep" aria-hidden="true"></span>
+    <button type="button" class="app-map__tool" aria-label="Zoom avant" title="Zoom avant" (click)="zoomer(1)">
       <stp-icon name="plus" aria-hidden="true" /><span>Zoom +</span>
     </button>
-    <button type="button" class="chantier-carte__outil" aria-label="Zoom arrière" title="Zoom arrière" (click)="zoomer(-1)">
+    <button type="button" class="app-map__tool" aria-label="Zoom arrière" title="Zoom arrière" (click)="zoomer(-1)">
       <stp-icon name="minus" aria-hidden="true" /><span>Zoom −</span>
     </button>
-    <button type="button" class="chantier-carte__outil" aria-label="Recentrer sur les chantiers affichés" title="Recentrer" (click)="vueDEnsemble()">
+    <button type="button" class="app-map__tool" aria-label="Recentrer sur les chantiers affichés" title="Recentrer" (click)="vueDEnsemble()">
       <stp-icon name="scan" aria-hidden="true" /><span>Recentrer</span>
     </button>
-    <button type="button" class="chantier-carte__outil" aria-label="Orienter la carte au nord" title="Orienter au nord" (click)="orienterAuNord()">
+    <button type="button" class="app-map__tool" aria-label="Orienter la carte au nord" title="Orienter au nord" (click)="orienterAuNord()">
       <stp-icon name="map" aria-hidden="true" /><span>Nord</span>
     </button>
-    <button type="button" class="chantier-carte__outil" aria-label="Centrer sur ma position" title="Ma position" (click)="localiser()">
+    <button type="button" class="app-map__tool" aria-label="Centrer sur ma position" title="Ma position" (click)="localiser()">
       <stp-icon name="locate-fixed" aria-hidden="true" /><span>Ma position</span>
     </button>
   </div>
@@ -54,6 +54,6 @@
   }
 
   @if (messageErreur(); as message) {
-    <stp-message class="chantier-carte__erreur" severity="error" [text]="message" />
+    <stp-message class="app-map__error" severity="error" [text]="message" />
   }
 </div>

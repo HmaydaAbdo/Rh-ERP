@@ -1,10 +1,11 @@
+import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
@@ -20,10 +21,9 @@ interface PermissionGroup {
 
 @Component({
   selector: 'app-role-form',
-  imports: [FormField, FormRoot, RouterLink, IconComponent, ButtonComponent, FieldErrorComponent],
+  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, IconComponent, ButtonComponent, FieldErrorComponent],
   templateUrl: './role-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './role-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleFormComponent {
   private readonly roleService = inject(RoleService);

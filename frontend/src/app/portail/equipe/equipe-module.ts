@@ -2,7 +2,7 @@ import { map } from 'rxjs';
 
 import { critereEmployesDe, criterePaieDe } from '../perimetre/perimetre';
 import { chargerToutLeReferentiel, ModulePerimetre } from '../perimetre/perimetre-module';
-import { filtreEquipeActif, lireFiltresEquipe, versCriteresEquipe, versParametresEquipe } from './filtres/equipe-filtres';
+import { filtreEquipeActif, lireFiltresEquipe, versCriteresEquipe } from './filtres/equipe-filtres';
 import { EquipeService } from './services/equipe.service';
 
 /** Ce que le module Équipes apporte aux vues Cartes et Analytique partagées (voir `portail/perimetre/`). */
@@ -18,7 +18,6 @@ export function moduleEquipe(equipeService: EquipeService): ModulePerimetre {
     vueEffectifParDimension: true,
     introAnalytique: 'Répartition de la paie par équipe et évolution mensuelle des indicateurs sélectionnés.',
     periodePaieRecenteFixe: true,
-    sansRaccourciListe: true,
     sansRaccourciCartes: true,
     sansLienEmployes: true,
     lienEmployesPresDuNiveau: true,
@@ -28,7 +27,6 @@ export function moduleEquipe(equipeService: EquipeService): ModulePerimetre {
     sansOrphelinsDansCartes: true,
     route: '/equipes',
     permission: 'EQUIPE_READ',
-    parametresListe: (params) => versParametresEquipe(lireFiltresEquipe(params)),
     critereEmployes: (_params, portee) => critereEmployesDe(portee),
     criterePaie: (_params, portee, periode) => criterePaieDe(portee, periode),
     catalogue: {

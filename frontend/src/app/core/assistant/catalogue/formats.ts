@@ -17,16 +17,6 @@ export function formater(valeur: unknown, format: FormatColonne = 'texte'): stri
   return String(valeur);
 }
 
-/** Le CSV d'un tableau (séparateur `;` et BOM : Excel en français l'ouvre sans assistant), valeurs brutes. */
-export function versCsv(
-  colonnes: readonly { key: string; label: string }[],
-  lignes: readonly Record<string, unknown>[]
-): string {
-  const echapper = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const corps = lignes.map((ligne) => colonnes.map((c) => echapper(ligne[c.key])).join(';'));
-  return '﻿' + [colonnes.map((c) => echapper(c.label)).join(';'), ...corps].join('\r\n');
-}
-
 /** Ordre de tri d'une colonne : nombres par valeur, texte par ordre alphabétique français, vides en dernier. */
 export function comparer(a: unknown, b: unknown): number {
   if (a == null || a === '') return b == null || b === '' ? 0 : 1;

@@ -1,5 +1,5 @@
 
-// Fenêtres de dialogue (`ui/dialog`), confirmations (`shared/feedback`) et sélecteur de fichier : un seul style pour tous les écrans
+// Fenêtres de dialogue (`ui/dialog`), confirmations (`shared/ui/feedback`) et sélecteur de fichier : un seul style pour tous les écrans
 // (voir conventions/design-system.md). Le dialogue se plafonne à l'écran sur téléphone dans son propre composant.
 
 // Choix d'un fichier (import Excel) : le bouton natif prend l'allure d'un bouton secondaire
@@ -10,7 +10,7 @@ input[type='file'] {
 
   &::file-selector-button {
     height: var(--control-height);
-    margin-right: var(--space-sm);
+    margin-inline-end: var(--space-sm);
     padding: 0 var(--space-md);
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-md);

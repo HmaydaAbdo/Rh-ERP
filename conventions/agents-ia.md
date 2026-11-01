@@ -202,9 +202,11 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
 * Chaque graphe déclare son état typé, ses transitions, ses outils, ses politiques de reprise, ses
   limites, ses interruptions et ses sorties. Un enchaînement simple reste simple ; un graphe n'est
   pas un motif pour multiplier les agents.
-* L'agent est construit avec les composants officiels (voir « Frameworks d'abord ») : boucle d'agent
-  `create_agent` de LangChain sur LangGraph, ses middlewares, et Deep Agents lorsqu'un besoin le
-  justifie. Les appels de modèles restent probabilistes : valider les arguments et sorties par
+* L'agent est construit avec les composants officiels (voir « Frameworks d'abord ») : `create_deep_agent` de Deep
+  Agents (décision du 2026-10-31 : sur-ensemble de `create_agent` de LangChain, qui renvoie un graphe LangGraph et
+  accepte middlewares, checkpointer, `Store`, contexte d'exécution et sortie structurée), avec ses middlewares. On adopte le harnais
+  tel que Deep Agents le propose (fichiers virtuels sur `StateBackend`, sous-agents, résumé) ; `FilesystemBackend` et
+  `LocalShellBackend` ne sont jamais utilisés sur un serveur. Les appels de modèles restent probabilistes : valider les arguments et sorties par
   schéma côté service IA, puis refaire les validations métier côté Spring. Une erreur retournée à
   l'agent est structurée et minimisée ; elle n'expose ni stacktrace ni données interdites.
 * Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
@@ -226,6 +228,10 @@ dans l'inventaire du § 7 de [ia.md](../docs/ia.md) (« Objectif : aucun code IA
 elle y reste ouverte jusqu'à son remplacement testé. Une fonction payante d'un framework (CopilotKit Intelligence, par
 exemple) se remplace par une alternative gratuite, jamais par un achat.
 
+**Lecture de la documentation (2026-10-31).** Avant d'affirmer ou de coder le comportement d'un framework, lire en entier
+sa page officielle ; à l'entrée de chaque épopée du [plan de travail IA](../docs/ia/plan-de-travail.md), relire toute la
+documentation concernée (§ 4.0 du plan). Une limite de version imposée par une dépendance est consignée au § 3 du plan.
+
 Dans ERP-RH (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
 LangChain, LangGraph, Deep Agents, l'intégration AG-UI et leurs paquets : aucune implémentation
 maison d'une capacité qu'un de ces frameworks fournit. Avant d'écrire du code IA, chercher le
@@ -234,10 +240,10 @@ propriétaire avant d'écrire quoi que ce soit.
 
 | Besoin | Composant officiel |
 |---|---|
-| Boucle d'agent, appels d'outils | `create_agent` (LangChain), exécuté par LangGraph |
+| Boucle d'agent, appels d'outils | `create_deep_agent` (Deep Agents, au-dessus de `create_agent` de LangChain), exécuté par LangGraph |
 | Choix des outils utiles parmi le catalogue | `LLMToolSelectorMiddleware` |
 | Plan visible et suivi pour une tâche à plusieurs étapes | `TodoListMiddleware` (ou Deep Agents) |
-| Plafonds par run | `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` |
+| Plafonds par run | Aucun plafond appliqué par nous (décision du 2026-10-31) ; `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` ne sont pas utilisés |
 | Nouvel essai, repli de modèle | `ModelRetryMiddleware`, `ToolRetryMiddleware`, `ModelFallbackMiddleware`, et la passerelle |
 | Masquage d'identifiants | `PIIMiddleware` |
 | Mémoire compactée | `SummarizationMiddleware` ; persistance par un checkpointer LangGraph |

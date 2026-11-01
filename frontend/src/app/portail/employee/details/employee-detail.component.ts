@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -33,10 +34,9 @@ function duree(depuis: string, aujourdhui: Date): { annees: number; mois: number
  */
 @Component({
   selector: 'app-employee-detail',
-  imports: [DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent, MessageComponent, PaieParcoursComponent],
+  imports: [DockDeclencheurComponent, DatePipe, DecimalPipe, RouterLink, AuditHistoriqueComponent, DialogComponent, ButtonComponent, BadgeComponent, IconComponent, MessageComponent, PaieParcoursComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './employee-detail.component.html',
-  styleUrl: './employee-detail.component.scss'
+  templateUrl: './employee-detail.component.html'
 })
 export class EmployeeDetailComponent {
   protected readonly libelleStatut = libelleStatutEmploye;

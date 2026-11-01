@@ -1,0 +1,8 @@
+<div class="app-shell" role="presentation" [class.app-shell--auth]="!navigationVisible()">
+  @if (navigationVisible()) {
+    <a class="app-skip" href="#contenu" (click)="allerAuContenu($event)">Aller au contenu</a>
+  }
+  <main id="contenu" class="app-content" tabindex="-1">
+    <ng-content />
+  </main>
+</div>

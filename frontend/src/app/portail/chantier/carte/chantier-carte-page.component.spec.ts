@@ -28,8 +28,8 @@ describe('ChantierCartePageComponent', () => {
     const element: HTMLElement = fixture.nativeElement;
     expect(element.querySelector('h1')).toBeNull();
     expect(element.querySelector('app-chantier-carte [role="region"]')).not.toBeNull();
-    expect(element.querySelector('.carte-page__filtre')).not.toBeNull();
-    expect(element.querySelectorAll('.carte-page__chantier')).toHaveLength(0);
+    expect(element.querySelector('.app-map-page__search')).not.toBeNull();
+    expect(element.querySelectorAll('.app-map-page__site')).toHaveLength(0);
     expect(element.querySelector('input[aria-label="Rechercher par code ou nom de chantier"]')).not.toBeNull();
     expect(element.textContent).not.toContain('Paie');
     expect(element.textContent).not.toContain('Employés');
@@ -46,10 +46,10 @@ describe('ChantierCartePageComponent', () => {
     configurer({ carte });
     const fixture = TestBed.createComponent(ChantierCartePageComponent);
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('.carte-page__reessayer')?.textContent).toContain('Réessayer');
-    fixture.nativeElement.querySelector('.carte-page__reessayer').click();
+    expect(fixture.nativeElement.querySelector('.app-map-page__retry')?.textContent).toContain('Réessayer');
+    fixture.nativeElement.querySelector('.app-map-page__retry').click();
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('.carte-page__vide')?.textContent).toContain('Aucun chantier ne correspond à cette recherche.');
+    expect(fixture.nativeElement.querySelector('.app-map-page__empty')?.textContent).toContain('Aucun chantier ne correspond à cette recherche.');
     expect(carte).toHaveBeenCalledTimes(2);
   });
 });

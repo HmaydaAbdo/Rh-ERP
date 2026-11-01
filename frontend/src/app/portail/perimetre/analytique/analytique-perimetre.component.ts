@@ -12,20 +12,20 @@ import { ChantierReference } from '../../../shared/reference-data/chantier-refer
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { FunctionReference } from '../../../shared/reference-data/function-reference.model';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
-import { LazySelectPage, LazySelectSource } from '../../../shared/components/lazy-select/lazy-select.model';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { LazySelectPage, LazySelectSource } from '../../../shared/ui/lazy-select/lazy-select.model';
 import { ChartComponent, ChartSelection } from '../../../shared/ui/chart/chart.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
-import { PdfExportButtonComponent } from '../../../shared/components/pdf-export-button/pdf-export-button.component';
-import { PdfImpressionDocument } from '../../../shared/services/pdf-impression.service';
 import { jeton, valeursSurPoints } from '../../../shared/ui/chart/chart-theme';
 import { EmployeeAnalytique, EmployeeRegroupement } from '../../employee/models/employee.model';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { PaieAnalytique, PaieEffectifMois, PaieSearchCriteria } from '../../paie/models/paie.model';
 import { couleurEvolution, libelleEvolutionMesure, MesureEvolution } from '../../paie/analytique/paie-chart-theme';
+import { TableColumn } from '../../../shared/table/table-columns';
+import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { formaterMontant, formaterVariation, libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
@@ -35,7 +35,7 @@ import {
 } from '../perimetre';
 import { LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, LignePaie, nomGroupe } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
-import { hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsLigne } from './graphiques-perimetre';
+import { axeDeMesure, hauteurPourLignes, libelleTranche, libelleTrancheTotal, optionsBarres, optionsBarresGroupees, optionsLigne, optionsLigneGroupee, unitesDesMesures } from './graphiques-perimetre';
 
 interface Graphique<T extends ChartType> { data: ChartData<T>; options: ChartOptions<T> }
 type MesureRepartition = 'masse' | 'effectif';
@@ -91,9 +91,8 @@ interface Donnees {
  */
 @Component({
   selector: 'app-analytique-perimetre',
-  imports: [DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, MessageComponent, PdfExportButtonComponent],
+  imports: [TableComponent, TableCellDirective, DecimalPipe, NgTemplateOutlet, RouterLink, ChartComponent, IconComponent, SelectComponent, LazySelectComponent, ButtonComponent, MessageComponent],
   templateUrl: './analytique-perimetre.component.html',
-  styleUrl: './analytique-perimetre.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnalytiquePerimetreComponent implements OnInit {
@@ -116,6 +115,71 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleDimensionVue = computed(() => this.libelleDimensionVueMaj().toLocaleLowerCase('fr'));
   protected readonly mesuresEvolution = MESURES_EVOLUTION;
   protected readonly libelleEvolutionMesure = libelleEvolutionMesure;
+  protected readonly colonnesEquipes = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelleDimensionVueMaj() },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
+    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
+  ]);
+  protected readonly colonnesEvolutionEquipe: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
+    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
+  ];
+  protected readonly colonnesQualite: TableColumn[] = [
+    { field: 'rattachement', header: 'Rattachement' },
+    { field: 'bulletins', header: 'Bulletins', align: 'text-end' }
+  ];
+  protected readonly colonnesHeuresSupp = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelleDimensionVueMaj() },
+    { field: 'effectif', header: 'Effectif', align: 'text-end' },
+    { field: 'heures', header: 'Heures', align: 'text-end' },
+    { field: 'montantDh', header: 'Montant (DH)', align: 'text-end' },
+    { field: 'stcDh', header: 'STC (DH)', align: 'text-end' },
+    { field: 'forfaitDh', header: 'Forfait (DH)', align: 'text-end' },
+    { field: 'netAPayerDh', header: 'Net (DH)', align: 'text-end' }
+  ]);
+  protected readonly colonnesEvolutionPaie: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
+    { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
+    { field: 'stc', header: 'STC', align: 'text-end' },
+    { field: 'stcMontant', header: 'Montant STC (DH)', align: 'text-end' }
+  ];
+  protected readonly colonnesRepartitionPaie = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelles[this.dimension()] },
+    { field: 'effectif', header: 'Payés', align: 'text-end' },
+    { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
+    { field: 'stc', header: 'STC' },
+    { field: 'approfondir', header: 'Approfondir', sortable: false }
+  ]);
+  protected readonly colonnesTranches: TableColumn[] = [
+    { field: 'tranche', header: 'Tranche' },
+    { field: 'effectif', header: 'Bulletins', align: 'text-end' }
+  ];
+  protected readonly colonnesMouvements: TableColumn[] = [
+    { field: 'periode', header: 'Mois' },
+    { field: 'effectif', header: 'Payés', align: 'text-end' },
+    { field: 'entrees', header: 'Entrées', align: 'text-end' },
+    { field: 'sorties', header: 'Sorties', align: 'text-end' },
+    { field: 'mutations', header: 'Mutations', align: 'text-end' }
+  ];
+  protected readonly colonnesAge: TableColumn[] = [
+    { field: 'tranche', header: 'Âge' },
+    { field: 'effectif', header: 'Employés', align: 'text-end' }
+  ];
+  protected readonly colonnesAnciennete: TableColumn[] = [
+    { field: 'tranche', header: 'Ancienneté' },
+    { field: 'effectif', header: 'Employés', align: 'text-end' }
+  ];
+  protected readonly colonnesFiches = computed<TableColumn[]>(() => [
+    { field: 'libelle', header: this.libelles[this.dimension()] },
+    { field: 'effectif', header: 'Employés', align: 'text-end' },
+    { field: 'actifs', header: 'En poste', align: 'text-end' }
+  ]);
   protected readonly libellePeriode = libellePeriode;
   protected readonly libelleTranche = libelleTranche;
   protected readonly libelleTrancheTotal = libelleTrancheTotal;
@@ -184,7 +248,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
       moisPrecedent && precedent !== undefined ? `${courant - precedent > 0 ? '+' : ''}${FORMAT_ENTIER.format(courant - precedent)}` : null;
     const tuiles: Tuile[] = [
       { libelle: 'Masse salariale', valeur: `${formaterMontant(kpis.masse)} DH`, variation: pourcent(kpis.masse, moisPrecedent?.masse) },
-      { libelle: 'Effectif payé', valeur: String(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) },
+      { libelle: 'Bulletins de paie', valeur: String(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) },
       { libelle: 'Coût moyen par personne', valeur: kpis.coutMoyen === null ? '—' : `${formaterMontant(kpis.coutMoyen)} DH`, variation: pourcent(kpis.coutMoyen, moisPrecedent?.coutMoyen) },
       { libelle: 'Soldes de tout compte', valeur: `${kpis.stc} · ${formaterMontant(kpis.stcMontant)} DH`, variation: absolu(kpis.stc, moisPrecedent?.stc) }
     ];
@@ -258,9 +322,9 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly mesureEvolutionEquipe = signal<MesureEvolution[]>(['effectif']);
   protected readonly libelleMesureEquipe = (mesure: MesureEvolution): string => {
     switch (mesure) {
-      case 'effectif': return 'Effectif (personnes)';
+      case 'effectif': return 'Bulletins de paie';
       case 'masse': return 'Masse salariale (DH)';
-      case 'stc': return 'STC (personnes)';
+      case 'stc': return 'STC (bulletins)';
       case 'stcMontant': return 'STC (DH)';
     }
   };
@@ -288,29 +352,52 @@ export class AnalytiquePerimetreComponent implements OnInit {
     const mesure = this.mesureRepartitionEquipe()[0] ?? 'effectif';
     return this.equipesEffectif().slice().sort((a, b) => b[mesure] - a[mesure]);
   });
-  protected readonly graphiquesRepartitionEquipe = computed<(Graphique<'bar'> & { mesure: MesureEvolution })[]>(() => {
+  /** Un seul graphique pour tous les indicateurs choisis : barres côte à côte, un axe par unité (décision du 2026-11-01). */
+  protected readonly graphiqueRepartitionEquipe = computed<(Graphique<'bar'> & { hauteur: number }) | null>(() => {
     this.theme.theme();
-    return this.mesureRepartitionEquipe().map((mesure) => {
-      const groupes = this.tableauEquipes().filter((groupe) => groupe[mesure] > 0).sort((a, b) => b[mesure] - a[mesure] || a.libelle.localeCompare(b.libelle, 'fr'));
-      return {
-        mesure,
-        data: { labels: groupes.map((groupe) => groupe.libelle), datasets: [{ label: this.libelleMesureEquipe(mesure), data: groupes.map((groupe) => groupe[mesure]), backgroundColor: couleurEvolution(mesure), borderRadius: 4 }] },
-        options: optionsBarres({ indexAxis: 'y', montants: mesure === 'masse' || mesure === 'stcMontant' })
-      };
-    });
+    const mesures = this.mesureRepartitionEquipe();
+    if (mesures.length === 0) {
+      return null;
+    }
+    const unites = unitesDesMesures(mesures);
+    const groupes = this.tableauEquipes()
+      .filter((groupe) => mesures.some((mesure) => groupe[mesure] > 0))
+      .sort((a, b) => b[mesures[0]] - a[mesures[0]] || a.libelle.localeCompare(b.libelle, 'fr'));
+    return {
+      data: {
+        labels: groupes.map((groupe) => groupe.libelle),
+        datasets: mesures.map((mesure) => ({
+          label: this.libelleMesureEquipe(mesure),
+          data: groupes.map((groupe) => groupe[mesure]),
+          backgroundColor: couleurEvolution(mesure),
+          borderRadius: 4,
+          xAxisID: axeDeMesure('x', mesure, unites)
+        }))
+      },
+      options: optionsBarresGroupees(unites),
+      hauteur: hauteurPourLignes(groupes.length * (1 + (mesures.length - 1) * 0.6))
+    };
   });
-  protected readonly graphiquesEvolutionEquipe = computed<(Graphique<'line'> & { mesure: MesureEvolution })[]>(() => {
+  protected readonly graphiqueEvolutionEquipe = computed<Graphique<'line'> | null>(() => {
     this.theme.theme();
+    const mesures = this.mesureEvolutionEquipe();
+    if (mesures.length === 0) {
+      return null;
+    }
+    const unites = unitesDesMesures(mesures);
     const evolution = this.evolutionEquipe();
-    return this.mesureEvolutionEquipe().map((mesure) => {
-      const couleur = couleurEvolution(mesure);
-      return {
-        mesure,
-        data: { labels: evolution.map((mois) => libellePeriode(mois.periode)), datasets: [{ label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25 }] },
-        options: optionsLigne(mesure === 'masse' || mesure === 'stcMontant')
-      };
-    });
+    return {
+      data: {
+        labels: evolution.map((mois) => libellePeriode(mois.periode)),
+        datasets: mesures.map((mesure) => {
+          const couleur = couleurEvolution(mesure);
+          return { label: this.libelleMesureEquipe(mesure), data: evolution.map((mois) => mois[mesure]), borderColor: couleur, backgroundColor: couleur, tension: 0.25, yAxisID: axeDeMesure('y', mesure, unites) };
+        })
+      },
+      options: optionsLigneGroupee(unites)
+    };
   });
+  protected readonly libellesMesures = (mesures: readonly MesureEvolution[]): string => mesures.map((mesure) => this.libelleMesureEquipe(mesure)).join(', ');
 
   protected readonly graphiqueEvolution = computed<Graphique<'line'> & { plugins: ReturnType<typeof valeursSurPoints>[] }>(() => {
     this.theme.theme();
@@ -347,7 +434,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
       data: {
         labels: lignes.map((l) => nomGroupe(this.dimension(), l)),
         datasets: [{
-          label: mesure === 'masse' ? 'Masse (DH)' : 'Effectif payé',
+          label: mesure === 'masse' ? 'Masse (DH)' : 'Bulletins de paie',
           data: lignes.map((l) => l[mesure]),
           backgroundColor: jeton(mesure === 'masse' ? '--chart-1' : '--chart-2'),
           borderRadius: 4
@@ -416,110 +503,19 @@ export class AnalytiquePerimetreComponent implements OnInit {
     };
   });
 
-  protected documentKpis(): PdfImpressionDocument {
-    return this.documentPdf('Indicateurs clés · Paie', ['Indicateur', 'Valeur', 'Variation'],
-      this.tuiles().map((tuile) => [tuile.libelle, tuile.valeur, tuile.variation ?? '']));
-  }
 
-  protected documentEvolution(): PdfImpressionDocument {
-    const evolution = this.paie()?.evolution ?? [];
-    const mesure = this.mesureEvolution();
-    return this.documentPdf(`Évolution mensuelle · ${libelleEvolutionMesure(mesure)}`,
-      ['Mois', 'Masse (DH)', 'Effectif payé', 'STC (personnes)', 'STC (DH)'],
-      evolution.map((ligne) => [libellePeriode(ligne.periode), formaterMontant(ligne.masse), ligne.effectif, ligne.stc, formaterMontant(ligne.stcMontant)]));
-  }
 
-  protected documentRepartitionPaie(): PdfImpressionDocument {
-    return this.documentPdf(`Répartition Paie · ${this.libelles[this.dimension()]} · ${this.libellePeriode(this.periode() ?? '')}`,
-      [this.libelles[this.dimension()], 'Payés', 'Masse (DH)', 'STC', 'Montant STC (DH)'],
-      this.lignesRepartitionPaie().map((ligne) => [this.nomLigne(ligne), ligne.effectif, ligne.masse, ligne.stc, ligne.stcMontant]));
-  }
 
-  protected documentTranchesPaie(): PdfImpressionDocument {
-    return this.documentPdf('Bulletins par tranche de total', ['Tranche', 'Bulletins'],
-      (this.paie()?.tranches ?? []).map((tranche) => [libelleTrancheTotal(tranche), tranche.effectif]));
-  }
 
-  protected documentMouvementsPaye(): PdfImpressionDocument {
-    return this.documentPdf('Effectif payé · évolution mensuelle', ['Mois', 'Employés payés'],
-      this.mouvements().map((mois) => [libellePeriode(mois.periode), mois.effectif]));
-  }
 
-  protected documentMouvements(): PdfImpressionDocument {
-    return this.documentPdf('Entrées, sorties et mutations', ['Mois', 'Entrées', 'Sorties', 'Mutations'],
-      this.mouvements().slice(1).map((mois) => [libellePeriode(mois.periode), mois.entrees ?? '—', mois.sorties, mois.mutations ?? '—']));
-  }
 
-  protected documentKpisFiches(): PdfImpressionDocument {
-    const f = this.fiches();
-    return this.documentPdf('Indicateurs clés · Employés', ['Indicateur', 'Valeur'], f ? [
-      ['Effectif', f.effectif], ['En poste', f.actifs], ['Sortis', f.inactifs], ['Âge moyen (ans)', f.ageMoyen ?? '—'],
-      ['Ancienneté moyenne (ans)', f.ancienneteMoyenne ?? '—'], ['Embauches sur 12 mois', f.embauchesDouzeMois]
-    ] : []);
-  }
 
-  protected documentAges(): PdfImpressionDocument {
-    return this.documentPdf('Pyramide des âges', ['Âge', 'Employés'],
-      (this.fiches()?.parAge ?? []).map((tranche) => [libelleTranche(tranche, 'age'), tranche.effectif]));
-  }
 
-  protected documentAnciennete(): PdfImpressionDocument {
-    return this.documentPdf('Ancienneté', ['Ancienneté', 'Employés'],
-      (this.fiches()?.parAnciennete ?? []).map((tranche) => [libelleTranche(tranche, 'anciennete'), tranche.effectif]));
-  }
 
-  protected documentRepartitionFiches(): PdfImpressionDocument {
-    return this.documentPdf(`Employés par ${this.libelles[this.dimension()].toLowerCase()}`,
-      [this.libelles[this.dimension()], 'Employés', 'En poste'],
-      this.repartitionFiches().map((groupe) => [this.nomLigne(groupe), groupe.effectif, groupe.actifs]));
-  }
 
-  protected documentRepartitionEquipe(): PdfImpressionDocument {
-    return this.documentPdf(`Situation de paie par ${this.libelleDimensionVue()}`,
-      [this.libelleDimensionVueMaj(), 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
-      this.tableauEquipes().map((equipe) => [equipe.libelle, equipe.effectif, formaterMontant(equipe.masse), equipe.stc, formaterMontant(equipe.stcMontant)]),
-      `${this.contexteEquipe(true)} · Indicateurs affichés : ${this.mesureRepartitionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'}`);
-  }
 
-  protected documentEvolutionEquipe(): PdfImpressionDocument {
-    const equipe = this.optionsEquipesEvolution().find((valeur) => valeur.value === this.equipeEvolutionId());
-    return this.documentPdf(`Évolution mensuelle de la paie par ${this.libelleDimensionVue()}`,
-      ['Mois', 'Effectif (personnes)', 'Masse salariale (DH)', 'STC (personnes)', 'STC (DH)'],
-      this.evolutionEquipe().map((mois) => [libellePeriode(mois.periode), mois.effectif, formaterMontant(mois.masse), mois.stc, formaterMontant(mois.stcMontant)]),
-      `${this.contexteEquipe(false)} · Indicateurs affichés : ${this.mesureEvolutionEquipe().map((mesure) => this.libelleMesureEquipe(mesure)).join(', ') || 'aucun'} · Période couverte : ${this.evolutionEquipe().length ? `${libellePeriode(this.evolutionEquipe()[0].periode)} à ${libellePeriode(this.evolutionEquipe()[this.evolutionEquipe().length - 1].periode)}` : 'aucune'}${equipe ? ` · ${this.libelleDimensionVueMaj()} : ${equipe.label}` : ''}`);
-  }
 
-  protected documentQualiteOrphelins(): PdfImpressionDocument {
-    const analyse = this.qualitePaie();
-    return {
-      titre: 'Qualité des rattachements des bulletins de paie',
-      contexte: `${this.module().libellePluriel} · Paie de ${analyse ? libellePeriode(analyse.periode) : ''}`,
-      colonnes: ['Rattachement', 'Bulletins'],
-      lignes: [['Avec équipe', this.bulletinsAvecEquipe()], ['Sans équipe (orphelins)', analyse?.qualite.sansEquipe ?? 0]]
-    };
-  }
 
-  private documentPdf(titre: string, colonnes: string[], lignes: (string | number)[][], contexte?: string): PdfImpressionDocument {
-    return { titre, contexte: contexte ?? this.contextePerimetre(), colonnes, lignes };
-  }
-
-  private contextePerimetre(): string {
-    const contexte = [`Domaine : ${this.module().libellePluriel}`];
-    const periode = this.periode();
-    if (periode) contexte.push(`Période de référence : ${libellePeriode(periode)}`);
-    for (const dimension of DIMENSIONS) {
-      const ids = this.perimetre()[cleIds(dimension)];
-      if (ids.length) contexte.push(`${this.libelles[dimension]} : ${ids.map((id) => this.nom(dimension, id)).join(', ')}`);
-    }
-    const filtres = this.params();
-    for (const [cle, libelle] of [['nom', 'Nom'], ['cin', 'CIN'], ['code', 'Code'], ['libelle', 'Libellé'], ['designation', 'Désignation']] as const) {
-      const valeur = filtres.get(cle)?.trim();
-      if (valeur) contexte.push(`${libelle} : ${valeur}`);
-    }
-    const statut = filtres.get('statut');
-    if (statut === 'ACTIF' || statut === 'INACTIF') contexte.push(`Statut des fiches : ${statut === 'ACTIF' ? 'En poste' : 'Sorti'} (ne filtre pas la paie)`);
-    return contexte.join(' · ');
-  }
 
   private contexteEquipe(avecPeriode: boolean): string {
     const contexte = [`Domaine : ${this.libelleDimensionVueMaj()}`];

@@ -1,9 +1,10 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 import { finalize, Subscription } from 'rxjs';
 
-import { ColumnChooserComponent } from '../../../shared/components/column-chooser/column-chooser.component';
+import { ColumnChooserComponent } from '../../../shared/ui/column-chooser/column-chooser.component';
 import { surChangementDesFiltres } from '../../../shared/forms/filtres';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
@@ -15,7 +16,7 @@ import { AuditChampsComponent } from '../champs/audit-champs.component';
 import { AuditChangement, AuditCriteres, AuditEntree, AuditLigne, CategorieAudit, ResultatAudit } from '../models/audit.model';
 import { AuditService } from '../services/audit.service';
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { PaieService } from '../../paie/services/paie.service';
 
 const DEBOUNCE_RECHERCHE_MS = 300;
@@ -39,7 +40,7 @@ const filtresVides = () => ({
  */
 @Component({
   selector: 'app-journal',
-  imports: [
+  imports: [DockDeclencheurComponent, 
     ColumnChooserComponent,
     AuditChampsComponent,
     ButtonComponent,
@@ -52,8 +53,7 @@ const filtresVides = () => ({
     DialogComponent
   ],
   templateUrl: './journal.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './journal.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JournalComponent {
   protected readonly columns = new ColumnState([
@@ -64,7 +64,7 @@ export class JournalComponent {
     { field: 'utilisateurNom', header: 'Utilisateur' },
     { field: 'origine', header: 'Origine' },
     { field: 'cible', header: 'Cible', sortField: 'entiteType' },
-    { field: 'nombreElements', header: 'Éléments', align: 'text-right' },
+    { field: 'nombreElements', header: 'Éléments', align: 'text-end' },
     { field: 'motif', header: 'Motif', cellClass: 'text-truncate' }
   ]);
 

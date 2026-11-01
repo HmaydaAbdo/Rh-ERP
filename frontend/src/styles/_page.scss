@@ -9,105 +9,58 @@
 //     <div class="app-table-bar">          total à gauche, outils à droite (du moins au plus important)
 //     <stp-table …>
 
+// Les sections d'un écran se suivent dans une colonne : un seul écart (`--space-lg`) entre elles, jamais de marge propre à une section.
+// Un `.app-page` imbriqué (tableau d'une vue) ne double ni le retrait ni l'écart.
 .app-page {
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
   min-width: 0;
-}
+  padding: var(--space-lg);
 
-// Mode carte : le rail cède toute la largeur à la carte. Le hamburger ouvre un volet superposé;
-// il reste fixe afin de préserver un trajet continu du pointeur vers le menu.
-@include bp.desktop {
-  .app-shell.app-shell--carte .app-carte-menu {
-    position: fixed;
-    top: var(--space-md);
-    left: var(--space-md);
-    z-index: 120;
-    display: grid;
-    place-items: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    border: 1px solid var(--map-ui-border);
-    border-radius: var(--radius-md);
-    background: var(--map-ui-surface);
-    color: var(--map-ui-icon);
-    box-shadow: var(--map-ui-shadow);
-    cursor: pointer;
-    transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out),
-      border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
-
-    svg { width: 1.25rem; height: 1.25rem; }
-
-    &:hover { background: var(--map-ui-surface); border-color: var(--map-ui-icon); color: var(--map-ui-highlight); }
-    &:active { transform: scale(0.96); }
-    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-  }
-
-  .app-shell.app-shell--carte .app-content {
-    min-height: 100svh;
-    margin-left: 0;
+  .app-page {
     padding: 0;
   }
 
-  .app-shell.app-shell--carte .app-sidebar {
-    z-index: 100;
-    width: var(--sidebar-expanded-width);
-    transform: translate3d(calc(-100% - var(--space-sm)), 0, 0) scale(0.985);
-    transform-origin: left center;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: transform var(--duration-base) var(--ease-out), opacity var(--duration-fast) var(--ease-out),
-      visibility 0s linear var(--duration-base);
-
-    .app-sidebar__nav { padding-top: calc(var(--space-md) + 3.5rem); }
-
-    .app-sidebar__link {
-      justify-content: flex-start;
-      padding-inline: var(--space-md);
-    }
-
-    .app-sidebar__group-chevron { display: block; }
-
-    .app-sidebar__label { width: auto; opacity: 1; }
-    .app-sidebar__footer { flex-direction: row; padding: var(--space-sm); }
-    .app-sidebar__username { display: block; }
+  @include bp.phone {
+    padding: var(--space-md);
   }
-
-  .app-shell.app-shell--carte.app-shell--carte-menu-ouvert .app-sidebar {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transition-delay: 0s;
-    box-shadow: var(--shadow-lg);
-  }
-
-  .app-shell--carte-menu-ouvert .app-sidebar__nav > *,
-  .app-shell--carte-menu-ouvert .app-sidebar__group-items > * {
-    animation: app-carte-sidebar-arrivee var(--duration-base) var(--ease-out) both;
-    animation-delay: calc(var(--nav-index, 0) * var(--duration-stagger));
-  }
-}
-
-@keyframes app-carte-sidebar-arrivee {
-  from { opacity: 0; transform: translate3d(calc(-1 * var(--space-sm-md)), 0, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 // Formulaires et consultations ont une surface contenue; les listes gardent le canevas libre pour leurs données.
 .app-page--narrow,
 .app-page--wide {
-  padding: var(--space-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+}
 
-  @include bp.phone {
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
+.app-vues .app-page {
+  padding: 0;
+}
+
+// Le point d'insertion du routeur est un élément sans taille : il ne doit pas compter comme une section (il doublerait l'écart).
+.app-vues > router-outlet,
+.app-page > router-outlet {
+  display: none;
+}
+
+// Barre du tableau et tableau : une seule suite de sections, au même écart que le reste de l'écran
+.app-collection-table__surface > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+
+  &[hidden] {
+    display: none;
   }
+}
+
+// Un en-tête équipé du bouton Staport (`stp-dock-declencheur`, premier enfant) lui réserve la marge de début.
+.app-page__header:has(> stp-dock-declencheur),
+.app-vues__header:has(> stp-dock-declencheur) {
+  position: relative;
+  padding-inline-start: calc(var(--control-height) + var(--space-md));
 }
 
 .app-page__header {
@@ -116,9 +69,6 @@
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
 
   h1 {
     margin: 0;
@@ -134,7 +84,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
   padding: var(--space-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -144,7 +93,7 @@
   > stp-select,
   > app-lazy-select,
   > label {
-    flex: 1 1 10rem;
+    flex: 1 1 9.5rem;
     max-width: 15rem;
     min-width: 0;
   }
@@ -171,7 +120,7 @@
   }
 
   .app-toolbar__clear {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
 
   // Compteur de filtres actifs d'un bouton « Plus de filtres » ou « Filtres »
@@ -201,6 +150,72 @@
     }
   }
 
+  // Mois : flèches vers le mois précédent / suivant autour du mois courant, ouvert en grille dans un panneau
+  .app-toolbar__period {
+    display: inline-flex;
+    align-items: stretch;
+    height: var(--control-height);
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+
+    .stp-button {
+      height: 100%;
+      border-radius: 0;
+      font-size: var(--text-sm);
+    }
+
+    .stp-button--icon-only {
+      width: 2rem;
+      padding: 0;
+    }
+  }
+
+  .app-toolbar__period-month {
+    min-width: 9.5rem;
+    justify-content: center;
+    border-inline: 1px solid var(--color-border) !important;
+  }
+
+  // Recherche : champ précédé d'une loupe
+  .app-toolbar__search {
+    position: relative;
+    flex: 1 1 11rem;
+    max-width: 15rem;
+
+    input {
+      width: 100%;
+      padding-inline-start: 2.25rem;
+    }
+
+    stp-icon {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 0.75rem;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+  }
+
+  // Filtres secondaires : toujours dans la ligne sur grand écran, repliés derrière « Filtres » sur téléphone
+  .app-toolbar__toggle {
+    display: none;
+  }
+
+  .app-toolbar__secondary {
+    display: contents;
+
+    > input.stp-input,
+    > stp-select,
+    > app-lazy-select {
+      flex: 1 1 8rem;
+      max-width: 14rem;
+      min-width: 0;
+    }
+  }
+
   // Téléphone : deux contrôles par ligne
   @include bp.phone {
     display: grid;
@@ -215,7 +230,46 @@
 
     .app-toolbar__clear {
       grid-column: 1 / -1;
-      margin-left: 0;
+      margin-inline-start: 0;
+    }
+
+    .app-toolbar__period {
+      grid-column: 1 / -1;
+
+      .stp-button--icon-only {
+        width: 2.75rem;
+      }
+    }
+
+    .app-toolbar__period-month {
+      flex: 1;
+    }
+
+    .app-toolbar__toggle {
+      display: inline-flex;
+    }
+
+    .app-toolbar__secondary {
+      display: none;
+      grid-column: 1 / -1;
+      flex-direction: column;
+      gap: var(--space-sm);
+
+      &--open {
+        display: flex;
+      }
+
+      > input.stp-input,
+      > stp-select,
+      > app-lazy-select {
+        flex: none;
+        width: 100%;
+        max-width: none;
+      }
+    }
+
+    .app-toolbar__clear-label {
+      display: none;
     }
 
     .app-toolbar__more {
@@ -236,7 +290,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
-  margin-bottom: var(--space-sm);
 
   @include bp.phone {
     flex-wrap: wrap;
@@ -291,11 +344,6 @@
       grid-column: 1 / -1;
     }
 
-    > [table-export] {
-      grid-column: 2;
-      justify-self: end;
-    }
-
     .stp-split-button {
       display: flex;
       width: 100%;
@@ -307,72 +355,17 @@
   }
 }
 
-.app-collection-table__surface:has([table-export]:hover) .stp-table__scroll,
-.app-collection-table__surface:has([table-export]:focus-within) .stp-table__scroll {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
-}
-
-// Tableaux courts hors stp-table (résultats d'import, journaux spécialisés) : mêmes repères et défilement autonome.
-.app-static-table-scroll {
-  max-width: 100%;
-  max-height: min(28rem, 60vh);
-  overflow: auto;
-  border: 1px solid var(--table-border);
-  border-radius: var(--radius-md);
-  overscroll-behavior: contain;
-
-  &:focus-visible {
-    outline-offset: -2px;
-  }
-}
-
-.app-static-table {
-  width: 100%;
-  min-width: 34rem;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-
-  th,
-  td {
-    padding: var(--space-sm) var(--space-md);
-    border-bottom: 1px solid var(--table-border-light);
-    text-align: start;
-    vertical-align: top;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--table-header-bg);
-    color: var(--color-text);
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  tbody tr:nth-child(even) {
-    background: var(--table-row-alt-bg);
-  }
-
-  tbody tr:hover {
-    background: var(--table-row-hover-bg);
-  }
-}
-
 // ---- Écran à plusieurs vues (Paie, Employés) ----
 // La carte de page, puis un en-tête qui porte sur une ligne le titre, les onglets de vue (`app-vue-switcher`) posés sur le filet,
 // et les actions à droite (`.app-vues__actions`, sur l'hôte du composant d'actions).
 .app-vues {
   min-width: 0;
-  border: 1px solid var(--color-border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  box-shadow: var(--shadow-sm);
 
   @include bp.phone {
     padding: var(--space-md);
@@ -380,41 +373,55 @@
 }
 
 .app-vues__header {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
   gap: var(--space-xl);
-  margin-bottom: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
 
   h1 {
     margin: 0;
-    padding-bottom: var(--space-sm);
     font-size: var(--text-page-title);
     font-weight: 600;
     line-height: 1.15;
   }
 
-  // Les actions à droite, au niveau du titre et des onglets, sans toucher au filet qui porte les onglets
+  // Titre à gauche, onglets de vue au milieu, actions à droite : trois colonnes, les onglets restent centrés sur la page
   .app-vues__actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-sm);
-    margin-left: auto;
+    grid-column: 3;
     align-self: center;
-    padding-bottom: var(--space-xs);
+  }
+
+  // Écran moyen : titre et actions sur la première ligne, onglets centrés sur la seconde (rien ne se chevauche, rien ne passe à la ligne)
+  @media (max-width: 72rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    app-vue-switcher {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      justify-self: center;
+    }
+
+    .app-vues__actions {
+      grid-column: 2;
+      grid-row: 1;
+    }
   }
 
   // Téléphone : le titre au-dessus, les onglets se partagent la largeur, puis les actions
   @include bp.phone {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     gap: 0;
 
     .app-vues__actions {
-      margin-left: 0;
+      grid-column: 1;
       align-self: stretch;
+      padding-block: var(--space-sm);
     }
   }
 }

@@ -1,10 +1,25 @@
-import { NgTemplateOutlet } from '@angular/common';
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, contentChild, Directive, inject, Injector, input, model, output, signal, TemplateRef } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, contentChild, Directive, effect, inject, input, model, output, signal, TemplateRef } from '@angular/core';
+import { AgGridAngular } from 'ag-grid-angular';
+import {
+  AllCommunityModule,
+  type CellKeyDownEvent,
+  type FullWidthCellKeyDownEvent,
+  type ColDef,
+  type ColumnMovedEvent,
+  type GridApi,
+  type GridReadyEvent,
+  ModuleRegistry,
+  type RowClickedEvent,
+  type SortChangedEvent,
+  themeQuartz
+} from 'ag-grid-community';
 
 import { TABLE_ROWS_PER_PAGE, TableColumn } from '../../table/table-columns';
 import { ButtonComponent } from '../button/button.directive';
-import { IconComponent } from '../icon/icon.component';
 import { SelectComponent, SelectOption } from '../select/select.component';
+import { TableCellParams, TableCellRendererComponent, TableEmptyOverlayComponent } from './table-cell-renderer.component';
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 /** Requête de données d'un tableau paginé côté serveur (même forme que l'ancien `TableLazyLoadEvent`). */
 export interface TableLazyLoadEvent {
@@ -32,23 +47,51 @@ export class TableFooterDirective {
   readonly template = inject(TemplateRef);
 }
 
-const MIN_COLUMN_WIDTH = 60;
-const MAX_COLUMN_WIDTH = 2000;
-const KEYBOARD_RESIZE_STEP = 12;
+const COLONNE_ACTIONS = '__actions';
+const LIGNE_PIED = { __pied: true };
 
 /**
- * Tableau de données Staport : HTML natif (`table`, `th scope="col"`, `aria-sort`) sans dépendance de widgets.
+ * Thème AG Grid de Staport (API de thèmes officielle) : les valeurs sont les jetons de `_tokens.scss`, lus par le navigateur à
+ * chaque rendu ; le changement de thème clair / sombre s'applique donc sans reconstruire la grille. Bordures franches (cadre, trait
+ * d'en-tête), séparateurs de ligne visibles, lignes hautes.
+ */
+const THEME = themeQuartz.withParams({
+  backgroundColor: 'var(--color-surface)',
+  foregroundColor: 'var(--color-text)',
+  accentColor: 'var(--color-primary)',
+  borderColor: 'var(--color-border)',
+  headerBackgroundColor: 'var(--table-header-bg)',
+  headerTextColor: 'var(--color-text)',
+  oddRowBackgroundColor: 'var(--table-row-alt-bg)',
+  rowHoverColor: 'var(--table-row-hover-bg)',
+  fontFamily: 'var(--font-sans)',
+  headerFontWeight: 600,
+  fontSize: 15,
+  headerFontSize: 14,
+  rowHeight: 48,
+  headerHeight: 46,
+  cellHorizontalPadding: 16,
+  wrapperBorder: { style: 'solid', width: 1, color: 'var(--table-border)' },
+  headerRowBorder: { style: 'solid', width: 1, color: 'var(--table-border)' },
+  rowBorder: { style: 'solid', width: 1, color: 'var(--table-border-light)' },
+  columnBorder: false,
+  wrapperBorderRadius: 8
+});
+
+/**
+ * Tableau de données Staport, bâti sur **AG Grid Community** (MIT) : tri, redimensionnement, réordonnancement, navigation
+ * clavier, ARIA et virtualisation viennent de la bibliothèque ; ce composant ne fait que la raccorder à l'application.
  * Voir `conventions/frontend.md`, section Tableaux.
  *
- * - Mode serveur (`lazy`) : le tableau ne trie ni ne découpe rien, il émet `lazyLoad` à l'initialisation puis à chaque
+ * - Mode serveur (`lazy`) : le tableau n'ordonne ni ne découpe rien, il émet `lazyLoad` à l'initialisation puis à chaque
  *   changement de page, de taille ou de tri ; le parent charge la page et fournit `value` et `totalRecords`.
  * - Mode mémoire : `value` contient toutes les lignes, le tri et la pagination sont faits ici.
- * - Colonnes : tri par bouton d'en-tête, redimensionnement (poignée à la souris, flèches au clavier), réordonnancement
- *   (glisser-déposer ou Alt + flèches sur l'en-tête). Le parent garde l'ordre via `columnsReorder`.
+ * - Les cellules, les actions de ligne et le pied sont des gabarits projetés par le domaine (`stpCell`, `stpRowActions`,
+ *   `stpFooter`) affichés par un `cellRenderer` de la grille. Le parent garde l'ordre des colonnes via `columnsReorder`.
  */
 @Component({
   selector: 'stp-table',
-  imports: [NgTemplateOutlet, ButtonComponent, IconComponent, SelectComponent],
+  imports: [AgGridAngular, ButtonComponent, SelectComponent],
   templateUrl: './table.component.html',
   styleUrl: './table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,7 +99,7 @@ const KEYBOARD_RESIZE_STEP = 12;
 export class TableComponent<T extends object> {
   readonly value = input<T[]>([]);
   readonly columns = input.required<TableColumn[]>();
-  /** Nom accessible du tableau (annoncé avec la région défilante). */
+  /** Nom accessible du tableau (annoncé avec la grille). */
   readonly label = input.required<string>();
   readonly lazy = input(false);
   /** Total de lignes côté serveur (mode `lazy`). */
@@ -64,13 +107,14 @@ export class TableComponent<T extends object> {
   readonly loading = input(false);
   readonly emptyMessage = input('Aucune donnée.');
   readonly rowsPerPageOptions = input<number[]>(TABLE_ROWS_PER_PAGE);
+  /** Faux : toutes les lignes sont affichées, sans pagination (petits tableaux de données). */
+  readonly paginated = input(true);
   readonly reorderable = input(true);
   readonly resizable = input(true);
   /** Faux : la colonne des actions n'est pas affichée (ex. l'utilisateur n'a pas la permission des actions). */
   readonly rowActionsVisible = input(true);
   /** Ligne cliquable (et atteignable au clavier, Entrée) quand cette fonction répond vrai ; `rowClick` émet alors la ligne. */
   readonly rowClickable = input<((row: T) => boolean) | null>(null);
-  readonly rowTitle = input<((row: T) => string | null) | null>(null);
 
   /** Index de la première ligne affichée et taille de page : liables en double sens pour conserver l'état dans l'URL. */
   readonly first = model(0);
@@ -82,24 +126,21 @@ export class TableComponent<T extends object> {
   readonly columnsReorder = output<TableColumn[]>();
   readonly rowClick = output<T>();
 
-  private readonly injector = inject(Injector);
-
   protected readonly cell = contentChild(TableCellDirective);
   protected readonly rowActions = contentChild(TableRowActionsDirective);
   protected readonly footer = contentChild(TableFooterDirective);
   protected readonly showActions = computed(() => !!this.rowActions() && this.rowActionsVisible());
 
-  protected readonly widths = signal<Record<string, number>>({});
-  protected readonly minColumnWidth = MIN_COLUMN_WIDTH;
-  protected readonly maxColumnWidth = MAX_COLUMN_WIDTH;
-  protected readonly dragged = signal<string | null>(null);
-  protected readonly dropTarget = signal<string | null>(null);
+  protected readonly theme = THEME;
+  protected readonly cellRenderer = TableCellRendererComponent;
+  protected readonly noRowsOverlay = TableEmptyOverlayComponent;
+  protected readonly noRowsParams = computed(() => ({ message: this.emptyMessage() }));
+  protected readonly pinnedBottom = computed(() => (this.footer() ? [LIGNE_PIED] : undefined));
 
   protected readonly total = computed(() => (this.lazy() ? this.totalRecords() : this.value().length));
   protected readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.rows())));
   protected readonly currentPage = computed(() => Math.min(this.pageCount(), Math.floor(this.first() / this.rows()) + 1));
   protected readonly lastRow = computed(() => Math.min(this.total(), this.first() + this.rows()));
-  protected readonly columnCount = computed(() => this.columns().length + (this.showActions() ? 1 : 0));
   protected readonly rowsOptions = computed<SelectOption<number>[]>(() => this.rowsPerPageOptions().map((value) => ({ value, label: String(value) })));
 
   protected readonly displayed = computed(() => {
@@ -107,14 +148,63 @@ export class TableComponent<T extends object> {
       return this.value();
     }
     const field = this.sortField();
-    let rows = [...this.value()];
+    const rows = [...this.value()];
     if (field) {
       const direction = this.sortOrder();
       rows.sort((a, b) => direction * compareValues(valueAt(a, field), valueAt(b, field)));
     }
-    rows = rows.slice(this.first(), this.first() + this.rows());
-    return rows;
+    return this.paginated() ? rows.slice(this.first(), this.first() + this.rows()) : rows;
   });
+
+  /** Téléphone : la première colonne reste en vue pendant le défilement horizontal. */
+  private readonly etroit = signal(false);
+
+  protected readonly colDefs = computed<ColDef[]>(() => {
+    const definitions: ColDef[] = this.columns().map((colonne, index) => ({
+      colId: colonne.field,
+      field: colonne.field,
+      headerName: colonne.shortHeader ?? colonne.header,
+      headerTooltip: colonne.header,
+      // Le contenu vient du gabarit projeté (`stpCell`) ; sans gabarit, la cellule affiche cette valeur (vide pour un objet).
+      valueFormatter: ({ value }) => (value == null || typeof value === 'object' ? '' : String(value)),
+      sortable: colonne.sortable !== false,
+      // L'ordre vient du serveur (ou de ce composant en mode mémoire) : la grille n'y touche pas.
+      comparator: () => 0,
+      resizable: this.resizable(),
+      suppressMovable: !this.reorderable(),
+      minWidth: colonne.minWidth ?? 90,
+      flex: colonne.minWidth ? colonne.minWidth / 90 : 1,
+      pinned: this.etroit() && index === 0 ? 'left' : null,
+      lockPinned: true,
+      cellClass: [colonne.align, colonne.cellClass].filter(Boolean).join(' ') || undefined,
+      headerClass: colonne.align || undefined,
+      cellRenderer: this.cellRenderer,
+      cellRendererParams: {
+        resoudre: (params) => this.modeleCellule(params, colonne)
+      } satisfies Pick<TableCellParams, 'resoudre'>
+    }));
+    if (this.showActions()) {
+      definitions.push({
+        colId: COLONNE_ACTIONS,
+        headerName: 'Actions',
+        headerClass: 'stp-table__actions-header',
+        sortable: false,
+        resizable: false,
+        suppressMovable: true,
+        width: 140,
+        minWidth: 90,
+        cellClass: 'stp-table__actions',
+        cellRenderer: this.cellRenderer,
+        cellRendererParams: {
+          resoudre: (params) => this.modeleActions(params)
+        } satisfies Pick<TableCellParams, 'resoudre'>
+      });
+    }
+    return definitions;
+  });
+
+  private api: GridApi | null = null;
+  private appliqueEtatTri = false;
 
   constructor() {
     // Le contrat historique : un tableau serveur demande lui-même sa première page dès qu'il est affiché.
@@ -122,44 +212,66 @@ export class TableComponent<T extends object> {
       if (this.lazy()) {
         this.emitLazy();
       }
+      const fenetre = typeof window === 'undefined' ? null : window;
+      const mediaQuery = fenetre?.matchMedia('(max-width: 767px)');
+      if (mediaQuery) {
+        this.etroit.set(mediaQuery.matches);
+        mediaQuery.addEventListener('change', (evenement) => this.etroit.set(evenement.matches));
+      }
+    });
+    // Le tri affiché suit l'état du parent (URL, première charge) sans relancer de chargement.
+    effect(() => {
+      const champ = this.sortField();
+      const ordre = this.sortOrder();
+      this.colDefs();
+      this.appliquerTriALaGrille(champ, ordre);
     });
   }
 
-  protected isClickable(row: T): boolean {
-    return this.rowClickable()?.(row) ?? false;
+  protected onGridReady(evenement: GridReadyEvent): void {
+    this.api = evenement.api;
+    evenement.api.setGridAriaProperty('label', this.label());
+    this.appliquerTriALaGrille(this.sortField(), this.sortOrder());
   }
 
-  protected onRowClick(row: T): void {
-    if (this.isClickable(row)) {
-      this.rowClick.emit(row);
-    }
-  }
-
-  protected sortKey(column: TableColumn): string {
-    return column.sortField ?? column.field;
-  }
-
-  protected ariaSort(column: TableColumn): 'ascending' | 'descending' | 'none' {
-    if (this.sortField() !== this.sortKey(column)) {
-      return 'none';
-    }
-    return this.sortOrder() === 1 ? 'ascending' : 'descending';
-  }
-
-  protected sortBy(column: TableColumn): void {
-    if (column.sortable === false) {
+  protected onSortChanged(evenement: SortChangedEvent): void {
+    if (this.appliqueEtatTri) {
       return;
     }
-    const key = this.sortKey(column);
-    if (this.sortField() === key) {
-      this.sortOrder.set(this.sortOrder() === 1 ? -1 : 1);
-    } else {
-      this.sortField.set(key);
-      this.sortOrder.set(1);
-    }
+    const triee = evenement.api.getColumnState().find((colonne) => colonne.sort);
+    const colonne = triee ? this.columns().find((c) => c.field === triee.colId) : undefined;
+    this.sortField.set(colonne ? this.sortKey(colonne) : null);
+    this.sortOrder.set(triee?.sort === 'desc' ? -1 : 1);
     this.first.set(0);
     this.emitLazy();
   }
+
+  protected onColumnMoved(evenement: ColumnMovedEvent): void {
+    if (!evenement.finished || !evenement.source.startsWith('ui')) {
+      return;
+    }
+    const ordre = evenement.api.getColumnState().map((colonne) => colonne.colId).filter((id) => id !== COLONNE_ACTIONS);
+    const colonnes = ordre.map((id) => this.columns().find((c) => c.field === id)).filter((c): c is TableColumn => !!c);
+    if (colonnes.length === this.columns().length && colonnes.some((c, i) => c.field !== this.columns()[i]?.field)) {
+      this.columnsReorder.emit(colonnes);
+    }
+  }
+
+  protected onRowClicked(evenement: RowClickedEvent): void {
+    const cible = evenement.event?.target as HTMLElement | null;
+    if (cible?.closest('button, a, input, select, textarea, [role="button"]')) {
+      return;
+    }
+    this.cliquerLigne(evenement.data as T | undefined);
+  }
+
+  protected onCellKeyDown(evenement: CellKeyDownEvent | FullWidthCellKeyDownEvent): void {
+    if ((evenement.event as KeyboardEvent | null)?.key === 'Enter') {
+      this.cliquerLigne(evenement.data as T | undefined);
+    }
+  }
+
+  protected readonly getRowClass = (params: { data?: T }): string | undefined => (params.data && this.rowClickable()?.(params.data) ? 'stp-table__row--clickable' : undefined);
 
   protected goToPage(page: number): void {
     const bounded = Math.min(Math.max(page, 1), this.pageCount());
@@ -176,96 +288,41 @@ export class TableComponent<T extends object> {
     this.emitLazy();
   }
 
-  // ---- Redimensionnement ----
-
-  protected startResize(event: PointerEvent, column: TableColumn): void {
-    event.preventDefault();
-    const header = (event.target as HTMLElement).closest('th') as HTMLElement;
-    const startX = event.clientX;
-    const startWidth = header.offsetWidth;
-    const target = event.target as HTMLElement;
-    target.setPointerCapture(event.pointerId);
-
-    const move = (moveEvent: PointerEvent) => this.setWidth(column, startWidth + moveEvent.clientX - startX);
-    const stop = () => {
-      target.removeEventListener('pointermove', move);
-      target.removeEventListener('pointerup', stop);
-      target.removeEventListener('pointercancel', stop);
-    };
-    target.addEventListener('pointermove', move);
-    target.addEventListener('pointerup', stop);
-    target.addEventListener('pointercancel', stop);
+  private cliquerLigne(ligne: T | undefined): void {
+    if (ligne && this.rowClickable()?.(ligne)) {
+      this.rowClick.emit(ligne);
+    }
   }
 
-  protected resizeWithKeyboard(event: KeyboardEvent, column: TableColumn): void {
-    const delta = event.key === 'ArrowRight' ? KEYBOARD_RESIZE_STEP : event.key === 'ArrowLeft' ? -KEYBOARD_RESIZE_STEP : 0;
-    if (delta === 0) {
+  private sortKey(colonne: TableColumn): string {
+    return colonne.sortField ?? colonne.field;
+  }
+
+  private appliquerTriALaGrille(champ: string | null, ordre: 1 | -1): void {
+    if (!this.api) {
       return;
     }
-    event.preventDefault();
-    const header = (event.target as HTMLElement).closest('th') as HTMLElement;
-    this.setWidth(column, (this.widths()[column.field] ?? header.offsetWidth) + delta);
+    const colonne = champ ? this.columns().find((c) => this.sortKey(c) === champ) : undefined;
+    this.appliqueEtatTri = true;
+    this.api.applyColumnState({
+      state: colonne ? [{ colId: colonne.field, sort: ordre === 1 ? 'asc' : 'desc' }] : [],
+      defaultState: { sort: null }
+    });
+    this.appliqueEtatTri = false;
   }
 
-  private setWidth(column: TableColumn, width: number): void {
-    this.widths.update((current) => ({
-      ...current,
-      [column.field]: Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)))
-    }));
-  }
-
-  // ---- Réordonnancement ----
-
-  protected onDragStart(event: DragEvent, column: TableColumn): void {
-    this.dragged.set(column.field);
-    event.dataTransfer?.setData('text/plain', column.field);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
+  private modeleCellule(params: { data?: unknown; node: { rowPinned?: string | null } }, colonne: TableColumn) {
+    if (params.node.rowPinned === 'bottom') {
+      const pied = this.footer();
+      return pied ? { template: pied.template, contexte: { col: colonne } } : null;
     }
+    const cellule = this.cell();
+    return cellule && params.data ? { template: cellule.template, contexte: { $implicit: params.data, col: colonne } } : null;
   }
 
-  protected onDragOver(event: DragEvent, column: TableColumn): void {
-    if (this.dragged() && this.dragged() !== column.field) {
-      event.preventDefault();
-      this.dropTarget.set(column.field);
-    }
-  }
-
-  protected onDrop(event: DragEvent, column: TableColumn): void {
-    event.preventDefault();
-    const source = this.dragged();
-    this.onDragEnd();
-    if (source && source !== column.field) {
-      this.move(source, this.columns().findIndex((c) => c.field === column.field));
-    }
-  }
-
-  protected onDragEnd(): void {
-    this.dragged.set(null);
-    this.dropTarget.set(null);
-  }
-
-  protected moveWithKeyboard(event: Event, column: TableColumn, offset: -1 | 1): void {
-    event.preventDefault();
-    const index = this.columns().findIndex((c) => c.field === column.field);
-    this.move(column.field, index + offset);
-    // L'en-tête change de place : le focus le suit une fois le tableau redessiné.
-    afterNextRender(() => document.getElementById(this.headerId(column))?.querySelector('button')?.focus(), { injector: this.injector });
-  }
-
-  protected headerId(column: TableColumn): string {
-    return `stp-th-${column.field}`;
-  }
-
-  private move(field: string, targetIndex: number): void {
-    const columns = [...this.columns()];
-    const from = columns.findIndex((c) => c.field === field);
-    if (from < 0 || targetIndex < 0 || targetIndex >= columns.length || from === targetIndex) {
-      return;
-    }
-    const [moved] = columns.splice(from, 1);
-    columns.splice(targetIndex, 0, moved);
-    this.columnsReorder.emit(columns);
+  private modeleActions(params: { data?: unknown; node: { rowPinned?: string | null } }) {
+    const actions = this.rowActions();
+    return actions && params.data && params.node.rowPinned !== 'bottom' ? { template: actions.template, contexte: { $implicit: params.data } } : null;
   }
 
   private emitLazy(): void {

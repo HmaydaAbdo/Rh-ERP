@@ -1,8 +1,9 @@
+import { attendreGrille, lignesGrille } from '../../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { saisir } from '../../../../shared/testing/formulaire';
 import { Role } from '../../models/admin.model';
 import { RoleService } from '../../services/role.service';
@@ -20,7 +21,7 @@ describe('RoleListComponent', () => {
   let navigation: ReturnType<typeof vi.spyOn>;
   const racine = () => fixture.nativeElement as HTMLElement;
   const bouton = (nom: string) => racine().querySelector(`button[aria-label="${nom}"]`) as HTMLButtonElement;
-  const noms = () => Array.from(racine().querySelectorAll('tbody tr td:first-child')).map((td) => td.textContent?.trim());
+  const noms = () => lignesGrille(racine()).map((l) => l.cells[0]?.textContent?.trim());
 
   async function afficher(): Promise<void> {
     service = {
@@ -36,6 +37,7 @@ describe('RoleListComponent', () => {
     fixture = TestBed.createComponent(RoleListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -52,7 +54,7 @@ describe('RoleListComponent', () => {
 
     expect(service.search).toHaveBeenCalledWith({}, { page: 0, size: 10, sort: 'nom,asc' });
     expect(noms()).toEqual(['SYSTEM_ADMIN', 'RH', 'Comptable']);
-    const ligne = (i: number) => Array.from(racine().querySelectorAll('tbody tr')[i].querySelectorAll('td')).slice(0, 3).map((td) => td.textContent?.trim());
+    const ligne = (i: number) => lignesGrille(racine())[i].cells.slice(0, 3).map((td) => td.textContent?.trim());
     expect(ligne(0)).toEqual(['SYSTEM_ADMIN', 'Administration', '1 permission(s)']);
     expect(ligne(1)).toEqual(['RH', '—', '0 permission(s)']);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('3 rôles');
@@ -101,7 +103,7 @@ describe('RoleListComponent', () => {
     saisir(racine(), 'input[aria-label="Nom"]', 'zzz');
     await filtrer();
 
-    expect(racine().querySelector('.stp-table__empty')?.textContent).toBe('Aucun rôle ne correspond à ces critères.');
+    expect(racine().querySelector('.stp-table__empty-state')?.textContent).toBe('Aucun rôle ne correspond à ces critères.');
   });
 
   it('ouvre la modification d’un rôle', async () => {
@@ -150,12 +152,14 @@ describe('RoleListComponent', () => {
     service.search.mockReturnValueOnce(throwError(() => new Error('lecture impossible')));
     fixture.componentInstance['onSearch']();
     await fixture.whenStable();
+    await attendreGrille(fixture);
 
     expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger les rôles');
     expect(racine().textContent).not.toContain('Aucun rôle ne correspond');
 
     fixture.componentInstance['reessayer']();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     expect(noms()).toEqual(['SYSTEM_ADMIN', 'RH', 'Comptable']);
   });
 

@@ -3,11 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, finalize, Subject } from 'rxjs';
 
-import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/components/collection-shell/collection-shell.component';
+import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';

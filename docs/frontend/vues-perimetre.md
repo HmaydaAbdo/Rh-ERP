@@ -55,8 +55,8 @@ vide (aucun élément ne correspond) n'interroge aucune source.
 
 **Cartes** (`fusionnerGroupes`) : au niveau de la dimension du module et sans autre dimension restreinte, le référentiel est
 **exhaustif** (une carte par entrée, à zéro sans données) ; sinon il ne fait que décorer (statut, désignation, lien) les groupes
-qui ont des fiches ou des bulletins. Quand `PAIE_READ` est accordée, chaque carte présente séparément Effectif (personnes),
-Masse salariale (DH), STC (personnes) et STC (DH), avec leur libellé et leur valeur. La comparaison porte sur le mois
+qui ont des fiches ou des bulletins. Quand `PAIE_READ` est accordée, chaque carte présente séparément Bulletins de paie,
+Masse salariale (DH), STC (bulletins) et STC (DH), avec leur libellé et leur valeur. La comparaison porte sur le mois
 calendaire contigu : écart pour les effectifs, pourcentage pour les montants. Si le mois précédent existe mais qu'un groupe
 n'y figure pas, ses valeurs de comparaison sont zéro. Sans paie enregistrée sur ce mois, la carte indique que la comparaison
 est indisponible; une base monétaire nulle n'est jamais divisée.
@@ -120,7 +120,7 @@ affiche des indicateurs à zéro. Le module à niveau « mois » (Paie) ouvre le
 | Module | Dimension | Hiérarchie Cartes | Priorité Analytique | Référentiel | Particularités |
 |---|---|---|---|---|---|
 | Chantiers | `CHANTIER` | chantier → équipe → fonction → employés | Employé puis Paie | code, nom/désignation, statut En cours / Clôturé | filtres code, désignation, statut |
-| Équipes | `EQUIPE` | équipe → chantier → fonction | Effectif payé par équipe, mois le plus récent | code, libellé | filtres code/libellé conservés entre vues; pas de sélecteur de période; évolution historique de l'équipe choisie |
+| Équipes | `EQUIPE` | équipe → chantier → fonction | Bulletins de paie par équipe, mois le plus récent | code, libellé | filtres code/libellé conservés entre vues; pas de sélecteur de période; évolution historique de l'équipe choisie |
 | Fonctions | `FONCTION` | fonction → chantier → équipe → employés | Employé puis Paie | libellé | filtre libellé |
 | Employés | aucune | chantier → équipe → fonction → employés | Employé puis Paie | aucun | nom, CIN, statut sur les fiches (nom et CIN aussi sur la paie) ; pas de lien « Voir les employés » |
 | Paie | aucune | mois → chantier → équipe → fonction → employés | Paie puis Employé | aucun | suppression en groupe par carte (`PAIE_PURGE`) |

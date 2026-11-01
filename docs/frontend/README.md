@@ -153,8 +153,8 @@ nouveau reprend ces règles dès sa création.
 | Logo | Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon uniquement) — dessin provisoire, à remplacer par une version vectorielle du logo. Aucun logo dans l'authentification ou le menu latéral |
 | Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; `--text-page-title` pour les titres d'écran, `--text-display` réservé à l'accroche d'accueil |
 | Thème | Clair ou sombre : suit le système tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage. Graphite Staport et ses règles d'usage sont définis dans [design-system.md](../../conventions/design-system.md). |
-| Menu latéral | Fond bleu très foncé en clair et graphite en sombre (`--color-sidebar-*`), repère cuivre discret. Chaque destination du menu a une icône dédiée, sans répétition. Sur grand écran, le menu reste iconique et compact ; Fonctions et Équipes sont deux entrées séparées. Sur `/carte`, le rail disparaît : un hamburger précède le filtre, et révèle par survol ou focus clavier un volet animé qui se replie à la sortie. L'animation est coupée avec `prefers-reduced-motion`. Sur **téléphone et tablette compacte**, le menu garde son tiroir piloté par la barre du haut. |
-| Authentification | Connexion, mot de passe oublié et réinitialisation partagent un formulaire centré sur tout le canevas, même si une session est active, posé sur la photographie locale `src/assets/auth/staport-login-atlas.png` générée pour Staport RH. Un voile sombre conserve le contraste ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
+| Navigation | **Unifiée dans la barre Staport** (`stp-dock`), décision du propriétaire du 2026-11-01 : plus de rail ni de menu latéral. Le bouton hamburger placé avant le titre de chaque page (`stp-dock-declencheur`, sans bordure animée) ouvre à côté de lui un panneau (overlay du CDK) : en haut les commandes directes (Accueil, indisponible jusqu'aux fiches de poste ; AI = Staport Intelligence ; thème ; fermer), dessous les destinations autorisées par les permissions (le groupe Administration système se replie), puis l'utilisateur et la déconnexion. Elle se ferme avec Échap, un clic à côté, la croix ou le choix d'une destination. Chaque destination à plusieurs vues ouvre sa vue Cartes. Sur `/carte`, le hamburger est dans la barre de recherche. |
+| Authentification | Connexion, mot de passe oublié et réinitialisation partagent la carte `stp-auth-card` (`shared/ui/auth-card`) : une carte plate centrée sur le fond de page, qui suit le thème de l'application, même si une session est active ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
 
 Le shell de navigation s'affiche ou se masque selon la session et la route d'authentification, mais l'application conserve un seul
 `router-outlet` monté. Cela garde stables les contrôles accessibles à popup (sélecteurs, comboboxes) pendant la transition entre
@@ -239,6 +239,8 @@ Détail : [../auth/README.md](../auth/README.md).
 `src/app/shared/ui/` : composants standalone, `OnPush`, Signals, construits sur Angular Aria/CDK et les jetons (aucune bibliothèque de
 widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalogue** (`/catalogue`, route de développement seulement,
 `app.routes.ts`) les montre dans leurs états et sert aux tests E2E d'accessibilité.
+
+La règle de réutilisation, le registre des éléments à présenter au catalogue et l'inventaire des domaines à aligner sont suivis dans [l'audit des composants partagés](audit-composants-partages.md). Le travail de migration planifié pour samedi est isolé dans le [TODO frontend dédié](TODO-2026-10-31-harmonisation.md), hors du TODO général. Tout composant d'interface rejoint le socle et le catalogue ; les hôtes de domaine raccordent leurs données, permissions et événements métier aux API partagées sans créer de style ou de contrôles locaux.
 
 | Composant | Rôle | Base |
 |---|---|---|
@@ -335,9 +337,8 @@ Tous les tableaux de données — **sans exception** — offrent :
 
 **Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
 son propre style de tableau. Un en-tête peut déclarer `shortHeader` pour afficher un libellé compact ; son `header` complet reste annoncé aux technologies d'assistance, visible au survol et utilisé dans le sélecteur de colonnes. Les en-têtes ne sont pas tronqués. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
-`emptyMessage` et présenté dans le tableau. Les seuls tableaux hors `stp-table` sont des listes courtes de lignes d'import ignorées :
-elles utilisent `app-static-table-scroll` / `app-static-table` (`styles/_page.scss`), une région de défilement focusable, une légende
-accessible et des en-têtes `scope="col"`.
+`emptyMessage` et présenté dans le tableau. **Aucun tableau HTML natif** n'existe hors du kit : même les petites listes (lignes d'import ignorées, données d'accompagnement
+des graphiques) passent par `stp-table` avec `[paginated]="false"`, `[reorderable]="false"` et `[rowActionsVisible]="false"`.
 
 Les libellés d'en-tête et d'option restent intégralement visibles : le texte passe à la ligne et ne dépend pas d'une infobulle pour
 être lu. Le sélecteur expose toutes les colonnes déclarées dans `ColumnState`, y compris celles temporairement masquées. Les
@@ -395,10 +396,7 @@ Les formulaires de modification et les fiches distinguent chargement, donnée di
 Un formulaire n'est pas enregistrable avant la lecture de l'enregistrement demandé. Une recherche échouée ne se présente
 pas comme une liste vide. Les vues partagées gardent les sources disponibles et nomment celles qui sont indisponibles.
 
-Les exports individuels des tableaux et graphiques utilisent `PdfImpressionService` : titre, période de référence,
-filtres lisibles, graphiques et tableau de données complet. Les composants qui présentent plusieurs graphiques les
-incluent tous avec leur légende et le fond de leur thème afin que les libellés restent lisibles. La table conserve ses en-têtes sur chaque page imprimée; la fenêtre d'impression
-permet l'enregistrement en PDF. Le rapport métier Paie conserve son export PDF serveur et son assistant dédié.
+Aucun tableau, graphique ni carte n'exporte ses données depuis le navigateur (décision du 2026-11-01). Seuls les exports produits par le backend subsistent, comme le rapport métier Paie (PDF ou Excel serveur) et son assistant dédié.
 
 - **Signal Forms** pour tous les formulaires (2026-10-10) : modèle `signal` typé, `form(modele, schema, { submission })`, `<form [formRoot]>`,
   `[formField]` sur les champs, `<stp-field-error>` pour le message sous le champ (une fois touché) ; les champs obligatoires portent une

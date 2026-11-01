@@ -31,9 +31,9 @@ describe('chart-theme', () => {
 
   describe('habillage', () => {
     it('la police du texte est celle de l’interface, à la taille demandée', () => {
-      racine.style.setProperty('--font-sans', 'IBM Plex Sans');
+      racine.style.setProperty('--font-sans', 'Inter Variable');
 
-      expect(police()).toEqual({ family: 'IBM Plex Sans', size: 12 });
+      expect(police()).toEqual({ family: 'Inter Variable', size: 12 });
       expect(police(14).size).toBe(14);
     });
 

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
-import { LazySelectPage, LazySelectSource } from '../components/lazy-select/lazy-select.model';
+import { LazySelectPage, LazySelectSource } from '../ui/lazy-select/lazy-select.model';
 import { Page } from '../models/page.model';
 import { EmployeeReference } from './employee-reference.model';
 
@@ -12,7 +12,7 @@ function avecLibelle(employee: EmployeeReference): EmployeeReferenceOption {
   return { ...employee, displayLabel: `${employee.nomPrenom} — ${employee.cin}` };
 }
 
-/** Source de données du sélecteur générique (voir `shared/components/lazy-select`) pour l'employé
+/** Source de données du sélecteur générique (voir `shared/ui/lazy-select`) pour l'employé
  * d'un bulletin de paie — les employés sont potentiellement nombreux (contrairement à
  * Function/Chantier), la pagination/recherche serveur est donc indispensable ici, pas seulement une
  * conséquence de la convention. `displayLabel` (nom + CIN) désambiguïse les homonymes, absent du

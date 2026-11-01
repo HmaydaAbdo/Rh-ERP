@@ -5,8 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { distinctUntilChanged, finalize, map, skip, Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
-import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/components/collection-table/collection-table.component';
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent } from '../../../shared/ui/badge/badge.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
@@ -27,14 +27,7 @@ const CONFIGURATION_TABLE_EMPLOYE: CollectionTableConfig = {
   selector: 'app-employee-list',
   imports: [CollectionTableComponent, ButtonComponent, BadgeComponent, TableCellDirective, TableRowActionsDirective, DatePipe, DecimalPipe],
   templateUrl: './employee-list.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    // Unité du salaire (« / mois », « / jour ») : discrète à côté du montant
-    .employee-list__unite {
-      color: var(--color-text-muted);
-      font-size: var(--text-xs);
-    }
-  `
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EmployeeListComponent {
   protected readonly tableConfiguration = CONFIGURATION_TABLE_EMPLOYE;
@@ -43,12 +36,12 @@ export class EmployeeListComponent {
 
   /** Le salaire est une donnée de paie : sa colonne n'existe que pour qui a `PAIE_READ` (le serveur ne l'envoie qu'à lui). */
   protected readonly columns = new ColumnState([
-    { field: 'nomPrenom', header: 'Nom & prénom' },
+    { field: 'nomPrenom', header: 'Nom & prénom', minWidth: 200 },
     { field: 'cin', header: 'CIN' },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
     { field: 'equipe', header: 'Équipe', sortField: 'equipe.libelle' },
-    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-right' }] : []),
+    ...(this.authService.hasPermission('PAIE_READ') ? [{ field: 'salaire', header: 'Salaire', align: 'text-end' }] : []),
     { field: 'dateEmbauche', header: "Date d'embauche" },
     { field: 'statut', header: 'Statut' }
   ]);

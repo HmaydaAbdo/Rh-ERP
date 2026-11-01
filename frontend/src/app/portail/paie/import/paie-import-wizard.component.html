@@ -1,53 +1,30 @@
 <stp-dialog header="Importer la paie" width="860px" [open]="visible()" [closable]="store.etat() !== 'import'" (openChange)="setVisible($event)">
-  <div class="import-wizard">
-    <p class="import-wizard__sous-titre">{{ store.sousTitre() }}</p>
+  <div class="app-wizard">
+    <p class="app-wizard__sous-titre">{{ store.sousTitre() }}</p>
 
-    <nav class="import-wizard__etapes" aria-label="Étapes de l'import">
-      @for (id of store.etapes; track id; let i = $index) {
-        <button
-          type="button"
-          class="import-wizard__etape"
-          [class.import-wizard__etape--active]="id === store.etape() && store.etat() !== 'termine'"
-          [class.import-wizard__etape--faite]="i < store.indexEtape() || store.etat() === 'termine'"
-          [attr.aria-current]="id === store.etape() ? 'step' : null"
-          (click)="store.allerA(id)"
-        >
-          <span class="import-wizard__pastille">
-            @if (i < store.indexEtape() || store.etat() === 'termine') {
-              <stp-icon name="check" />
-            } @else {
-              {{ i + 1 }}
-            }
-          </span>
-          <span class="import-wizard__libelle">{{ store.libelleEtapes[id] }}</span>
-        </button>
-        @if (i < store.etapes.length - 1) {
-          <span class="import-wizard__trait" [class.import-wizard__trait--plein]="i < store.indexEtape() || store.etat() === 'termine'"><span></span></span>
-        }
-      }
-    </nav>
+    <stp-stepper ariaLabel="Étapes de l'import" [etapes]="etapesStepper()" [courante]="store.etape()" [indexCourant]="store.indexEtape()" [termine]="store.etat() === 'termine'" (choisir)="store.allerA($any($event))" />
 
-    <div class="import-wizard__corps" [attr.aria-busy]="store.occupe()">
+    <div class="app-wizard__corps" [attr.aria-busy]="store.occupe()">
       @if (store.erreur(); as erreur) {
-        <stp-message severity="error" class="import-wizard__alerte" role="alert">{{ erreur }}</stp-message>
+        <stp-message severity="error" class="app-wizard__alerte" role="alert">{{ erreur }}</stp-message>
       }
 
       @if (store.etat() === 'saisie') {
         @switch (store.etape()) {
           @case ('fichier') {
-            <section class="import-wizard__panneau">
-              <div class="import-wizard__mois">
+            <section class="app-wizard__panneau">
+              <div class="app-wizard__mois">
                 @if (store.moisImpose()) {
-                  <span class="import-wizard__etiquette">Mois à importer</span>
+                  <span class="app-wizard__etiquette">Mois à importer</span>
                   <strong>{{ store.libellePeriode(store.mois()) }}</strong>
-                  <span class="import-wizard__legende">La paie s'importe mois après mois : c'est le mois qui suit le dernier importé.</span>
+                  <span class="app-wizard__legende">La paie s'importe mois après mois : c'est le mois qui suit le dernier importé.</span>
                 } @else {
-                  <label for="importMois" class="import-wizard__etiquette">Mois à importer</label>
+                  <label for="importMois" class="app-wizard__etiquette">Mois à importer</label>
                   <stp-month-input inputId="importMois" (valueChange)="store.choisirMois($event)" placeholder="Choisir le mois" />
-                  <span class="import-wizard__legende">Premier import : choisissez le mois du fichier.</span>
+                  <span class="app-wizard__legende">Premier import : choisissez le mois du fichier.</span>
                 }
               </div>
-              <label class="import-wizard__depot" [class.import-wizard__depot--inactif]="!store.mois() || store.occupe()">
+              <label class="app-wizard__depot" [class.app-wizard__depot--inactif]="!store.mois() || store.occupe()">
                 <stp-icon name="file-spreadsheet" size="2rem" />
                 <strong>{{ store.occupe() ? 'Analyse du fichier…' : 'Choisir le fichier Excel de paie' }}</strong>
                 <span>Le fichier est d'abord analysé : rien n'est enregistré avant la dernière étape.</span>
@@ -62,15 +39,15 @@
 
           @case ('departs') {
             @if (store.analyse(); as analyse) {
-              <section class="import-wizard__panneau">
+              <section class="app-wizard__panneau">
                 @if (analyse.departs.length === 0) {
-                  <p class="import-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans STC.</p>
+                  <p class="app-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans STC.</p>
                 } @else {
-                  <p class="import-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé.</p>
-                  <ul class="import-wizard__departs">
+                  <p class="app-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé.</p>
+                  <ul class="app-wizard__departs">
                     @for (depart of analyse.departs; track depart.employeId) {
-                      <li [class.import-wizard__depart--decoche]="!store.departs()[depart.employeId]?.coche">
-                        <label class="import-wizard__case">
+                      <li [class.app-wizard__depart--decoche]="!store.departs()[depart.employeId]?.coche">
+                        <label class="app-wizard__case">
                           <input type="checkbox" [checked]="store.departs()[depart.employeId]?.coche" (change)="store.saisirDepart(depart.employeId, { coche: coche($event) })" />
                           <span><strong>{{ depart.nomPrenom }}</strong> <small>CIN {{ depart.cin }} · {{ depart.motif ? depart.motif + ' dans le fichier' : 'absent du fichier' }}</small></span>
                         </label>
@@ -89,9 +66,9 @@
                   </ul>
                 }
                 @if (analyse.retours.length > 0) {
-                  <h3 class="import-wizard__titre"><stp-icon name="user-check" /> Retours <span class="import-wizard__nombre">{{ analyse.retours.length }}</span></h3>
-                  <p class="import-wizard__legende">Employés sortis présents dans le fichier : ils repassent en poste à l'import.</p>
-                  <ul class="import-wizard__liste">
+                  <h3 class="app-wizard__titre"><stp-icon name="user-check" /> Retours <span class="app-wizard__nombre">{{ analyse.retours.length }}</span></h3>
+                  <p class="app-wizard__legende">Employés sortis présents dans le fichier : ils repassent en poste à l'import.</p>
+                  <ul class="app-wizard__liste">
                     @for (retour of analyse.retours; track retour.employeId) {
                       <li>{{ retour.nomPrenom }} <small>CIN {{ retour.cin }}</small></li>
                     }
@@ -103,14 +80,14 @@
 
           @case ('recap') {
             @if (store.analyse(); as analyse) {
-              <section class="import-wizard__panneau">
-                <dl class="import-wizard__recap">
+              <section class="app-wizard__panneau">
+                <dl class="app-wizard__bilan">
                   <div><dt>Mois</dt><dd>{{ store.libellePeriode(store.mois()) }}</dd></div>
                   <div><dt>Bulletins à créer</dt><dd>{{ analyse.totalLignes }}</dd></div>
                   <div><dt>Départs confirmés</dt><dd>{{ store.departsConfirmes().length }}</dd></div>
                   <div><dt>Retours</dt><dd>{{ analyse.retours.length }}</dd></div>
                 </dl>
-                <p class="import-wizard__legende">Tout est enregistré d'un coup : bulletins, départs et retours.</p>
+                <p class="app-wizard__legende">Tout est enregistré d'un coup : bulletins, départs et retours.</p>
               </section>
             }
           }
@@ -118,44 +95,39 @@
       }
 
       @if (store.etat() === 'import') {
-        <section class="import-wizard__panneau import-wizard__generation" role="status">
-          <stp-icon name="settings" class="stp-spin" size="2rem" />
-          <strong>Import en cours</strong>
-          <p>Les bulletins, les départs et les retours sont enregistrés ensemble.</p>
-          <span class="import-wizard__indetermine"><span></span></span>
-        </section>
+        <stp-wizard-state etat="encours" titre="Import en cours" class="app-wizard__panneau">
+          <p class="m-0">Les bulletins, les départs et les retours sont enregistrés ensemble.</p>
+        </stp-wizard-state>
       }
 
       @if (store.etat() === 'termine') {
         @if (store.bilan(); as bilan) {
-          <section class="import-wizard__panneau import-wizard__termine" role="status">
-            <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" /><path d="M20 33l8 8 16-17" /></svg>
-            <strong>Paie de {{ store.libellePeriode(bilan.periode) }} importée</strong>
-            <p>{{ bilan.crees }} bulletin(s) · {{ bilan.departs }} départ(s) · {{ bilan.retours }} retour(s)</p>
-            <div class="import-wizard__boutons-fin">
+          <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Paie de ' + store.libellePeriode(bilan.periode) + ' importée'">
+            <p class="m-0">{{ bilan.crees }} bulletin(s) · {{ bilan.departs }} départ(s) · {{ bilan.retours }} retour(s)</p>
+            <div class="app-wizard__boutons-fin">
               <button stp-button type="button" (click)="setVisible(false)">Fermer</button>
             </div>
-          </section>
+          </stp-wizard-state>
         }
       }
     </div>
 
     @if (store.etat() === 'saisie') {
-      <footer class="import-wizard__pied">
+      <footer class="app-wizard__pied">
         <button stp-button variant="text" icon="arrow-left" type="button" (click)="store.precedent()" [style.visibility]="store.indexEtape() > 0 ? 'visible' : 'hidden'">Retour</button>
         @switch (store.etape()) {
           @case ('fichier') {
-            <span class="import-wizard__indice">Choisissez le fichier pour lancer l'analyse.</span>
+            <span class="app-wizard__indice">Choisissez le fichier pour lancer l'analyse.</span>
           }
           @case ('controle') {
             @if (!store.pret()) {
-              <span class="import-wizard__indice">Réglez chaque problème pour continuer.</span>
+              <span class="app-wizard__indice">Réglez chaque problème pour continuer.</span>
             }
             <button stp-button icon="arrow-right" type="button" [disabled]="!store.pret() || store.occupe()" (click)="store.suivant()">Continuer</button>
           }
           @case ('departs') {
             @if (!store.departsValides()) {
-              <span class="import-wizard__indice">Saisissez le motif de chaque départ coché.</span>
+              <span class="app-wizard__indice">Saisissez le motif de chaque départ coché.</span>
             }
             <button stp-button icon="arrow-right" type="button" [disabled]="!store.departsValides()" (click)="store.suivant()">Continuer</button>
           }

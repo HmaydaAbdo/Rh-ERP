@@ -19,8 +19,7 @@ const TAILLE_PAGE = 10;
   selector: 'app-audit-historique',
   imports: [AuditChampsComponent, ButtonComponent],
   templateUrl: './audit-historique.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './audit-historique.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditHistoriqueComponent implements OnChanges {
   private readonly auditService = inject(AuditService);

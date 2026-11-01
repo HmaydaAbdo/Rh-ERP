@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
+import { MonthPickerComponent } from '../../../../shared/ui/month-picker/month-picker.component';
 import { CountUpDirective } from '../../../../shared/directives/count-up.directive';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PaieExportStore } from '../paie-export.store';
@@ -10,7 +10,6 @@ import { PaieExportStore } from '../paie-export.store';
   selector: 'app-paie-export-etape-periode',
   imports: [MonthPickerComponent, CountUpDirective, IconComponent],
   templateUrl: './periode-etape.component.html',
-  styleUrl: './periode-etape.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieExportEtapePeriodeComponent {

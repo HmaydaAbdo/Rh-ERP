@@ -3,6 +3,15 @@
 // décore jamais un écran de travail. Durées et courbe viennent des jetons (`--duration-*`, `--ease-out`). Un utilisateur qui
 // demande moins de mouvement n'en voit presque plus (voir la fin de ce fichier).
 
+// Sens de l'écriture : les glissements horizontaux s'inversent en lecture de droite à gauche (`dir="rtl"`, arabe préparé en E0.8).
+:root {
+  --sens-ecriture: 1;
+}
+
+:root[dir='rtl'] {
+  --sens-ecriture: -1;
+}
+
 // ---- Un écran qui arrive : il apparaît en fondu en montant de quelques pixels ----
 // `backwards` et non `both` : une animation qui garde son état final crée un contexte d'empilement permanent, et les fenêtres et
 // panneaux de l'écran (position fixe) passeraient sous le fond qui les masque.
@@ -24,12 +33,12 @@
 
 // Mouvements nommés du produit : définis ici pour garder une seule source des animations.
 @keyframes scene-entree-avant {
-  from { opacity: 0; transform: translateX(24px); }
+  from { opacity: 0; transform: translateX(calc(24px * var(--sens-ecriture, 1))); }
   to { opacity: 1; transform: none; }
 }
 
 @keyframes scene-entree-arriere {
-  from { opacity: 0; transform: translateX(-24px); }
+  from { opacity: 0; transform: translateX(calc(-24px * var(--sens-ecriture, 1))); }
   to { opacity: 1; transform: none; }
 }
 
@@ -39,31 +48,31 @@
 }
 
 @keyframes barre-course {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(300%); }
+  from { transform: translateX(calc(-100% * var(--sens-ecriture, 1))); }
+  to { transform: translateX(calc(300% * var(--sens-ecriture, 1))); }
 }
 
 @keyframes stp-spin {
   to { transform: rotate(360deg); }
 }
 
-@keyframes export-wizard-indetermine {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(333%); }
+@keyframes stp-wizard-indetermine {
+  from { transform: translateX(calc(-100% * var(--sens-ecriture, 1))); }
+  to { transform: translateX(calc(333% * var(--sens-ecriture, 1))); }
 }
 
-@keyframes export-wizard-confirme {
+@keyframes stp-wizard-confirme {
   from { opacity: 0; transform: scale(0.85); }
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes export-wizard-avant {
-  from { opacity: 0; transform: translateX(24px); }
+@keyframes stp-entree {
+  from { opacity: 0; transform: translateX(calc(24px * var(--sens-ecriture, 1))); }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes export-wizard-arriere {
-  from { opacity: 0; transform: translateX(-24px); }
+@keyframes stp-entree-arriere {
+  from { opacity: 0; transform: translateX(calc(-24px * var(--sens-ecriture, 1))); }
   to { opacity: 1; transform: none; }
 }
 

@@ -2,7 +2,7 @@
 
 > Conventions de design applicables à tout le frontend : identité visuelle, jetons, thèmes, typographie, mouvement,
 > composants, visualisations et accessibilité. Complète `frontend.md` (section « Design System »), qui pose la règle
-> générale : aucune valeur de design écrite en dur. L'identité Staport constitue le fil visuel commun ; les détails
+> générale : aucune valeur de design écrite en dur. La charte « standard de la catégorie » constitue le fil visuel commun ; les détails
 > propres à une application (logo d'écran, parcours, composants métier) sont décrits dans sa documentation.
 
 ---
@@ -17,11 +17,11 @@ Les jetons forment trois couches :
 
 | Couche | Rôle | Exemples |
 |---|---|---|
-| **Primitives** | L'échelle de couleurs de la marque ; identique dans les deux thèmes | `--brand-50` … `--brand-950` |
+| **Primitives** | Valeurs brutes réutilisées par plusieurs jetons (rayons, durées, échelle d'espacement) ; la couleur n'a pas d'échelle de marque | `--space-*`, `--radius-*`, `--duration-*` |
 | **Sémantiques** | Intention indépendante du composant ; adaptées au thème | surface, texte, action, statut, focus, graphiques |
 | **Composants** | Décisions répétées propres à un composant ou une famille cohérente | hauteur de contrôle, rayon de dialogue, élévation de menu |
 
-Un composant utilise les jetons sémantiques ou de composant, jamais une primitive de marque (`--brand-*`) : c'est ce qui
+Un composant utilise les jetons sémantiques ou de composant, jamais une valeur brute : c'est ce qui
 lui permet de suivre le thème et de changer d'identité sans réécriture. Les variables d'une bibliothèque sont générées
 ou mappées depuis les tokens Staport ; elles ne deviennent pas une source de vérité concurrente. La couleur d'action sert
 aux actions et à leur repérage ; les couleurs de statut restent distinctes de la marque.
@@ -31,21 +31,86 @@ lorsqu'un jeton sémantique existant exprime déjà l'intention.
 
 ---
 
-# Identité visuelle Staport
+# Identité visuelle : charte « standard de la catégorie »
 
-L'interface traduit l'identité Staport en une expérience **précise, accueillante et premium**, adaptée à des outils de
-travail : hiérarchie typographique nette, données immédiatement lisibles, surfaces avec une profondeur maîtrisée,
-alignements réguliers et interactions soignées. Le bleu de la marque ancre l'interface. Le thème clair conserve ses
-surfaces minérales et son accent cuivre ; le thème sombre adopte **Graphite Staport**, une gamme noire mate et graphite,
-avec actions et icônes bleues, texte net et accent cuivre réservé à quelques repères.
+**Décision du propriétaire du 2026-10-31** : l'identité visuelle précédente (bleu de marque, cuivre, Graphite Staport) est
+remplacée. Seuls le nom et le logo Staport sont conservés. La charte retenue est le **standard de la catégorie, exécuté sans
+faute** : un ERP clair, net et rassurant, bleu d'action sur neutres ardoise en thème clair, gris chauds neutres en thème sombre, pensé pour que l'on s'y sente à l'aise des heures
+durant. Le niveau de finition à atteindre est celui de **Linear** (rythme, états, vitesse, clavier), de **Stripe Dashboard**
+(chiffres, tableaux et filtres d'une lisibilité exemplaire) et de **Notion** (confort de lecture et d'édition).
 
-Le caractère immersif vient de la continuité du contexte, de la qualité des visualisations et d'une composition qui aide
-à comprendre l'espace de travail. Il ne masque pas les données ni ne réduit leur contraste. Le thème sombre traverse
-les surfaces, actions, navigation, formulaires et états actifs. Le bleu marque les actions, icônes et focus ; le cuivre
-reste rare et secondaire. Les fonds graphite gardent les données lisibles. Les variations de lumière servent la hiérarchie et la lecture.
-Éviter le néon uniforme, le glassmorphism systématique et les dégradés décoratifs.
-Vérifier le contraste du bleu extrait du logo avant de l'utiliser comme couleur de texte ou de contrôle sur une surface ;
-le logo ne garantit pas à lui seul un contraste suffisant pour les usages d'interface.
+Principes, par ordre de priorité :
+
+1. **Le texte est toujours clairement visible.** Texte courant : contraste d'au moins **7:1** sur sa surface (AAA) ; texte
+   secondaire : au moins **4,5:1** ; aucun gris clair sur blanc, aucun texte de moins de 12 px, dans les deux thèmes, y compris au
+   soleil sur téléphone.
+2. **Les bordures sont franches, surtout celles des tableaux.** Voir « Bordures » ci-dessous.
+3. **Aéré et calme** : une densité confortable (lignes de tableau hautes, marges généreuses), le même rythme d'espacement
+   partout ; l'information dense s'obtient par la hiérarchie, pas en serrant.
+4. **Un seul vocabulaire de composants** : tout écran, de tout domaine, est composé de composants partagés (voir « Composants
+   partagés »). Aucun composant propre à un domaine.
+5. **L'attachement vient du soin** : états vides utiles, chargements en squelette, erreurs claires, transitions brèves et
+   discrètes, pas d'ornements. Éviter le néon, le glassmorphism, les dégradés décoratifs, les ombres lourdes.
+
+## Palette
+
+Le bleu d'action est la seule couleur de marque ; les couleurs de statut restent distinctes de lui. Valeurs de référence (les
+jetons sémantiques de `_tokens.scss` les portent ; un composant n'écrit jamais ces valeurs) :
+
+| Rôle | Thème clair | Thème sombre |
+|---|---|---|
+| Fond de page (`--color-canvas`) | `#F3F4F6` | `#1F1E1D` |
+| Carte et tableau (`--color-surface`) | `#FFFFFF` | `#2B2A28` |
+| Texte (`--color-text`) | `#111827` | `#F5F4EF` |
+| Texte secondaire (`--color-text-muted`) | `#4B5563` | `#BDBAB1` |
+| Action (`--color-primary`) | `#1E40AF` | `#ECEAE3` (blanc cassé) |
+| Texte sur action (`--color-primary-contrast`) | `#FFFFFF` | `#1F1E1D` |
+| Bordure franche (`--color-border-strong`) | `#7F8796` | `#8A877F` |
+| Bordure de ligne (`--color-border`) | `#A9B0BC` | `#6B6962` |
+| Succès / avertissement / erreur | texte sur fond teinté, contraste ≥ 7:1 | idem |
+
+Le thème sombre est un **gris chaud neutre, sans bleu** (décision du propriétaire du 2026-10-31, après le tableau initial) ; son action est
+un blanc cassé, et les liens y restent soulignés puisque leur teinte ne se distingue pas du texte (classe globale `app-link`, `styles/_forms.scss`). Les contrastes de chaque couple
+texte / surface et bordure / surface, dans les deux thèmes, sont mesurés par `npm run check:contraste` (script
+`scripts/check-contraste-jetons.mjs`) et consignés dans [`docs/frontend/contraste-jetons.md`](../docs/frontend/contraste-jetons.md) ; le
+contrôle échoue si un couple requis passe sous son seuil ou si un jeton de l'ancienne identité réapparaît. Une valeur sous les seuils
+est corrigée avant d'être adoptée.
+
+## Bordures
+
+* **Tableaux** : cadre extérieur et trait sous l'en-tête en bordure **franche** (≥ 3:1 sur la surface voisine) ; séparateurs de
+  lignes en bordure de ligne, toujours visibles (≥ 2.18:1 au minimum, jamais plus clairs) ; lignes alternées ou survol pour
+  guider l'œil sans remplacer les bordures.
+* **Champs de saisie, boutons secondaires, cartes** : bordure franche (≥ 3:1), jamais un simple trait clair ; focus : anneau
+  de 2 px de la couleur d'action, d'au moins 3:1 sur la surface, décalé de la bordure.
+* Une bordure ne porte jamais seule une information : l'état (erreur, sélection) ajoute aussi une icône ou du texte.
+
+## Typographie
+
+* Une seule famille sans empattement, de milieu de gamme, sobre et très lisible : **Inter** (licence OFL), embarquée dans
+  l'application (`@fontsource-variable/inter`), chiffres tabulaires (`font-variant-numeric: tabular-nums`) pour tous les montants,
+  jamais de CDN. Pas de police d'affichage décorative.
+* Échelle à jetons uniquement ; corps de texte courant de 15 à 16 px, interligne de 1,5 ; titres en graisse 600.
+* Prévoir dès maintenant l'arabe de droite à gauche : propriétés logiques (`margin-inline-start`, `inset-inline`) au lieu de
+  gauche/droite ; police arabe à choisir au moment de livrer l'arabe. **Contrôle automatisé** : `npm run check:logique`
+  (`scripts/check-proprietes-logiques.mjs`, branché dans la CI) refuse `margin-left`, `padding-right`, `left:`, `right:`,
+  `text-align: left|right`, `float`, les classes `ml-*`, `mr-*`, `text-left`, `text-right`… ; on écrit `margin-inline-start`,
+  `inset-inline-end`, `text-align: start|end`, `ms-*`, `me-*`, `text-end`. Les glissements horizontaux multiplient leur
+  décalage par `--sens-ecriture` (`1`, ou `-1` sous `dir="rtl"`, défini dans `_motion.scss`). Les options de bibliothèques
+  (`left`/`right` de Chart.js ou de MapLibre) ne sont pas du CSS et ne sont pas concernées. `e2e/rtl.spec.ts` essaie le catalogue
+  et la paie en `dir="rtl"` (aucun débordement, aucune violation axe, navigation du côté du hamburger).
+
+## Composants partagés
+
+Tout écran est composé de composants du dossier partagé (`shared/ui/`). Si un besoin n'y est pas couvert, on **ajoute le
+composant au dossier partagé** (ou on étend un existant) avant de l'utiliser ; on n'écrit jamais un composant dans le dossier
+d'un domaine pour un usage visuel. Les tableaux utilisent **AG Grid Community** (`stp-table` ; au clavier : flèches pour les cellules, Maj + flèche gauche ou droite pour déplacer une colonne, Alt + flèche pour la redimensionner) et les graphiques **`ng2-charts`**, habillés
+par les jetons de cette charte (décision du 2026-10-31).
+
+**Règle vérifiée en CI** : aucun composant situé hors de `shared/ui/` ne porte de styles propres (`styleUrl`, `styles`). Un écran de domaine
+compose des composants de `shared/ui/` et les classes partagées de `src/styles/` (`app-page`, `app-toolbar`, `app-kpi`, `app-panel`,
+`app-wizard`…) ; ce dont il a besoin et qui manque s'ajoute à ces feuilles ou à `shared/ui/`. Le contrôle `npm run check:composants`
+(script `scripts/check-composants-partages.mjs`) échoue sur toute infraction.
 
 Le rendu premium repose sur le soin apporté à la typographie, aux espacements, aux états de composants et à la stabilité
 visuelle, pas sur l'ajout d'effets. Les écrans denses gardent des niveaux de lecture évidents. Chaque écran conserve une
@@ -59,19 +124,12 @@ compacts au pied d'une carte (par exemple l'accès à l'analyse de cette équipe
 permanente, avec un nom accessible et une infobulle qui décrivent la destination. Les liens de lecture ou de retour
 conservent une apparence de lien identifiable.
 
-L'action d'export d'un composant est une icône sans bordure permanente dans son coin supérieur droit ou sa barre d'outils,
-avec un nom accessible et une infobulle explicites. Pour une carte qui comporte d'autres actions, l'export rejoint leur
-rangée d'icônes dans le pied de carte, répartie sur toute la largeur disponible. Le survol et le focus mettent en évidence la
-bordure du conteneur concerné, avec les jetons de couleur, d'ombre et de durée du design system.
-Préserver l'espace du bouton pour éviter les chevauchements et les déplacements de mise en page.
-L'action reste disponible au clavier et sur écran tactile ; sa découverte ne dépend pas du survol.
-Le mouvement reste discret et respecte `prefers-reduced-motion`.
+**Aucun bouton d'export par composant** (décision du propriétaire, 2026-11-01) : un tableau, un graphique ou une carte n'exporte jamais
+ses données depuis le navigateur (ni PDF d'impression, ni CSV). Seuls subsistent les exports produits par le backend, comme le rapport de
+paie, lancés depuis l'action « Exporter » de l'écran ou de son assistant. Le survol et le focus d'un conteneur mettent en évidence sa
+bordure, avec les jetons de couleur, d'ombre et de durée du design system. Le mouvement reste discret et respecte `prefers-reduced-motion`.
 
-Sur `/carte` en grand écran, le rail latéral habituel s'efface au profit d'un hamburger fixe juste avant le filtre. Le
-survol ou le focus du bouton révèle le volet ; celui-ci reste visible pendant le survol ou le focus du bouton ou du volet,
-puis se replie à la sortie. Un court glissement et une révélation en cascade des liens indiquent l'entrée dans la navigation
-sans déplacer la carte ni ses contrôles. `prefers-reduced-motion` supprime ces effets. Téléphone et tablette gardent le
-tiroir piloté par la barre supérieure.
+La navigation est unifiée dans la barre Staport (voir « Kit de page ») : aucun rail ni menu latéral ; sur `/carte` le hamburger est dans la barre de recherche, la carte occupe tout l'écran.
 
 Pour préparer ou contrôler une évolution visuelle, utiliser les skills de design et d'accessibilité
 pertinentes disponibles (par exemple Impeccable ou UI/UX Pro Max) et un outil de navigateur adapté
@@ -108,27 +166,32 @@ troisième palette de marque qui dupliquerait les thèmes.
   (`:host-context([data-theme='dark'])`), pas par un second fichier.
 * Tout écran se vérifie dans **les deux thèmes**, avec contraste élevé et `forced-colors`, avant d'être livré.
 
-## Graphite Staport — thème sombre
+## Kit de page : alignement et rythme
 
-| Rôle | Couleur | Jeton principal |
-|---|---|---|
-| Noir mat (canevas) | `#0D0D0D` | `--color-canvas` |
-| Graphite (surface) | `#151515` | `--color-surface` |
-| Graphite clair (séparation) | `#2B2B2B` | `--color-border-strong` |
-| Bleu électrique (action) | `#168DFF` | `--color-primary` |
-| Bleu clair (icône et focus) | `#68AAFF` | `--color-focus` |
-| Blanc net | `#EDEDED` | `--color-text` |
-| Cuivre (accent rare) | `#C88E5C` | `--color-brand-accent` |
+*Décision du propriétaire, 2026-11-01.* Un écran est une colonne de sections qui occupent toute la largeur disponible :
 
-Le système sombre garde la même atmosphère dans la navigation, les écrans métier, les formulaires, l'assistant et la
-cartographie. Les tokens sémantiques pilotent les composants ; les surfaces montent du noir mat au graphite, les actions,
-icônes et focus restent bleus. Les boutons gardent leur contraste via `--color-primary-contrast`. L'accent cuivre reste
-rare dans le thème sombre et ne remplace ni les actions bleues ni les couleurs métier.
+* **Un seul écart vertical** entre sections, `--space-lg` : `.app-page`, `.app-vues`, `.app-entitys` et `.app-busy` sont des colonnes
+  (`display: flex; flex-direction: column; gap: var(--space-lg)`). Aucune section ne porte de marge propre ; un gabarit de domaine ne
+  pose ni `mt-*`, `mb-*`, `my-*`, `m-N`, `space-y-*` ni `margin` en ligne. `npm run check:espacement`
+  (`scripts/check-espacement.mjs`, dans la CI) le refuse.
+* **Un seul bord de début et de fin** : le retrait vient de la page seule (`.app-page`), un `.app-page` imbriqué n'ajoute ni retrait ni
+  écart. Un bloc vide (`:empty`) ne compte pas comme une section.
+* **En-tête de page** : le bouton hamburger de la barre Staport (`stp-dock-declencheur`, bordure franche, sans animation) en premier, puis le titre à
+  gauche ; les onglets de vue au milieu ; les actions à droite, sur une seule ligne.
+* **Navigation unifiée, barre Staport** (`stp-dock`) : un seul panneau, ouvert à côté du hamburger de l'en-tête (overlay du CDK) ;
+  commandes directes en haut (Accueil, indisponible jusqu'à la définition des fiches de poste ; AI = Staport Intelligence ; thème ;
+  fermer), destinations autorisées dessous, utilisateur et déconnexion en pied. Pas de menu latéral, pas de lanceur flottant.
+* **Cartes** : grille `auto-fit` à partir de 20 rem, texte courant de 14 px au moins ; les onglets de vue gardent le contexte des
+  filtres, donc pas de boutons « Voir la liste » ni « Voir les employés ».
+* **Garde de rythme** : `e2e/domaines-rendu.spec.ts` mesure, pour chaque écran, les bords de début et de fin de ses sections et l'écart
+  vertical entre elles.
 
-La carte prolonge Graphite Staport avec un Plan vectoriel noir et graphite, des routes ardoise lisibles, des marqueurs
-cuivre, des icônes de commande bleues et des infobulles graphite. Les vues Satellite et Relief gardent leur matière propre,
-avec un chrome sombre constant. Les couleurs de succès, avertissement, erreur et catégories de graphiques préservent
-leur signification métier dans tous les thèmes.
+## Thème sombre
+
+Le thème sombre suit les valeurs du tableau « Palette » : fond gris chaud très sombre, cartes un cran plus clair, texte blanc cassé,
+action blanc cassé. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une simple
+inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification métier dans
+les deux thèmes. **Thème par défaut : sombre** (décision du propriétaire, 2026-11-01) ; le choix de l'utilisateur est gardé dans le stockage local du navigateur. La carte des chantiers suit le thème : plan clair ou sombre (jetons `--map-plan-*`, jeu d'icônes `light` ou `dark`), interface de la carte en jetons `--map-ui-*` par thème ; le satellite garde son imagerie et le jeu d'icônes sombre. Pages sans cadre ni marge extérieure : l'écran occupe toute la zone à droite du rail, sans filet sous l'en-tête ; titre, onglets de vue et actions sont alignés sur une même ligne.
 
 ---
 
@@ -152,7 +215,7 @@ et obligations de leur contrat métier. Le panneau reste utilisable au clavier, 
 sur téléphone et en couleurs forcées. Un changement de source recharge les options autorisées.
 
 Chaque graphique de répartition trie ses catégories selon sa propre mesure et masque les valeurs nulles.
-Son tableau complet reste accessible à la demande et dans l'export. Les tableaux larges défilent dans
+Son tableau complet reste accessible à la demande. Les tableaux larges défilent dans
 leur conteneur sans élargir la page.
 Le canvas reste borné à la largeur de son conteneur, y compris après passage du bureau au téléphone.
 Les cartes alignent leurs indicateurs avec des espacements explicites; ne pas réserver de place pour
@@ -162,7 +225,7 @@ une ligne complète pour préserver leurs libellés.
 
 Les jetons Staport et les composants propres à Staport sont la source visuelle. Angular Aria/CDK fournit les primitives
 d'interaction accessibles; Tailwind CSS 4 fournit les utilitaires reliés aux jetons; Lucide Angular fournit les icônes.
-Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/` et la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre).
+Les composants sont composés et testés dans Storybook ou un catalogue équivalent avant d'être partagés (ERP-RH : `src/app/shared/ui/`, présentés par la route de développement `/catalogue`, vérifiée par axe en thèmes clair et sombre). Le catalogue ERP-RH recense toutes les briques d'interface partagées, y compris les composants de collection et d'intégration ; une brique visuelle partagée ne peut pas rester cachée dans un dossier commun sans page de démonstration ou référence explicite au catalogue.
 
 Utiliser les composants Angular Aria et CDK comme primitives accessibles et construire les composants Staport par-dessus,
 avec HTML natif dès que l'interaction est simple. Le système de design est porté par les jetons Staport, Tailwind CSS 4,
@@ -172,6 +235,10 @@ Chaque composant partagé définit les états qui s'appliquent parmi : repos, su
 chargement et erreur, ainsi que ses variantes de densité si elles sont utiles. Ces états restent perceptibles sans dépendre
 uniquement de la couleur. Valider au clavier, lecteur d'écran, focus, contraste, français, comportement zoneless et
 performance chaque composant partagé.
+La démo catalogue utilise des données locales déterministes lorsque le composant dépend normalement d'une API ; elle
+montre les variantes et états utiles sans appeler un backend métier. Les composants purement structurels sont montrés
+avec des projections représentatives. Chaque ajout ou changement d'API met à jour la démo, la documentation publique
+et les tests du catalogue dans le même changement.
 AG Grid Community n'est utilisé que pour une grille avancée lorsqu'un besoin mesuré le justifie ; il est encapsulé
 et chargé à la demande. PrimeNG, PrimeIcons et PrimeFlex sont exclus du socle pour limiter le verrouillage fournisseur et
 garder la maîtrise du langage visuel.
@@ -185,7 +252,7 @@ non contractuels et règles globales qui fuient dans les autres domaines.
 
 * **Une seule famille** de texte pour toute l'interface (`--font-sans`) et une famille à chasse fixe (`--font-mono`)
   réservée aux identifiants (codes, numéros de pièce, périodes) — classe utilitaire `.mono`.
-* Les polices sont **embarquées dans l'application** (paquets `@fontsource/*`, déclarés dans `angular.json`) : jamais de CDN
+* Les polices sont **embarquées dans l'application** (paquet `@fontsource-variable/inter`, déclaré dans `angular.json`) : jamais de CDN
   ni d'appel à un service externe, l'application doit fonctionner sans accès à Internet.
 * Les **chiffres tabulaires** (`font-variant-numeric: tabular-nums`) sont obligatoires partout où l'on compare des montants
   (tableaux, tuiles de synthèse).
@@ -227,15 +294,15 @@ et ne décore jamais un écran de travail. Tout est défini une seule fois dans 
 
 # Graphiques
 
-Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`shared/ui/chart/chart-theme.ts`) et lit les jetons.
+Les graphiques sont dessinés par **`ng2-charts`** (directive `baseChart` sur Chart.js, enveloppée par `stp-chart`). Chart.js dessine dans un canvas et ne lit pas le CSS ; l'habillage est donc commun (`shared/ui/chart/chart-theme.ts`) et lit les jetons.
 Chaque graphique répond à une question explicite et présente les unités, la période et la source des données utiles à
 son interprétation.
 
-* **Une mesure, un axe par défaut.** Ne jamais comparer les longueurs de séries qui utilisent des unités différentes.
-  Exception cadrée pour les évolutions temporelles de rapports explicitement validées : deux indicateurs peuvent partager
-  un graphique à deux axes Y quand leurs périodes correspondent et que les unités ne sont pas comparables. Chaque axe
-  porte son nom et son unité, ses graduations indépendantes restent visibles, et couleur, légende et valeurs relient sans
-  ambiguïté chaque série à son axe. Cette exception ne s'étend pas aux graphiques de distribution ni aux écrans interactifs.
+* **Un graphique par question, plusieurs indicateurs par graphique** (décision du propriétaire, 2026-11-01). Les indicateurs d'un même
+  sujet se groupent dans **un seul graphique à barres côte à côte**, et non en un graphique par grandeur. Les indicateurs de même unité
+  partagent l'axe Y principal ; une unité différente passe sur un **second axe Y à droite**. Chaque axe porte son nom et son unité, ses
+  graduations indépendantes restent visibles, et couleur, légende, infobulle et tableau de données relient sans ambiguïté chaque série à
+  son axe. Jamais plus de deux unités par graphique ; au-delà, on sépare. Les périodes des séries correspondent.
 * **La couleur suit l'entité, jamais son rang** : une mesure a la même couleur dans tous les graphiques, quel que soit le
   filtre. Palette catégorielle `--chart-1…8` validée avec le validateur de la méthode (écart de vision des couleurs ≥ 8,
   plancher de vision normale ≥ 15) en clair **et** en sombre, dans un ordre fixe ; au-delà de trois séries on regroupe ou on
@@ -260,7 +327,7 @@ des tableaux) : aucun écran ne redéfinit la carte, l'en-tête, les filtres ni 
 | `app-page__header` | Le titre éditorial (`--text-page-title`) de l'écran et, à droite, ses actions |
 | `app-page__header` + `app-page__actions app-page__actions--liste` | Les actions d'un écran de liste (Importer, Synchroniser, Exporter, puis l'action principale « Nouveau … » en dernier), à droite du titre ; en une grille sur téléphone. Les écrans qui ont des onglets de vue (la paie) les posent au même niveau que les onglets |
 | `app-toolbar` | Les filtres regroupés dans une bande secondaire, sans ajouter une carte lourde : contrôles de même hauteur (`--control-height`), deux par ligne sur téléphone. `app-toolbar__clear` : le bouton « Réinitialiser » ; `app-toolbar__date` : un champ précédé d'un petit libellé (« Du », « Au ») |
-| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils du tableau à droite (`app-table-bar__tools`) : choix des colonnes et export propre au tableau lorsqu'il est proposé |
+| `app-table-bar` | Le total à gauche (`app-table-bar__total`), les outils du tableau à droite (`app-table-bar__tools`) : choix des colonnes |
 | `app-table-bar` + `app-column-chooser.en-ligne` | Le choix des colonnes se pose toujours dans la barre du tableau |
 
 Formulaires et consultations (`src/styles/_forms.scss`) :

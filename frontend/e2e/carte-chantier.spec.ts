@@ -21,11 +21,11 @@ test('la carte Chantier filtre ses marqueurs avec le menu compact', async ({ pag
   await expect(filtre.getByRole('searchbox', { name: 'Rechercher par code ou nom de chantier' })).toBeVisible();
   await expect(filtre.getByRole('combobox', { name: 'Filtrer par nature' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Chantiers' })).toHaveCount(0);
-  await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
+  await expect(page.locator('.app-map-page__site')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Ajouter un chantier' })).toHaveCount(0);
   await expect(page.getByText('Paie', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Employés', { exact: true })).toHaveCount(0);
-  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
+  await expect(page.locator('.app-map__marker')).toHaveCount(2);
   expect(mock.calls).toContain('GET /chantiers/carte');
 
   const select = filtre.getByRole('combobox', { name: 'Filtrer par nature' });
@@ -39,20 +39,20 @@ test('la carte Chantier filtre ses marqueurs avec le menu compact', async ({ pag
     await expect(page.locator('.stp-select__option').filter({ hasText: nature }).first()).toBeVisible();
   }
   await page.locator('.stp-select__option').filter({ hasText: 'Dépôt' }).click();
-  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(1);
+  await expect(page.locator('.app-map__marker')).toHaveCount(1);
   await page.locator('.stp-select__option').filter({ hasText: 'AO' }).click();
-  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
+  await expect(page.locator('.app-map__marker')).toHaveCount(2);
   await page.locator('.stp-select__option').filter({ hasText: 'Dépôt' }).click();
-  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(1);
-  await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
+  await expect(page.locator('.app-map__marker')).toHaveCount(1);
+  await expect(page.locator('.app-map-page__site')).toHaveCount(0);
 
-  expect((await new AxeBuilder({ page }).include('.carte-page__filtre').analyze()).violations.map((v) => v.id)).toEqual([]);
+  expect((await new AxeBuilder({ page }).include('.app-map-page__search').analyze()).violations.map((v) => v.id)).toEqual([]);
   await page.getByRole('button', { name: 'Fermer la liste' }).click();
   await expect(page.getByRole('listbox')).toHaveCount(0);
   await page.getByRole('button', { name: 'Ouvrir la liste' }).click();
   await page.locator('.stp-select__option').filter({ hasText: 'AO' }).click();
-  await expect(page.locator('.chantier-carte__marqueur')).toHaveCount(2);
-  await page.locator('.chantier-carte__marqueur[data-tooltip*="Route de Nador"]').hover();
+  await expect(page.locator('.app-map__marker')).toHaveCount(2);
+  await page.locator('.app-map__marker[data-tooltip*="Route de Nador"]').hover();
   await page.screenshot({ path: 'test-results/carte-chantiers-premium-desktop.png', fullPage: true });
 });
 
@@ -68,9 +68,9 @@ test('le filtre reste compact sur mobile et la carte reste la surface principale
   await expect(filtre.getByRole('searchbox', { name: 'Rechercher par code ou nom de chantier' })).toBeVisible();
   await expect(filtre.getByRole('combobox', { name: 'Filtrer par nature' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Carte des chantiers' })).toBeVisible();
-  await expect(page.locator('.carte-page__chantier')).toHaveCount(0);
-  await expect(page.locator('.chantier-carte__marqueur').first()).toHaveText('');
-  await expect(page.locator('.chantier-carte__marqueur[data-tooltip*="Route de Nador"]')).toHaveCount(1);
+  await expect(page.locator('.app-map-page__site')).toHaveCount(0);
+  await expect(page.locator('.app-map__marker').first()).toHaveText('');
+  await expect(page.locator('.app-map__marker[data-tooltip*="Route de Nador"]')).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/carte-chantiers-premium-mobile.png', fullPage: true });
 });

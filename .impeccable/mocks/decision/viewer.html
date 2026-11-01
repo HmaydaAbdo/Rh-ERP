@@ -1,0 +1,10 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Chartes proposées</title>
+<style>body{margin:0;background:#222;font:16px system-ui;color:#fff}h2{margin:14px 12px 6px}.w{overflow:hidden;margin:0 0 24px}iframe{border:0;width:1440px;height:900px;transform-origin:0 0;display:block}</style></head><body>
+<h2>1. Pisé (le tirage) : clair à gauche, sombre à droite</h2><div class="w"><iframe src="assigned.html"></iframe></div>
+<h2>2. Zellige</h2><div class="w"><iframe src="model-pick.html"></iframe></div>
+<h2>3. Neutre et un seul accent</h2><div class="w"><iframe src="challenger-monochrome.html"></iframe></div>
+<h2>4. Standard de la catégorie</h2><div class="w"><iframe src="canon.html"></iframe></div>
+<script>
+function fit(){var s=Math.min(1,innerWidth/1440);document.querySelectorAll('iframe').forEach(function(f){f.style.transform='scale('+s+')';f.parentElement.style.height=(900*s)+'px'})}
+document.querySelectorAll('iframe').forEach(function(f){f.src=f.getAttribute('src')+'?t='+Date.now()});fit();addEventListener('resize',fit);
+</script></body></html>

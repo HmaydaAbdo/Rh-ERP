@@ -56,7 +56,42 @@ Ne jamais créer un dossier technique regroupant plusieurs domaines.
 * Activer le mode strict TypeScript et conserver des types explicites aux frontières des API et bibliothèques ; ne pas contourner les erreurs de types par `any` ou des assertions injustifiées.
 * Utiliser les templates sémantiques et le control flow Angular (`@if`, `@for`, `@switch`) ; ne pas créer de logique métier complexe dans les templates.
 * Conserver le défaut OnPush de la version Angular cible et expliciter `ChangeDetectionStrategy.OnPush` quand cela rend l'intention lisible. Importer seulement les directives/composants Aria/CDK nécessaires.
-* Les composants métier restent dans leur domaine; les composants Staport partagés exposent une API explicite et cohérente.
+* Les hôtes de route et adaptateurs de données restent dans leur domaine ; leurs gabarits assemblent les composants d'interface du socle partagé, qui exposent une API explicite et cohérente.
+
+## Priorité obligatoire aux composants partagés
+
+Avant de créer ou modifier un composant d'interface, rechercher le besoin dans `src/app/shared/ui/`, le catalogue `/catalogue` et les domaines qui consomment déjà le socle.
+Si un composant partagé couvre le besoin, le domaine le réutilise par son API publique. Il ne crée
+pas une copie, une variante locale ni un composant équivalent.
+
+Toute interface visible et toute interaction applicative sont construites avec des composants du socle
+partagé et les points d'extension officiels du framework. Cette règle couvre les contrôles, tableaux,
+coques de collection, filtres, formulaires, dialogues, états de liste, navigation entre vues, cartes,
+graphiques, assistants et exports visuels ; elle s'applique aussi à un composant qui n'a encore qu'un
+seul domaine consommateur. Chaque composant d'interface partagé est inscrit au catalogue public.
+
+Un domaine conserve ses routes, modèles, règles, données, permissions et hôtes de raccordement. Le gabarit
+d'un hôte assemble les composants partagés ; l'hôte configure le socle, fournit les données et branche
+les événements métier. Il ne définit pas de style visuel, de contrôle interactif ni de copie d'une mise
+en page commune.
+Une interface métier spécialisée est elle aussi implémentée comme composant partagé configurable ; son
+API ne contient pas de branchement conditionnel qui nomme ou reconnaît un domaine.
+
+Quand le catalogue ne couvre pas un besoin, vérifier d'abord les composants et points d'extension
+officiels du framework, puis la possibilité de configurer ou d'étendre le socle. Si aucun ne convient,
+proposer un composant partagé configurable avec son API, ses états, ses usages envisagés et ses contrôles
+d'accessibilité ; le présenter au catalogue avant son usage par un domaine. Il n'existe pas d'exception
+au seul motif qu'un besoin est métier ou n'a qu'un seul consommateur.
+
+Une exception temporaire n'est envisageable qu'après avoir démontré l'absence d'une solution adaptée
+dans le framework officiel et le socle partagé. Elle requiert l'accord préalable du propriétaire, décrit
+le blocage technique, le périmètre isolé, le risque de divergence et le plan de sortie vers le socle.
+Elle est inscrite à l'inventaire avec un responsable et une échéance ; elle ne peut pas devenir une
+convention implicite.
+
+Le catalogue est le registre de découverte et de vérification du socle ; il ne remplace pas les API
+publiques des composants ni leur documentation. Un nouveau composant partagé est documenté et présenté
+au catalogue dans le même changement, avant sa première utilisation par un domaine.
 
 ### Signals et état réactif
 
@@ -217,9 +252,7 @@ Tous les tableaux interactifs ont **le même style**, défini une seule fois dan
 visible, en-têtes en majuscules sur fond neutre, alternance de lignes, survol, état vide illustré, paginateur compact. Les classes d'alignement
 (`text-center`, `text-right`) et de graisse (`font-semibold`, `font-bold`) utilisées par `TableColumn.align` et
 `cellClass` y sont définies. **Aucun écran ne redéfinit ces règles** : toute évolution du style se fait dans
-`table.component.scss`, pour tous les tableaux interactifs à la fois. Un petit tableau statique de résultats d'import peut utiliser
-`app-static-table-scroll` et `app-static-table` (`styles/_page.scss`) ; il garde un nom accessible, une légende, des en-têtes
-`scope="col"` et un défilement clavier/tactile indépendant. Ne pas utiliser cette exception pour une liste métier.
+`table.component.scss`, pour tous les tableaux interactifs à la fois. Aucun tableau HTML natif n'est écrit : une petite liste statique utilise aussi `stp-table` (`[paginated]="false"`).
 
 ## Colonnes pilotées par la configuration
 
@@ -313,7 +346,7 @@ Tout domaine métier qui présente une collection consultable propose trois vues
 sources de vérité ni trois règles métier.
 
 * La coque et l'assemblage Tabulaire utilisent les composants configurables partagés de
-  `shared/components/collection-shell/` et `shared/components/collection-table/` (ADR 0012). Le domaine reste
+  `shared/ui/collection-shell/` et `shared/ui/collection-table/` (ADR 0012). Le domaine reste
   propriétaire de ses routes, filtres, adaptateur de données, colonnes, cellules, actions et permissions. Il fournit
   une configuration typée et projette ses filtres/actions et gabarits; aucun contrat métier ni branche conditionnelle
   par domaine ne doit être ajouté au socle partagé. Ne pas créer de classe de base commune.
@@ -322,10 +355,10 @@ sources de vérité ni trois règles métier.
 * Les routes de collection sont regroupées sous une coque de domaine : la route racine affiche Tabulaire,
   `/cartes` affiche Cartes et `/analytique` affiche Analytique. Les pages de création, de consultation et de
   modification restent hors de cette coque.
-* Le sélecteur, le titre et l'emplacement des actions gardent la même place dans les trois vues. Les filtres sont propres
-  au domaine; lorsqu’ils s’appliquent à plusieurs vues, ils sont visibles au même endroit et leurs valeurs sont
-  synchronisées avec les paramètres d’URL afin de permettre le lien direct, le rechargement et le retour navigateur.
-  Un filtre n’est partagé entre des vues que s’il a le même sens métier dans chacune.
+* Le sélecteur, le titre et l'emplacement des actions gardent la même place dans les trois vues. Le rendu et la disposition
+  des filtres utilisent le composant partagé ; chaque domaine lui fournit ses critères, options autorisées et valeurs d'URL.
+  Lorsqu'un filtre s'applique à plusieurs vues, il reste au même endroit et sa valeur est synchronisée avec l'URL pour le
+  lien direct, le rechargement et le retour navigateur. Un critère n'est commun que s'il a le même sens métier dans chaque vue.
 * Chaque vue charge son propre contenu par une route lazy-loaded. Cartes représente les enregistrements du domaine
   avec une organisation adaptée à leur lecture; Analytique définit explicitement ses indicateurs, périodes, filtres
   et autorisations. Une projection provenant d’un autre domaine passe par son contrat public et ne redéfinit pas
@@ -400,7 +433,7 @@ tous les paramètres métier.
   seule ; le fil ne montre jamais un identifiant technique. Les fiches Employé forment le dernier niveau lorsque le droit de
   lecture est accordé.
 - Chaque carte réunit les **fiches Employé** (dernier état importé) et, lorsque `PAIE_READ` est accordée, les quatre mesures du
-  mois : **Effectif (personnes)**, **Masse salariale (DH)**, **STC (personnes)** et **STC (DH)**. Chaque mesure présente son
+  mois : **Bulletins de paie**, **Masse salariale (DH)**, **STC (bulletins)** et **STC (DH)**. Chaque mesure présente son
   libellé, sa valeur et sa comparaison au mois calendaire précédent : écart en personnes, pourcentage en DH. La comparaison
   utilise uniquement ce mois contigu, jamais un mois antérieur plus ancien. Un groupe absent du mois précédent vaut zéro si
   des données y sont enregistrées; si le mois n'existe pas, la comparaison est indiquée comme indisponible. Un montant dont

@@ -11,7 +11,7 @@ const ligne = {
 
 const permissions = ['HEURES_SUP_READ', 'HEURES_SUP_IMPORT', 'HEURES_SUP_DELETE', 'HEURES_SUP_PURGE', 'PAIE_READ', 'EMPLOYEE_READ', 'CHANTIER_READ', 'EQUIPE_READ', 'FUNCTION_READ'];
 
-test('la liste filtrée affiche les champs métier, le total et propose un PDF', async ({ page }) => {
+test('la liste filtrée affiche les champs métier et le total', async ({ page }) => {
   const api = await mockApi(page, { username: 'rh', permissions }, {
     'POST /heures-supp/search': () => pageDe([ligne]),
     'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30.76, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76 }, parChantier: [], parEquipe: [], parFonction: [], definitions: {} }),
@@ -24,7 +24,6 @@ test('la liste filtrée affiche les champs métier, le total et propose un PDF',
   await expect(page.getByText(/15[.,]38 DH\/h/)).toBeVisible();
   await expect(page.getByText(/130[.,]76 DH/).first()).toBeVisible();
   await expect(page.locator('.app-table-bar__summary')).toContainText('Net à payer');
-  await expect(page.getByRole('button', { name: 'Exporter les heures supplémentaires filtrées en PDF' })).toBeVisible();
   const presentation = await page.evaluate(() => {
     const filtres = document.querySelector('form.app-toolbar[aria-label="Filtres des heures supplémentaires"]');
     const tops = filtres ? Array.from(filtres.children).filter((element) => getComputedStyle(element).display !== 'none').map((element) => Math.round(element.getBoundingClientRect().top)) : [];

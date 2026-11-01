@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -9,7 +10,7 @@ import { EquipeService } from '../services/equipe.service';
 
 @Component({
   selector: 'app-equipe-detail',
-  imports: [RouterLink, ButtonComponent, IconComponent],
+  imports: [DockDeclencheurComponent, RouterLink, ButtonComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './equipe-detail.component.html'
 })

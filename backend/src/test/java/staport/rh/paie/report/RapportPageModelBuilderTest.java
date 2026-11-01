@@ -263,7 +263,7 @@ class RapportPageModelBuilderTest {
                 .map(PageModel.BlocTitreRubrique.class::cast)
                 .extracting(PageModel.BlocTitreRubrique::texte)
                 .containsExactly("Masse salariale et montants des STC (DH)",
-                        "Effectif rémunéré et sorties du personnel (personnes)");
+                        "Bulletins de paie et sorties du personnel (bulletins)");
 
         PageModel analyseChantier = pages.stream().filter(page -> page.blocs().stream()
                         .anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
@@ -281,7 +281,7 @@ class RapportPageModelBuilderTest {
                 .map(PageModel.BlocTitreRubrique.class::cast)
                 .extracting(PageModel.BlocTitreRubrique::texte)
                 .containsExactly("Masse salariale et montants des STC (DH)",
-                        "Effectif rémunéré et sorties du personnel (personnes)");
+                        "Bulletins de paie et sorties du personnel (bulletins)");
 
         assertThat(cartesKpi(analyseChantier).stream().filter(c -> c.label().equals("MASSE SALARIALE")).toList())
                 .singleElement().extracting(CarteKpi::sousTexte).isNull();
@@ -354,8 +354,8 @@ class RapportPageModelBuilderTest {
                         .anyMatch(PageModel.BlocTitreChapitre.class::isInstance))
                         .filter(page -> !"GLOBAL".equals(page.niveauTexte())).findFirst().orElseThrow();
                 assertThat(cartesKpi(analyseChantier).stream().map(CarteKpi::label))
-                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "EFFECTIF",
-                                "STC / SORTIES (PERSONNES)", "STC / SORTIES (DH)");
+                        .containsExactly("MASSE SALARIALE", "MASSE MOIS PRECEDENT", "BULLETINS DE PAIE",
+                                "STC / SORTIES (BULLETINS)", "STC / SORTIES (DH)");
 
                 int lignes = 0;
                 for (int p = debutDetail; p < pages.size(); p++) {
@@ -442,7 +442,7 @@ class RapportPageModelBuilderTest {
                 .map(PageModel.BlocTitreRubrique.class::cast)
                 .extracting(PageModel.BlocTitreRubrique::texte)
                 .containsExactly("Masse salariale et montants des STC (DH)",
-                        "Effectif rémunéré et sorties du personnel (personnes)");
+                        "Bulletins de paie et sorties du personnel (bulletins)");
 
         PageModel materiel = pages.stream()
                 .filter(page -> page.blocs().stream().anyMatch(PageModel.BlocGraphiqueMateriel.class::isInstance))
@@ -516,10 +516,10 @@ class RapportPageModelBuilderTest {
     void blocKpi_agrandiLesCartesQuandLeTextePasseALaLigne() {
 
         PageModel.BlocKpi courte = builder.blocKpi(List.of(
-                new CarteKpi("EFFECTIF", "56", "compte"),
+                new CarteKpi("BULLETINS DE PAIE", "56", "compte"),
                 new CarteKpi("MASSE SALARIALE", "280 000,00 DH", "montant")));
         PageModel.BlocKpi longue = builder.blocKpi(List.of(
-                new CarteKpi("EFFECTIF", "56", "compte"),
+                new CarteKpi("BULLETINS DE PAIE", "56", "compte"),
                 new CarteKpi("MASSE SALARIALE", "12 345 678 901 234 567 890,00 DH et encore du texte qui passe à la ligne",
                         "montant")));
 
@@ -541,7 +541,7 @@ class RapportPageModelBuilderTest {
         assertThat(moisPrecedent).hasSize(3);
         assertThat(moisPrecedent).allSatisfy(c -> assertThat(c.valeur()).isEmpty());
         assertThat(cartesKpi(pages.get(0)))
-                .filteredOn(c -> c.label().equals("EFFECTIF"))
+                .filteredOn(c -> c.label().equals("BULLETINS DE PAIE"))
                 .extracting(CarteKpi::sousTexte)
                 .containsExactly("Écart indisponible");
     }

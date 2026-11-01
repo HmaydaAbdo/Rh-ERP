@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 
-import { NotificationService } from '@shared/feedback/feedback.service';
+import { NotificationService } from '@shared/ui/feedback/feedback.service';
 
 interface ApiErrorResponse {
   message?: string;

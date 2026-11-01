@@ -71,16 +71,14 @@ describe('ChartComponent', () => {
     expect(chart.data.datasets[0].data).toEqual([10, 20]);
   });
 
-  it('se recrée quand les données changent', async () => {
+  it('met à jour le graphique quand les données changent', async () => {
     await afficher();
-    const avant = await graphique();
 
     fixture.componentInstance.donnees.set({ labels: ['C057'], datasets: [{ label: 'Masse', data: [5] }] });
     fixture.detectChanges();
 
     await vi.waitFor(async () => {
       const apres = await graphique();
-      expect(apres).not.toBe(avant);
       expect(apres.data.labels).toEqual(['C057']);
     });
   });
@@ -101,13 +99,14 @@ describe('ChartComponent', () => {
 
     await afficher();
     const contraste = await graphique();
+    const couleurContraste = contraste.options.color;
     expect(contraste.options.color).toBe(couleurSysteme('CanvasText'));
     expect(contraste.options.scales?.['x']?.ticks?.color).toBe(couleurSysteme('CanvasText'));
     expect(contraste.options.scales?.['y']?.grid?.color).toBe(couleurSysteme('GrayText'));
 
     changement?.({ matches: false } as MediaQueryListEvent);
     fixture.detectChanges();
-    await vi.waitFor(async () => expect(await graphique()).not.toBe(contraste));
+    await vi.waitFor(async () => expect((await graphique()).options.color).not.toBe(couleurContraste));
     const normal = await graphique();
     expect(normal.options.color).toBe('#666');
     expect(normal.options.scales?.['x']?.ticks?.color).toBe('#666');

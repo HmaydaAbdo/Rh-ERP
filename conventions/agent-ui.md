@@ -25,10 +25,44 @@ mêmes contrôles serveur. Les filtres, période et sélection pertinents sont v
 au passage entre modes et au retour aux écrans classiques, sans devenir une source de droits.
 Partager le socle d'interaction et de rendu ; les règles et données restent dans leur domaine.
 
-L'exploration d'une UI ouverte compare d'abord une composition plus riche dans le catalogue.
-La génération/exécution de HTML, CSS ou JavaScript arbitraire n'est pas autorisée par cette
-convention, même dans une iframe. Un besoin de code UI isolé exige un ADR et une évolution
-normative approuvés avant prototype exécutable, avec isolation et échanges de données prouvés.
+**Interface générative ouverte (décision du propriétaire du 2026-10-31).** L'agent peut produire de l'HTML, du CSS et du
+JavaScript lorsque le catalogue A2UI ne suffit pas. L'interdiction posée le 2026-10-23 (précaution, sans décision
+propriétaire consignée) est levée, aux conditions suivantes, qui viennent de la documentation officielle de CopilotKit :
+
+* Le rendu passe uniquement par le moteur officiel (`openGenerativeUI` de `provideCopilotKit`) : le code généré s'exécute
+  dans une iframe isolée, sans accès à l'origine de l'application. Aucun moteur d'exécution écrit par nous.
+* Le code généré ne peut appeler que des fonctions de l'hôte déclarées une à une (`sandboxFunctions` : nom, description,
+  paramètres, gestionnaire), étroites, qui revérifient identité, permission et périmètre côté serveur ; ces fonctions
+  n'exposent aucun secret ni jeton, et les arguments sont validés dans le gestionnaire.
+* Seules les données autorisées pour l'utilisateur et nécessaires à la vue entrent dans le code généré ; un secret n'est jamais
+  placé dans un en-tête, une propriété, un argument d'outil ou un contenu d'activité (tout cela est visible du navigateur).
+* Une vue bien formée n'est pas une vue exacte : les chiffres affichés restent ceux des outils métier, et la vue ouverte
+  reste accompagnée d'un repli sur le catalogue ou sur le texte.
+* Le catalogue A2UI, lui, reste fermé : le moteur A2UI n'interprète ni HTML, ni script, ni URL active (voir plus bas).
+
+Mesures contre les risques propres à l'interface ouverte (fausse interface qui imite un écran légitime, script qui lit ou
+envoie des données, injection par un champ piégé, page qui sature le navigateur, chiffre faux bien présenté). Chaque mesure a
+son test, et aucune n'est remplacée par une autre :
+
+* **Isolation** : seul le moteur officiel, iframe sans accès à l'origine ; vérifier par un test que le code généré ne peut ni
+  lire le stockage ou les cookies de l'application, ni naviguer la page parente, ni émettre de requête réseau non prévue
+  (politique de contenu de l'iframe à fixer et à prouver ; non vérifiée à ce jour).
+* **Fonctions de l'hôte** : liste blanche minimale ; chacune valide ses arguments, revérifie identité, permission et
+  périmètre côté serveur, journalise l'appel dans l'audit, et ne renvoie que des données autorisées.
+* **Données** : seules les données nécessaires à la vue entrent dans le code généré, après les projections par champ de
+  Spring ; aucune donnée interdite à l'utilisateur, aucun secret, aucun jeton.
+* **Jeu adverse** : cas d'injection directe et indirecte (champs de données piégés), d'exfiltration (lien, image, requête),
+  d'usurpation d'écran (faux formulaire, faux bouton d'approbation) et de contournement de périmètre, rejoués à chaque
+  changement de modèle, de prompt ou de bibliothèque.
+* **Bornes** : taille du code généré, temps d'exécution, nombre de vues ouvertes par réponse et par minute.
+* **Chiffres** : toute valeur affichée vient d'un outil métier ; une vue ouverte ne calcule ni ne remplace une valeur métier.
+* **Action humaine** : une vue ouverte n'exécute jamais d'écriture ; une action sensible passe par l'approbation humaine
+  décrite dans `security.md` et `mcp.md`.
+* **Arrêt et repli** : un paramètre désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
+  repli (catalogue ou texte) et est journalisé sans son contenu.
+* **Veille** : à chaque revue mensuelle des modèles (`docs/ia.md` § 4.1), relire les nouvelles pratiques de sécurité des
+  interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner dans le plan de travail IA ce qui
+  change cette liste.
 
 ## Objectifs et frontières
 

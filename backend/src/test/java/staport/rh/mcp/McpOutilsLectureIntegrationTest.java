@@ -47,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
-    private static final Set<String> TOUT = Set.of("IA_UTILISER", "HEURES_SUP_READ", "HEURES_SUP_IMPORT", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
+    private static final Set<String> TOUT = Set.of("IA_UTILISER", "ACCUEIL_READ", "HEURES_SUP_READ", "HEURES_SUP_IMPORT", "PAIE_READ", "PAIE_EXPORT", "EMPLOYEE_READ",
             "CHANTIER_READ", "EQUIPE_READ", "FUNCTION_READ", "PARAMETRE_READ", "ROLE_MANAGE", "AUDIT_READ");
 
     @Autowired
@@ -80,7 +80,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     // --- catalogue et refus ---
 
     @Test
-    void le_catalogue_publie_trente_outils_en_lecture_seule() throws Exception {
+    void le_catalogue_publie_trente_et_un_outils_en_lecture_seule() throws Exception {
         List<String> noms = new ArrayList<>();
         rpc(toutVoir, "tools/list", Map.of()).get("tools").forEach(outil -> {
             noms.add(outil.get("name").asString());
@@ -88,7 +88,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
         });
         assertThat(noms).containsExactlyInAnyOrderElementsOf(appelsTypes().keySet().stream()
                 .collect(java.util.stream.Collectors.toCollection(() -> new ArrayList<>(List.of("systeme_identite")))));
-        assertThat(noms).hasSize(30);
+        assertThat(noms).hasSize(31);
     }
 
     @Test
@@ -575,6 +575,7 @@ class McpOutilsLectureIntegrationTest extends McpIntegrationTestBase {
     /** Un appel valide de chaque outil métier, avec les données du test. */
     private Map<String, Map<String, Object>> appelsTypes() {
         Map<String, Map<String, Object>> appels = new LinkedHashMap<>();
+        appels.put("accueil_lire", Map.of());
         appels.put("chantier_rechercher", Map.of("recherche", "C-" + ref.suffixe()));
         appels.put("chantier_fiche", Map.of("id", ref.chantierId()));
         appels.put("equipe_rechercher", Map.of("recherche", "E" + ref.suffixe()));

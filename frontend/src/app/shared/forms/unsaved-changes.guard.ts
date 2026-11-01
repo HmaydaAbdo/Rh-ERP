@@ -3,7 +3,7 @@ import { FieldTree } from '@angular/forms/signals';
 import { CanDeactivateFn } from '@angular/router';
 import { Observable } from 'rxjs';
 
-import { ConfirmDialogService } from '@shared/feedback/feedback.service';
+import { ConfirmDialogService } from '@shared/ui/feedback/feedback.service';
 
 /** Un écran de formulaire que le guard sait protéger : il expose son formulaire (Signal Forms). */
 export interface FormulaireProtege {

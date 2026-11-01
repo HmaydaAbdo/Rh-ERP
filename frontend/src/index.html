@@ -5,16 +5,17 @@
   <title>Staport RH</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#052a49">
+  <meta name="theme-color" content="#f3f4f6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1f1e1d" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/svg+xml" href="assets/brand/monogramme.svg">
   <script>
-    // Pose le thème avant le premier affichage (pas de flash clair puis sombre) : le choix mémorisé, sinon la préférence du système.
+    // Pose le thème avant le premier affichage (pas de flash clair puis sombre) : le choix mémorisé, sinon le sombre.
     // Même règle que core/theme/theme.service.ts.
     (function () {
       var theme = null;
       try { theme = localStorage.getItem('staport-theme'); } catch (e) {}
       if (theme !== 'light' && theme !== 'dark') {
-        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        theme = 'dark';
       }
       document.documentElement.setAttribute('data-theme', theme);
     })();

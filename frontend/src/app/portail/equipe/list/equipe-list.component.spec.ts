@@ -1,8 +1,9 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 
-import { ConfirmDialogService, NotificationService } from '../../../shared/feedback/feedback.service';
+import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { Equipe } from '../models/equipe.model';
 import { EquipeService } from '../services/equipe.service';
@@ -29,6 +30,7 @@ describe('EquipeListComponent', () => {
     fixture = TestBed.createComponent(EquipeListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -40,15 +42,12 @@ describe('EquipeListComponent', () => {
     await afficher();
 
     expect(service.search.mock.lastCall![1]).toEqual({ page: 0, size: 10, sort: 'code,asc' });
-    expect(Array.from(racine().querySelectorAll('tbody tr')).map((tr) => Array.from(tr.querySelectorAll('td')).slice(0, 2).map((td) => td.textContent?.trim()))).toEqual([
+    expect(lignesGrille(racine()).map((tr) => tr.cells.slice(0, 2).map((td) => td.textContent?.trim()))).toEqual([
       ['CH', 'Chauffeurs'],
       ['OP', 'Opérateurs']
     ]);
     expect(racine().querySelector('.app-table-bar__total')?.textContent?.trim()).toBe('2 équipes');
     expect(racine().querySelector('app-collection-table stp-table')).not.toBeNull();
-    const exporteur = racine().querySelector('app-pdf-export-button[table-export]');
-    expect(exporteur?.parentElement?.classList.contains('app-table-bar__tools')).toBe(true);
-    expect(exporteur?.querySelector('button[aria-label="Exporter les équipes filtrées en PDF"]')).not.toBeNull();
   });
 
   it('propose modification et suppression à qui a les droits, la seule consultation sinon', async () => {

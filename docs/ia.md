@@ -213,6 +213,12 @@ pris en charge ; chaque surface a un repli texte.
 
 ## 7. Plan et suivi
 
+**Le plan de référence du travail IA restant est le [plan de travail IA](ia/plan-de-travail.md)** : épopées ordonnées,
+état de chaque épopée, questions ouvertes et traçabilité des anciens plans. L'inventaire des capacités officielles
+CopilotKit, LangChain, LangGraph et Deep Agents et l'analyse des écarts du backend y sont intégrés (les deux fichiers de
+Codex qui les portaient ont été supprimés le 2026-10-31 ; ils se relisent avec `git show 0b2fd0da:docs/ia/<fichier>`).
+Les tableaux de tâches ci-dessous gardent leur historique ; en cas de divergence, le plan de travail fait foi.
+
 États : ⬜ à faire · 🟦 en cours · ✅ fait · ⛔ bloqué.
 
 ### Jalons
@@ -529,7 +535,7 @@ et ses contrôles documentés.
 | Preuve MCP | Serveur SDK Java `mcp-core` + `mcp-json-jackson3` 2.1.0 sur Java 21 / Spring Boot 4.1.1 (J0, avant l'adoption de Spring AI en T13) ; clients TypeScript `@modelcontextprotocol/sdk` 1.32.1 et Python `mcp` 2.3.0 ; protocole **2025-11-25**, Streamable HTTP. Profil Maven `mcp-compatibility`, portée test uniquement ; voir le [README du prototype](../scripts/ia/mcp-compatibility/README.md). |
 | LiteLLM | Image `erp-rh-litellm` (LiteLLM v1.104.2 épinglé par digest), base dédiée `litellm-db`, démarrés par défaut avec la pile (clés virtuelles enregistrées par `litellm-cles`). Fournisseurs actifs : Gemini, Groq, Mistral Experiment, Cloudflare, OpenRouter `:free`, Z.ai Flash, NVIDIA NIM. Pool `complex` principal : deux Nemotron NVIDIA ; repli explicite par le routeur officiel LiteLLM vers Mistral Ministral 14B, qualifié sur un parcours synthétique à deux outils MCP (chantier puis heures supplémentaires), schéma réel des arguments, période ISO et réponse fondée sur le résultat. La qualification complète de l'agent (24 cas) et de la bascule sur l'image publiée reste à faire. Candidats suivants (gratuits, renouvelables) : SambaNova (20 req/jour par modèle, sans carte), OVHcloud AI Endpoints anonyme (2 req/min), Cohere (1 000 appels/mois, évaluation), LLM7 (100 K tokens/jour). Écartés : GitHub Models (retiré), Hugging Face (plus de crédit gratuit), Cerebras (aucune inférence gratuite), DeepSeek (aucun palier gratuit), Alibaba Model Studio (quota unique de 90 jours), SiliconFlow international, Chutes, Kluster. Voir [`litellm/README.md`](../litellm/README.md). |
 | Service IA | Image `erp-rh-ia` (Python 3.13), santé, client LiteLLM, agent LangGraph avec ciblage par domaine et évaluation (T6), point d'entrée AG-UI `POST /agui` (T7). Aucun vérificateur de chiffres après coup ; les calculs viennent des API métier. Voir [`ia/README.md`](../ia/README.md). |
-| Code IA dans l'application | Serveur MCP de **Spring AI 2.0.2** (SDK MCP Java 2.1.0, Spring Boot 4.1.2) : route `/mcp` sans état derrière `MCP_ENABLED`, outils déclarés par `@McpTool` (permission par `@PreAuthorize`, bornes par Bean Validation, trace par `@AuditableAction`), chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 30 outils en lecture (ci-dessous). Assistant Angular (`core/assistant`, T8). Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
+| Code IA dans l'application | Serveur MCP de **Spring AI 2.0.2** (SDK MCP Java 2.1.0, Spring Boot 4.1.2) : route `/mcp` sans état derrière `MCP_ENABLED`, outils déclarés par `@McpTool` (permission par `@PreAuthorize`, bornes par Bean Validation, trace par `@AuditableAction`), chaîne de sécurité dédiée, jeton agent `POST /auth/jetons/agent`, JWKS `GET /.well-known/jwks.json`, permission `IA_UTILISER` (V36, `SYSTEM_ADMIN` seulement). Catalogue de 31 outils en lecture (ci-dessous). Assistant Angular (`core/assistant`, T8). Détails : [Auth](auth/README.md#jeton-délégué-de-lassistant-ia). |
 | CI et production | Job `ia` et publication de `erp-rh-litellm` / `erp-rh-ia` ajoutés à la CI ; exécution distante sur demande du propriétaire ; rien de déployé. |
 
 ### Catalogue MCP
@@ -564,6 +570,7 @@ Chaque outil exige `IA_UTILISER` (route) et la permission de son domaine (revér
 | | `heures_supp_indicateurs` | `HEURES_SUP_READ` + `PAIE_READ` | `periode` (absente = dernière période importée), chantier(s), équipe(s), fonction(s), CIN/nom | Effectif, heures, Montant, STC (DH), Forfaits, Net à payer et toutes les répartitions du périmètre par chantier/équipe/fonction ; définitions incluses | `heures-supp` / `analytique` |
 | | `heures_supp_rechercher` | `HEURES_SUP_READ` + `PAIE_READ` | mois, chantier, équipe, fonction, CIN/nom, pages de 20 sans plafond ; un critère obligatoire | Lignes détaillées et totaux calculés par Spring ; toutes les pages accessibles | `heures-supp` / `tabulaire` |
 | Rapport | `rapport_preparer` | `PAIE_EXPORT` + `PAIE_READ` | `periode`, `chantierIds` | Chantiers du rapport ; aucun fichier généré | `paie` / `tabulaire`, `action=export` |
+| Accueil | `accueil_lire` | `ACCUEIL_READ` | aucun | Indicateurs de l'accueil de l'utilisateur, dans l'ordre, et ceux qu'il peut y ajouter ; lecture seule | `accueil` |
 | Paramètres | `parametres_lire` | `PARAMETRE_READ` | aucun | Clé, libellé, valeur, unité, bornes | `admin/parametres` |
 | Administration | `roles_lister` | `ROLE_MANAGE` | `nom`, pages de 20 | Rôles et codes de permission (sans les comptes), toutes les pages accessibles | `admin/roles` |
 | Audit | `audit_rechercher` | `AUDIT_READ` | filtres, pages de 20 | Toutes les entrées du journal, total et pages accessibles | `audit` |

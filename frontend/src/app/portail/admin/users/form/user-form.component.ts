@@ -1,3 +1,4 @@
+import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, email, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
@@ -5,8 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/services/auth.service';
-import { LazySelectComponent } from '../../../../shared/components/lazy-select/lazy-select.component';
-import { NotificationService } from '../../../../shared/feedback/feedback.service';
+import { LazySelectComponent } from '../../../../shared/ui/lazy-select/lazy-select.component';
+import { NotificationService } from '../../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../../shared/forms/soumission';
 import { EmployeeReferenceService } from '../../../../shared/reference-data/employee-reference.service';
@@ -36,11 +37,10 @@ interface PermissionGroup {
 
 @Component({
   selector: 'app-user-form',
-  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
+  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
   providers: [RoleReferenceService],
   templateUrl: './user-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './user-form.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserFormComponent {
   private readonly userService = inject(UserService);

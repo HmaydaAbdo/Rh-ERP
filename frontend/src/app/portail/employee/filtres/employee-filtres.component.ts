@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, linkedSignal, output, untracked } from '@angular/core';
 import { debounce, form, FormField, FormRoot } from '@angular/forms/signals';
 
-import { LazySelectComponent } from '../../../shared/components/lazy-select/lazy-select.component';
+import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
