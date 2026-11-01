@@ -6,7 +6,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 
 | Fichier | Rôle |
 |---|---|
-| `Dockerfile` | Image LiteLLM v1.104.2 épinglée par version et digest, configuration intégrée |
+| `Dockerfile` | Image LiteLLM v1.109.0-dev.2 (préversion adoptée le 2026-11-01) épinglée par version et digest, configuration intégrée |
 | `entrypoint.sh` | Refuse de démarrer sans `LITELLM_MASTER_KEY` (préfixe `sk-`), `LITELLM_SALT_KEY` ou `DATABASE_URL` |
 | `filtrer_config.py` | Au démarrage, retire les déploiements dont la clé est vide (LiteLLM ne bascule pas sur une 401) |
 | `litellm_config.yaml` | Groupes officiels par capacité, poids, limites, réglages du routeur |
