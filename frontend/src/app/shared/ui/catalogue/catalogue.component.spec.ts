@@ -18,7 +18,7 @@ describe('CatalogueComponent', () => {
 
     expect(page.querySelector('h1')?.textContent).toBe('Catalogue Staport');
     expect(Array.from(page.querySelectorAll('h2')).map((h) => h.textContent)).toEqual([
-      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', "Carte d'authentification", 'Dialogue', 'Masse salariale mensuelle', 'Tableau (mode mémoire)'
+      'Boutons', 'Pastilles', 'Champs', 'Messages et icônes', "Carte d'authentification", 'Dialogue', 'Masse salariale mensuelle', 'Tableau (mode mémoire)', 'Vocabulaire partagé'
     ]);
     expect(page.querySelector('details summary')?.textContent?.trim()).toBe('Afficher les données du graphique');
   });
