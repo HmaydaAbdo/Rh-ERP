@@ -12,8 +12,8 @@ import java.util.Optional;
 public enum IndicateurAccueil {
 
     PAIE_MASSE("paie.masse", "Masse salariale", "Masse salariale du dernier mois de paie, avec sa variation sur le mois précédent", "PAIE_READ"),
-    PAIE_EFFECTIF("paie.effectif", "Effectif payé", "Nombre de personnes payées sur le dernier mois de paie", "PAIE_READ"),
-    PAIE_COUT_MOYEN("paie.cout-moyen", "Coût moyen par personne", "Masse salariale divisée par l'effectif payé du dernier mois", "PAIE_READ"),
+    PAIE_EFFECTIF("paie.effectif", "Bulletins de paie", "Nombre de bulletins de paie (un par employé payé) du dernier mois de paie", "PAIE_READ"),
+    PAIE_COUT_MOYEN("paie.cout-moyen", "Coût moyen par personne", "Masse salariale divisée par le nombre de bulletins du dernier mois", "PAIE_READ"),
     PAIE_STC("paie.stc", "Soldes de tout compte", "Nombre et montant des soldes de tout compte du dernier mois de paie", "PAIE_READ"),
     EMPLOYE_EFFECTIF("employe.effectif", "Employés", "Effectif des fiches Employé", "EMPLOYEE_READ"),
     EMPLOYE_EN_POSTE("employe.en-poste", "Employés en poste", "Part des fiches Employé en poste", "EMPLOYEE_READ"),

@@ -44,7 +44,7 @@ test.describe('Chantiers', () => {
     const carte = page.locator('.app-entity').filter({ hasText: 'C168' });
     await expect(carte).toContainText('En cours');
     await expect(carte).not.toContainText('Employés sur les fiches récentes');
-    await expect(carte).toContainText('Effectif (personnes)');
+    await expect(carte).toContainText('Bulletins de paie');
     await expect(carte).toContainText('Paie · août 2026');
     await expect(page.locator('.app-entity').filter({ hasText: 'C196' })).toContainText('Clôturé');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);

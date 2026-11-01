@@ -283,7 +283,7 @@
             <h4 id="pa-repartition">Répartition par {{ libelles[dimension()].toLowerCase() }} · {{ libellePeriode(a.periode) }}</h4>
             <div class="app-chips" role="group" aria-label="Mesure de la répartition">
               <button type="button" [attr.aria-pressed]="mesureRepartition() === 'masse'" (click)="mesureRepartition.set('masse')">Masse (DH)</button>
-              <button type="button" [attr.aria-pressed]="mesureRepartition() === 'effectif'" (click)="mesureRepartition.set('effectif')">Effectif payé</button>
+              <button type="button" [attr.aria-pressed]="mesureRepartition() === 'effectif'" (click)="mesureRepartition.set('effectif')">Bulletins de paie</button>
             </div>
           </div>
           <p class="app-help">Un clic sur une barre ajoute ce groupe au périmètre et approfondit l’analyse.</p>

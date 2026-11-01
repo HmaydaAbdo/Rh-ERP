@@ -409,7 +409,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = await ouvrirVue();
     const graphique = harness.fixture.debugElement.queryAll(By.directive(ChartComponent))
       .map((debug) => debug.componentInstance as ChartComponent<'bar' | 'line'>)
-      .find((component) => component.data().datasets[0]?.label === 'Effectif (personnes)');
+      .find((component) => component.data().datasets[0]?.label === 'Bulletins de paie');
 
     expect(graphique?.data().labels).toEqual(['Nador']);
     expect(page.textContent).toContain('Marrakech');
@@ -447,7 +447,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(evolution.querySelectorAll('.app-chart-indicator')).toHaveLength(1);
     const graphiques = harness.fixture.debugElement.queryAll(By.directive(ChartComponent)).map((debug) => debug.componentInstance as ChartComponent<'bar' | 'line'>);
     const groupes = graphiques.filter((graphique) => graphique.data().datasets.length === 2);
-    expect(groupes.map((graphique) => graphique.data().datasets.map((jeu) => jeu.label))).toEqual([['Effectif (personnes)', 'Masse salariale (DH)'], ['Effectif (personnes)', 'STC (personnes)']]);
+    expect(groupes.map((graphique) => graphique.data().datasets.map((jeu) => jeu.label))).toEqual([['Bulletins de paie', 'Masse salariale (DH)'], ['Bulletins de paie', 'STC (bulletins)']]);
     expect(Object.keys(groupes[0].options()!.scales!)).toEqual(expect.arrayContaining(['x', 'x1']));
     expect(Object.keys(groupes[1].options()!.scales!)).not.toContain('y1');
   });
@@ -457,12 +457,12 @@ describe('AnalytiquePerimetreComponent', () => {
     const bouton = (nom: string) => Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.trim() === nom) as HTMLButtonElement;
 
     expect(bouton('Masse (DH)').getAttribute('aria-pressed')).toBe('true');
-    bouton('STC (personnes)').click();
+    bouton('STC (bulletins)').click();
     harness.fixture.detectChanges();
-    expect(bouton('STC (personnes)').getAttribute('aria-pressed')).toBe('true');
-    bouton('Effectif payé').click();
+    expect(bouton('STC (bulletins)').getAttribute('aria-pressed')).toBe('true');
+    bouton('Bulletins de paie').click();
     harness.fixture.detectChanges();
-    expect(bouton('Effectif payé').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton('Bulletins de paie').getAttribute('aria-pressed')).toBe('true');
   });
 
   it('répartit par une autre dimension sans relancer la paie, STC compris dans le tableau', async () => {
@@ -515,7 +515,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = await ouvrir('/chantiers/analytique?chantierIds=1&periode=2026-08');
 
     expect(page.textContent).toContain('Aucun bulletin sur ce périmètre en août 2026');
-    expect(page.textContent).toContain('Effectif payé');
+    expect(page.textContent).toContain('Bulletins de paie');
     expect(page.textContent).toContain('Évolution mensuelle');
   });
 

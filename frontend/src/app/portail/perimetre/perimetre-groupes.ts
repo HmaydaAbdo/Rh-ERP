@@ -166,7 +166,7 @@ export interface Variations {
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
 /**
- * Écart signé en unité puis en pourcentage : « +40 personnes (+4,1 %) », « −8 765,43 DH (−0,2 %) ». Sans écart : « Stable ».
+ * Écart signé en unité puis en pourcentage : « +40 bulletins (+4,1 %) », « −8 765,43 DH (−0,2 %) ». Sans écart : « Stable ».
  * Sans base de comparaison (mois précédent à zéro), le pourcentage n'existe pas : l'écart en unité seul, jamais une division par zéro.
  */
 function ecart(courant: number, precedent: number, unite: (valeurAbsolue: number) => string): string {
@@ -179,7 +179,7 @@ function ecart(courant: number, precedent: number, unite: (valeurAbsolue: number
   return precedent > 0 ? `${enUnite} (${formaterVariation((difference / precedent) * 100).replace('-', '−')})` : enUnite;
 }
 
-const personnes = (n: number): string => `${FORMAT_ENTIER.format(n)} ${n === 1 ? 'personne' : 'personnes'}`;
+const personnes = (n: number): string => `${FORMAT_ENTIER.format(n)} ${n === 1 ? 'bulletin' : 'bulletins'}`;
 const dirhams = (n: number): string => `${formaterMontant(n)} DH`;
 
 /** Les variations d'une carte par rapport au mois contigu ; `null` sans comparaison possible (jamais un zéro ni une division par zéro). */

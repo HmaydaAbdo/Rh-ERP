@@ -5,7 +5,7 @@ import { mockApi } from './support/api-mock';
 
 const DISPONIBLES = [
   { code: 'paie.masse', libelle: 'Masse salariale', description: 'Masse salariale du dernier mois de paie' },
-  { code: 'paie.effectif', libelle: 'Effectif payé', description: 'Nombre de personnes payées' },
+  { code: 'paie.effectif', libelle: 'Bulletins de paie', description: 'Nombre de personnes payées' },
   { code: 'employe.effectif', libelle: 'Employés', description: 'Effectif des fiches Employé' }
 ];
 
