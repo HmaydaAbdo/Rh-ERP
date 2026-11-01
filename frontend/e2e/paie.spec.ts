@@ -64,7 +64,7 @@ test.describe('Paie', () => {
     await page.goto('/paie');
 
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'ALAMI Karim', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'ALAMI Karim', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Vue de la paie' }).getByRole('link')).toHaveCount(3);
 
     const resultats = await new AxeBuilder({ page }).analyze();

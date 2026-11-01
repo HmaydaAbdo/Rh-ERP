@@ -54,7 +54,7 @@ test.describe('Fonctions', () => {
     await expect(dialogue).toContainText('MACON');
     await dialogue.getByRole('button', { name: 'Supprimer' }).click();
 
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toHaveCount(0);
     expect(mock.calls).toContain('DELETE /functions/1');
   });
 
@@ -73,12 +73,12 @@ test.describe('Fonctions', () => {
   test('recherche en temps réel et trie par colonne', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: DROITS }, { 'POST /functions/search': () => pageDe([{ id: 1, libelle: 'MACON' }]) });
     await page.goto('/functions');
-    await expect(page.getByRole('cell', { name: 'MACON', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'MACON', exact: true })).toBeVisible();
 
     await page.getByRole('searchbox', { name: 'Libellé' }).fill('mac');
     await expect.poll(() => (mock.bodies['POST /functions/search'] ?? []).at(-1)).toEqual({ libelle: 'mac' });
 
-    await page.getByRole('button', { name: /Libellé/ }).click();
+    await page.getByRole('columnheader', { name: /Libellé/ }).click();
     await expect(page.getByRole('columnheader', { name: /Libellé/ })).toHaveAttribute('aria-sort', 'ascending');
   });
 

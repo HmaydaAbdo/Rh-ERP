@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../testing/grille';
 import { TestBed } from '@angular/core/testing';
 
 import { fournirSignalForms } from '../../forms/signal-forms.config';
@@ -43,6 +44,7 @@ describe('CatalogueComponent', () => {
     (Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Ouvrir') as HTMLButtonElement).click();
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
 
     expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Résultat de l'import");
   });
@@ -51,7 +53,7 @@ describe('CatalogueComponent', () => {
     const { page } = afficher();
     const tableau = page.querySelectorAll('stp-table')[1];
 
-    expect(tableau.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(lignesGrille(tableau)).toHaveLength(10);
     expect(tableau.querySelector('.stp-table__report')?.textContent?.trim()).toBe('1 - 10 sur 27 — page 1/3');
   });
 

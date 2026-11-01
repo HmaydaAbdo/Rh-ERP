@@ -37,7 +37,7 @@ test.describe('Chantiers', () => {
       'POST /employees/analytique': () => FICHES
     });
     await page.goto('/chantiers?code=C1');
-    await expect(page.getByRole('cell', { name: 'C168', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/chantiers\/cartes\?code=C1$/);
@@ -90,7 +90,7 @@ test.describe('Chantiers', () => {
       'PUT /chantiers/1/statut': () => ({ ...NADOR, actif: false, version: 1 })
     });
     await page.goto('/chantiers?actif=true');
-    await expect(page.getByRole('cell', { name: 'C168', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
     await expect.poll(() => (mock.bodies['POST /chantiers/search'] ?? []).at(-1)).toEqual({ actif: true });
 
     await page.getByRole('button', { name: 'Clôturer le chantier C168' }).click();

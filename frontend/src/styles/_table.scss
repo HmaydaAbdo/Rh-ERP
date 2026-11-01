@@ -1,0 +1,60 @@
+// Règles qui touchent le DOM interne d'AG Grid (`stp-table`) : peu nombreuses, locales à `.stp-table`, sans `::ng-deep`.
+// Le reste de l'aspect (couleurs, bordures, hauteurs, police) vient du thème de la grille, défini dans `shared/ui/table`.
+.stp-table {
+  // Montants et dates alignés : chiffres tabulaires dans toute la grille
+  .ag-cell,
+  .ag-header-cell-text {
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Cellules : le contenu projeté (badges, liens, boutons) se centre sur la hauteur de la ligne
+  .ag-cell {
+    display: flex;
+    align-items: center;
+  }
+
+  .ag-cell.text-right,
+  .ag-cell.text-end {
+    justify-content: flex-end;
+  }
+
+  .ag-cell.text-center {
+    justify-content: center;
+  }
+
+  .stp-table__actions {
+    gap: var(--space-xs);
+  }
+
+  // En-tête de la colonne d'actions : réservé aux lecteurs d'écran
+  .stp-table__actions-header .ag-header-cell-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .stp-table__row--clickable {
+    cursor: pointer;
+  }
+
+  // Ligne de pied (totaux) : en gras
+  .ag-grid-pinned-bottom-rows .ag-cell {
+    font-weight: 600;
+  }
+
+  .stp-table__empty-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  // Le sélecteur de lignes par page et les boutons de la grille respectent la taille tactile
+  .ag-header-cell-label {
+    font-weight: 600;
+  }
+}

@@ -71,7 +71,7 @@ test.describe('Équipes', () => {
       'POST /employees/analytique': () => FICHES
     });
     await page.goto('/equipes?code=C');
-    await expect(page.getByRole('cell', { name: 'CH', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'CH', exact: true })).toBeVisible();
     await page.getByRole('navigation', { name: 'Vues des équipes' }).getByRole('link', { name: 'Cartes' }).click();
     await expect(page).toHaveURL(/\/equipes\/cartes\?code=C$/);
     await expect(page.getByText('Étape 1 sur 4')).toHaveCount(0);

@@ -1,120 +1,30 @@
-<div class="stp-table" [class.stp-table--loading]="loading()">
-  <div class="stp-table__scroll" role="region" tabindex="0" [attr.aria-label]="label()" [attr.aria-busy]="loading()">
-    <table>
-      <thead>
-        <tr>
-          @for (col of columns(); track col.field) {
-            <th
-              #th
-              scope="col"
-              [id]="headerId(col)"
-              [class]="col.align ?? ''"
-              [class.stp-table__th--target]="dropTarget() === col.field"
-              [attr.aria-sort]="col.sortable === false ? null : ariaSort(col)"
-              [style.width.px]="widths()[col.field] ?? null"
-              [style.min-width.px]="widths()[col.field] ?? null"
-              [attr.draggable]="reorderable() ? 'true' : null"
-              (dragstart)="onDragStart($event, col)"
-              (dragover)="onDragOver($event, col)"
-              (drop)="onDrop($event, col)"
-              (dragend)="onDragEnd()"
-            >
-              <button
-                type="button"
-                class="stp-table__sort"
-                [attr.aria-label]="col.header"
-                [attr.title]="col.header"
-                (click)="sortBy(col)"
-                (keydown.alt.arrowleft)="moveWithKeyboard($event, col, -1)"
-                (keydown.alt.arrowright)="moveWithKeyboard($event, col, 1)"
-              >
-                <span class="stp-table__sort-label">{{ col.shortHeader ?? col.header }}</span>
-                @if (col.sortable !== false) {
-                  <stp-icon
-                    class="stp-table__sort-icon"
-                    [class.stp-table__sort-icon--active]="ariaSort(col) !== 'none'"
-                    [name]="ariaSort(col) === 'ascending' ? 'arrow-up' : ariaSort(col) === 'descending' ? 'arrow-down' : 'arrow-up-down'"
-                  />
-                }
-              </button>
-              @if (resizable()) {
-                <span
-                  class="stp-table__resizer"
-                  role="separator"
-                  aria-orientation="vertical"
-                  [attr.aria-valuemin]="minColumnWidth"
-                  [attr.aria-valuemax]="maxColumnWidth"
-                  [attr.aria-valuenow]="widths()[col.field] ?? th.offsetWidth"
-                  tabindex="0"
-                  [attr.aria-label]="'Largeur de la colonne ' + col.header"
-                  draggable="false"
-                  (pointerdown)="startResize($event, col)"
-                  (keydown)="resizeWithKeyboard($event, col)"
-                ></span>
-              }
-            </th>
-          }
-          @if (showActions()) {
-            <th scope="col"><span class="app-lecteur">Actions</span></th>
-          }
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of displayed(); track $index) {
-          <tr
-            [class.stp-table__row--clickable]="isClickable(row)"
-            [attr.tabindex]="isClickable(row) ? 0 : null"
-            [attr.title]="rowTitle()?.(row) ?? null"
-            (click)="onRowClick(row)"
-            (keydown.enter)="onRowClick(row)"
-          >
-            @for (col of columns(); track col.field) {
-              <td [class]="((col.align ?? '') + ' ' + (col.cellClass ?? '')).trim()">
-                @if (cell(); as cellDef) {
-                  <ng-container [ngTemplateOutlet]="cellDef.template" [ngTemplateOutletContext]="{ $implicit: row, col: col }" />
-                }
-              </td>
-            }
-            @if (showActions()) {
-              @let actionsDef = rowActions()!;
-              <td class="stp-table__actions">
-                <ng-container [ngTemplateOutlet]="actionsDef.template" [ngTemplateOutletContext]="{ $implicit: row }" />
-              </td>
-            }
-          </tr>
-        } @empty {
-          @if (!loading()) {
-            <tr>
-              <td class="stp-table__empty" [attr.colspan]="columnCount()">
-                <span class="stp-table__empty-state"><stp-icon name="search" /><span>{{ emptyMessage() }}</span></span>
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-      @if (footer(); as footerDef) {
-        <tfoot>
-          <tr>
-            @for (col of columns(); track col.field) {
-              <td [class]="((col.align ?? '') + ' font-bold').trim()">
-                <ng-container [ngTemplateOutlet]="footerDef.template" [ngTemplateOutletContext]="{ col: col }" />
-              </td>
-            }
-            @if (showActions()) {
-              <td></td>
-            }
-          </tr>
-        </tfoot>
-      }
-    </table>
-    @if (loading()) {
-      <div class="stp-table__loader" role="status">
-        <stp-icon name="loader-circle" class="stp-spin" size="1.5rem" />
-        <span class="app-lecteur">Chargement…</span>
-      </div>
-    }
-  </div>
+<div class="stp-table" [class.stp-table--loading]="loading()" [attr.aria-busy]="loading()">
+  <ag-grid-angular
+    class="stp-table__grid"
+    domLayout="autoHeight"
+    [theme]="theme"
+    [columnDefs]="colDefs()"
+    [rowData]="displayed()"
+    [pinnedBottomRowData]="pinnedBottom()"
+    [loading]="loading()"
+    [ensureDomOrder]="true"
+    [suppressColumnVirtualisation]="true"
+    [suppressRowVirtualisation]="true"
+    [suppressMovableColumns]="!reorderable()"
+    [suppressDragLeaveHidesColumns]="true"
+    [suppressCellFocus]="false"
+    [suppressNoRowsOverlay]="loading()"
+    [noRowsOverlayComponent]="noRowsOverlay"
+    [noRowsOverlayComponentParams]="noRowsParams()"
+    [getRowClass]="getRowClass"
+    (gridReady)="onGridReady($event)"
+    (sortChanged)="onSortChanged($event)"
+    (columnMoved)="onColumnMoved($event)"
+    (rowClicked)="onRowClicked($event)"
+    (cellKeyDown)="onCellKeyDown($event)"
+  />
 
+  @if (paginated()) {
   <nav class="stp-table__paginator" aria-label="Pagination">
     <p class="stp-table__report" role="status">
       @if (total() > 0) {
@@ -134,4 +44,5 @@
       </label>
     </div>
   </nav>
+  }
 </div>

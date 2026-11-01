@@ -1,3 +1,4 @@
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -29,6 +30,7 @@ describe('EquipeListComponent', () => {
     fixture = TestBed.createComponent(EquipeListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+    await attendreGrille(fixture);
     fixture.detectChanges();
   }
 
@@ -40,7 +42,7 @@ describe('EquipeListComponent', () => {
     await afficher();
 
     expect(service.search.mock.lastCall![1]).toEqual({ page: 0, size: 10, sort: 'code,asc' });
-    expect(Array.from(racine().querySelectorAll('tbody tr')).map((tr) => Array.from(tr.querySelectorAll('td')).slice(0, 2).map((td) => td.textContent?.trim()))).toEqual([
+    expect(lignesGrille(racine()).map((tr) => tr.cells.slice(0, 2).map((td) => td.textContent?.trim()))).toEqual([
       ['CH', 'Chauffeurs'],
       ['OP', 'Opérateurs']
     ]);
