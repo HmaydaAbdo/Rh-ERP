@@ -2,7 +2,7 @@
 
 > État initial observé le 30 octobre 2026 dans `frontend/src/app/portail`, `frontend/src/app/shared` et le catalogue `/catalogue`.
 > Cet inventaire est un point de départ vérifiable, pas une autorisation de conserver des interfaces locales.
-> Le suivi de l'harmonisation frontend est dans Jira (KAN-174, correctifs Heures supplémentaires KAN-173).
+> Le suivi de l'harmonisation frontend est dans Jira (KAN-178, correctifs Heures supplémentaires KAN-173).
 
 ## Cible
 

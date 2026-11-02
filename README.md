@@ -184,7 +184,7 @@ la première fois, puis changer le mot de passe via l'UI.
 
 - L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
 - Domaine Pointage non construit : KAN-171.
-- Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-159 et KAN-160.
+- Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-177 et KAN-160.
 
 L'architecture de déploiement (Docker Compose de production, nginx inner/outer, CI) est en place —
 voir [`docs/deployment.md`](docs/deployment.md). Le service de backup PostgreSQL démarre par défaut

@@ -23,7 +23,7 @@ constituent le blueprint éprouvé par ERP-RH pour les applications suivantes. L
 | Comprendre l'authentification, les comptes et les rôles | [auth/README.md](auth/README.md) |
 | Savoir qui a le droit de faire quoi (catalogue des permissions) | [rbac/README.md](rbac/README.md) |
 | Travailler sur l'interface (routes, guards, composants partagés, tableaux) | [frontend/README.md](frontend/README.md) |
-| Auditer les composants partagés et suivre l'harmonisation frontend | [Inventaire](frontend/audit-composants-partages.md) · Jira KAN-174 |
+| Auditer les composants partagés et suivre l'harmonisation frontend | [Inventaire](frontend/audit-composants-partages.md) · Jira KAN-178 |
 | Lancer les tests et voir l'état actuel de la suite | [testing.md](testing.md) · [couverture par domaine](testing/domain-coverage.md) · règles obligatoires : [conventions/testing.md](../conventions/testing.md) |
 | Déployer (Docker, nginx, CI, backup) | [deployment.md](deployment.md) |
 | Informations encore à fournir pour le déploiement | [deployment-informations-a-fournir.md](deployment-informations-a-fournir.md) |
@@ -82,7 +82,7 @@ dans le document indiqué.
 ## Ce qui reste à faire
 
 Le suivi des sujets ouverts est dans Jira (projet `KAN`, épopée E17 pour l'exploitation, la qualité des données et les
-domaines restants : « Qualité des données » KAN-159 et KAN-160, domaine Pointage KAN-171, déploiement KAN-161 à KAN-164).
+domaines restants : « Qualité des données » KAN-177 et KAN-160, domaine Pointage KAN-171, déploiement KAN-161 à KAN-164).
 
 ---
 
