@@ -58,7 +58,7 @@ test.describe('Chantiers', () => {
     expect(mock.bodies['POST /paie/analytique'].at(-1)).toEqual({ periode: '2026-08', chantierIds: [1, 2] });
     await page.getByRole('navigation', { name: 'Vues des chantiers' }).getByRole('link', { name: 'Cartes' }).click();
 
-    await carte.getByRole('link', { name: /Voir l’historique Paie de/ }).click();
+    await carte.getByRole('link', { name: /voir l’historique Paie de/i }).click();
     await expect(page).toHaveURL(/\/chantiers\/analytique\?code=C1&chantierIds=1/);
     await expect(page.getByRole('heading', { name: 'Évolution mensuelle par chantier' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Situation des fiches Employé' })).toHaveCount(0);
