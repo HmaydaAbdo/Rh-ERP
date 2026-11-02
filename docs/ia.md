@@ -114,7 +114,7 @@ telle dans ce commentaire et ouvre une tâche `veille-ia` pour la couvrir, jamai
 **Une nouvelle version trouvée.** Tout reste gratuit : modèles et services via LiteLLM ou auto-hébergés ; un service
 payant est écarté et noté dans la tâche.
 
-* Version compatible : on l'adopte (une tâche, une branche, une PR à CI verte, `scripts/ia/verrous.txt` mis à jour).
+* Version compatible : on l'adopte (une branche, une PR à CI verte, `scripts/ia/verrous.txt` mis à jour).
   Pour un modèle ou une configuration LiteLLM, la proposition attend la confirmation du propriétaire (point 6).
 * Version incompatible ou problème trouvé : on ne contourne pas en silence. On ouvre un ticket Jira (message d'erreur
   exact, reproduction minimale), on ouvre un signalement chez l'éditeur et on déclare le retard dans `blocages` de
