@@ -17,6 +17,7 @@ La table `heures_supp` contient une ligne par employé, mois et chantier. La con
 `(employee_id, periode, chantier_id)` empêche les doublons ; `version` protège les modifications concurrentes.
 Chaque ligne référence l'employé, le bulletin du mois, la fonction constatée et le chantier. Elle conserve le
 salaire et le type de salaire utilisés, S/H, P/H, Montant, l'indicateur STC/sortie, STC (DH), Forfait et Net à payer.
+Le statut paie (STC/sortie) et le type de salaire restent stockés pour le calcul mais ne sont affichés dans aucun écran du module (tableau, fiche d'une ligne) ; le chantier, son filtre et son choix à l'import restent affichés.
 Pour un forfait seul, P/H, salaire de référence, type et S/H sont absents et Montant/STC valent zéro. Les lignes
 sont auditées dans `heures_supp_aud`.
 
