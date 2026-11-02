@@ -59,9 +59,10 @@ Deux règles imposées par le propriétaire, sans exception :
   propriétaire et sources officielles de l'IA sont dans [`docs/ia/decisions.md`](docs/ia/decisions.md) ; les versions
   verrouillées dans [`scripts/ia/verrous.txt`](scripts/ia/verrous.txt) (vérifiées en CI). Si le connecteur Jira est
   indisponible, le dire au propriétaire et reporter dans Jira dès son retour ; ne pas ouvrir de fichier de suivi.
-- **Une tâche Jira, une branche, une PR.** Chaque PR traite une seule tâche `KAN-n` : branche `KAN-n-slug`, clé `KAN-n` au
-  début du titre de la PR et de chaque message de commit. L'application gratuite « GitHub for Jira » relie alors branches,
-  commits et PR à la tâche.
+- **Une branche, une PR, une ou plusieurs tâches liées.** Une PR peut regrouper plusieurs tâches `KAN-n` d'un même lot
+  cohérent : branche `KAN-n-slug` (tâche principale), toutes les clés au début du titre de la PR, la clé concernée au
+  début de chaque message de commit. L'application gratuite « GitHub for Jira » relie alors branches, commits et PR aux
+  tâches. Chaque tâche du lot garde sa preuve en commentaire et passe en « Terminé(e) » à la fusion.
 - **Une tâche va jusqu'à « Terminé(e) » avant la suivante.** Le parcours complet est : branche, PR, les 4 contrôles requis
   verts sur le dernier commit, fusion, branche supprimée, `main` à jour, ticket en « Terminé(e) » avec la preuve en
   commentaire. Tant qu'il n'est pas achevé, on n'ouvre ni autre branche ni autre PR ; pendant l'attente de la CI, seules
