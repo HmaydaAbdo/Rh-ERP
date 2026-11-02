@@ -61,6 +61,8 @@ public class HeuresSuppService implements IHeuresSuppService {
         if (repository.existsByEmployee_IdAndPeriodeAndChantier_Id(requete.employeeId(), requete.periode(), requete.chantierId()))
             throw new HeuresSuppImportException("Une ligne existe déjà pour cet employé, ce mois et ce chantier.");
         boolean stc = ObservationStc.estStcOuSortie(bulletin.observation());
+        if (RegleStcHeuresSupp.heuresInterdites(stc, requete.heuresSupplementaires()))
+            throw new HeuresSuppImportException(RegleStcHeuresSupp.messageHeuresRefusees(employe.nomPrenom(), employe.cin(), requete.periode()));
         if (stc && requete.forfaitDh() != null) throw new HeuresSuppImportException("Le forfait est interdit car la paie est marquée STC/sortie.");
         if (stc && repository.existsByEmployee_IdAndPeriodeAndForfaitIsNotNullAndChantier_IdNot(requete.employeeId(), requete.periode(), requete.chantierId()))
             throw new HeuresSuppImportException("Un forfait existe déjà pour cet employé sur un autre chantier pendant ce mois marqué STC/sortie.");
@@ -109,6 +111,10 @@ public class HeuresSuppService implements IHeuresSuppService {
         }
         if (ligne.isStcOuSortie() && requete.forfaitDh() != null) {
             throw new HeuresSuppImportException("Le forfait est interdit car la paie du mois est marquée STC/sortie.");
+        }
+        if (RegleStcHeuresSupp.heuresInterdites(ligne.isStcOuSortie(), requete.heuresSupplementaires())) {
+            throw new HeuresSuppImportException(RegleStcHeuresSupp.messageHeuresRefusees(
+                    ligne.getEmployee().getNomPrenom(), ligne.getEmployee().getCin(), ligne.getPeriode()));
         }
         var taux = ligne.getSalaireHoraire();
         if (requete.heuresSupplementaires() != null && taux == null) {

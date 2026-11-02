@@ -11,19 +11,24 @@ public final class CalculHeuresSupp {
     private static final BigDecimal DIX = BigDecimal.TEN;
     private static final BigDecimal DEUX_CENT_SOIXANTE = new BigDecimal("260");
     private static final BigDecimal ZERO_MONTANT = new BigDecimal("0.00");
-    private static final int ECHELLE_TAUX = 20;
+    /** S/H n'a pas de virgule : le taux horaire est un nombre entier de dirhams. */
+    private static final int ECHELLE_TAUX = 0;
 
     private CalculHeuresSupp() {
     }
 
-    /** Salaire journalier / 10 ou salaire mensuel / 26 / 10 ; le taux est conservé à 20 décimales. */
+    /**
+     * Salaire journalier / 10 ou salaire mensuel / 26 / 10, arrondi à l'entier de dirham (HALF_DOWN : fraction
+     * supérieure à 0,5 on monte, inférieure à 0,5 on descend, exactement 0,5 on descend). Le taux arrondi est la
+     * valeur stockée et celle dont découlent les montants.
+     */
     public static BigDecimal salaireHoraire(BigDecimal salaire, TypeSalaire typeSalaire) {
         if (salaire == null || typeSalaire == null) {
             throw new IllegalArgumentException("Le salaire et son type sont nécessaires au calcul de S/H.");
         }
         return switch (typeSalaire) {
-            case JOURNALIER -> salaire.divide(DIX);
-            case MENSUEL -> salaire.divide(DEUX_CENT_SOIXANTE, ECHELLE_TAUX, RoundingMode.HALF_UP);
+            case JOURNALIER -> salaire.divide(DIX, ECHELLE_TAUX, RoundingMode.HALF_DOWN);
+            case MENSUEL -> salaire.divide(DEUX_CENT_SOIXANTE, ECHELLE_TAUX, RoundingMode.HALF_DOWN);
         };
     }
 

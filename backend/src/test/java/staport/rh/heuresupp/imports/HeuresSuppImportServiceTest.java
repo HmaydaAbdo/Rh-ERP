@@ -98,12 +98,33 @@ class HeuresSuppImportServiceTest {
         assertThat(analyse.pret()).isTrue();
         assertThat(analyse.lignesZero()).isZero();
         assertThat(analyse.lignes()).singleElement().satisfies(ligne -> {
-            assertThat(ligne.salaireHoraireDh()).isEqualByComparingTo("15.38461538461538461538");
-            assertThat(ligne.montantDh()).isEqualByComparingTo("38.46");
+            assertThat(ligne.salaireHoraireDh()).isEqualByComparingTo("15");
+            assertThat(ligne.montantDh()).isEqualByComparingTo("37.50");
             assertThat(ligne.stcDh()).isEqualByComparingTo("0.00");
-            assertThat(ligne.netAPayerDh()).isEqualByComparingTo("38.46");
+            assertThat(ligne.netAPayerDh()).isEqualByComparingTo("37.50");
         });
         verify(repository, never()).saveAll(any());
+    }
+
+    @Test
+    void le_taux_est_arrondi_a_l_entier_aux_frontieres_x49_x50_x51_et_le_montant_en_decoule() {
+        paiePresente();
+        when(employes.findByCin(CIN)).thenReturn(
+                Optional.of(employe("4027.40", TypeSalaire.MENSUEL)),   // 15,49 -> 15
+                Optional.of(employe("4030.00", TypeSalaire.MENSUEL)),   // 15,50 -> 15 (on descend)
+                Optional.of(employe("4032.60", TypeSalaire.MENSUEL)),   // 15,51 -> 16
+                Optional.of(employe("155.00", TypeSalaire.JOURNALIER)), // 15,50 -> 15
+                Optional.of(employe("155.10", TypeSalaire.JOURNALIER)));// 15,51 -> 16
+        when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(Optional.of(bulletin("Présence")));
+        when(lecteur.lire(fichier)).thenReturn(classeur("2"));
+
+        String[] attendus = {"15", "15", "16", "15", "16"};
+        String[] montants = {"30.00", "30.00", "32.00", "30.00", "32.00"};
+        for (int i = 0; i < attendus.length; i++) {
+            var ligne = service.analyser(fichier, MOIS, CHANTIER_ID, null).lignes().getFirst();
+            assertThat(ligne.salaireHoraireDh()).isEqualByComparingTo(attendus[i]);
+            assertThat(ligne.montantDh()).isEqualByComparingTo(montants[i]);
+        }
     }
 
     @Test
@@ -142,6 +163,48 @@ class HeuresSuppImportServiceTest {
     }
 
     @Test
+    void refuse_les_heures_d_un_employe_stc_ou_sorti_et_bloque_l_import() {
+        paiePresente();
+        when(lecteur.lire(fichier)).thenReturn(classeur("2"));
+        when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
+        when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(
+                Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")),
+                Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")));
+
+        for (int i = 0; i < 2; i++) {
+            HeuresSuppImportAnalyseDto analyse = service.analyser(fichier, MOIS, CHANTIER_ID, null);
+
+            assertThat(analyse.pret()).isFalse();
+            assertThat(analyse.erreurs()).singleElement().satisfies(erreur -> {
+                assertThat(erreur).contains("CIN " + CIN).contains("Alaoui Salma");
+                assertThat(erreur).contains("employé STC/sorti sur la paie d'octobre 2026");
+            });
+        }
+        assertThatThrownBy(() -> service.importer(fichier, MOIS, CHANTIER_ID, null))
+                .isInstanceOf(HeuresSuppImportException.class)
+                .hasMessageContaining("L'import est bloqué").hasMessageContaining("employé STC/sorti");
+        verify(repository, never()).saveAll(any());
+    }
+
+    @Test
+    void accepte_une_ligne_zero_d_un_employe_stc_ou_sorti() {
+        paiePresente();
+        when(lecteur.lire(fichier)).thenReturn(new FichierHeuresSupp(
+                List.of(new LigneFichierHeuresSupp(2, "Alaoui Salma", CIN, BigDecimal.ZERO)), 1, 1));
+        when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
+        when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(Optional.of(bulletin("STC")));
+
+        var analyse = service.analyser(fichier, MOIS, CHANTIER_ID, null);
+
+        assertThat(analyse.pret()).isTrue();
+        assertThat(analyse.erreurs()).isEmpty();
+        assertThat(analyse.lignes()).singleElement().satisfies(ligne -> {
+            assertThat(ligne.stcOuSortie()).isTrue();
+            assertThat(ligne.montantDh()).isEqualByComparingTo("0");
+        });
+    }
+
+    @Test
     void refuse_l_import_si_l_employe_n_a_pas_de_bulletin_du_mois() {
         paiePresente();
         when(lecteur.lire(fichier)).thenReturn(classeur("2"));
@@ -170,13 +233,14 @@ class HeuresSuppImportServiceTest {
         assertThat(resultat.lignesHeures()).isEqualTo(1);
         assertThat(resultat.lignesZero()).isZero();
         assertThat(resultat.heuresTotales()).isEqualByComparingTo("2");
-        assertThat(resultat.montantTotalDh()).isEqualByComparingTo("30.77");
-        assertThat(resultat.netTotalDh()).isEqualByComparingTo("30.77");
+        assertThat(resultat.montantTotalDh()).isEqualByComparingTo("30.00");
+        assertThat(resultat.netTotalDh()).isEqualByComparingTo("30.00");
         ArgumentCaptor<List<HeureSupp>> lignes = ArgumentCaptor.forClass(List.class);
         verify(repository).saveAll(lignes.capture());
         assertThat(lignes.getValue()).singleElement().satisfies(ligne -> {
-            assertThat(ligne.getSalaireHoraire()).isEqualByComparingTo("15.38461538461538461538");
-            assertThat(ligne.getMontant()).isEqualByComparingTo("30.77");
+            assertThat(ligne.getSalaireHoraire()).isEqualByComparingTo("15");
+            assertThat(ligne.getSalaireHoraire().scale()).isZero();
+            assertThat(ligne.getMontant()).isEqualByComparingTo("30.00");
             assertThat(ligne.getPaie()).isNotNull();
         });
     }
@@ -204,9 +268,13 @@ class HeuresSuppImportServiceTest {
     }
 
     private static EmployeeResponseDto employe() {
+        return employe("4000", TypeSalaire.MENSUEL);
+    }
+
+    private static EmployeeResponseDto employe(String salaire, TypeSalaire type) {
         return new EmployeeResponseDto(EMPLOYE_ID, 0L, "Alaoui Salma", CIN, LocalDate.of(1990, 1, 1),
                 LocalDate.of(2020, 1, 1), new FunctionSummaryDto(17L, "Chauffeur"), null, null,
-                new BigDecimal("4000"), TypeSalaire.MENSUEL, EmployeeStatut.ACTIF);
+                new BigDecimal(salaire), type, EmployeeStatut.ACTIF);
     }
 
     private static PaieResponseDto bulletin(String observation) {
