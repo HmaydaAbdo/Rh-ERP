@@ -19,7 +19,7 @@ import java.util.Base64;
  * entre les deux (aucune des deux classes ne dépend de l'autre).
  */
 @Component
-final class RapportRessourcesStatiques {
+public final class RapportRessourcesStatiques {
 
     private static final String DOSSIER_FONTS = "report/paie/fonts/";
     private static final String CHEMIN_CSS = "report/paie/html/rapport.css";
@@ -52,7 +52,7 @@ final class RapportRessourcesStatiques {
     final String css;
     private final String logoBase64;
 
-    RapportRessourcesStatiques() {
+    public RapportRessourcesStatiques() {
         this.policeRegular = chargerRessource(DOSSIER_FONTS + "LiberationSerif-Regular.ttf");
         this.policeBold = chargerRessource(DOSSIER_FONTS + "LiberationSerif-Bold.ttf");
         this.policeItalic = chargerRessource(DOSSIER_FONTS + "LiberationSerif-Italic.ttf");
@@ -68,7 +68,7 @@ final class RapportRessourcesStatiques {
      * (page de garde ET bandeau récurrent de chaque page), contrairement à un flux qui ne se lit
      * qu'une fois (piège déjà rencontré côté JasperReports avec un {@code InputStream}, voir
      * l'ancien {@code PaieReportPdfService.chargerLogo}). */
-    String logoDataUri() {
+    public String logoDataUri() {
         return "data:image/png;base64," + logoBase64;
     }
 

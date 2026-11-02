@@ -76,7 +76,7 @@ public class PaieReportHtmlPdfService {
      * classe) : le document reçu est déjà entièrement paginé (un {@code <div class="page">} par
      * page physique, taille fixe), il n'y a plus aucune décision de mise en page à prendre pour le
      * moteur de rendu. */
-    byte[] rendre(Document documentJsoup) {
+    public byte[] rendre(Document documentJsoup) {
         org.w3c.dom.Document documentW3c = new W3CDom().fromJsoup(documentJsoup);
         try (ByteArrayOutputStream sortie = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
