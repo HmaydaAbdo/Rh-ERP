@@ -71,6 +71,28 @@ describe('HeuresSuppListComponent', () => {
     expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 1, 20, 'montant,desc');
   });
 
+  it('exporte le PDF du périmètre filtré avec le dernier tri, sans la pagination', () => {
+    service['exporterPdf'] = vi.fn().mockReturnValue(of(new Blob(['%PDF'])));
+    const creer = vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:pdf');
+    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    component.charger({ first: 40, rows: 20, sortField: 'montant', sortOrder: -1 });
+
+    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
+    bouton.click();
+
+    expect(service['exporterPdf']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 'montant,desc');
+    expect(creer).toHaveBeenCalled();
+  });
+
+  it('signale un échec d’export sans masquer l’écran', () => {
+    service['exporterPdf'] = vi.fn().mockReturnValue(throwError(() => new Error('500')));
+    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
+    bouton.click();
+
+    expect(component.erreur()).toContain('PDF');
+  });
+
   it('reçoit une erreur de recherche sans masquer l’écran', () => {
     service['search'].mockReturnValue(throwError(() => new Error('network')));
     component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });

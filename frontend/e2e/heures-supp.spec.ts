@@ -5,8 +5,8 @@ import { mockApi, page as pageDe } from './support/api-mock';
 const ligne = {
   id: 1, version: 0, employeeId: 7, nomPrenom: 'Salma Alaoui', cin: 'AB123', fonction: 'Chauffeur', chantierId: 4,
   codeChantier: 'C4', chantier: 'Site', periode: '2026-10', salaireReferenceDh: 4000,
-  typeSalaireReference: 'MENSUEL', salaireHoraireDh: 15.38, heuresSupplementaires: 2, montantDh: 30.76,
-  stcOuSortie: false, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76
+  typeSalaireReference: 'MENSUEL', salaireHoraireDh: 15, heuresSupplementaires: 2, montantDh: 30,
+  stcOuSortie: false, stcDh: 0, forfaitDh: 100, netAPayerDh: 130
 };
 
 const permissions = ['HEURES_SUP_READ', 'HEURES_SUP_IMPORT', 'HEURES_SUP_DELETE', 'HEURES_SUP_PURGE', 'PAIE_READ', 'EMPLOYEE_READ', 'CHANTIER_READ', 'EQUIPE_READ', 'FUNCTION_READ'];
@@ -14,15 +14,15 @@ const permissions = ['HEURES_SUP_READ', 'HEURES_SUP_IMPORT', 'HEURES_SUP_DELETE'
 test('la liste filtrée affiche les champs métier et le total', async ({ page }) => {
   const api = await mockApi(page, { username: 'rh', permissions }, {
     'POST /heures-supp/search': () => pageDe([ligne]),
-    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30.76, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76 }, parChantier: [], parEquipe: [], parFonction: [], definitions: {} }),
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parChantier: [], parEquipe: [], parFonction: [], definitions: {} }),
     'GET /heures-supp/periodes': () => ['2026-10']
   });
 
   await page.goto('/heures-supp?periode=2026-10&cin=AB123&nom=Salma');
   await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
-  await expect(page.getByText(/15[.,]38 DH\/h/)).toBeVisible();
-  await expect(page.getByText(/130[.,]76 DH/).first()).toBeVisible();
+  await expect(page.getByText(/15 DH\/h/)).toBeVisible();
+  await expect(page.getByText(/130[.,]00 DH/).first()).toBeVisible();
   await expect(page.locator('.app-table-bar__summary')).toContainText('Net à payer');
   const presentation = await page.evaluate(() => {
     const filtres = document.querySelector('form.app-toolbar[aria-label="Filtres des heures supplémentaires"]');
@@ -55,7 +55,7 @@ test('l’écran de modification présente les données historiques et enregistr
   await page.goto('/heures-supp/1/edit');
   await expect(page.getByRole('heading', { name: 'Modifier la ligne d’heures supplémentaires' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
-  await expect(page.getByText(/15[.,]38 DH\/h/)).toBeVisible();
+  await expect(page.getByText(/15 DH\/h/)).toBeVisible();
   await page.getByLabel('Heures supplémentaires (P/H)').fill('3');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(page).toHaveURL(/\/heures-supp\?periode=2026-10/);
@@ -65,7 +65,7 @@ test('l’écran de modification présente les données historiques et enregistr
 test('la purge mensuelle utilise le dialogue partagé et confirme le nombre exact', async ({ page }) => {
   const api = await mockApi(page, { username: 'rh', permissions }, {
     'POST /heures-supp/search': () => pageDe([ligne]),
-    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30.76, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76 }, parChantier: [], parEquipe: [], parFonction: [], definitions: {} }),
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parChantier: [], parEquipe: [], parFonction: [], definitions: {} }),
     'GET /heures-supp/periodes': () => ['2026-10'],
     'POST /heures-supp/suppression-mois': () => 1
   });
@@ -81,7 +81,7 @@ test('la purge mensuelle utilise le dialogue partagé et confirme le nombre exac
 test('les vues Cartes et Analytique affichent les heures supplémentaires et suivent les filtres', async ({ page }) => {
   const groupe = { id: 4, code: 'C4', libelle: 'Site', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 };
   const api = await mockApi(page, { username: 'rh', permissions }, {
-    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30.76, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76 }, parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
     'GET /heures-supp/periodes': () => ['2026-10']
   });
 
@@ -91,6 +91,6 @@ test('les vues Cartes et Analytique affichent les heures supplémentaires et sui
 
   await page.goto('/heures-supp/analytique?periode=2026-10&cin=AB123');
   await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
-  await expect(page.getByText(/130[.,]76 DH/).first()).toBeVisible();
+  await expect(page.getByText(/130[.,]00 DH/).first()).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10', cin: 'AB123' });
 });
