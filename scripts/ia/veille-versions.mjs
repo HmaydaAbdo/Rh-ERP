@@ -14,7 +14,8 @@ const racine = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--'))
 // Retards connus et expliqués : ils n'échouent pas le mode strict. Les retirer dès que la cause disparaît.
 const blocages = {
   'litellm': 'préversion 1.109.0.dev2 adoptée sur décision du propriétaire (2026-11-01) : seule à lever openai<3 (scripts/ia/verrous.txt)',
-  '@a2ui/web_core': '@copilotkit/angular 0.6.0 épingle 0.10.4 (scripts/ia/verrous.txt)',
+  '@a2ui/web_core': '0.15.0 appelle ZodType.prototype.describe, absent de zod 4 que la surcharge impose (KAN-151) ; @copilotkit/angular 0.6.0 épingle 0.10.4 (scripts/ia/verrous.txt)',
+  '@a2ui/angular': '0.14.0 exige @a2ui/web_core ^0.15.0, incompatible avec zod 4 (KAN-151)',
   'agentevals': 'bibliothèque dormante : dernière publication le 2025-07-24 (scripts/ia/verrous.txt)',
 };
 
@@ -24,7 +25,7 @@ const pypi = ['langchain', 'langchain-core', 'langchain-litellm', 'langgraph', '
 const npm = [
   ['frontend', '@copilotkit/angular'], ['frontend', '@copilotkit/core'], ['frontend', '@copilotkit/shared'],
   ['frontend', '@ag-ui/client'], ['frontend', '@ag-ui/core'], ['frontend', '@ag-ui/a2ui-middleware'],
-  ['frontend', '@a2ui/web_core'], ['copilot-runtime', '@copilotkit/runtime'], ['copilot-runtime', '@copilotkit/sqlite-runner'],
+  ['frontend', '@a2ui/web_core'], ['frontend', '@a2ui/angular'], ['copilot-runtime', '@copilotkit/runtime'], ['copilot-runtime', '@copilotkit/sqlite-runner'],
 ];
 
 const uvLock = readFileSync(join(racine, 'ia/uv.lock'), 'utf8');
