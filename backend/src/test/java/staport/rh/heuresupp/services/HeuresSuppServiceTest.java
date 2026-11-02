@@ -118,19 +118,21 @@ class HeuresSuppServiceTest {
     }
 
     @Test
-    void creerRefuseDesHeuresPourUnBulletinStcOuSortieAvecNomCinEtMois() {
+    void creerAccepteDesHeuresPourUnBulletinStcOuSortieEtLeurMontantPasseEnStc() {
         for (String observation : new String[]{"STC", " sortie "}) {
             when(paie.observation()).thenReturn(observation);
             lenient().when(repository.existsByEmployee_IdAndPeriodeAndChantier_Id(5L, PERIODE, 8L)).thenReturn(false);
+            when(repository.save(any(HeureSupp.class))).thenAnswer(appel -> appel.getArgument(0));
 
-            var erreur = assertThrows(HeuresSuppImportException.class,
-                    () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, new BigDecimal("2"), null)));
-
-            assertTrue(erreur.getMessage().contains("Salma Alaoui"), erreur.getMessage());
-            assertTrue(erreur.getMessage().contains("AB123"), erreur.getMessage());
-            assertTrue(erreur.getMessage().contains("employé STC/sorti sur la paie d'octobre 2026"), erreur.getMessage());
+            service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, new BigDecimal("2"), null));
         }
-        verify(repository, never()).save(any());
+        var captor = org.mockito.ArgumentCaptor.forClass(HeureSupp.class);
+        verify(repository, org.mockito.Mockito.times(2)).save(captor.capture());
+        captor.getAllValues().forEach(ligne -> {
+            assertTrue(ligne.isStcOuSortie());
+            assertEquals(0, ligne.getMontant().compareTo(ligne.getStcDh()));
+            assertEquals(0, BigDecimal.ZERO.compareTo(ligne.getNetAPayer()));
+        });
     }
 
     @Test
@@ -186,21 +188,16 @@ class HeuresSuppServiceTest {
     }
 
     @Test
-    void modifierRefuseDesHeuresPositivesSurUneLigneStcMaisAccepteZero() {
+    void modifierAccepteDesHeuresSurUneLigneStcEtLeMontantPasseEnStc() {
         HeureSupp stc = ligneExistante(3L, BigDecimal.TEN, true);
         stc.setPeriode(PERIODE);
-        var employeLigne = mock(Employee.class);
-        when(employeLigne.getNomPrenom()).thenReturn("Salma Alaoui");
-        when(employeLigne.getCin()).thenReturn("AB123");
-        stc.setEmployee(employeLigne);
         when(repository.findById(4L)).thenReturn(Optional.of(stc));
-
-        var erreur = assertThrows(HeuresSuppImportException.class,
-                () -> service.modifier(4L, new HeuresSuppModificationDto(3L, new BigDecimal("1.5"), null)));
-        assertTrue(erreur.getMessage().contains("Salma Alaoui (CIN AB123) : employé STC/sorti sur la paie d'octobre 2026"), erreur.getMessage());
-        verify(repository, never()).save(any());
-
         when(repository.save(stc)).thenReturn(stc);
+
+        service.modifier(4L, new HeuresSuppModificationDto(3L, new BigDecimal("1.5"), null));
+        assertEquals(0, stc.getMontant().compareTo(stc.getStcDh()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(stc.getNetAPayer()));
+
         service.modifier(4L, new HeuresSuppModificationDto(3L, BigDecimal.ZERO, null));
         assertEquals(0, BigDecimal.ZERO.compareTo(stc.getMontant()));
         assertEquals(0, BigDecimal.ZERO.compareTo(stc.getNetAPayer()));

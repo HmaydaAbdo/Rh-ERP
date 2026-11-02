@@ -23,7 +23,6 @@ import staport.rh.heuresupp.audit.PerimetreCorrectionHeuresSupp;
 import staport.rh.heuresupp.audit.PerimetreImportHeuresSupp;
 import staport.rh.heuresupp.repositories.HeuresSuppRepository;
 import staport.rh.heuresupp.services.CalculHeuresSupp;
-import staport.rh.heuresupp.services.RegleStcHeuresSupp;
 import staport.rh.paie.entities.Paie;
 import staport.rh.paie.reporting.ObservationStc;
 import staport.rh.paie.services.interfaces.IPaieService;
@@ -296,9 +295,6 @@ public class HeuresSuppImportService {
             paie.findByEmployeeIdAndPeriode(employe.id(), periode).ifPresentOrElse(bulletin -> {
                 dossier.paieId = bulletin.id();
                 dossier.stcOuSortie = ObservationStc.estStcOuSortie(bulletin.observation());
-                if (RegleStcHeuresSupp.heuresInterdites(dossier.stcOuSortie, dossier.heures)) {
-                    dossier.erreurs.add(employe.nomPrenom() + " : " + RegleStcHeuresSupp.messageHeuresRefusees(periode));
-                }
             }, () -> dossier.erreurs.add("aucun bulletin de paie n'existe pour cet employé pendant le mois choisi."));
             if (dossier.heures != null) {
                 try {
