@@ -163,27 +163,25 @@ class HeuresSuppImportServiceTest {
     }
 
     @Test
-    void refuse_les_heures_d_un_employe_stc_ou_sorti_et_bloque_l_import() {
+    void accepte_les_heures_d_un_employe_stc_ou_sorti_dont_le_montant_passe_en_stc_sans_net_a_payer() {
         paiePresente();
         when(lecteur.lire(fichier)).thenReturn(classeur("2"));
         when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
         when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(
-                Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")),
                 Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")));
 
         for (int i = 0; i < 2; i++) {
             HeuresSuppImportAnalyseDto analyse = service.analyser(fichier, MOIS, CHANTIER_ID, null);
 
-            assertThat(analyse.pret()).isFalse();
-            assertThat(analyse.erreurs()).singleElement().satisfies(erreur -> {
-                assertThat(erreur).contains("CIN " + CIN).contains("Alaoui Salma");
-                assertThat(erreur).contains("employé STC/sorti sur la paie d'octobre 2026");
+            assertThat(analyse.pret()).isTrue();
+            assertThat(analyse.erreurs()).isEmpty();
+            assertThat(analyse.lignes()).singleElement().satisfies(ligne -> {
+                assertThat(ligne.stcOuSortie()).isTrue();
+                assertThat(ligne.montantDh()).isPositive();
+                assertThat(ligne.stcDh()).isEqualByComparingTo(ligne.montantDh());
+                assertThat(ligne.netAPayerDh()).isEqualByComparingTo("0");
             });
         }
-        assertThatThrownBy(() -> service.importer(fichier, MOIS, CHANTIER_ID, null))
-                .isInstanceOf(HeuresSuppImportException.class)
-                .hasMessageContaining("L'import est bloqué").hasMessageContaining("employé STC/sorti");
-        verify(repository, never()).saveAll(any());
     }
 
     @Test
