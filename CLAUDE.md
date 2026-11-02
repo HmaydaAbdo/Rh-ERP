@@ -30,7 +30,8 @@ Les tâches se suivent dans Jira (projet `KAN`, cloudId `04f02d9f-c364-4998-ba63
 créer toute nouvelle tâche, tenir le statut et la preuve à jour (règle d'`AGENTS.md`). **Jira et le code sont les seules
 sources de suivi : ne créer aucun fichier markdown d'avancement.** Pour tout travail IA : avancer épopée par épopée,
 principes et décisions dans [`docs/ia/decisions.md`](docs/ia/decisions.md). Ne jamais supposer le comportement d'un
-framework : lire sa documentation officielle en entier avant de l'affirmer (règle d'`AGENTS.md`). Ne rien supprimer
+framework : lire sa documentation officielle en entier avant de l'affirmer (règle d'`AGENTS.md`), en passant d'abord par
+Context7 (`resolve-library-id` puis `query-docs`). Ne rien supprimer
 (fichier, branche, donnée) hors du périmètre de la tâche sans l'accord du propriétaire. Toute nouvelle erreur ou surprise
 coûteuse s'ajoute à [`conventions/lecons.md`](conventions/lecons.md).
 
