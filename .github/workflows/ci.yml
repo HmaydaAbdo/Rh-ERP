@@ -326,8 +326,8 @@ jobs:
         working-directory: frontend
         run: npx ng build --configuration production
 
-      # Parcours E6E (connexion, permissions, fonctions, paie, composants, téléphone) contre une API simulée, avec axe.
-      - name: Run frontend E6E tests
+      # Parcours E2E (connexion, permissions, fonctions, paie, composants, téléphone) contre une API simulée, avec axe.
+      - name: Run frontend E2E tests
         working-directory: frontend
         run: npm run e2e
 
@@ -346,7 +346,7 @@ jobs:
           path: frontend/sbom-frontend.cdx.json
 
       # Traces et rapport des parcours en échec, pour comprendre un échec propre au CI sans le rejouer.
-      - name: Upload E6E report on failure
+      - name: Upload E2E report on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
