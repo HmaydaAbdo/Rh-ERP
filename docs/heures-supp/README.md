@@ -65,7 +65,7 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction. |
 | P/H | Nombre d'heures supplémentaires fourni, en heures décimales, avec au plus une décimale ; les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
-| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. La valeur calculée est conservée avec l'import. |
+| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi à l'entier** (pas de virgule : fraction > 0,5 on monte, < 0,5 on descend, exactement 0,5 on descend, soit `HALF_DOWN`). La valeur arrondie est celle qui est conservée avec l'import. |
 | Marqueur STC/sortie | Observation du bulletin de Paie de l'employé pour le même mois. Le domaine réutilise la règle Paie `ObservationStc.estStcOuSortie`. |
 | Forfait | Montant en DH saisi séparément des heures supplémentaires. Il peut concerner un employé absent du fichier d'heures, mais pas un employé marqué STC/sortie ce mois-là. |
 
@@ -75,7 +75,7 @@ Les montants sont produits par Spring ; l'assistant IA ne les recalcule pas.
 
 | Grandeur | Définition |
 |---|---|
-| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import. Sa précision est conservée pour le calcul. |
+| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import, **entier de dirhams** (arrondi `HALF_DOWN` : 15,49 → 15 ; 15,50 → 15 ; 15,51 → 16). La valeur arrondie est stockée (colonne `s_h` `NUMERIC(10,0)`, migration V43) et le Montant, STC et Net à payer en découlent. |
 | **P/H** | Heures supplémentaires du mois, fournies en heures décimales entre 0 inclus et une décimale au plus. |
 | **Montant** | `S/H × P/H`, arrondi à deux décimales en DH. |
 | **STC (DH)** | `Montant` si le bulletin du même mois est marqué exactement « STC » ou « sortie » (casse et espaces extérieurs ignorés) ; sinon `0 DH`. |
@@ -119,7 +119,7 @@ une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia
 
 ## Scénarios couverts par les tests
 
-- `CalculHeuresSuppTest` : S/H journalier et mensuel sans perte de précision, Montant arrondi à deux décimales, STC et Net.
+- `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à deux décimales, STC et Net.
 - `LecteurFichierHeuresSuppTest` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
 - `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, STC/forfait et doublon de forfait.
 - `HeuresSuppAnalytiqueServiceTest` : agrégats, groupes et périodes.
