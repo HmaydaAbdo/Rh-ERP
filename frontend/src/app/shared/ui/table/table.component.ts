@@ -163,8 +163,10 @@ export class TableComponent<T extends object> {
     const definitions: ColDef[] = this.columns().map((colonne, index) => ({
       colId: colonne.field,
       field: colonne.field,
-      headerName: colonne.shortHeader ?? colonne.header,
-      headerTooltip: colonne.header,
+      // Le titre est toujours complet (jamais abrégé ni tronqué) : il passe à la ligne et l'en-tête prend la hauteur nécessaire.
+      headerName: colonne.header,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       // Le contenu vient du gabarit projeté (`stpCell`) ; sans gabarit, la cellule affiche cette valeur (vide pour un objet).
       valueFormatter: ({ value }) => (value == null || typeof value === 'object' ? '' : String(value)),
       sortable: colonne.sortable !== false,

@@ -14,6 +14,7 @@ import { ChantierReferenceService } from '../../../shared/reference-data/chantie
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { HeuresSuppService } from '../services/heures-supp.service';
+import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 
 const CONFIG: CollectionShellConfig = {
   titre: 'Heures supplémentaires',
@@ -30,7 +31,8 @@ const CONFIG: CollectionShellConfig = {
   imports: [CollectionShellComponent, SplitButtonComponent, MonthInputComponent, LazySelectComponent, ButtonComponent, RouterLink],
   template: `
     <app-collection-shell [configuration]="configuration">
-      <stp-split-button collection-actions label="Importer un chantier" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="telechargementModele()" (clicked)="ouvrirImport()" />
+      <stp-split-button collection-actions label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="telechargementModele()" (clicked)="ouvrirImport()" />
+      @if (exportEtat.exporter(); as exporter) { <button collection-actions stp-button variant="secondary" icon="download" type="button" [loading]="exportEtat.enCours()" (click)="exporter()">Exporter</button> }
       @if (peutAjouter()) { <a collection-actions stp-button variant="primary" icon="plus" routerLink="/heures-supp/new">Ajouter une ligne</a> }
       <form collection-filters class="app-toolbar" aria-label="Filtres des heures supplémentaires" (submit)="$event.preventDefault()">
         <stp-month-input ariaLabel="Période des heures supplémentaires" [value]="mois()" (valueChange)="choisirMois($event)" />
@@ -56,6 +58,7 @@ export class HeuresSuppVuesComponent {
   protected readonly chantiers = inject(ChantierReferenceService);
   protected readonly equipes = inject(EquipeReferenceService);
   protected readonly fonctions = inject(FunctionReferenceService);
+  protected readonly exportEtat = inject(HeuresSuppExportEtat);
   protected readonly telechargementModele = signal(false);
   protected readonly menuImport: MenuAction[] = [{
     label: 'Télécharger le modèle Excel', icon: 'file-spreadsheet', command: () => this.telechargerModele()

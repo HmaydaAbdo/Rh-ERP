@@ -4,6 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
+import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppVuesComponent } from './heures-supp-vues.component';
 
@@ -53,5 +54,24 @@ describe('HeuresSuppVuesComponent', () => {
     expect(TestBed.inject(HeuresSuppService).telechargerModele).toHaveBeenCalledOnce();
     expect(url).toHaveBeenCalledWith(expect.any(Blob));
     expect(click).toHaveBeenCalledOnce();
+  });
+
+  it('pose le bouton Exporter à côté d’Importer quand le tableau est affiché, et le retire sinon', async () => {
+    await harness.navigateByUrl('/heures-supp', HeuresSuppVuesComponent);
+    const etat = TestBed.inject(HeuresSuppExportEtat);
+    const boutons = (): string[] => Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).map((b) => b.textContent?.trim() ?? '');
+    expect(boutons()).not.toContain('Exporter');
+
+    const exporter = vi.fn();
+    etat.exporter.set(exporter);
+    harness.detectChanges();
+    expect(boutons()).toContain('Exporter');
+    expect(boutons().join('|')).not.toContain('Importer un chantier');
+    Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
+    expect(exporter).toHaveBeenCalledOnce();
+
+    etat.exporter.set(null);
+    harness.detectChanges();
+    expect(boutons()).not.toContain('Exporter');
   });
 });

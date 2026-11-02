@@ -8,9 +8,11 @@ export interface NavItem {
   group?: 'administration-systeme';
 }
 
-/** Entrées du menu, dans l'ordre : l'écran d'arrivée est le premier auquel l'utilisateur a accès, l'Accueil d'abord (voir `homeGuard`). */
+/**
+ * Entrées du menu, dans l'ordre : l'écran d'arrivée est le premier auquel l'utilisateur a accès (voir `homeGuard`). L'Accueil n'est
+ * pas disponible avant la définition des fiches de poste (décision du propriétaire, 2026-11-02) : il n'a ni entrée ni route.
+ */
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Accueil', icon: 'house', route: '/accueil', permission: 'ACCUEIL_READ' },
   { label: 'Paie', icon: 'wallet', route: '/paie', permission: 'PAIE_READ' },
   { label: 'Heures sup.', icon: 'clock-3', route: '/heures-supp', permission: 'HEURES_SUP_READ' },
   { label: 'Employés', icon: 'users', route: '/employees', permission: 'EMPLOYEE_READ' },

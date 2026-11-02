@@ -39,7 +39,7 @@ import java.util.Map;
 public class HeuresSuppExportPdfService {
 
     static final int LIGNES_MAX = 5000;
-    static final int LIGNES_PAR_PAGE = 26;
+    static final int LIGNES_PAR_PAGE = 22;
     private static final String CHEMIN_CSS = "report/heures-supp/rapport.css";
 
     /** Colonnes de la vue Tabulaire (propriété triable) : seul ce tri est accepté, comme à l'écran. */
@@ -110,7 +110,7 @@ public class HeuresSuppExportPdfService {
             Element page = doc.body().appendElement("div").addClass("page");
             entete(page, titre, contexte);
             Element table = page.appendElement("div").addClass("page-body").appendElement("table").addClass("heures");
-            for (String colonne : List.of("mois", "chantier", "employe", "cin", "fonction", "salaire", "sh", "ph", "montant", "stc", "forfait", "net")) {
+            for (String colonne : List.of("mois", "chantier", "employe", "cin", "fonction", "salaire", "sh", "ph", "montant", "stc", "forfait", "net", "emargement")) {
                 table.appendElement("col").addClass(colonne);
             }
             enteteTableau(table);
@@ -144,7 +144,7 @@ public class HeuresSuppExportPdfService {
 
     private void enteteTableau(Element table) {
         String[][] colonnes = {{"Mois", ""}, {"Chantier", ""}, {"Employé", ""}, {"CIN", ""}, {"Fonction", ""}, {"Salaire réf.", "num"},
-                {"S/H", "num"}, {"P/H", "num"}, {"Montant", "num"}, {"STC", "num"}, {"Forfait", "num"}, {"Net à payer", "num"}};
+                {"S/H", "num"}, {"P/H", "num"}, {"Montant", "num"}, {"STC", "num"}, {"Forfait", "num"}, {"Net à payer", "num"}, {"Émargement", ""}};
         Element tr = table.appendElement("thead").appendElement("tr");
         for (String[] colonne : colonnes) {
             Element th = tr.appendElement("th").text(colonne[0]);
@@ -167,6 +167,7 @@ public class HeuresSuppExportPdfService {
         nombre(tr, l.stcDh(), 2);
         nombre(tr, l.forfaitDh(), 2);
         nombre(tr, l.netAPayerDh(), 2);
+        tr.appendElement("td").addClass("emargement");
     }
 
     private void ligneTotaux(Element tr, Totaux t) {
@@ -179,6 +180,7 @@ public class HeuresSuppExportPdfService {
         nombre(tr, t.stc(), 2);
         nombre(tr, t.forfait(), 2);
         nombre(tr, t.net(), 2);
+        tr.appendElement("td");
     }
 
     private record Totaux(int lignes, BigDecimal heures, BigDecimal montant, BigDecimal stc, BigDecimal forfait, BigDecimal net) {

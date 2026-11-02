@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -9,6 +9,7 @@ import { ColumnState } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableLazyLoadEvent } from '../../../shared/ui/table/table.component';
 import { HeuresSupp, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
+import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
@@ -29,18 +30,19 @@ export class HeuresSuppListComponent {
     { field: 'periode', header: 'Mois', sortField: 'periode' }, { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
     { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom', minWidth: 200 },
     { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
-    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference' },
+    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference', minWidth: 140 },
     { field: 'salaireHoraireDh', header: 'S/H', sortField: 'salaireHoraire' },
-    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant' },
-    { field: 'stcDh', header: 'STC', sortField: 'stcDh' }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait' },
-    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer' }, { field: 'actions', header: 'Actions', sortable: false }
+    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant', minWidth: 120 },
+    { field: 'stcDh', header: 'STC', sortField: 'stcDh', minWidth: 110 }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait', minWidth: 120 },
+    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer', minWidth: 130 }, { field: 'actions', header: 'Actions', sortable: false }
   ]);
   protected readonly lignes = signal<HeuresSupp[]>([]);
   protected readonly total = signal(0);
   protected readonly totalNetAPayer = signal<number | null>(null);
   protected readonly erreurTotal = signal(false);
   protected readonly chargement = signal(false);
-  protected readonly exportEnCours = signal(false);
+  private readonly exportEtat = inject(HeuresSuppExportEtat);
+  protected readonly exportEnCours = this.exportEtat.enCours;
   protected readonly erreur = signal<string | null>(null);
   protected readonly purgeNombre = signal<number | null>(null);
   protected readonly purgeSaisie = signal<number | null>(null);
@@ -56,7 +58,7 @@ export class HeuresSuppListComponent {
   private dernierCritereAnalytique = '';
 
 
-  protected exporterPdf(): void {
+  exporterPdf(): void {
     if (this.exportEnCours()) return;
     this.exportEnCours.set(true); this.erreur.set(null);
     this.service.exporterPdf(this.criteres, this.dernierTri).pipe(finalize(() => this.exportEnCours.set(false))).subscribe({
@@ -114,6 +116,8 @@ export class HeuresSuppListComponent {
   }
 
   constructor() {
+    this.exportEtat.exporter.set(() => this.exporterPdf());
+    inject(DestroyRef).onDestroy(() => this.exportEtat.exporter.set(null));
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const periode = params.get('periode');
       const ids = (key: string): number[] | undefined => {

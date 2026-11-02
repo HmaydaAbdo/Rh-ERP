@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSupp } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
+import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 import { HeuresSuppListComponent } from './heures-supp-list.component';
 
 const LIGNE: HeuresSupp = {
@@ -78,8 +79,7 @@ describe('HeuresSuppListComponent', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     component.charger({ first: 40, rows: 20, sortField: 'montant', sortOrder: -1 });
 
-    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
-    bouton.click();
+    TestBed.inject(HeuresSuppExportEtat).exporter()!();
 
     expect(service['exporterPdf']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 'montant,desc');
     expect(creer).toHaveBeenCalled();
@@ -87,8 +87,7 @@ describe('HeuresSuppListComponent', () => {
 
   it('signale un échec d’export sans masquer l’écran', () => {
     service['exporterPdf'] = vi.fn().mockReturnValue(throwError(() => new Error('500')));
-    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
-    bouton.click();
+    TestBed.inject(HeuresSuppExportEtat).exporter()!();
 
     expect(component.erreur()).toContain('PDF');
   });
