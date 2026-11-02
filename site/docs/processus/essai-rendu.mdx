@@ -1,0 +1,16 @@
+---
+title: Essai de rendu des diagrammes
+---
+
+# Essai de rendu des diagrammes
+
+Page d'essai (KAN-188) : elle prouve que Mermaid s'affiche dans le site. Elle sera remplacée par le premier vrai
+processus documenté.
+
+```mermaid
+flowchart LR
+  A[Import du fichier] --> B{Fichier valide ?}
+  B -- oui --> C[Calcul des heures supplémentaires]
+  B -- non --> D[Rapport d'erreurs]
+  C --> E[Validation RH]
+```
