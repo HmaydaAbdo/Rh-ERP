@@ -14,8 +14,8 @@ const racine = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--'))
 // Retards connus et expliqués : ils n'échouent pas le mode strict. Les retirer dès que la cause disparaît.
 const blocages = {
   'litellm': 'préversion 1.109.0.dev2 adoptée sur décision du propriétaire (2026-11-01) : seule à lever openai<3 (scripts/ia/verrous.txt)',
-  '@a2ui/web_core': '0.15.0 appelle ZodType.prototype.describe, absent de zod 4 que la surcharge impose (KAN-151) ; @copilotkit/angular 0.6.0 épingle 0.10.4 (scripts/ia/verrous.txt)',
-  '@a2ui/angular': '0.14.0 exige @a2ui/web_core ^0.15.0, incompatible avec zod 4 (KAN-151)',
+  '@a2ui/web_core': '0.15.0 appelle ZodType.prototype.describe, absent de zod 4 que la surcharge impose (a2ui#3819) ; @copilotkit/angular 0.6.0 épingle 0.10.4 ; frontend Angular gelé jusqu\'à la refonte Next.js (KAN-155, scripts/ia/verrous.txt)',
+  '@a2ui/angular': '0.14.0 exige @a2ui/web_core ^0.15.0, incompatible avec zod 4 (a2ui#3819) ; frontend Angular gelé jusqu\'à la refonte Next.js (KAN-155)',
   'agentevals': 'bibliothèque dormante : dernière publication le 2025-07-24 (scripts/ia/verrous.txt)',
 };
 
