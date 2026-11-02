@@ -18,7 +18,7 @@ const PAIE = {
 const FICHES = { effectif: 8, actifs: 7, inactifs: 1, ageMoyen: 36, ancienneteMoyenne: 4.5, embauchesDouzeMois: 1, parAge: [], parAnciennete: [] };
 
 test.describe('Accueil', () => {
-  test('montre les indicateurs choisis et permet de les composer', async ({ page }) => {
+  test('arrive sur l’accueil, montre les indicateurs choisis et permet de les composer', async ({ page }) => {
     let choisis = ['paie.masse', 'employe.effectif'];
     const mock = await mockApi(page, { username: 'rh', permissions: ['ACCUEIL_READ', 'ACCUEIL_WRITE', 'PAIE_READ', 'EMPLOYEE_READ'] }, {
       'GET /accueil': () => ({ version: null, personnalise: false, indicateurs: choisis, disponibles: DISPONIBLES }),
@@ -31,7 +31,8 @@ test.describe('Accueil', () => {
       'POST /employees/analytique': () => FICHES
     });
 
-    await page.goto('/accueil');
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/accueil$/);
     await expect(page.getByRole('heading', { name: 'Accueil', level: 1 })).toBeVisible();
     await expect(page.locator('.app-kpi').first()).toContainText('Masse salariale');
     await expect(page.locator('.app-kpi').nth(1)).toContainText('8');

@@ -192,7 +192,7 @@ describe('UserFormComponent', () => {
       expect(users.update).not.toHaveBeenCalled();
 
       users.findById.mockReturnValue(of(UTILISATEUR));
-      (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer')) as HTMLButtonElement).click();
+      (racine().querySelector('button') as HTMLButtonElement).click();
       await stabiliser();
 
       expect((racine().querySelector('#email') as HTMLInputElement).value).toBe(UTILISATEUR.email);

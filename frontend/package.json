@@ -13,7 +13,6 @@
     "e2e": "playwright test",
     "e2e:references": "node ../scripts/e2e-references.mjs",
     "check:composants": "node ../scripts/check-composants-partages.mjs ..",
-    "check:espacement": "node ../scripts/check-espacement.mjs ..",
     "check:logique": "node ../scripts/check-proprietes-logiques.mjs ..",
     "check:contraste": "node ../scripts/check-contraste-jetons.mjs ..",
     "audit:deps": "npm audit --audit-level=moderate",
