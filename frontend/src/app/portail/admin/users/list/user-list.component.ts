@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounce, form, FormField, FormRoot, required } from '@angular/forms/signals';
@@ -30,7 +29,7 @@ const DEBOUNCE_FILTRE_MS = 300;
 
 @Component({
   selector: 'app-user-list',
-  imports: [DockDeclencheurComponent, 
+  imports: [
     AccueilEditeurComponent,
     ColumnChooserComponent,
     FormField,

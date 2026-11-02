@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: var(--space-md) 0 0;
+  padding: var(--space-md) var(--space-sm) var(--space-xs);
   border-block-start: 1px solid var(--table-border-light);
   font-size: var(--text-sm);
 }

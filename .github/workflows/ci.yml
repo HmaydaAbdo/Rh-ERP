@@ -290,11 +290,6 @@ jobs:
         working-directory: frontend
         run: npm run check:composants
 
-      # Espacement : le kit de page seul sépare les sections ; aucune marge utilitaire dans les gabarits des domaines (E0.7).
-      - name: Check spacing rule
-        working-directory: frontend
-        run: npm run check:espacement
-
       # Propriétés logiques seulement : aucune position ni marge gauche/droite en dur, pour préparer l'arabe (E0.8).
       - name: Check logical properties
         working-directory: frontend

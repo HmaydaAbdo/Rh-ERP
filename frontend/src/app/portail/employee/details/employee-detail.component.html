@@ -1,7 +1,7 @@
 @if (loading() || erreurChargement()) {
   <div class="app-page app-page--narrow">
     <a routerLink="/employees" class="app-back"><stp-icon name="arrow-left" /> Employés</a>
-    <div class="app-page__header"><stp-dock-declencheur /><h1>Fiche de l’employé</h1></div>
+    <div class="app-page__header"><h1>Fiche de l’employé</h1></div>
     @if (loading()) {
       <stp-message text="Chargement de l’employé…" />
     } @else {
@@ -34,7 +34,7 @@
     </header>
 
     <section aria-labelledby="fiche-situation">
-      <h2 id="fiche-situation" class="app-section-title">Situation actuelle</h2>
+      <h2 id="fiche-situation" class="app-section-title mb-2">Situation actuelle</h2>
       <dl class="app-facts">
         <div>
           <dt>Fonction</dt>

@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -10,7 +9,7 @@ import { FunctionService } from '../services/function.service';
 
 @Component({
   selector: 'app-function-detail',
-  imports: [DockDeclencheurComponent, RouterLink, ButtonComponent, IconComponent],
+  imports: [RouterLink, ButtonComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './function-detail.component.html'
 })

@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -14,7 +13,7 @@ import { ChantierService } from '../services/chantier.service';
 
 @Component({
   selector: 'app-chantier-detail',
-  imports: [DockDeclencheurComponent, RouterLink, ButtonComponent, BadgeComponent, IconComponent],
+  imports: [RouterLink, ButtonComponent, BadgeComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chantier-detail.component.html'
 })

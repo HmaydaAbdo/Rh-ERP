@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, FormRoot, max, maxLength, min, required, validate } from '@angular/forms/signals';
@@ -51,7 +50,7 @@ interface PaieSaisie {
 
 @Component({
   selector: 'app-paie-form',
-  imports: [DockDeclencheurComponent, 
+  imports: [
     FormField,
     FormRoot,
     RouterLink,

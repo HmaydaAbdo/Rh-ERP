@@ -1,12 +1,201 @@
-// Coque : le contenu occupe toute la largeur ; la navigation est dans la barre Staport (`stp-dock`), ouverte par le bouton de l'en-tête.
+@use 'breakpoints' as bp;
+
 .app-shell {
+  --sidebar-width: 4.5rem;
+  --sidebar-expanded-width: 17rem;
+  --topbar-height: 3.5rem;
   min-height: 100vh;
 }
 
+// Barre du haut et fond du tiroir : n'existent qu'en navigation compacte
+.app-topbar,
+.app-backdrop {
+  display: none;
+}
+
+.app-carte-menu { display: none; }
+
+.app-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 100;
+  width: var(--sidebar-width);
+  overflow: visible;
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  border-inline-end: 1px solid var(--color-sidebar-border);
+  box-shadow: var(--shadow-sidebar);
+  transition: width var(--duration-base) var(--ease-out);
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-xs);
+    gap: var(--space-xs);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+  }
+
+  &__link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    min-height: 2.75rem;
+    padding: var(--space-sm) 0;
+    border-radius: var(--radius-md);
+    color: inherit;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--text-base);
+    white-space: nowrap;
+    transition: background-color var(--duration-fast), color var(--duration-fast);
+
+
+    &:hover {
+      background: var(--color-sidebar-hover-bg);
+      color: var(--color-sidebar-active-text);
+    }
+
+    &:focus-visible {
+      outline-color: var(--color-sidebar-active-text);
+      outline-offset: -2px;
+    }
+
+    &.active {
+      background: var(--color-sidebar-active-bg);
+      color: var(--color-sidebar-active-text);
+
+      font-weight: 600;
+    }
+  }
+
+  &__group {
+    min-width: 0;
+
+    &-title {
+      cursor: pointer;
+      list-style: none;
+
+      &::-webkit-details-marker { display: none; }
+    }
+
+    &-chevron {
+      display: none;
+      margin-inline-start: auto;
+      transition: transform var(--duration-fast) var(--ease-out);
+    }
+
+    &:not([open]) &-chevron { transform: rotate(-90deg); }
+
+    &-items {
+      display: grid;
+      gap: var(--space-xs);
+      padding-block: var(--space-xs);
+    }
+  }
+
+  &__label {
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  &__footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    border-top: 1px solid var(--color-sidebar-border);
+    white-space: nowrap;
+  }
+
+  &__username {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-inline-start: var(--space-xs);
+    font-size: var(--text-sm);
+    display: none;
+  }
+
+  &__action {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--duration-fast), color var(--duration-fast);
+
+    &:hover {
+      background: var(--color-sidebar-hover-bg);
+      color: var(--color-sidebar-active-text);
+    }
+  }
+}
+
+.app-sidebar:hover,
+.app-sidebar:has(:focus-visible) {
+  width: var(--sidebar-expanded-width);
+
+  .app-sidebar__link {
+    justify-content: flex-start;
+    padding-inline: var(--space-md);
+  }
+
+  .app-sidebar__link--child {
+    padding-inline-start: calc(var(--space-md) + var(--space-md));
+    font-size: var(--text-sm);
+  }
+
+  .app-sidebar__group-chevron { display: inline-flex; }
+
+  .app-sidebar__label {
+    width: auto;
+    opacity: 1;
+  }
+
+  .app-sidebar__footer {
+    flex-direction: row;
+    padding: var(--space-sm);
+  }
+
+  .app-sidebar__username {
+    display: block;
+  }
+}
+
 .app-content {
-  // Toute la place pour le travail : c'est l'écran qui porte son propre espacement
-  padding: 0;
+  padding: var(--space-xl);
+  margin-inline-start: var(--sidebar-width);
   min-width: 0;
+
+  @include bp.phone {
+    padding: var(--space-md);
+  }
 }
 
 // Un seul outlet reste monté pendant la connexion : Angular Aria peut donc nettoyer les contrôles sans détruire
@@ -14,6 +203,109 @@
 .app-shell--auth .app-content {
   min-height: 100vh;
   min-height: 100svh;
+  margin-inline-start: 0;
+  padding: 0;
+}
+
+// ---- Navigation compacte : le menu devient un tiroir ouvert par la barre du haut ----
+@include bp.compact-nav {
+  .app-topbar {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    height: calc(var(--topbar-height) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(var(--space-sm), env(safe-area-inset-right)) 0 max(var(--space-sm), env(safe-area-inset-left));
+    background: var(--color-sidebar-bg);
+    color: var(--color-sidebar-active-text);
+
+    &__menu {
+      display: grid;
+      place-items: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border: none;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+  }
+
+  .app-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: var(--color-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--duration-base), visibility var(--duration-base);
+  }
+
+  .app-shell--menu-ouvert .app-backdrop {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .app-sidebar {
+    width: min(18rem, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--duration-base) var(--ease-out), visibility var(--duration-base);
+
+    &__label {
+      width: auto;
+      opacity: 1;
+    }
+
+    &__link {
+      min-height: 2.75rem;
+      justify-content: flex-start;
+      padding-inline: var(--space-md);
+    }
+
+    &__link--child {
+      padding-inline-start: calc(var(--space-md) + var(--space-md));
+    }
+
+    &__group-chevron { display: inline-flex; }
+
+    &__footer {
+      flex-direction: row;
+      padding: var(--space-sm);
+    }
+
+    &__username {
+      display: block;
+    }
+
+    &__action {
+      width: 2.75rem;
+      height: 2.75rem;
+      min-width: 2.75rem;
+    }
+  }
+
+  .app-sidebar:hover,
+  .app-sidebar:has(:focus-visible) {
+    width: min(18rem, 85vw);
+  }
+
+  .app-shell--menu-ouvert .app-sidebar {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-content {
+    margin-inline-start: 0;
+    padding-top: calc(var(--topbar-height) + env(safe-area-inset-top) + var(--space-md));
+  }
 }
 
 // Lien d'évitement : invisible, il apparaît au premier appui sur Tab pour passer directement au contenu
@@ -37,4 +329,107 @@
 
 .app-content:focus {
   outline: none;
+}
+
+// ---- Mode carte : le rail cède toute la largeur à la carte. Le hamburger ouvre un volet superposé ; il reste fixe afin de
+// préserver un trajet continu du pointeur vers le menu. ----
+@include bp.desktop {
+  .app-shell.app-shell--carte .app-carte-menu {
+    position: fixed;
+    inset-block-start: var(--space-md);
+    inset-inline-start: var(--space-md);
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid var(--map-ui-border);
+    border-radius: var(--radius-md);
+    background: var(--map-ui-surface);
+    color: var(--map-ui-icon);
+    box-shadow: var(--map-ui-shadow);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+
+    &:hover { border-color: var(--map-ui-icon); color: var(--map-ui-highlight); }
+    &:active { transform: scale(0.96); }
+    &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  }
+
+  .app-shell.app-shell--carte .app-content {
+    min-height: 100svh;
+    margin-inline-start: 0;
+    padding: 0;
+  }
+
+  .app-shell.app-shell--carte .app-sidebar {
+    z-index: 100;
+    width: var(--sidebar-expanded-width);
+    transform: translate3d(calc(-100% - var(--space-sm)), 0, 0) scale(0.985);
+    transform-origin: left center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--duration-base) var(--ease-out), opacity var(--duration-fast) var(--ease-out),
+      visibility 0s linear var(--duration-base);
+
+    .app-sidebar__nav { padding-block-start: calc(var(--space-md) + 3.5rem); }
+
+    .app-sidebar__link {
+      justify-content: flex-start;
+      padding-inline: var(--space-md);
+    }
+
+    .app-sidebar__group-chevron { display: inline-flex; }
+    .app-sidebar__label { width: auto; opacity: 1; }
+    .app-sidebar__footer { flex-direction: row; padding: var(--space-sm); }
+    .app-sidebar__username { display: block; }
+  }
+
+  .app-shell.app-shell--carte.app-shell--carte-menu-ouvert .app-sidebar {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-shell--carte-menu-ouvert .app-sidebar__nav > *,
+  .app-shell--carte-menu-ouvert .app-sidebar__group-items > * {
+    animation: app-carte-sidebar-arrivee var(--duration-base) var(--ease-out) both;
+    animation-delay: calc(var(--nav-index, 0) * var(--duration-stagger));
+  }
+}
+
+@keyframes app-carte-sidebar-arrivee {
+  from { opacity: 0; transform: translate3d(calc(-1 * var(--space-sm-md)), 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+// ---- Contraste forcé : le rail reprend la palette du système ----
+@media (forced-colors: active) {
+  .app-sidebar {
+    border-inline-end: 1px solid Canvas;
+    background: CanvasText;
+    color: Canvas;
+    box-shadow: none;
+  }
+
+  .app-sidebar__footer {
+    border-color: Canvas;
+    color: Canvas;
+  }
+
+  .app-sidebar__link {
+    color: Canvas;
+
+    &:hover,
+    &.active {
+      border: 1px solid Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+  }
 }

@@ -1,5 +1,5 @@
 <div class="journal app-page">
-  <div class="app-page__header"><stp-dock-declencheur />
+  <div class="app-page__header">
     <h1>Journal d’audit</h1>
   </div>
 
@@ -209,7 +209,7 @@
         <p class="app-muted">Aucun changement enregistré par cette opération.</p>
       }
       @for (changement of changements(); track changement.entiteType + changement.entiteId + changement.operation) {
-        <section class="app-card">
+        <section class="app-card mb-4">
           <h4>
             {{ changement.operation === 'AJOUT' ? 'Ajout' : changement.operation === 'SUPPRESSION' ? 'Suppression' : 'Modification' }} —
             {{ libelleEntite(changement.entiteType) }} n° {{ changement.entiteId }}

@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, email, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
@@ -37,7 +36,7 @@ interface PermissionGroup {
 
 @Component({
   selector: 'app-user-form',
-  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
+  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, IconComponent, ButtonComponent, FieldErrorComponent, PasswordInputComponent],
   providers: [RoleReferenceService],
   templateUrl: './user-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
