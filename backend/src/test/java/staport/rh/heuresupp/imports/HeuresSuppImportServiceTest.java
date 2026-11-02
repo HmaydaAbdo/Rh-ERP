@@ -163,6 +163,48 @@ class HeuresSuppImportServiceTest {
     }
 
     @Test
+    void refuse_les_heures_d_un_employe_stc_ou_sorti_et_bloque_l_import() {
+        paiePresente();
+        when(lecteur.lire(fichier)).thenReturn(classeur("2"));
+        when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
+        when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(
+                Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")),
+                Optional.of(bulletin("STC")), Optional.of(bulletin("Sortie")));
+
+        for (int i = 0; i < 2; i++) {
+            HeuresSuppImportAnalyseDto analyse = service.analyser(fichier, MOIS, CHANTIER_ID, null);
+
+            assertThat(analyse.pret()).isFalse();
+            assertThat(analyse.erreurs()).singleElement().satisfies(erreur -> {
+                assertThat(erreur).contains("CIN " + CIN).contains("Alaoui Salma");
+                assertThat(erreur).contains("employé STC/sorti sur la paie d'octobre 2026");
+            });
+        }
+        assertThatThrownBy(() -> service.importer(fichier, MOIS, CHANTIER_ID, null))
+                .isInstanceOf(HeuresSuppImportException.class)
+                .hasMessageContaining("L'import est bloqué").hasMessageContaining("employé STC/sorti");
+        verify(repository, never()).saveAll(any());
+    }
+
+    @Test
+    void accepte_une_ligne_zero_d_un_employe_stc_ou_sorti() {
+        paiePresente();
+        when(lecteur.lire(fichier)).thenReturn(new FichierHeuresSupp(
+                List.of(new LigneFichierHeuresSupp(2, "Alaoui Salma", CIN, BigDecimal.ZERO)), 1, 1));
+        when(employes.findByCin(CIN)).thenReturn(Optional.of(employe()));
+        when(paie.findByEmployeeIdAndPeriode(EMPLOYE_ID, MOIS)).thenReturn(Optional.of(bulletin("STC")));
+
+        var analyse = service.analyser(fichier, MOIS, CHANTIER_ID, null);
+
+        assertThat(analyse.pret()).isTrue();
+        assertThat(analyse.erreurs()).isEmpty();
+        assertThat(analyse.lignes()).singleElement().satisfies(ligne -> {
+            assertThat(ligne.stcOuSortie()).isTrue();
+            assertThat(ligne.montantDh()).isEqualByComparingTo("0");
+        });
+    }
+
+    @Test
     void refuse_l_import_si_l_employe_n_a_pas_de_bulletin_du_mois() {
         paiePresente();
         when(lecteur.lire(fichier)).thenReturn(classeur("2"));
