@@ -113,10 +113,10 @@ class HeuresSuppExportPdfServiceTest {
         byte[] pdf = service.generer(new HeuresSuppExportRequestDto(YearMonth.of(2026, 10), List.of(4L), null, null, "AB", "Employé", "montant,desc"));
         String texte = texte(pdf);
 
-        // 60 lignes + la ligne de totaux = 61 lignes, 26 par page.
+        // 60 lignes + la ligne de totaux = 61 lignes, 22 par page.
         assertThat(pages(pdf)).isEqualTo(3);
         assertThat(texte).contains("Ressources Humaines", "Heures supplémentaires 2026-10", "Mois : 2026-10", "Nom : Employé", "CIN : AB",
-                "1 chantier(s)", "Tri : Montant (décroissant)", "Employé 1 ", "Employé 60", "Total · 60 lignes", "Page 3 / 3");
+                "1 chantier(s)", "Tri : Montant (décroissant)", "Employé 1 ", "Employé 60", "Total · 60 lignes", "Page 3 / 3", "Émargement");
         // Les champs retirés de l'interface ne figurent pas dans le rapport.
         assertThat(texte).doesNotContain("Statut paie").doesNotContain("Type salaire");
         verify(repository).findAll(any(Specification.class), eq(HeuresSuppExportPdfService.trier("montant,desc")));

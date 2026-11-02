@@ -1,6 +1,5 @@
 
     <div class="app-page__actions app-page__actions--liste">
-      <button stp-button variant="secondary" icon="download" type="button" [loading]="exportEnCours()" (click)="exporterPdf()">Exporter en PDF</button>
       @if (canPurge() && criteres.periode) { <button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button> }
     </div>
     @if (purgeNombre() !== null) {

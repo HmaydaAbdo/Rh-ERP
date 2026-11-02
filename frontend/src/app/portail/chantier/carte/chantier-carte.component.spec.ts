@@ -162,7 +162,7 @@ describe('ChantierCarteComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')).toBeNull();
   });
 
-  it("redessine la carte, plan clair ou sombre, quand le thème de l'application change", async () => {
+  it("garde le style cartographique et ne redessine pas la carte quand le thème de l'application change", async () => {
     const setStyle = vi.spyOn(CarteMapLibre.prototype, 'setStyle');
     localStorage.setItem('staport-theme', 'light');
     const theme = TestBed.inject(ThemeService);
@@ -174,7 +174,7 @@ describe('ChantierCarteComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(setStyle).toHaveBeenCalledTimes(appelsALaCreation + 1);
+    expect(setStyle).toHaveBeenCalledTimes(appelsALaCreation);
   });
 
   it('suit la taille de son conteneur', async () => {

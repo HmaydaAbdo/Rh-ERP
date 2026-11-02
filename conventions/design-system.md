@@ -176,7 +176,7 @@ troisième palette de marque qui dupliquerait les thèmes.
 Le thème sombre suit les valeurs du tableau « Palette » : fond gris chaud très sombre, cartes un cran plus clair, texte blanc cassé,
 action blanc cassé. Il garde les mêmes bordures franches (≥ 3:1) et le même texte à fort contraste ; il n'est jamais une simple
 inversion. Les couleurs de succès, d'avertissement, d'erreur et des catégories de graphiques gardent leur signification métier dans
-les deux thèmes. La carte des chantiers adopte un chrome sombre constant ; ses vues Satellite et Relief gardent leur matière propre.
+les deux thèmes. La carte des chantiers est toujours sombre, quel que soit le thème choisi (décision du 2026-11-02), chrome et plan compris ; ses vues Satellite et Relief gardent leur matière propre.
 
 ---
 

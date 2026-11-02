@@ -53,7 +53,7 @@ les lignes importées, les zéros conservés, les forfaits seuls, remplacements,
 permissions endpoint par endpoint sont décrites dans [RBAC](../rbac/heures-supp.md).
 
 Les routes `/heures-supp`, `/heures-supp/cartes` et `/heures-supp/analytique` gardent les filtres dans l'URL.
-Tabulaire est la vue détaillée, la vue par défaut, triable sur chaque colonne ; son bouton « Exporter en PDF » (Tabulaire seulement) suit les filtres, la recherche et le tri affichés. Les actions de ligne sont des icônes. Cartes et Analytique utilisent les composants partagés, avec le mois et le
+Tabulaire est la vue détaillée, la vue par défaut, triable sur chaque colonne ; son bouton « Exporter » (Tabulaire seulement, posé à côté d'« Importer » dans l'en-tête ; le rapport PDF se termine par une colonne « Émargement » vide, réservée aux signatures) suit les filtres, la recherche et le tri affichés. Les actions de ligne sont des icônes. Cartes et Analytique utilisent les composants partagés, avec le mois et le
 périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employés à zéro heure n'est injecté dans Cartes.
 
 ## Données d'entrée et provenance
