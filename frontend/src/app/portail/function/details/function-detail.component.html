@@ -1,7 +1,7 @@
 @if (fonction(); as fonction) {
   <div class="function-detail app-page app-page--narrow">
     <a routerLink="/functions" class="app-back"><stp-icon name="arrow-left" /> Fonctions</a>
-    <div class="app-page__header"><stp-dock-declencheur />
+    <div class="app-page__header">
       <h1>{{ fonction.libelle }}</h1>
       <div class="app-page__actions">
         @if (canWrite()) {

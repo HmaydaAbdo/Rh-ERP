@@ -40,25 +40,17 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await page.getByRole('button', { name: 'Se connecter' }).click();
   const sessionAdmin = await (await connexionAdmin).json() as { accessToken: string };
   const adminToken = sessionAdmin.accessToken;
-  const ouvrirBarre = page.getByRole('button', { name: 'Ouvrir la barre Staport' });
-  await expect(ouvrirBarre).toBeVisible();
-
-  // Navigation unifiée : le bouton hamburger de l'en-tête ouvre la barre Staport ; les destinations d'administration sont dans un groupe repliable ;
-  // un lien ouvre la vue d'ouverture de l'écran (« /paie/cartes ») et referme la barre.
+  // Menu latéral : les destinations d'administration sont dans un groupe repliable ; un lien ouvre l'écran.
+  const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
+  await expect(navigation).toBeVisible();
   for (const [url, titre] of [
     ['/employees', 'Employés'], ['/chantiers', 'Chantiers'], ['/functions', 'Fonctions'],
     ['/equipes', 'Équipes'], ['/paie', 'Paie'], ['/admin/users', 'Utilisateurs'],
     ['/admin/roles', 'Rôles'], ['/admin/parametres', 'Paramètres'], ['/audit', 'Journal d’audit']
   ] as const) {
-    await ouvrirBarre.click();
-    const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
     const lien = navigation.locator(`a[href^="${url}"]`).first();
-    // L'état du groupe est lu sur l'élément <details> une fois le panneau affiché : tester la visibilité du lien pendant
-    // l'ouverture du panneau faisait cliquer le titre d'un groupe déjà ouvert et le refermait.
-    const groupe = navigation.locator('details.stp-dock__groupe');
-    await expect(groupe).toBeVisible();
-    if (!(await groupe.evaluate((element: HTMLDetailsElement) => element.open)) && !(await lien.isVisible())) {
-      await navigation.getByText('Administration système', { exact: true }).click();
+    if (!(await lien.isVisible())) {
+      await navigation.locator('summary', { hasText: 'Administration système' }).click();
     }
     await lien.click();
     await expect(page.getByRole('heading', { name: titre })).toBeVisible();

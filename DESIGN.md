@@ -4,7 +4,7 @@ description: Console de travail dense et nette pour la paie, les employés et le
 colors:
   action-light: "#1E40AF"
   action-dark: "#ECEAE3"
-  canvas-light: "#F3F4F6"
+  canvas-light: "#F3F4F1"
   surface-light: "#FFFFFF"
   text-light: "#111827"
   border-strong-light: "#7F8796"

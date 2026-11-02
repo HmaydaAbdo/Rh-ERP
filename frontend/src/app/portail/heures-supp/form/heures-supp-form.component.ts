@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormField, FormRoot, disabled, form, min, required } from '@angular/forms/signals';
@@ -36,7 +35,7 @@ function periodeTexte(periode: Date | null): string | null {
 
 @Component({
   selector: 'app-heures-supp-form',
-  imports: [DockDeclencheurComponent, DecimalPipe, FormField, FormRoot, RouterLink, LazySelectComponent, MessageComponent, MonthInputComponent, ButtonComponent, FieldErrorComponent, IconComponent, NumberInputComponent],
+  imports: [DecimalPipe, FormField, FormRoot, RouterLink, LazySelectComponent, MessageComponent, MonthInputComponent, ButtonComponent, FieldErrorComponent, IconComponent, NumberInputComponent],
   templateUrl: './heures-supp-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

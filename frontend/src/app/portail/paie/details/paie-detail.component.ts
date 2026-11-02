@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,7 +15,7 @@ import { PaieService } from '../services/paie.service';
 
 @Component({
   selector: 'app-paie-detail',
-  imports: [DockDeclencheurComponent, RouterLink, AuditHistoriqueComponent, DecimalPipe, IconComponent, ButtonComponent, DialogComponent, MessageComponent],
+  imports: [RouterLink, AuditHistoriqueComponent, DecimalPipe, IconComponent, ButtonComponent, DialogComponent, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './paie-detail.component.html'
 })

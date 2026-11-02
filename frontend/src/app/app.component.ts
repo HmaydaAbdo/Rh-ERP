@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
-import { AssistantEtatService } from './core/assistant/assistant-etat.service';
 import { AssistantRacineComponent } from './core/assistant/assistant-racine.component';
 import { AuthService } from './core/auth/services/auth.service';
 import { SIDEBAR_ITEMS } from './core/navigation/nav-items';
@@ -30,7 +29,6 @@ export class AppComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   readonly theme = inject(ThemeService);
-  readonly assistantEtat = inject(AssistantEtatService);
 
   readonly user = this.authService.user;
   readonly isAuthenticated = this.authService.isAuthenticated;
@@ -46,6 +44,7 @@ export class AppComponent {
   readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
   /** Staport Intelligence (docs/ia.md, T8) : réservé au droit IA_UTILISER ; l'application reste utilisable sans lui. */
   readonly assistantVisible = computed(() => this.navigationVisible() && this.authService.hasPermission('IA_UTILISER'));
+  readonly estCarte = computed(() => cheminSansRequete(this.routeCourante()) === '/carte');
 
   /** Les destinations visibles par l'utilisateur, d'après ses permissions (jamais un rôle codé en dur). */
   readonly menu = computed<readonly ShellNavItem[]>(() =>
@@ -53,7 +52,6 @@ export class AppComponent {
       label: item.label,
       icon: item.icon,
       route: item.route,
-      ouverture: item.ouverture,
       groupe: item.group
     }))
   );

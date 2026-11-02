@@ -4,10 +4,6 @@
 > (contrainte unique `employé × période`). La paie **n'est pas calculée** : le total est saisi ou importé tel
 > quel. Les bulletins se créent par saisie ou par import Excel, et se **modifient uniquement depuis l'écran**.
 
-> **Vocabulaire (décision du propriétaire, 2026-11-01).** Parler de paie, c'est parler de **bulletins de paie, un par employé et par
-> mois**. Les nombres de paie s'expriment en bulletins (« Sur 3 ans et 2 mois, 15 623 bulletins de paie ») ; un « effectif payé » est un
-> nombre de bulletins du mois. Les vues Cartes ne titrent plus « Mois » : elles disent la durée couverte et le nombre de bulletins.
-
 ---
 
 ## Vue d'ensemble

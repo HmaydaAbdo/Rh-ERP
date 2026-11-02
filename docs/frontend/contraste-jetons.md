@@ -6,8 +6,8 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 
 | Couple | Premier plan | Arrière-plan | Contraste | Seuil | Résultat |
 |---|---|---|---|---|---|
-| Texte sur canvas | `--color-text` #111827 | `--color-canvas` #f3f4f6 | 16,12:1 | 7:1 | OK |
-| Texte secondaire sur canvas | `--color-text-muted` #4b5563 | `--color-canvas` #f3f4f6 | 6,87:1 | 4,5:1 | OK |
+| Texte sur canvas | `--color-text` #111827 | `--color-canvas` #f3f4f1 | 16,07:1 | 7:1 | OK |
+| Texte secondaire sur canvas | `--color-text-muted` #4b5563 | `--color-canvas` #f3f4f1 | 6,85:1 | 4,5:1 | OK |
 | Texte sur surface | `--color-text` #111827 | `--color-surface` #ffffff | 17,74:1 | 7:1 | OK |
 | Texte secondaire sur surface | `--color-text-muted` #4b5563 | `--color-surface` #ffffff | 7,56:1 | 4,5:1 | OK |
 | Texte sur surface-alt | `--color-text` #111827 | `--color-surface-alt` #f4f5f7 | 16,26:1 | 7:1 | OK |
@@ -17,19 +17,22 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Texte sur surface-hover | `--color-text` #111827 | `--color-surface-hover` #e8ebf0 | 14,84:1 | 7:1 | OK |
 | Texte secondaire sur surface-hover | `--color-text-muted` #4b5563 | `--color-surface-hover` #e8ebf0 | 6,32:1 | 4,5:1 | OK |
 | Lien sur surface | `--color-link` #1e40af | `--color-surface` #ffffff | 8,72:1 | 4,5:1 | OK |
-| Lien sur fond de page | `--color-link` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 4,5:1 | OK |
+| Lien sur fond de page | `--color-link` #1e40af | `--color-canvas` #f3f4f1 | 7,90:1 | 4,5:1 | OK |
 | Texte fort sur action douce | `--color-primary-strong` #1e40af | `--color-primary-soft` #e3eafb | 7,24:1 | 7:1 | OK |
 | Libellé de bouton principal | `--color-primary-contrast` #ffffff | `--color-primary` #1e40af | 8,72:1 | 4,5:1 | OK |
 | Libellé de bouton principal au survol | `--color-primary-contrast` #ffffff | `--color-primary-hover` #1e3a8a | 10,36:1 | 4,5:1 | OK |
 | Action sur surface | `--color-primary` #1e40af | `--color-surface` #ffffff | 8,72:1 | 3:1 | OK |
-| Action sur fond de page | `--color-primary` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 3:1 | OK |
+| Action sur fond de page | `--color-primary` #1e40af | `--color-canvas` #f3f4f1 | 7,90:1 | 3:1 | OK |
 | Libellé du bouton de suppression | `--color-danger-contrast` #ffffff | `--color-danger` #7f1d1d | 10,02:1 | 4,5:1 | OK |
 | Anneau de focus sur surface | `--color-focus` #1e40af | `--color-surface` #ffffff | 8,72:1 | 3:1 | OK |
-| Anneau de focus sur fond de page | `--color-focus` #1e40af | `--color-canvas` #f3f4f6 | 7,93:1 | 3:1 | OK |
+| Anneau de focus sur fond de page | `--color-focus` #1e40af | `--color-canvas` #f3f4f1 | 7,90:1 | 3:1 | OK |
 | Bordure franche sur surface | `--color-border-strong` #7f8796 | `--color-surface` #ffffff | 3,62:1 | 3:1 | OK |
-| Bordure franche sur fond de page | `--color-border-strong` #7f8796 | `--color-canvas` #f3f4f6 | 3,29:1 | 3:1 | OK |
+| Bordure franche sur fond de page | `--color-border-strong` #7f8796 | `--color-canvas` #f3f4f1 | 3,27:1 | 3:1 | OK |
 | Bordure de ligne sur surface | `--color-border` #a9b0bc | `--color-surface` #ffffff | 2,18:1 | 2,18:1 | OK |
-| Bordure de ligne sur fond de page (informatif) | `--color-border` #a9b0bc | `--color-canvas` #f3f4f6 | 1,98:1 | 2,18:1 | sous le seuil, informatif |
+| Bordure de ligne sur fond de page (informatif) | `--color-border` #a9b0bc | `--color-canvas` #f3f4f1 | 1,98:1 | 2,18:1 | sous le seuil, informatif |
+| Rail : texte | `--color-sidebar-text` #d1d5db | `--color-sidebar-bg` #111827 | 12,04:1 | 7:1 | OK |
+| Rail : texte au survol | `--color-sidebar-text` #d1d5db | `--color-sidebar-hover-bg` #1f2937 | 9,96:1 | 7:1 | OK |
+| Rail : élément actif | `--color-sidebar-active-text` #ffffff | `--color-sidebar-active-bg` #2a3447 | 12,50:1 | 7:1 | OK |
 | Carte : texte | `--map-ui-text` #111827 | `--map-ui-surface` #ffffff | 17,74:1 | 7:1 | OK |
 | Carte : texte secondaire | `--map-ui-text-muted` #4b5563 | `--map-ui-surface` #ffffff | 7,56:1 | 4,5:1 | OK |
 | Carte : icône | `--map-ui-icon` #1f2937 | `--map-ui-surface` #ffffff | 14,68:1 | 3:1 | OK |
@@ -80,6 +83,9 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Bordure franche sur fond de page | `--color-border-strong` #8a877f | `--color-canvas` #1f1e1d | 4,64:1 | 3:1 | OK |
 | Bordure de ligne sur surface | `--color-border` #6b6962 | `--color-surface` #2b2a28 | 2,61:1 | 2,18:1 | OK |
 | Bordure de ligne sur fond de page (informatif) | `--color-border` #6b6962 | `--color-canvas` #1f1e1d | 3,03:1 | 2,18:1 | OK |
+| Rail : texte | `--color-sidebar-text` #d6d3ca | `--color-sidebar-bg` #141413 | 12,32:1 | 7:1 | OK |
+| Rail : texte au survol | `--color-sidebar-text` #d6d3ca | `--color-sidebar-hover-bg` #2b2a28 | 9,58:1 | 7:1 | OK |
+| Rail : élément actif | `--color-sidebar-active-text` #f5f4ef | `--color-sidebar-active-bg` #3a3937 | 10,48:1 | 7:1 | OK |
 | Carte : texte | `--map-ui-text` #f5f4ef | `--map-ui-surface` #2b2a28 | 13,02:1 | 7:1 | OK |
 | Carte : texte secondaire | `--map-ui-text-muted` #bdbab1 | `--map-ui-surface` #2b2a28 | 7,39:1 | 4,5:1 | OK |
 | Carte : icône | `--map-ui-icon` #eceae3 | `--map-ui-surface` #2b2a28 | 11,91:1 | 3:1 | OK |

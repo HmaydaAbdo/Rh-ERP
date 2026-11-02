@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 
@@ -11,7 +10,7 @@ import { ParametreItemComponent } from './parametre-item.component';
 
 @Component({
   selector: 'app-parametre-list',
-  imports: [DockDeclencheurComponent, ButtonComponent, IconComponent, ParametreItemComponent],
+  imports: [ButtonComponent, IconComponent, ParametreItemComponent],
   templateUrl: './parametre-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

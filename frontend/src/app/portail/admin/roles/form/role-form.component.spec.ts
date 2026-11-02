@@ -66,7 +66,7 @@ describe('RoleFormComponent', () => {
       expect(racine().querySelector('[role="alert"]')?.textContent).toContain('Impossible de charger');
 
       service.findAllPermissions.mockReturnValue(of(PERMISSIONS));
-      (Array.from(racine().querySelectorAll('button')).find((b) => b.textContent?.includes('Réessayer')) as HTMLButtonElement).click();
+      (racine().querySelector('button') as HTMLButtonElement).click();
       await stabiliser();
 
       expect(racine().querySelector('form')).not.toBeNull();

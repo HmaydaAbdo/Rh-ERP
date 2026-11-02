@@ -31,7 +31,7 @@ test.describe('Connexion', () => {
     await page.getByLabel('Mot de passe', { exact: true }).fill('Secret-123');
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
-    await expect(page).toHaveURL(/\/functions\/cartes$/);
+    await expect(page).toHaveURL(/\/functions$/);
     await expect(page.getByRole('heading', { name: 'Fonctions' })).toBeVisible();
   });
 
