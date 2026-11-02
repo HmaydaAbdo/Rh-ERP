@@ -206,7 +206,7 @@ export class CartesPerimetreComponent implements OnInit {
     };
     return `${nombre} ${nombre === 1 ? singulier[niveau] : this.pluriel(niveau)}`;
   }
-  protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie());
+  protected readonly aucuneSource = computed(() => !this.voitEmployes() && !this.voitPaie() && !this.voitHeuresSupp());
 
   /**
    * Niveau « Mois » : la durée couverte par la paie et le nombre de bulletins de paie (un bulletin = un employé payé pour un mois),

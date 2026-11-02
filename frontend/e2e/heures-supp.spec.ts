@@ -77,3 +77,20 @@ test('la purge mensuelle utilise le dialogue partagé et confirme le nombre exac
   await page.getByRole('button', { name: 'Confirmer la suppression' }).click();
   await expect.poll(() => api.bodies['POST /heures-supp/suppression-mois']?.[0]).toEqual({ periode: '2026-10', nombreAttendu: 1 });
 });
+
+test('les vues Cartes et Analytique affichent les heures supplémentaires et suivent les filtres', async ({ page }) => {
+  const groupe = { id: 4, code: 'C4', libelle: 'Site', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 };
+  const api = await mockApi(page, { username: 'rh', permissions }, {
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30.76, stcDh: 0, forfaitDh: 100, netAPayerDh: 130.76 }, parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
+    'GET /heures-supp/periodes': () => ['2026-10']
+  });
+
+  await page.goto('/heures-supp/cartes?periode=2026-10&cin=AB123');
+  await expect(page.getByText('Aucune donnée n’est disponible pour votre compte.')).toHaveCount(0);
+  await expect(page.getByText('C4', { exact: true })).toBeVisible();
+
+  await page.goto('/heures-supp/analytique?periode=2026-10&cin=AB123');
+  await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
+  await expect(page.getByText(/130[.,]76 DH/).first()).toBeVisible();
+  expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10', cin: 'AB123' });
+});
