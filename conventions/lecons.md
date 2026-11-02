@@ -12,6 +12,8 @@ seule fois, ici. Format : constat, cause, règle.
 | Une branche partait de la mauvaise base, des commits restaient locaux, la PR n'était pas à jour. | Avant tout `git` ou `gh` : vérifier le dossier courant, la branche et `git status`. Une seule branche de travail et une PR à la fois ; après fusion, ne garder que `main`. |
 | Une CI verte sur un ancien commit a été prise pour une validation. | Les 4 contrôles requis (`backend`, `frontend`, `full-stack`, `ia`) doivent être verts sur le **dernier commit poussé**. |
 | Un refus automatique d'une commande a été contourné par une autre voie. | Un refus n'est jamais contourné : donner la commande au propriétaire, ou lui demander d'ajouter la règle de permission. |
+| Un ticket de mesure (KAN-9, démarrage du service `ia`) a été clos après la seule mesure de l'import, sans mesurer le démarrage complet du conteneur. | Avant de clore, comparer ce qui a été mesuré à ce que le titre promet ; ce qui ne l'est pas est mesuré ou écrit « non vérifié », et le ticket reste ouvert tant qu'il manque. |
+| Plusieurs tâches avançaient en parallèle pendant l'attente de la CI. | Une tâche va jusqu'à « Terminé(e) » (fusion, branche supprimée, preuve) avant d'ouvrir la suivante ; pendant l'attente, lecture et mesures sans branche seulement. |
 | Une tâche était annoncée « faite » sans preuve. | Une tâche passe à « Terminé(e) » en Jira seulement avec sa preuve en commentaire (test, trace, capture, lien de PR). Ce qui n'a pas été vérifié est écrit « non vérifié ». |
 
 ## Outils et scripts
