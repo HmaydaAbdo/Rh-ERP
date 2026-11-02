@@ -14,5 +14,5 @@ les scénarios exécutables du README et les portes de couverture backend/fronte
 outils MCP sont décrits dans [docs/ia.md](../../ia.md) ; ne pas ajouter de calcul IA ni d'accès direct aux repositories.
 
 Le domaine identifie les employés par CIN, exige une paie du même mois, importe par chantier, conserve les taux calculés
-à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie ne peut pas avoir d'heures supplémentaires ce mois (import, ajout, modification ; 0 heure accepté) : réutiliser `ObservationStc.estStcOuSortie` et `RegleStcHeuresSupp`. Ses capacités IA passent par MCP, avec définitions
+à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser `ObservationStc.estStcOuSortie`. Ses capacités IA passent par MCP, avec définitions
 et unités explicites ; Spring reste la source de tous les calculs.
