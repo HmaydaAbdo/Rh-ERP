@@ -72,7 +72,8 @@ Deux règles imposées par le propriétaire, sans exception :
   nouvelle erreur ou surprise coûteuse.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
   `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
-  recommandation. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
+  recommandation en commentaire de la tâche Jira du mois (label `veille-ia`), pas dans un fichier. Une version
+  compatible est adoptée ; un problème donne un ticket et un signalement chez l'éditeur. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
 
 La [routine de travail et de livraison](conventions/workflow.md) s'applique à chaque tâche : reprise du
 contexte et de l'état Git, exécution du périmètre approuvé, vérifications, documentation, puis livraison
