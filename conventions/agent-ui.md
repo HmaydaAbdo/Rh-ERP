@@ -61,7 +61,7 @@ son test, et aucune n'est remplacée par une autre :
 * **Arrêt et repli** : un paramètre désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
   repli (catalogue ou texte) et est journalisé sans son contenu.
 * **Veille** : à chaque revue mensuelle des modèles (`docs/ia.md` § 4.1), relire les nouvelles pratiques de sécurité des
-  interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner dans le plan de travail IA ce qui
+  interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner en commentaire de la tâche Jira de veille (label `veille-ia`) ce qui
   change cette liste.
 
 ## Objectifs et frontières
