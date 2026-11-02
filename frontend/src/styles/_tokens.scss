@@ -297,13 +297,6 @@
   @include theme-dark;
 }
 
-// Sans JavaScript, ni attribut posé : la préférence du système décide.
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    @include theme-dark;
-  }
-}
-
 // Écrans tactiles et téléphones : cibles d'au moins 44 px et texte de champ d'au moins 16 px (sinon iOS zoome à la saisie).
 @include bp.touch {
   :root {
