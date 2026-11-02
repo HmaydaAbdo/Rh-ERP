@@ -89,21 +89,21 @@ public class HeureSupp {
     @Column(name = "p_h", precision = 8, scale = 1)
     private BigDecimal heures;
 
-    @Column(name = "montant", nullable = false, precision = 16, scale = 2)
+    @Column(name = "montant", nullable = false, precision = 16, scale = 0)
     private BigDecimal montant;
 
     /** Instantané du marqueur STC/sortie dans le bulletin du même mois. */
     @Column(name = "est_stc_ou_sortie", nullable = false)
     private boolean stcOuSortie;
 
-    @Column(name = "stc_dh", nullable = false, precision = 16, scale = 2)
+    @Column(name = "stc_dh", nullable = false, precision = 16, scale = 0)
     private BigDecimal stcDh;
 
     /** Montant libre en DH, absent quand aucun forfait n'a été saisi. */
-    @Column(name = "forfait", precision = 16, scale = 2)
+    @Column(name = "forfait", precision = 16, scale = 0)
     private BigDecimal forfait;
 
-    @Column(name = "net_a_payer", nullable = false, precision = 16, scale = 2)
+    @Column(name = "net_a_payer", nullable = false, precision = 16, scale = 0)
     private BigDecimal netAPayer;
 
     public HeureSupp() {

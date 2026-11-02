@@ -56,22 +56,22 @@ describe('HeuresSuppVuesComponent', () => {
     expect(click).toHaveBeenCalledOnce();
   });
 
-  it('pose le bouton Exporter à côté d’Importer quand le tableau est affiché, et le retire sinon', async () => {
-    await harness.navigateByUrl('/heures-supp', HeuresSuppVuesComponent);
-    const etat = TestBed.inject(HeuresSuppExportEtat);
+  it('pose le bouton Exporter à côté d’Importer dans les trois vues et exporte le périmètre filtré dans l’ordre du tableau', async () => {
+    const service = TestBed.inject(HeuresSuppService) as unknown as { exporterPdf: ReturnType<typeof vi.fn> };
+    service.exporterPdf = vi.fn().mockReturnValue(of(new Blob(['%PDF'])));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:pdf');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const boutons = (): string[] => Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).map((b) => b.textContent?.trim() ?? '');
-    expect(boutons()).not.toContain('Exporter');
 
-    const exporter = vi.fn();
-    etat.exporter.set(exporter);
-    harness.detectChanges();
-    expect(boutons()).toContain('Exporter');
-    expect(boutons().join('|')).not.toContain('Importer un chantier');
+    for (const url of ['/heures-supp', '/heures-supp/cartes', '/heures-supp/analytique']) {
+      await harness.navigateByUrl(`${url}?periode=2026-10&cin=AB1`, HeuresSuppVuesComponent);
+      expect(boutons()).toContain('Exporter');
+      expect(boutons().join('|')).not.toContain('Importer un chantier');
+    }
+
+    TestBed.inject(HeuresSuppExportEtat).tri.set('montant,desc');
     Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
-    expect(exporter).toHaveBeenCalledOnce();
-
-    etat.exporter.set(null);
-    harness.detectChanges();
-    expect(boutons()).not.toContain('Exporter');
+    expect(service.exporterPdf).toHaveBeenCalledWith({ periode: '2026-10', cin: 'AB1', nomPrenom: undefined, chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'montant,desc');
   });
 });

@@ -5,5 +5,17 @@
       "maxFindings": 5,
       "maxChars": 8000
     }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "liberation serif",
+        "createdAt": "2026-11-02T18:26:33.461Z",
+        "reason": "police du rapport PDF imprimé, identique au rapport de paie existant ; hors du système d'interface de DESIGN.md"
+      }
+    ]
   }
 }

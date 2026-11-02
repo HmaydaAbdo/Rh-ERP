@@ -75,12 +75,4 @@
   .ag-header-cell-label {
     font-weight: 600;
   }
-
-  // Titres complets : jamais d'ellipse, le texte passe à la ligne (hauteur d'en-tête automatique)
-  .ag-header-cell-text {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-    overflow-wrap: normal;
-  }
 }

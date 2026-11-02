@@ -5,8 +5,8 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSupp } from '../models/heures-supp.model';
-import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
+import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppListComponent } from './heures-supp-list.component';
 
 const LIGNE: HeuresSupp = {
@@ -70,26 +70,7 @@ describe('HeuresSuppListComponent', () => {
     expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 0, 20, 'employee.nomPrenom,asc');
     component.charger({ first: 20, rows: 20, sortField: 'montant', sortOrder: -1 });
     expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 1, 20, 'montant,desc');
-  });
-
-  it('exporte le PDF du périmètre filtré avec le dernier tri, sans la pagination', () => {
-    service['exporterPdf'] = vi.fn().mockReturnValue(of(new Blob(['%PDF'])));
-    const creer = vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:pdf');
-    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    component.charger({ first: 40, rows: 20, sortField: 'montant', sortOrder: -1 });
-
-    TestBed.inject(HeuresSuppExportEtat).exporter()!();
-
-    expect(service['exporterPdf']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 'montant,desc');
-    expect(creer).toHaveBeenCalled();
-  });
-
-  it('signale un échec d’export sans masquer l’écran', () => {
-    service['exporterPdf'] = vi.fn().mockReturnValue(throwError(() => new Error('500')));
-    TestBed.inject(HeuresSuppExportEtat).exporter()!();
-
-    expect(component.erreur()).toContain('PDF');
+    expect(TestBed.inject(HeuresSuppExportEtat).tri()).toBe('montant,desc');
   });
 
   it('reçoit une erreur de recherche sans masquer l’écran', () => {

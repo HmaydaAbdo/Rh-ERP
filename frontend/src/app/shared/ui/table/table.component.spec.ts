@@ -14,7 +14,7 @@ interface Employe {
 
 const COLONNES: TableColumn[] = [
   { field: 'nom', header: 'Nom' },
-  { field: 'fonction', header: 'Fonction' },
+  { field: 'fonction', header: 'Fonction', shortHeader: 'Fonct.' },
   { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' }
 ];
 
@@ -114,7 +114,7 @@ describe('TableComponent (AG Grid)', () => {
     await monter();
 
     expect(racine().querySelector('[role="grid"]')?.getAttribute('aria-label')).toBe('Employés');
-    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((h) => h.textContent?.trim())).toEqual(['Nom', 'Fonction', 'Chantier', 'Actions']);
+    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((h) => h.textContent?.trim())).toEqual(['Nom', 'Fonct.', 'Chantier', 'Actions']);
     expect(noms()).toEqual(['Zahra', 'Ali', 'Mehdi']);
     expect(lignesGrille(racine())[0].cells.map((c) => c.textContent?.trim()).slice(0, 3)).toEqual(['Zahra', 'Maçon', 'C2']);
     expect(racine().querySelector('button[aria-label="Voir Ali"]')).not.toBeNull();
@@ -124,7 +124,7 @@ describe('TableComponent (AG Grid)', () => {
   it('n’affiche pas la colonne d’actions quand le parent la masque', async () => {
     await monter((h) => h.actions.set(false));
 
-    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((h) => h.textContent?.trim())).toEqual(['Nom', 'Fonction', 'Chantier']);
+    expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((h) => h.textContent?.trim())).toEqual(['Nom', 'Fonct.', 'Chantier']);
   });
 
   it('annonce l’absence de ligne', async () => {

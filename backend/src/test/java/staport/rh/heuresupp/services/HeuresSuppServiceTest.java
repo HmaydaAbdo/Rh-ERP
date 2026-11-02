@@ -85,8 +85,8 @@ class HeuresSuppServiceTest {
 
         var ligne = capturerLigneSauvee();
         assertEquals(0, new BigDecimal("100").compareTo(ligne.getSalaireHoraire()));
-        assertEquals(new BigDecimal("250.00"), ligne.getMontant());
-        assertEquals(new BigDecimal("265.00"), ligne.getNetAPayer());
+        assertEquals(new BigDecimal("250"), ligne.getMontant());
+        assertEquals(new BigDecimal("265"), ligne.getNetAPayer());
         assertFalse(ligne.isStcOuSortie());
         assertEquals(PERIODE, ligne.getPeriode());
     }
@@ -210,14 +210,14 @@ class HeuresSuppServiceTest {
         when(repository.save(ligne)).thenReturn(ligne);
 
         service.modifier(4L, new HeuresSuppModificationDto(3L, new BigDecimal("3"), new BigDecimal("10")));
-        assertEquals(new BigDecimal("300.00"), ligne.getMontant());
-        assertEquals(new BigDecimal("310.00"), ligne.getNetAPayer());
+        assertEquals(new BigDecimal("300"), ligne.getMontant());
+        assertEquals(new BigDecimal("310"), ligne.getNetAPayer());
 
         service.modifier(4L, new HeuresSuppModificationDto(3L, null, new BigDecimal("10")));
         assertNull(ligne.getSalaireReference());
         assertNull(ligne.getTypeSalaireReference());
         assertNull(ligne.getSalaireHoraire());
-        assertEquals(new BigDecimal("10.00"), ligne.getNetAPayer());
+        assertEquals(new BigDecimal("10"), ligne.getNetAPayer());
     }
 
     @Test

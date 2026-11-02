@@ -70,15 +70,7 @@
   height: 2.5rem;
   border-bottom: 1px solid var(--color-border);
 }
-.app-datagrid__row--head {
-  height: auto;
-  min-height: 2.5rem;
-  background: var(--color-surface-alt);
-
-  // Un titre de colonne n'est jamais tronqué : il passe à la ligne.
-  .app-datagrid__cell { overflow: visible; text-overflow: clip; white-space: normal; padding-block: var(--space-xs); }
-  .app-datagrid__sort { height: auto; text-align: start; }
-}
+.app-datagrid__row--head { background: var(--color-surface-alt); }
 .app-datagrid__cell {
   position: relative;
   display: flex;

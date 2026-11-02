@@ -43,7 +43,7 @@ import java.util.Set;
 @Service
 public class HeuresSuppImportService {
 
-    private static final BigDecimal ZERO = new BigDecimal("0.00");
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String PAIE_ABSENTE = "Aucune paie n'est disponible pour ce mois. Importez d'abord la paie de ce mois, puis recommencez.";
 
     private final LecteurFichierHeuresSupp lecteur;
@@ -323,8 +323,8 @@ public class HeuresSuppImportService {
         if (dossier.stcOuSortie) {
             dossier.erreurs.add("le forfait est interdit car la paie du même mois est marquée STC/sortie.");
         }
-        if (dossier.forfait == null || dossier.forfait.signum() < 0 || dossier.forfait.scale() > 2) {
-            dossier.erreurs.add("le forfait doit être un montant en DH positif ou nul avec deux décimales au maximum.");
+        if (dossier.forfait == null || dossier.forfait.signum() < 0 || dossier.forfait.stripTrailingZeros().scale() > 0) {
+            dossier.erreurs.add("le forfait doit être un montant en DH entier de dirhams, positif ou nul (sans décimales).");
         }
     }
 

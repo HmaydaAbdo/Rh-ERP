@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,13 +28,13 @@ export class HeuresSuppListComponent {
   protected readonly table = TABLE;
   protected readonly columns = new ColumnState([
     { field: 'periode', header: 'Mois', sortField: 'periode' }, { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
-    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom', minWidth: 200 },
-    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
-    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference', minWidth: 140 },
+    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom' },
+    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
+    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference' },
     { field: 'salaireHoraireDh', header: 'S/H', sortField: 'salaireHoraire' },
-    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant', minWidth: 120 },
-    { field: 'stcDh', header: 'STC', sortField: 'stcDh', minWidth: 110 }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait', minWidth: 120 },
-    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer', minWidth: 130 }, { field: 'actions', header: 'Actions', sortable: false }
+    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant' },
+    { field: 'stcDh', header: 'STC', sortField: 'stcDh' }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait' },
+    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer' }, { field: 'actions', header: 'Actions', sortable: false }
   ]);
   protected readonly lignes = signal<HeuresSupp[]>([]);
   protected readonly total = signal(0);
@@ -42,7 +42,6 @@ export class HeuresSuppListComponent {
   protected readonly erreurTotal = signal(false);
   protected readonly chargement = signal(false);
   private readonly exportEtat = inject(HeuresSuppExportEtat);
-  protected readonly exportEnCours = this.exportEtat.enCours;
   protected readonly erreur = signal<string | null>(null);
   protected readonly purgeNombre = signal<number | null>(null);
   protected readonly purgeSaisie = signal<number | null>(null);
@@ -54,25 +53,8 @@ export class HeuresSuppListComponent {
   private readonly router = inject(Router);
   protected criteres: HeuresSuppSearchCriteria = {};
   private dernierEvenement: TableLazyLoadEvent | null = null;
-  private dernierTri = 'periode,desc';
   private dernierCritereAnalytique = '';
 
-
-  exporterPdf(): void {
-    if (this.exportEnCours()) return;
-    this.exportEnCours.set(true); this.erreur.set(null);
-    this.service.exporterPdf(this.criteres, this.dernierTri).pipe(finalize(() => this.exportEnCours.set(false))).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = `Heures_supplementaires_${this.criteres.periode ?? 'tous-les-mois'}.pdf`;
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.erreur.set('Le PDF n’a pas pu être généré. Affinez les filtres (5 000 lignes au plus) puis réessayez.')
-    });
-  }
 
   protected canDelete(): boolean { return this.auth.hasPermission('HEURES_SUP_DELETE'); }
   protected canPurge(): boolean { return this.auth.hasPermission('HEURES_SUP_PURGE'); }
@@ -116,8 +98,6 @@ export class HeuresSuppListComponent {
   }
 
   constructor() {
-    this.exportEtat.exporter.set(() => this.exporterPdf());
-    inject(DestroyRef).onDestroy(() => this.exportEtat.exporter.set(null));
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const periode = params.get('periode');
       const ids = (key: string): number[] | undefined => {
@@ -140,8 +120,8 @@ export class HeuresSuppListComponent {
   protected charger(event: TableLazyLoadEvent): void {
     this.dernierEvenement = event;
     this.chargement.set(true); this.erreur.set(null);
-    if (event.sortField) this.dernierTri = `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`;
-    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.dernierTri).pipe(finalize(() => this.chargement.set(false))).subscribe({
+    if (event.sortField) this.exportEtat.tri.set(`${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`);
+    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.exportEtat.tri()).pipe(finalize(() => this.chargement.set(false))).subscribe({
       next: (page) => { this.lignes.set(page.content); this.total.set(page.page.totalElements); },
       error: () => this.erreur.set('Les heures supplémentaires n’ont pas pu être chargées. Réessayez.')
     });

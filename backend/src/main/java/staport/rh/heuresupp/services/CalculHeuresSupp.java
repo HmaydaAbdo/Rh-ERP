@@ -10,7 +10,7 @@ public final class CalculHeuresSupp {
 
     private static final BigDecimal DIX = BigDecimal.TEN;
     private static final BigDecimal DEUX_CENT_SOIXANTE = new BigDecimal("260");
-    private static final BigDecimal ZERO_MONTANT = new BigDecimal("0.00");
+    private static final BigDecimal ZERO_MONTANT = BigDecimal.ZERO;
     /** S/H n'a pas de virgule : le taux horaire est un nombre entier de dirhams. */
     private static final int ECHELLE_TAUX = 0;
 
@@ -32,12 +32,12 @@ public final class CalculHeuresSupp {
         };
     }
 
-    /** Montant = S/H × P/H, arrondi à deux décimales de dirham. */
+    /** Montant = S/H × P/H, arrondi à l'entier de dirham comme S/H (HALF_DOWN : exactement 0,5 on descend). */
     public static BigDecimal montant(BigDecimal salaireHoraire, BigDecimal heures) {
         if (salaireHoraire == null || heures == null) {
             return ZERO_MONTANT;
         }
-        return salaireHoraire.multiply(heures).setScale(2, RoundingMode.HALF_UP);
+        return salaireHoraire.multiply(heures).setScale(ECHELLE_TAUX, RoundingMode.HALF_DOWN);
     }
 
     /** STC (DH) = Montant pour une paie marquée STC/sortie du même mois, sinon 0 DH. */
@@ -47,6 +47,6 @@ public final class CalculHeuresSupp {
 
     /** Net à payer = Montant - STC (DH) + Forfait, le forfait étant distinct du Montant. */
     public static BigDecimal netAPayer(BigDecimal montant, BigDecimal stcDh, BigDecimal forfait) {
-        return montant.subtract(stcDh).add(forfait == null ? ZERO_MONTANT : forfait).setScale(2, RoundingMode.UNNECESSARY);
+        return montant.subtract(stcDh).add(forfait == null ? ZERO_MONTANT : forfait).setScale(ECHELLE_TAUX, RoundingMode.UNNECESSARY);
     }
 }

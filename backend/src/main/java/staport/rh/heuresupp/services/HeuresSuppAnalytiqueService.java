@@ -21,10 +21,10 @@ import java.util.HashSet;
 @Service
 public class HeuresSuppAnalytiqueService {
 
-    private static final BigDecimal ZERO = new BigDecimal("0.00");
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final HeuresSuppAnalytiqueDto.Definitions DEFINITIONS = new HeuresSuppAnalytiqueDto.Definitions(
             "Somme des P/H du mois, en heures décimales.",
-            "Somme de S/H × P/H, chaque ligne arrondie à deux décimales en DH.",
+            "Somme de S/H × P/H, chaque ligne arrondie à l'entier de dirham (HALF_DOWN).",
             "Somme du Montant pour les bulletins du même mois marqués exactement STC ou sortie.",
             "Somme des forfaits saisis séparément des heures ; interdit pour un employé STC/sortie.",
             "Somme de Montant − STC (DH) + Forfait.");
