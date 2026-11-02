@@ -26,6 +26,15 @@ describe('HeuresSuppService', () => {
     request.flush({ content: [], page: { totalElements: 0 } });
   });
 
+  it('exporte le PDF avec les filtres, la recherche et le tri de la vue', () => {
+    service.exporterPdf({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal' }, 'montant,desc').subscribe();
+    const request = http.expectOne('heures-supp/export/pdf');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.responseType).toBe('blob');
+    expect(request.request.body).toEqual({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal', tri: 'montant,desc' });
+    request.flush(new Blob(['%PDF']));
+  });
+
   it('crée, modifie et supprime les lignes avec leurs contrats dédiés', () => {
     service.creer({ employeeId: 7, periode: '2026-10', chantierId: 4, heuresSupplementaires: 2, forfaitDh: null }).subscribe();
     const creation = http.expectOne('heures-supp');

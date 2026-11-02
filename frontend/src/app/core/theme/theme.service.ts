@@ -9,7 +9,7 @@ const DUREE_TRANSITION_MS = 300;
 
 /**
  * Thème clair ou sombre de l'application, porté par `data-theme` sur `<html>` (voir `styles/_tokens.scss`). Tant que
- * l'utilisateur n'a pas choisi, le thème est le sombre (décision du propriétaire, 2026-11-01) ; son choix est ensuite mémorisé sur ce navigateur
+ * l'utilisateur n'a pas choisi, le thème est le clair (décision du propriétaire, 2026-11-02) ; son choix est ensuite mémorisé sur ce navigateur
  * (confort local : jamais une donnée métier, jamais envoyée au serveur). Le script d'`index.html` applique la même règle avant
  * le premier affichage, pour éviter un flash du mauvais thème.
  */
@@ -18,7 +18,7 @@ export class ThemeService {
   private readonly document = inject(DOCUMENT);
   private choisi = this.lireChoix();
   /** Le thème courant ; un graphique (dessiné dans un canvas, qui ne lit pas le CSS) en dépend pour se redessiner à la bascule. */
-  readonly theme = signal<Theme>(this.choisi ?? 'dark');
+  readonly theme = signal<Theme>(this.choisi ?? 'light');
 
   constructor() {
     this.appliquer(this.theme());

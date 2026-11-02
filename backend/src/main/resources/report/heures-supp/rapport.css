@@ -1,0 +1,32 @@
+/* Rapport PDF des heures supplémentaires : A4 paysage, pages pré-découpées côté Java (une division .page par page
+   physique, hauteur fixe, lignes de hauteur fixe), même police et même bandeau que le rapport de paie. */
+@page { size: 842pt 595pt; margin: 0; }
+html, body { margin: 0; padding: 0; font-family: 'Liberation Serif', serif; color: #1a1a1a; }
+.page { position: relative; width: 842pt; height: 595pt; overflow: hidden; page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+
+.page-header { position: absolute; top: 20pt; left: 20pt; width: 802pt; height: 52pt; }
+.page-header .logo { position: absolute; left: 0; top: 0; width: 60pt; height: 40pt; }
+.page-header .sep { position: absolute; top: 4pt; height: 32pt; width: 0; border-left: 1pt solid #8a8a8a; }
+.page-header .sep.s1 { left: 68pt; }
+.page-header .sep.s2 { left: 212pt; }
+.page-header .bloc { position: absolute; top: 8pt; font-size: 11pt; font-weight: bold; }
+.page-header .bloc.b1 { left: 78pt; width: 130pt; }
+.page-header .bloc.b2 { left: 222pt; width: 560pt; }
+.page-header .bloc.b2 .contexte { display: block; margin-top: 3pt; font-size: 8pt; font-weight: normal; line-height: 10pt; }
+.page-header .filet { position: absolute; left: 0; top: 46pt; width: 802pt; border-top: 1.2pt solid #1a1a1a; }
+
+.page-body { position: absolute; top: 84pt; left: 20pt; width: 802pt; }
+table.heures { width: 797pt; border-collapse: collapse; table-layout: fixed; font-size: 8pt; }
+table.heures th, table.heures td { height: 16pt; padding: 0 3pt; border: 0.5pt solid #9a9a9a; overflow: hidden; white-space: nowrap; }
+table.heures th { height: 20pt; background: #e6e6e6; font-weight: bold; text-align: left; }
+table.heures td.num, table.heures th.num { text-align: right; }
+table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
+table.heures col.mois { width: 45pt; } table.heures col.chantier { width: 100pt; } table.heures col.employe { width: 140pt; }
+table.heures col.cin { width: 55pt; } table.heures col.fonction { width: 100pt; } table.heures col.salaire { width: 60pt; }
+table.heures col.sh { width: 40pt; } table.heures col.ph { width: 35pt; } table.heures col.montant { width: 55pt; }
+table.heures col.stc { width: 50pt; } table.heures col.forfait { width: 55pt; } table.heures col.net { width: 62pt; }
+
+.page-footer { position: absolute; left: 20pt; top: 560pt; width: 802pt; font-size: 8pt; border-top: 0.6pt solid #8a8a8a; padding-top: 4pt; }
+.page-footer .pagination { position: absolute; right: 0; top: 4pt; }
+.vide { margin-top: 30pt; font-size: 11pt; }

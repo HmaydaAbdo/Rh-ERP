@@ -50,6 +50,12 @@ Deux règles imposées par le propriétaire, sans exception :
   compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
   lu est écrit « non vérifié » ; la mémoire du modèle n'est pas une source.
+  **Accès à la documentation officielle : Context7 en premier.** Pour toute bibliothèque, tout framework, SDK, API ou outil
+  en ligne de commande (Spring, Angular, Next.js, FastAPI, LangChain, LangGraph, CopilotKit, AG Grid, Mintlify…), appeler le
+  serveur MCP Context7 : `resolve-library-id` pour trouver la bibliothèque, puis `query-docs` pour lire la documentation à
+  jour, avant d'écrire ou d'affirmer quoi que ce soit, même pour une bibliothèque connue. Les serveurs de documentation
+  dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `docs/ia/decisions.md`) complètent Context7 ; ils ne
+  le remplacent pas pour le reste.
 - **Jira et le code, seules sources de suivi.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
   `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E19 y sont des
   epics et chaque tâche porte son préfixe (`E12.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit

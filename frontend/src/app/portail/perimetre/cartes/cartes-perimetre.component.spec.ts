@@ -17,6 +17,8 @@ import { EmployeeService } from '../../employee/services/employee.service';
 import { Employee } from '../../employee/models/employee.model';
 import { PaieAnalytique } from '../../paie/models/paie.model';
 import { PaieService } from '../../paie/services/paie.service';
+import { moduleHeuresSupp } from '../../heures-supp/heures-supp-module';
+import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
 import { critereEmployesDe, criterePaieDe } from '../perimetre';
 import { ModulePerimetre } from '../perimetre-module';
 import { CartesPerimetreComponent } from './cartes-perimetre.component';
@@ -72,6 +74,16 @@ function module(avecCatalogue = true): ModulePerimetre {
 })
 class HoteComponent {
   module = module();
+}
+
+@Component({
+  selector: 'app-hote-heures-supp',
+  imports: [CartesPerimetreComponent],
+  template: '<app-cartes-perimetre [module]="module" />',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class HoteHeuresSuppComponent {
+  module = moduleHeuresSupp();
 }
 
 @Component({
@@ -195,11 +207,24 @@ describe('CartesPerimetreComponent', () => {
         provideRouter([
           { path: 'chantiers/cartes', component: HoteComponent },
           { path: 'equipes/cartes', component: HoteEquipeComponent },
+          { path: 'heures-supp/cartes', component: HoteHeuresSuppComponent },
           { path: 'equipes/paie-cartes', component: HoteEquipePaieComponent },
           { path: 'functions/cartes', component: HoteFonctionComponent }
         ]),
         { provide: EmployeeService, useValue: employes },
         { provide: PaieService, useValue: paie },
+        {
+          provide: HeuresSuppService,
+          useValue: {
+            periodes: () => of(['2026-10']),
+            analyser: () => of({
+              periode: '2026-10',
+              indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 },
+              parChantier: [{ id: 1, code: 'C168', libelle: 'Nador', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 }],
+              parEquipe: [], parFonction: []
+            })
+          }
+        },
         { provide: AuthService, useValue: { hasPermission: (code: string) => permissions(code) } },
         { provide: ChantierReferenceService, useValue: { fetchById: () => of({ id: 1, code: 'C168' }) } },
         { provide: EquipeReferenceService, useValue: { fetchById: () => of({ id: 5, code: 'CH' }) } },
@@ -425,6 +450,17 @@ describe('CartesPerimetreComponent', () => {
     expect(paie.listerPeriodes).not.toHaveBeenCalled();
     expect(paie.analyser).not.toHaveBeenCalled();
     expect(page.querySelector('.app-level')).not.toBeNull();
+  });
+
+  it('montre les cartes quand les heures supplémentaires sont la seule source autorisée', async () => {
+    permissions = (code) => ['HEURES_SUP_READ', 'CHANTIER_READ'].includes(code);
+    await harness.navigateByUrl('/heures-supp/cartes', HoteHeuresSuppComponent);
+    await harness.fixture.whenStable();
+    harness.fixture.detectChanges();
+    const page = harness.routeNativeElement as HTMLElement;
+
+    expect(page.textContent).not.toContain('Aucune donnée n’est disponible');
+    expect(page.querySelectorAll('.app-entity').length).toBeGreaterThan(0);
   });
 
   it('signale l’absence de mois de paie sans inventer d’indicateurs', async () => {

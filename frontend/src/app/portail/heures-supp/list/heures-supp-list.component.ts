@@ -26,17 +26,21 @@ const TABLE: CollectionTableConfig = { countLabel: (n) => `${n} ligne${n > 1 ? '
 export class HeuresSuppListComponent {
   protected readonly table = TABLE;
   protected readonly columns = new ColumnState([
-    { field: 'periode', header: 'Mois' }, { field: 'chantier', header: 'Chantier' }, { field: 'employe', header: 'Employé' },
-    { field: 'cin', header: 'CIN' }, { field: 'fonction', header: 'Fonction' }, { field: 'salaireReferenceDh', header: 'Salaire référence' },
-    { field: 'typeSalaireReference', header: 'Type salaire' }, { field: 'salaireHoraireDh', header: 'S/H' },
-    { field: 'heuresSupplementaires', header: 'P/H' }, { field: 'montantDh', header: 'Montant' }, { field: 'stcOuSortie', header: 'Statut paie' },
-    { field: 'stcDh', header: 'STC' }, { field: 'forfaitDh', header: 'Forfait' }, { field: 'netAPayerDh', header: 'Net à payer' }, { field: 'actions', header: 'Actions' }
+    { field: 'periode', header: 'Mois', sortField: 'periode' }, { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
+    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom', minWidth: 200 },
+    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
+    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference' },
+    { field: 'salaireHoraireDh', header: 'S/H', sortField: 'salaireHoraire' },
+    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant' },
+    { field: 'stcDh', header: 'STC', sortField: 'stcDh' }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait' },
+    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer' }, { field: 'actions', header: 'Actions', sortable: false }
   ]);
   protected readonly lignes = signal<HeuresSupp[]>([]);
   protected readonly total = signal(0);
   protected readonly totalNetAPayer = signal<number | null>(null);
   protected readonly erreurTotal = signal(false);
   protected readonly chargement = signal(false);
+  protected readonly exportEnCours = signal(false);
   protected readonly erreur = signal<string | null>(null);
   protected readonly purgeNombre = signal<number | null>(null);
   protected readonly purgeSaisie = signal<number | null>(null);
@@ -48,8 +52,25 @@ export class HeuresSuppListComponent {
   private readonly router = inject(Router);
   protected criteres: HeuresSuppSearchCriteria = {};
   private dernierEvenement: TableLazyLoadEvent | null = null;
+  private dernierTri = 'periode,desc';
   private dernierCritereAnalytique = '';
 
+
+  protected exporterPdf(): void {
+    if (this.exportEnCours()) return;
+    this.exportEnCours.set(true); this.erreur.set(null);
+    this.service.exporterPdf(this.criteres, this.dernierTri).pipe(finalize(() => this.exportEnCours.set(false))).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const lien = document.createElement('a');
+        lien.href = url;
+        lien.download = `Heures_supplementaires_${this.criteres.periode ?? 'tous-les-mois'}.pdf`;
+        lien.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.erreur.set('Le PDF n’a pas pu être généré. Affinez les filtres (5 000 lignes au plus) puis réessayez.')
+    });
+  }
 
   protected canDelete(): boolean { return this.auth.hasPermission('HEURES_SUP_DELETE'); }
   protected canPurge(): boolean { return this.auth.hasPermission('HEURES_SUP_PURGE'); }
@@ -75,10 +96,9 @@ export class HeuresSuppListComponent {
     const valeurs: Record<string, unknown> = {
       periode: ligne.periode, chantier: `${ligne.codeChantier} ${ligne.chantier}`, employe: ligne.nomPrenom, cin: ligne.cin,
       fonction: ligne.fonction, salaireReferenceDh: ligne.salaireReferenceDh === null ? '—' : `${ligne.salaireReferenceDh} DH`,
-      typeSalaireReference: ligne.typeSalaireReference === 'JOURNALIER' ? 'Journalier' : ligne.typeSalaireReference === 'MENSUEL' ? 'Mensuel' : '—',
       salaireHoraireDh: ligne.salaireHoraireDh === null ? '—' : `${ligne.salaireHoraireDh} DH/h`,
       heuresSupplementaires: ligne.heuresSupplementaires === null ? '—' : `${ligne.heuresSupplementaires} h`,
-      montantDh: `${ligne.montantDh} DH`, stcOuSortie: ligne.stcOuSortie ? 'STC / sortie' : '—', stcDh: `${ligne.stcDh} DH`,
+      montantDh: `${ligne.montantDh} DH`, stcDh: `${ligne.stcDh} DH`,
       forfaitDh: ligne.forfaitDh === null ? '—' : `${ligne.forfaitDh} DH`, netAPayerDh: `${ligne.netAPayerDh} DH`
     };
     return String(valeurs[champ] ?? '—');
@@ -116,7 +136,8 @@ export class HeuresSuppListComponent {
   protected charger(event: TableLazyLoadEvent): void {
     this.dernierEvenement = event;
     this.chargement.set(true); this.erreur.set(null);
-    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows).pipe(finalize(() => this.chargement.set(false))).subscribe({
+    if (event.sortField) this.dernierTri = `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`;
+    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.dernierTri).pipe(finalize(() => this.chargement.set(false))).subscribe({
       next: (page) => { this.lignes.set(page.content); this.total.set(page.page.totalElements); },
       error: () => this.erreur.set('Les heures supplémentaires n’ont pas pu être chargées. Réessayez.')
     });

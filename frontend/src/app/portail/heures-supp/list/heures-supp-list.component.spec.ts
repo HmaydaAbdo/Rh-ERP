@@ -46,12 +46,51 @@ describe('HeuresSuppListComponent', () => {
 
   it('applique tous les filtres d’URL, affiche CIN et S/H, et calcule le total filtré', () => {
     component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });
-    expect(service['search']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 0, 20);
+    expect(service['search']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 0, 20, 'periode,desc');
     expect(component.totalNetAPayer()).toBe(20);
     expect(fixture.nativeElement.querySelector('.app-table-bar__summary')?.textContent).toContain('Net à payer');
     expect(fixture.nativeElement.textContent).toContain('S/H');
     expect(fixture.nativeElement.textContent).toContain('CIN');
     expect(fixture.nativeElement.querySelector('.heures-supp-ajout')).toBeNull();
+  });
+
+  it('n’affiche ni statut paie ni type de salaire', () => {
+    component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });
+    fixture.detectChanges();
+    const texte = fixture.nativeElement.textContent as string;
+    expect(texte).not.toContain('Statut paie');
+    expect(texte).not.toContain('Type salaire');
+    expect(texte).toContain('Chantier');
+    expect(texte).toContain('Forfait');
+  });
+
+  it('transmet le champ et le sens du tri au serveur', () => {
+    component.charger({ first: 0, rows: 20, sortField: 'employee.nomPrenom', sortOrder: 1 });
+    expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 0, 20, 'employee.nomPrenom,asc');
+    component.charger({ first: 20, rows: 20, sortField: 'montant', sortOrder: -1 });
+    expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 1, 20, 'montant,desc');
+  });
+
+  it('exporte le PDF du périmètre filtré avec le dernier tri, sans la pagination', () => {
+    service['exporterPdf'] = vi.fn().mockReturnValue(of(new Blob(['%PDF'])));
+    const creer = vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:pdf');
+    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    component.charger({ first: 40, rows: 20, sortField: 'montant', sortOrder: -1 });
+
+    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
+    bouton.click();
+
+    expect(service['exporterPdf']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 'montant,desc');
+    expect(creer).toHaveBeenCalled();
+  });
+
+  it('signale un échec d’export sans masquer l’écran', () => {
+    service['exporterPdf'] = vi.fn().mockReturnValue(throwError(() => new Error('500')));
+    const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Exporter en PDF'))!;
+    bouton.click();
+
+    expect(component.erreur()).toContain('PDF');
   });
 
   it('reçoit une erreur de recherche sans masquer l’écran', () => {

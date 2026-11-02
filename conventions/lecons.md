@@ -35,6 +35,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Des vulnérabilités critiques transitives (npm) bloquaient la CI. | Les corriger par `overrides` dans `package.json` (par exemple `dompurify`), pas en retirant le contrôle. |
 | Un défaut d'une bibliothèque tierce (A2UI avec zod 4) a été contourné sans être signalé. | Contourner par un repli lisible côté ERP **et** ouvrir un signalement chez l'éditeur (texte anglais, reproduction minimale) ; consigner son lien dans la tâche Jira. |
 | Le comportement d'un framework a été affirmé de mémoire. | Lire la page officielle ou le code source en entier avant d'affirmer ; sinon écrire « non vérifié » (règle d'`AGENTS.md`). |
+| Un tableau a été livré avec un tri qui ne changeait que la page affichée, des vues sans recherche et sans export. | Tri, recherche et export PDF (mêmes filtres et tri que l'écran) sont exigés dans tout tableau et tout domaine, y compris pendant une migration : voir `conventions/frontend.md`, section « Tri, recherche et export ». |
 | Des tests unitaires ont été réécrits pour passer au lieu de corriger la cause. | Corriger la cause ; ne pas affaiblir une assertion métier. |
 
 ## Documentation

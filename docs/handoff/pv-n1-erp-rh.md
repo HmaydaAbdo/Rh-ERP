@@ -499,7 +499,7 @@ Le domaine conserve un import mensuel d'heures supplémentaires par chantier. Il
 |---|---|
 | Période | Un mois choisi ; l'import est bloqué dès la première étape si aucune paie n'existe pour ce mois. |
 | Identité | CIN exact ; les écarts de nom/fonction sont présentés pour alignement explicite. Un CIN inconnu requiert création d'une fiche employé. |
-| S/H | Salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. Précision gardée au calcul et figée pour l'import. |
+| S/H | Salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. Arrondi à l'entier (0,5 exact vers le bas) et figé pour l'import. |
 | P/H | Heures décimales positives ou nulles avec une décimale au plus ; les lignes à zéro sont conservées et comptabilisées. Une cellule vide est une erreur. |
 | Montant | S/H × P/H, arrondi à 2 décimales. |
 | STC (DH) | Montant si la paie du même mois est marquée STC/sortie ; sinon zéro. |

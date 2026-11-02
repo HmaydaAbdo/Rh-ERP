@@ -1,7 +1,8 @@
 
-    @if (canPurge() && criteres.periode) {
-      <div class="app-page__actions app-page__actions--liste"><button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button></div>
-    }
+    <div class="app-page__actions app-page__actions--liste">
+      <button stp-button variant="secondary" icon="download" type="button" [loading]="exportEnCours()" (click)="exporterPdf()">Exporter en PDF</button>
+      @if (canPurge() && criteres.periode) { <button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button> }
+    </div>
     @if (purgeNombre() !== null) {
       <stp-dialog [header]="'Supprimer toutes les lignes du mois ' + criteres.periode + ' ?'" width="34rem" [(open)]="purgeDialogueOuvert" (closed)="fermerPurge()">
         <p>La suppression concerne tous les chantiers et toutes les lignes de ce mois. Pour confirmer, retapez {{ purgeNombre() }}.</p>
@@ -23,17 +24,15 @@
           @case ('cin') { {{ ligne.cin }} }
           @case ('fonction') { {{ ligne.fonction }} }
           @case ('salaireReferenceDh') { {{ ligne.salaireReferenceDh === null ? '—' : (ligne.salaireReferenceDh | number:'1.2-2') + ' DH' }} }
-          @case ('typeSalaireReference') { {{ ligne.typeSalaireReference === 'JOURNALIER' ? 'Journalier' : ligne.typeSalaireReference === 'MENSUEL' ? 'Mensuel' : '—' }} }
-          @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-4') + ' DH/h' }} }
+          @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') + ' DH/h' }} }
           @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? '—' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
           @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} DH }
-          @case ('stcOuSortie') { {{ ligne.stcOuSortie ? 'STC / sortie' : '—' }} }
           @case ('stcDh') { {{ ligne.stcDh | number:'1.2-2' }} DH }
           @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') + ' DH' }} }
           @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.2-2' }} DH</strong> }
           @case ('actions') {
-            @if (canWrite()) { <button stp-button variant="text" type="button" (click)="modifier(ligne)">Modifier</button> }
-            @if (canDelete()) { <button stp-button variant="danger-text" type="button" (click)="supprimer(ligne)">Supprimer</button> }
+            @if (canWrite()) { <button stp-button variant="text" icon="pencil" iconOnly type="button" aria-label="Modifier la ligne" (click)="modifier(ligne)"></button> }
+            @if (canDelete()) { <button stp-button variant="danger-text" icon="trash-2" iconOnly type="button" aria-label="Supprimer la ligne" (click)="supprimer(ligne)"></button> }
           }
         }
       </ng-template>
