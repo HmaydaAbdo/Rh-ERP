@@ -43,4 +43,18 @@ describe('FilAssistant', () => {
     utilisateur.set(null);
     expect(service().fil()).toBeUndefined();
   });
+
+  it('distingue un fil neuf d’un fil déjà commencé, y compris après un rechargement', () => {
+    const premier = service();
+    expect(premier.estUtilise()).toBe(false);
+    premier.marquerUtilise();
+    expect(premier.estUtilise()).toBe(true);
+
+    TestBed.resetTestingModule();
+    const rechargement = service();
+    expect(rechargement.estUtilise()).toBe(true);
+
+    rechargement.nouveau();
+    expect(rechargement.estUtilise()).toBe(false);
+  });
 });

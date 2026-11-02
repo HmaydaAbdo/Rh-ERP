@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { AuthService } from '../auth/services/auth.service';
 
 const CLE = 'erp-rh.assistant.fil';
+const CLE_UTILISE = 'erp-rh.assistant.fil-utilise';
 
 /**
  * Le fil de discussion de l'assistant pour l'utilisateur connecté : repris après un rechargement de la page (le runtime
@@ -29,6 +30,34 @@ export class FilAssistant {
     const utilisateur = this.auth.user()?.id;
     if (utilisateur !== undefined) {
       this.courant.set(this.enregistrer(utilisateur, `u${utilisateur}-${uuid()}`));
+    }
+  }
+
+  /** Le fil a-t-il déjà reçu une question ? Un fil neuf n'a rien à rejouer : l'accueil s'affiche (voir `AssistantChatComponent`). */
+  estUtilise(): boolean {
+    const utilisateur = this.auth.user()?.id;
+    const fil = this.fil();
+    if (utilisateur === undefined || fil === undefined) {
+      return false;
+    }
+    try {
+      return localStorage.getItem(`${CLE_UTILISE}.${utilisateur}`) === fil;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Enregistre que la conversation courante a commencé : elle sera reprise (historique rejoué) au rechargement. */
+  marquerUtilise(): void {
+    const utilisateur = this.auth.user()?.id;
+    const fil = this.fil();
+    if (utilisateur === undefined || fil === undefined) {
+      return;
+    }
+    try {
+      localStorage.setItem(`${CLE_UTILISE}.${utilisateur}`, fil);
+    } catch {
+      // Sans stockage, la conversation n'est de toute façon pas reprise après un rechargement.
     }
   }
 
