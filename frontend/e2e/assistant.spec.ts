@@ -86,8 +86,8 @@ function flux(): string {
 }
 
 /** Le runtime CopilotKit simulé : suggestions sans état et authentifiées, runs de l'agent, A2UI et autorisations. */
-async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[]; autorisationsSuggestions: string[] }> {
-  const vu = { autorisations: [] as string[], fils: [] as string[], autorisationsSuggestions: [] as string[] };
+async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[]; connexions: string[]; autorisationsSuggestions: string[] }> {
+  const vu = { autorisations: [] as string[], fils: [] as string[], connexions: [] as string[], autorisationsSuggestions: [] as string[] };
   await page.route('**/ia/copilotkit/**', async (route) => {
     const url = route.request().url();
     if (url.endsWith('/info')) {
@@ -108,6 +108,9 @@ async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fi
         headers: { 'content-type': 'text/event-stream' },
         body: evenements.map((e) => `data: ${JSON.stringify(e)}\n\n`).join('')
       });
+    } else if (url.endsWith('/agent/default/connect')) {
+      vu.connexions.push((route.request().postDataJSON() as { threadId: string }).threadId);
+      await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: '' });
     } else if (url.endsWith('/agent/default/run')) {
       vu.autorisations.push(route.request().headers()['authorization'] ?? '');
       vu.fils.push((route.request().postDataJSON() as { threadId: string }).threadId);
@@ -135,12 +138,16 @@ test.describe('Staport Intelligence', () => {
     await page.keyboard.press('Control+k');
     const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
     const question = assistant.getByPlaceholder('Posez votre question…');
+    // Fil neuf : l'accueil de CopilotKit est visible (E1.6), puis laisse la place à la conversation.
+    await expect(assistant.getByTestId('copilot-welcome-screen')).toBeVisible();
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
+    await expect(assistant.getByTestId('copilot-welcome-screen')).toHaveCount(0);
 
     await assistant.getByRole('button', { name: 'Nouvelle conversation' }).click();
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toHaveCount(0);
+    await expect(assistant.getByTestId('copilot-welcome-screen')).toBeVisible();
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
@@ -153,6 +160,65 @@ test.describe('Staport Intelligence', () => {
       expect(fil).toMatch(/^u1-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     }
     expect(erreurs).toEqual([]);
+  });
+
+  test('ne rejoue rien pour un fil neuf et reprend l’historique du même fil après un rechargement', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    const runtime = await simulerRuntime(page);
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+
+    await page.keyboard.press('Control+k');
+    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    await expect(assistant.getByTestId('copilot-welcome-screen')).toBeVisible();
+    expect(runtime.connexions).toEqual([]);
+
+    const question = assistant.getByPlaceholder('Posez votre question…');
+    await question.fill('Quelle est la masse salariale de 2026-08 ?');
+    await question.press('Enter');
+    await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
+    expect(runtime.connexions).toEqual([]);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press('Control+k');
+    await expect.poll(() => runtime.connexions.length, { timeout: 20_000 }).toBeGreaterThan(0);
+    expect(new Set(runtime.connexions)).toEqual(new Set(runtime.fils));
+  });
+
+  test('se rattache au fil et affiche la réponse quand le flux d’un run est coupé en route', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    // Le relais coupe le flux après RUN_STARTED ; le run, lui, va au bout côté serveur : sa réponse est dans le fil.
+    const sse = (evenements: object[]) => evenements.map((e) => `data: ${JSON.stringify(e)}
+
+`).join('');
+    const reponse = [
+      { type: 'RUN_STARTED', threadId: 't', runId: 'r' },
+      { type: 'TEXT_MESSAGE_START', messageId: 'm', role: 'assistant' },
+      { type: 'TEXT_MESSAGE_CONTENT', messageId: 'm', delta: 'Réponse arrivée après la coupure.' },
+      { type: 'TEXT_MESSAGE_END', messageId: 'm' },
+      { type: 'RUN_FINISHED', threadId: 't', runId: 'r' }
+    ];
+    let connexions = 0;
+    await page.route('**/ia/copilotkit/agent/default/run', (route) =>
+      route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: sse([reponse[0]]) })
+    );
+    await page.route('**/ia/copilotkit/agent/default/connect', (route) => {
+      connexions++;
+      return route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: sse(reponse) });
+    });
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+
+    await page.keyboard.press('Control+k');
+    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const question = assistant.getByPlaceholder('Posez votre question…');
+    await question.fill('Quelle est la masse salariale de 2026-08 ?');
+    await question.press('Enter');
+
+    await expect(assistant.getByText('Réponse arrivée après la coupure.')).toBeVisible();
+    expect(connexions).toBe(1);
   });
 
   test('répond avec raisonnement, consultation et surface A2UI composée', async ({ page }) => {
