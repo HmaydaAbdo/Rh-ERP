@@ -30,5 +30,8 @@ jour son § 0 (états) avec le travail. Ne jamais supposer le comportement d'un 
 en entier avant de l'affirmer (règle d'`AGENTS.md`). Ne rien supprimer (fichier, branche, donnée) hors du périmètre de la
 tâche sans l'accord du propriétaire.
 
+Les tâches se suivent dans Jira (projet `KAN`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`, épopée E1 = KAN-4) :
+créer toute nouvelle tâche, tenir le statut et la preuve à jour, ne jamais perdre l'historique (règle d'`AGENTS.md`).
+
 Tout nouveau domaine doit aussi être intégré à l'IA ERP-RH selon la règle d'`AGENTS.md` : cas d'usage et données
 documentés dans `docs/ia.md`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.
