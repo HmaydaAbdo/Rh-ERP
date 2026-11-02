@@ -428,7 +428,7 @@ jobs:
         working-directory: frontend
         run: npx playwright test e2e/full-stack.spec.ts
         env:
-          E6E_FULL_STACK: "1"
+          E2E_FULL_STACK: "1"
           ADMIN_USERNAME: ci-admin
           ADMIN_PASSWORD: ci-admin-password
           BACKEND_URL: http://localhost:8080

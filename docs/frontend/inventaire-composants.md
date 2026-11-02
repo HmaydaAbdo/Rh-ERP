@@ -72,4 +72,4 @@ l'assistant sont retirés ; seuls les exports produits par le backend subsistent
 La page `/catalogue` (développement) montre chaque composant de `shared/ui/` puis le vocabulaire des feuilles `src/styles/` (assistant en
 étapes, tableau de bord, cartes, fiche, réglages, droits, barre de filtres), dans les deux thèmes. Elle est contrôlée par axe (aucune
 violation, clair et sombre). Les captures de référence — clair et sombre, ordinateur et téléphone — sont dans `docs/frontend/references/` ;
-`npm run e2e:references` (depuis `frontend/`, avec `E6E_PORT` pointant vers un serveur de développement) les régénère.
+`npm run e2e:references` (depuis `frontend/`, avec `E2E_PORT` pointant vers un serveur de développement) les régénère.
