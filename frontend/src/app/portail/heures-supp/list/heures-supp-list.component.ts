@@ -28,8 +28,8 @@ export class HeuresSuppListComponent {
   protected readonly columns = new ColumnState([
     { field: 'periode', header: 'Mois' }, { field: 'chantier', header: 'Chantier' }, { field: 'employe', header: 'Employé' },
     { field: 'cin', header: 'CIN' }, { field: 'fonction', header: 'Fonction' }, { field: 'salaireReferenceDh', header: 'Salaire référence' },
-    { field: 'typeSalaireReference', header: 'Type salaire' }, { field: 'salaireHoraireDh', header: 'S/H' },
-    { field: 'heuresSupplementaires', header: 'P/H' }, { field: 'montantDh', header: 'Montant' }, { field: 'stcOuSortie', header: 'Statut paie' },
+    { field: 'salaireHoraireDh', header: 'S/H' },
+    { field: 'heuresSupplementaires', header: 'P/H' }, { field: 'montantDh', header: 'Montant' },
     { field: 'stcDh', header: 'STC' }, { field: 'forfaitDh', header: 'Forfait' }, { field: 'netAPayerDh', header: 'Net à payer' }, { field: 'actions', header: 'Actions' }
   ]);
   protected readonly lignes = signal<HeuresSupp[]>([]);
@@ -75,10 +75,9 @@ export class HeuresSuppListComponent {
     const valeurs: Record<string, unknown> = {
       periode: ligne.periode, chantier: `${ligne.codeChantier} ${ligne.chantier}`, employe: ligne.nomPrenom, cin: ligne.cin,
       fonction: ligne.fonction, salaireReferenceDh: ligne.salaireReferenceDh === null ? '—' : `${ligne.salaireReferenceDh} DH`,
-      typeSalaireReference: ligne.typeSalaireReference === 'JOURNALIER' ? 'Journalier' : ligne.typeSalaireReference === 'MENSUEL' ? 'Mensuel' : '—',
       salaireHoraireDh: ligne.salaireHoraireDh === null ? '—' : `${ligne.salaireHoraireDh} DH/h`,
       heuresSupplementaires: ligne.heuresSupplementaires === null ? '—' : `${ligne.heuresSupplementaires} h`,
-      montantDh: `${ligne.montantDh} DH`, stcOuSortie: ligne.stcOuSortie ? 'STC / sortie' : '—', stcDh: `${ligne.stcDh} DH`,
+      montantDh: `${ligne.montantDh} DH`, stcDh: `${ligne.stcDh} DH`,
       forfaitDh: ligne.forfaitDh === null ? '—' : `${ligne.forfaitDh} DH`, netAPayerDh: `${ligne.netAPayerDh} DH`
     };
     return String(valeurs[champ] ?? '—');

@@ -54,6 +54,16 @@ describe('HeuresSuppListComponent', () => {
     expect(fixture.nativeElement.querySelector('.heures-supp-ajout')).toBeNull();
   });
 
+  it('n’affiche ni statut paie ni type de salaire', () => {
+    component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });
+    fixture.detectChanges();
+    const texte = fixture.nativeElement.textContent as string;
+    expect(texte).not.toContain('Statut paie');
+    expect(texte).not.toContain('Type salaire');
+    expect(texte).toContain('Chantier');
+    expect(texte).toContain('Forfait');
+  });
+
   it('reçoit une erreur de recherche sans masquer l’écran', () => {
     service['search'].mockReturnValue(throwError(() => new Error('network')));
     component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });
