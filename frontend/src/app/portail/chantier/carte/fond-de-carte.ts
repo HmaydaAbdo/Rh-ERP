@@ -135,10 +135,10 @@ export function preparerMapLibre(config: CarteConfig, base: string): void {
   mapLibrePrete = true;
 }
 
-/** Style complet : le plan suit le thème de l'application (`variante`), le satellite reste celui de l'imagerie ; `base` est `document.baseURI`. */
+/** Style complet : la carte reste sombre quel que soit le thème de l'application ; `base` est `document.baseURI`. */
 /** Lit la palette du Plan depuis les mêmes tokens CSS que le reste de l'interface. */
-export function lirePalettePlan(element: HTMLElement, variante: 'light' | 'dark' = 'dark'): Flavor {
-  const base = namedFlavor(variante);
+export function lirePalettePlan(element: HTMLElement): Flavor {
+  const base = namedFlavor('dark');
   const style = getComputedStyle(element);
   const couleur = (jeton: string, secours: string): string => style.getPropertyValue(jeton).trim() || secours;
   const landcover = base.landcover ?? {
@@ -187,8 +187,7 @@ export function creerStyle(
   config: CarteConfig,
   base: string,
   affichage: Affichage = AFFICHAGE_PAR_DEFAUT,
-  palettePlan: Flavor = namedFlavor('dark'),
-  variante: 'light' | 'dark' = 'dark'
+  palettePlan: Flavor = namedFlavor('dark')
 ): StyleSpecification {
   const sources: Record<string, SourceSpecification> = {
     [SOURCE_DU_FOND]: {
@@ -222,20 +221,20 @@ export function creerStyle(
   return {
     version: 8,
     glyphs: urlAbsolue(config.fond.glyphes, base),
-    // Le plan suit le thème ; sur l'imagerie satellite, les libellés et icônes restent ceux du jeu sombre, contrastés.
-    sprite: `${urlAbsolue(config.fond.icones, base)}/${affichage.fond === 'satellite' ? 'dark' : variante}`,
+    // Les libellés et icônes restent contrastés sur le fond sombre comme sur l'imagerie satellite.
+    sprite: `${urlAbsolue(config.fond.icones, base)}/dark`,
     sources,
-    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, variante, affichage, palettePlan),
+    layers: affichage.fond === 'satellite' ? couchesSatellite(config, affichage) : couchesPlan(config, 'dark', affichage, palettePlan),
     // Globe vu de loin, à plat en approchant (MapLibre passe de l'un à l'autre au fil du zoom).
     projection: { type: 'globe' },
-    sky: ciel(variante),
+    sky: ciel('dark'),
     ...(affichage.relief ? { terrain: { source: SOURCE_DU_RELIEF, exaggeration: config.relief.exageration } } : {})
   };
 }
 
 /** Plan vectoriel Protomaps : ombrage du relief sous l'eau et les routes, bâtiments en volume. */
 function couchesPlan(config: CarteConfig, variante: 'light' | 'dark', affichage: Affichage, palette: Flavor): LayerSpecification[] {
-  const flavor = palette;
+  const flavor = variante === 'dark' ? palette : namedFlavor(variante);
   const couches = layers(SOURCE_DU_FOND, flavor, { lang: config.langue }).map((couche) => {
     if (couche.id === 'buildings') { return batiments3d(flavor); }
     return ajusterCoucheBtp(couche);

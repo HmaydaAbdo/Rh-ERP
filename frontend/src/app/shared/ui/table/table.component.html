@@ -18,6 +18,8 @@
     [noRowsOverlayComponentParams]="noRowsParams()"
     [getRowClass]="getRowClass"
     (gridReady)="onGridReady($event)"
+    (rowDataUpdated)="ajusterColonnes()"
+    (firstDataRendered)="ajusterColonnes()"
     (sortChanged)="onSortChanged($event)"
     (columnMoved)="onColumnMoved($event)"
     (rowClicked)="onRowClicked($event)"

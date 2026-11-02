@@ -12,5 +12,5 @@ public record HeuresSuppCreationDto(
         @NotNull YearMonth periode,
         @NotNull Long chantierId,
         @DecimalMin("0.0") @Digits(integer = 7, fraction = 1) BigDecimal heuresSupplementaires,
-        @DecimalMin("0.00") @Digits(integer = 14, fraction = 2) BigDecimal forfaitDh
+        @DecimalMin("0") @Digits(integer = 14, fraction = 0) BigDecimal forfaitDh
 ) { }

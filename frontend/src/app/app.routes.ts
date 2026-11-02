@@ -36,13 +36,8 @@ export const routes: Routes = [
     title: 'Nouveau mot de passe',
     loadComponent: () => import('./core/auth/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent)
   },
-  {
-    path: 'accueil',
-    title: 'Accueil',
-    canActivate: [permissionGuard],
-    data: { permission: 'ACCUEIL_READ' },
-    loadComponent: () => import('./portail/accueil/accueil.component').then((m) => m.AccueilComponent)
-  },
+  // L'Accueil n'est pas disponible avant la définition des fiches de poste : l'ancienne adresse renvoie à l'arrivée (`homeGuard`).
+  { path: 'accueil', redirectTo: '', pathMatch: 'full' },
   {
     path: 'employees',
     title: 'Employés',

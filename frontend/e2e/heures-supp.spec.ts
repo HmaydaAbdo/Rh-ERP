@@ -22,7 +22,7 @@ test('la liste filtrée affiche les champs métier et le total', async ({ page }
   await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
   await expect(page.getByText(/15 DH\/h/)).toBeVisible();
-  await expect(page.getByText(/130[.,]00 DH/).first()).toBeVisible();
+  await expect(page.getByText(/130 DH/).first()).toBeVisible();
   await expect(page.locator('.app-table-bar__summary')).toContainText('Net à payer');
   const presentation = await page.evaluate(() => {
     const filtres = document.querySelector('form.app-toolbar[aria-label="Filtres des heures supplémentaires"]');
@@ -49,7 +49,7 @@ test('la liste filtrée affiche les champs métier et le total', async ({ page }
 test('l’écran de modification présente les données historiques et enregistre sur son parcours dédié', async ({ page }) => {
   const api = await mockApi(page, { username: 'rh', permissions }, {
     'GET /heures-supp/1': () => ligne,
-    'PUT /heures-supp/1': () => ({ ...ligne, heuresSupplementaires: 3, montantDh: 46.14, netAPayerDh: 146.14 })
+    'PUT /heures-supp/1': () => ({ ...ligne, heuresSupplementaires: 3, montantDh: 46, netAPayerDh: 146 })
   });
 
   await page.goto('/heures-supp/1/edit');
@@ -88,9 +88,12 @@ test('les vues Cartes et Analytique affichent les heures supplémentaires et sui
   await page.goto('/heures-supp/cartes?periode=2026-10&cin=AB123');
   await expect(page.getByText('Aucune donnée n’est disponible pour votre compte.')).toHaveCount(0);
   await expect(page.getByText('C4', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Exporter' })).toBeVisible();
 
   await page.goto('/heures-supp/analytique?periode=2026-10&cin=AB123');
   await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
-  await expect(page.getByText(/130[.,]00 DH/).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Exporter' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Importer/ }).first()).toBeVisible();
+  await expect(page.getByText(/130 DH/).first()).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10', cin: 'AB123' });
 });

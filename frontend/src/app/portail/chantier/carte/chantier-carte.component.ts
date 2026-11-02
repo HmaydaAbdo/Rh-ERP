@@ -1,4 +1,3 @@
-import { ThemeService } from '../../../core/theme/theme.service';
 import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -63,8 +62,8 @@ const MESSAGES_SOURCE: Readonly<Record<string, string>> = {
 
 /**
  * Carte du monde, initialisée sur le Maroc puis cadrée sur les points qualifiés reçus en entrée. Composant « bête » : il ne connaît ni la page,
- * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, suit le thème applicatif (clair ou sombre),
- * la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
+ * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, conserve son style sombre malgré
+ * le thème applicatif, la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
  * détruit la carte à sa destruction.
  *
  * Styles sans encapsulation : MapLibre crée ses propres éléments (contrôles, mention légale, fiches) hors du gabarit Angular.
@@ -82,15 +81,13 @@ export class ChantierCarteComponent {
   private marqueurs: Marker[] = [];
   private readonly config = inject(CARTE_CONFIG);
   private readonly document = inject(DOCUMENT);
-  private readonly themeService = inject(ThemeService);
   private readonly conteneur = viewChild.required<ElementRef<HTMLElement>>('conteneur');
   private readonly commandes = viewChild.required<ElementRef<HTMLElement>>('commandes');
 
   private carte?: CarteMapLibre;
   private observateur?: ResizeObserver;
-  /** Affichage du style en place ; le plan cartographique suit le thème applicatif (clair par défaut). */
+  /** Affichage du style en place ; le thème cartographique reste sombre et indépendant du thème applicatif. */
   private styleAffiche?: Affichage;
-  private styleTheme?: 'light' | 'dark';
 
   protected readonly idAide = `chantier-carte-aide-${compteur++}`;
 
@@ -113,11 +110,9 @@ export class ChantierCarteComponent {
 
     effect(() => {
       const affichage = this.affichage();
-      const theme = this.themeService.theme();
-      if (this.carte && (affichage !== this.styleAffiche || theme !== this.styleTheme)) {
+      if (this.carte && affichage !== this.styleAffiche) {
         this.styleAffiche = affichage;
-        this.styleTheme = theme;
-        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement, theme), theme));
+        this.carte.setStyle(creerStyle(this.config, this.document.baseURI, affichage, lirePalettePlan(this.document.documentElement)));
       }
     });
 
@@ -180,10 +175,9 @@ export class ChantierCarteComponent {
     preparerMapLibre(this.config, base);
 
     this.styleAffiche = this.affichage();
-    this.styleTheme = this.themeService.theme();
     const carte = new CarteMapLibre({
       container: this.conteneur().nativeElement,
-      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement, this.themeService.theme()), this.themeService.theme()),
+      style: creerStyle(this.config, base, this.styleAffiche, lirePalettePlan(this.document.documentElement)),
       attributionControl: { compact: true, customAttribution: [] },
       maplibreLogo: false,
       // Le fondu des libellés retarde la perception du premier rendu ; les tuiles restent chargées par le worker.

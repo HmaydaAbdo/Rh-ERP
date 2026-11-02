@@ -99,9 +99,9 @@ class HeuresSuppImportServiceTest {
         assertThat(analyse.lignesZero()).isZero();
         assertThat(analyse.lignes()).singleElement().satisfies(ligne -> {
             assertThat(ligne.salaireHoraireDh()).isEqualByComparingTo("15");
-            assertThat(ligne.montantDh()).isEqualByComparingTo("37.50");
+            assertThat(ligne.montantDh()).isEqualByComparingTo("37");
             assertThat(ligne.stcDh()).isEqualByComparingTo("0.00");
-            assertThat(ligne.netAPayerDh()).isEqualByComparingTo("37.50");
+            assertThat(ligne.netAPayerDh()).isEqualByComparingTo("37");
         });
         verify(repository, never()).saveAll(any());
     }

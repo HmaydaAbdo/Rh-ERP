@@ -18,7 +18,8 @@ const PAIE = {
 const FICHES = { effectif: 8, actifs: 7, inactifs: 1, ageMoyen: 36, ancienneteMoyenne: 4.5, embauchesDouzeMois: 1, parAge: [], parAnciennete: [] };
 
 test.describe('Accueil', () => {
-  test('arrive sur l’accueil, montre les indicateurs choisis et permet de les composer', async ({ page }) => {
+  // L'Accueil est indisponible avant la définition des fiches de poste (décision du 2026-11-02) : parcours conservé pour sa reprise.
+  test.skip('arrive sur l’accueil, montre les indicateurs choisis et permet de les composer', async ({ page }) => {
     let choisis = ['paie.masse', 'employe.effectif'];
     const mock = await mockApi(page, { username: 'rh', permissions: ['ACCUEIL_READ', 'ACCUEIL_WRITE', 'PAIE_READ', 'EMPLOYEE_READ'] }, {
       'GET /accueil': () => ({ version: null, personnalise: false, indicateurs: choisis, disponibles: DISPONIBLES }),

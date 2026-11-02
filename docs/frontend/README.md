@@ -336,7 +336,7 @@ Tous les tableaux de données — **sans exception** — offrent :
 | Filtres en temps réel | Délai de saisie de 300 ms ; **aucun bouton « Rechercher »**, seulement « Réinitialiser » |
 
 **Style unique** : le style est dans `ui/table/table.component.scss` (tokens `--table-*` de `styles/_tokens.scss`) ; aucun écran ne définit
-son propre style de tableau. Un en-tête peut déclarer `shortHeader` pour afficher un libellé compact ; son `header` complet reste annoncé aux technologies d'assistance, visible au survol et utilisé dans le sélecteur de colonnes. Les en-têtes ne sont pas tronqués. Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
+son propre style de tableau. Un en-tête peut déclarer `shortHeader` pour afficher l'abréviation que les utilisateurs connaissent (« J.R.O », « J.R.D »…) ; son `header` complet reste annoncé aux technologies d'assistance, visible au survol et utilisé dans le sélecteur de colonnes. Aucun texte ne passe à la ligne : chaque colonne est ajustée à son contenu (`autoSizeColumns`). Une cellule à texte long porte `cellClass: 'text-truncate'`. L'état vide est nommé par la propriété
 `emptyMessage` et présenté dans le tableau. **Aucun tableau HTML natif** n'existe hors du kit : même les petites listes (lignes d'import ignorées, données d'accompagnement
 des graphiques) passent par `stp-table` avec `[paginated]="false"`, `[reorderable]="false"` et `[rowActionsVisible]="false"`.
 
