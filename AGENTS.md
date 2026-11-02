@@ -61,7 +61,11 @@ Deux règles imposées par le propriétaire, sans exception :
   indisponible, le dire au propriétaire et reporter dans Jira dès son retour ; ne pas ouvrir de fichier de suivi.
 - **Une tâche Jira, une branche, une PR.** Chaque PR traite une seule tâche `KAN-n` : branche `KAN-n-slug`, clé `KAN-n` au
   début du titre de la PR et de chaque message de commit. L'application gratuite « GitHub for Jira » relie alors branches,
-  commits et PR à la tâche ; on avance une tâche à la fois, preuve en commentaire Jira, puis fusion, puis la suivante.
+  commits et PR à la tâche.
+- **Une tâche va jusqu'à « Terminé(e) » avant la suivante.** Le parcours complet est : branche, PR, les 4 contrôles requis
+  verts sur le dernier commit, fusion, branche supprimée, `main` à jour, ticket en « Terminé(e) » avec la preuve en
+  commentaire. Tant qu'il n'est pas achevé, on n'ouvre ni autre branche ni autre PR ; pendant l'attente de la CI, seules
+  la lecture et les mesures sans branche sont permises. Un ticket clos reste rouvrable si sa preuve est incomplète.
 - **Travail IA, épopée par épopée.** On avance dans l'ordre des épopées, on relit en entier la documentation officielle
   concernée à l'entrée de chaque épopée (§ 3 de `docs/ia/decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
   en dehors du périmètre de la tâche en cours sans l'accord du propriétaire. Les versions IA suivent la dernière stable
