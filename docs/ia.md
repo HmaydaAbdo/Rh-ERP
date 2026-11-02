@@ -213,11 +213,9 @@ pris en charge ; chaque surface a un repli texte.
 
 ## 7. Plan et suivi
 
-**Le plan de référence du travail IA restant est le [plan de travail IA](ia/plan-de-travail.md)** : épopées ordonnées,
-état de chaque épopée, questions ouvertes et traçabilité des anciens plans. L'inventaire des capacités officielles
-CopilotKit, LangChain, LangGraph et Deep Agents et l'analyse des écarts du backend y sont intégrés (les deux fichiers de
-Codex qui les portaient ont été supprimés le 2026-10-31 ; ils se relisent avec `git show 0b2fd0da:docs/ia/<fichier>`).
-Les tableaux de tâches ci-dessous gardent leur historique ; en cas de divergence, le plan de travail fait foi.
+**Le travail IA restant est suivi dans Jira (projet `KAN`, épopées E0 à E14)** ; les principes, les fonctions exclues,
+les décisions du propriétaire et les sources officielles sont dans [decisions.md](ia/decisions.md). Les tableaux de tâches
+ci-dessous gardent leur historique ; en cas de divergence, Jira et le code font foi.
 
 États : ⬜ à faire · 🟦 en cours · ✅ fait · ⛔ bloqué.
 
@@ -581,10 +579,10 @@ importé. Exclus : toute écriture (jusqu'à J6), la liste des comptes utilisate
 
 ## 9. Reprise
 
-1. Lire `AGENTS.md`, le [handoff général](handoff/etat-du-projet.md), ce document et les conventions
-   IA ; vérifier branche, `git status` et derniers commits.
-2. Reprendre la première tâche ⬜ du § 7 ; la passer en 🟦, puis en ✅ avec une ligne de journal
-   quand son critère de sortie est prouvé.
+1. Lire `AGENTS.md`, ce document, [decisions.md](ia/decisions.md) et les conventions IA ; consulter Jira (projet
+   `KAN`) ; vérifier branche, `git status` et derniers commits.
+2. Reprendre la tâche Jira la plus prioritaire de l'épopée en cours ; la passer en « En cours », puis en « Terminé(e) »
+   avec la preuve en commentaire quand son critère de sortie est prouvé.
 3. Ne jamais toucher au port 4200 ni à la pile Docker `erp-rh-*` du propriétaire.
 4. Toute nouvelle décision s'inscrit au § 2. Aucun autre document IA n'est créé : celui-ci les
    remplace.
