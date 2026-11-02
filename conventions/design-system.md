@@ -150,7 +150,7 @@ des estimations avec leur contexte, jamais comme des certitudes.
 
 # Thèmes clair et sombre
 
-Les applications proposent au minimum un thème clair et un thème sombre. Elles suivent la préférence système jusqu'au
+Les applications proposent au minimum un thème clair et un thème sombre. Le thème clair est le thème par défaut (décision du propriétaire, 2026-11-02) jusqu'au
 choix explicite de l'utilisateur ; ce choix est appliqué avant le premier affichage et conservé localement. Le contraste
 élevé complète ces thèmes en respectant les préférences système et les couleurs `forced-colors` : il ne demande pas une
 troisième palette de marque qui dupliquerait les thèmes.
