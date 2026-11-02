@@ -21,7 +21,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Un heredoc Bash a altéré des antislashs et des guillemets dans un fichier. | Écrire les fichiers avec les outils `Write` et `Edit`, jamais avec un heredoc ou `echo`. |
 | Les fins de ligne CRLF ont fait échouer silencieusement un remplacement sur plusieurs lignes. | Vérifier le résultat d'un remplacement multi-lignes ; normaliser les fins de ligne avant de remplacer par script. |
 | Un fichier a été écrasé par erreur. | Le restaurer avec `git checkout -- <fichier>` puis le réécrire ; lire un fichier avant de l'écraser. |
-| `transitionJiraIssue` a échoué avec `transition` au lieu de `transitionId`, puis avec un identifiant valable pour les tâches mais pas pour les épopées. | Lister les transitions autorisées dans l'erreur (`allowedValues`) : les identifiants diffèrent entre tâches (Terminé(e) = 10005) et épopées (Terminé = 41). |
+| `transitionJiraIssue` a échoué avec `transition` au lieu de `transitionId`, puis avec un identifiant qui n'était pas valable pour le ticket (10005 refusé sur une tâche en « Revue en cours » ; 41 accepté). | Passer `transitionId` ; ne jamais fixer un numéro de mémoire : les transitions valides dépendent du statut courant du ticket. Lire `allowedValues` dans l'erreur et en reprendre l'identifiant. |
 | Une recherche récursive sur tout le dépôt a dépassé le délai. | Utiliser l'outil `Grep`/`Glob` avec un dossier ou un motif ciblés, ou lancer la commande longue en arrière-plan. |
 
 ## Tests et qualité
