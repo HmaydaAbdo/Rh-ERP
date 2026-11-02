@@ -81,8 +81,8 @@ public class HeureSupp {
     @Column(name = "type_salaire_reference", length = 20)
     private TypeSalaire typeSalaireReference;
 
-    /** Salaire par heure, gardé à haute précision avant arrondi du Montant. */
-    @Column(name = "s_h", precision = 30, scale = 20)
+    /** Salaire par heure, entier de dirhams (arrondi HALF_DOWN), valeur stockée dont découle le Montant. */
+    @Column(name = "s_h", precision = 10, scale = 0)
     private BigDecimal salaireHoraire;
 
     /** Nombre d'heures du mois ; null pour un employé qui reçoit uniquement un forfait. */

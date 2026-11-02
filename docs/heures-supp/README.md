@@ -17,6 +17,7 @@ La table `heures_supp` contient une ligne par employé, mois et chantier. La con
 `(employee_id, periode, chantier_id)` empêche les doublons ; `version` protège les modifications concurrentes.
 Chaque ligne référence l'employé, le bulletin du mois, la fonction constatée et le chantier. Elle conserve le
 salaire et le type de salaire utilisés, S/H, P/H, Montant, l'indicateur STC/sortie, STC (DH), Forfait et Net à payer.
+Le statut paie (STC/sortie) et le type de salaire restent stockés pour le calcul mais ne sont affichés dans aucun écran du module (tableau, fiche d'une ligne) ; le chantier, son filtre et son choix à l'import restent affichés.
 Pour un forfait seul, P/H, salaire de référence, type et S/H sont absents et Montant/STC valent zéro. Les lignes
 sont auditées dans `heures_supp_aud`.
 
@@ -36,6 +37,7 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 | `DELETE /heures-supp/{id}` | Supprime une ligne avec audit. |
 | `POST /heures-supp/suppression-mois` | Supprime toutes les lignes d'un mois, tous chantiers confondus, si le nombre correspond à celui confirmé. |
 | `GET /heures-supp/periodes` | Mois ayant au moins un import. |
+| `POST /heures-supp/export/pdf` | Rapport PDF A4 paysage (bandeau et police du rapport de paie, totaux en dernière ligne) de TOUTES les lignes du périmètre filtré, recherché et trié de la vue Tabulaire ; tri limité aux colonnes de l'écran, 5 000 lignes au plus, action d'audit `HEURES_SUP_EXPORT_PDF` (catégorie `ACCES`). |
 | `GET /heures-supp/import/prerequis?periode=aaaa-MM&chantierId=…` | Confirme que le mois de paie et le chantier permettent d'ouvrir l'étape du fichier. |
 | `GET /heures-supp/import/modele` | Télécharge le modèle Excel `.xlsx`. |
 | `POST /heures-supp/import/analyse` | Lit le fichier et les forfaits sans écrire ; retourne lignes, erreurs, calculs et indicateur `pret`. |
@@ -51,7 +53,7 @@ les lignes importées, les zéros conservés, les forfaits seuls, remplacements,
 permissions endpoint par endpoint sont décrites dans [RBAC](../rbac/heures-supp.md).
 
 Les routes `/heures-supp`, `/heures-supp/cartes` et `/heures-supp/analytique` gardent les filtres dans l'URL.
-Tabulaire est la vue détaillée. Cartes et Analytique utilisent les composants partagés, avec le mois et le
+Tabulaire est la vue détaillée, la vue par défaut, triable sur chaque colonne ; son bouton « Exporter en PDF » (Tabulaire seulement) suit les filtres, la recherche et le tri affichés. Les actions de ligne sont des icônes. Cartes et Analytique utilisent les composants partagés, avec le mois et le
 périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employés à zéro heure n'est injecté dans Cartes.
 
 ## Données d'entrée et provenance
@@ -65,8 +67,9 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction. |
 | P/H | Nombre d'heures supplémentaires fourni, en heures décimales, avec au plus une décimale ; les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
-| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10. La valeur calculée est conservée avec l'import. |
+| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi à l'entier** (pas de virgule : fraction > 0,5 on monte, < 0,5 on descend, exactement 0,5 on descend, soit `HALF_DOWN`). La valeur arrondie est celle qui est conservée avec l'import. |
 | Marqueur STC/sortie | Observation du bulletin de Paie de l'employé pour le même mois. Le domaine réutilise la règle Paie `ObservationStc.estStcOuSortie`. |
+| Employé STC/sorti | Si le bulletin du **mois de la ligne** est marqué STC/sortie, l'employé ne peut pas avoir d'heures supplémentaires pour ce mois : la ligne est **refusée** (import Excel, ajout manuel et modification) avec un message du type « employé STC/sorti sur la paie d'octobre 2026 » (nom/CIN et mois). À l'import, l'erreur figure dans la liste des erreurs de l'analyse et bloque l'import comme les autres. Une ligne à **0 heure** reste acceptée ; le forfait seul reste refusé (règle ci-dessous). Le bulletin du mois doit exister, sinon la ligne est refusée. Aucune donnée existante n'est migrée. |
 | Forfait | Montant en DH saisi séparément des heures supplémentaires. Il peut concerner un employé absent du fichier d'heures, mais pas un employé marqué STC/sortie ce mois-là. |
 
 ## Grandeurs métier
@@ -75,10 +78,10 @@ Les montants sont produits par Spring ; l'assistant IA ne les recalcule pas.
 
 | Grandeur | Définition |
 |---|---|
-| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import. Sa précision est conservée pour le calcul. |
+| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import, **entier de dirhams** (arrondi `HALF_DOWN` : 15,49 → 15 ; 15,50 → 15 ; 15,51 → 16). La valeur arrondie est stockée (colonne `s_h` `NUMERIC(10,0)`, migration V43) et le Montant, STC et Net à payer en découlent. |
 | **P/H** | Heures supplémentaires du mois, fournies en heures décimales entre 0 inclus et une décimale au plus. |
 | **Montant** | `S/H × P/H`, arrondi à deux décimales en DH. |
-| **STC (DH)** | `Montant` si le bulletin du même mois est marqué exactement « STC » ou « sortie » (casse et espaces extérieurs ignorés) ; sinon `0 DH`. |
+| **STC (DH)** | `Montant` (donc `0` en pratique : les heures positives d'un employé STC/sorti sont refusées) si le bulletin du même mois est marqué exactement « STC » ou « sortie » (casse et espaces extérieurs ignorés) ; sinon `0 DH`. |
 | **Forfait** | Montant en DH indépendant du **Montant** des heures supplémentaires. Interdit si le bulletin de Paie du même mois est marqué STC/sortie. |
 | **Net à payer** | `Montant − STC (DH) + Forfait`. |
 
@@ -92,7 +95,7 @@ Depuis l'écran dédié, les utilisateurs autorisés peuvent ajouter une ligne m
 1. **Mois et chantier** : si aucune paie n'existe pour le mois, bloquer dès cette étape et demander d'importer la paie.
 2. **Pointage** : déposer le classeur `.xlsx` avec trois colonnes obligatoires (`Nom et prénom`, `CIN`, `HS`). Le modèle Excel se télécharge depuis le menu d'import de la collection, en dehors du wizard.
 3. **Forfaits** : rechercher et choisir un employé, saisir son montant dans une fenêtre, puis vérifier la liste des forfaits. L'employé peut être absent du fichier de pointage.
-4. **Contrôle et import** : analyser sans écrire, conserver les lignes HS à zéro, signaler une cellule HS vide et rapprocher les employés par CIN. Après les corrections demandées (alignement explicite ou création de fiche), présenter heures, Montant, STC, Forfaits et Net à payer avant de confirmer l'import atomique. Le forfait d'un employé marqué STC/sortie est refusé.
+4. **Contrôle et import** : analyser sans écrire, conserver les lignes HS à zéro, signaler une cellule HS vide et rapprocher les employés par CIN. Après les corrections demandées (alignement explicite ou création de fiche), présenter heures, Montant, STC, Forfaits et Net à payer avant de confirmer l'import atomique. Le forfait d'un employé marqué STC/sortie est refusé, de même que ses heures supplémentaires positives (0 heure accepté).
 
 ## Interface et composants partagés
 
@@ -119,9 +122,10 @@ une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia
 
 ## Scénarios couverts par les tests
 
-- `CalculHeuresSuppTest` : S/H journalier et mensuel sans perte de précision, Montant arrondi à deux décimales, STC et Net.
+- `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à deux décimales, STC et Net.
 - `LecteurFichierHeuresSuppTest` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
-- `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, STC/forfait et doublon de forfait.
+- `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, arrondi du S/H aux frontières, employé STC/sorti (heures refusées et import bloqué, 0 heure accepté), forfait STC et doublon de forfait.
+- `HeuresSuppServiceTest` : ajout et modification unitaires (bulletin absent, doublon, S/H arrondi, heures refusées pour un bulletin STC/sorti avec nom/CIN/mois, 0 heure accepté, forfait STC).
 - `HeuresSuppAnalytiqueServiceTest` : agrégats, groupes et périodes.
 - `EndpointSecurityTest`, `OpenApiContractTest` et `McpOutilsLectureIntegrationTest` : permissions, contrats HTTP/OpenAPI et outils MCP.
 - Tests Angular du module, du service, du wizard, de la liste et de la coque des vues : filtres, erreurs, contrôles de l'assistant et paramètres URL.

@@ -34,7 +34,7 @@ export class DockEtatService {
   readonly utilisateur = signal<string | null>(null);
   readonly assistantDisponible = signal(false);
   readonly assistantOuvert = signal(false);
-  readonly theme = signal<'light' | 'dark'>('dark');
+  readonly theme = signal<'light' | 'dark'>('light');
   /** Faux : l'Accueil est affiché mais indisponible (en attente de la définition des fiches de poste, plan E9.8). */
   readonly accueilActif = signal(false);
 

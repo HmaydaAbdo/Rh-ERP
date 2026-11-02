@@ -9,13 +9,13 @@
   <meta name="theme-color" content="#1f1e1d" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/svg+xml" href="assets/brand/monogramme.svg">
   <script>
-    // Pose le thème avant le premier affichage (pas de flash clair puis sombre) : le choix mémorisé, sinon le sombre.
+    // Pose le thème avant le premier affichage (pas de flash clair puis sombre) : le choix mémorisé, sinon le clair.
     // Même règle que core/theme/theme.service.ts.
     (function () {
       var theme = null;
       try { theme = localStorage.getItem('staport-theme'); } catch (e) {}
       if (theme !== 'light' && theme !== 'dark') {
-        theme = 'dark';
+        theme = 'light';
       }
       document.documentElement.setAttribute('data-theme', theme);
     })();

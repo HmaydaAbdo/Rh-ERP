@@ -10,8 +10,8 @@ export class HeuresSuppService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'heures-supp';
 
-  search(criteria: HeuresSuppSearchCriteria, page = 0, size = 20): Observable<Page<HeuresSupp>> {
-    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'periode,desc');
+  search(criteria: HeuresSuppSearchCriteria, page = 0, size = 20, sort = 'periode,desc'): Observable<Page<HeuresSupp>> {
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', sort);
     return this.http.post<Page<HeuresSupp>>(`${this.baseUrl}/search`, criteria, { params });
   }
 
@@ -39,6 +39,11 @@ export class HeuresSuppService {
 
   verifierPrerequis(periode: string, chantierId: number): Observable<HeuresSuppImportPrerequis> {
     return this.http.get<HeuresSuppImportPrerequis>(`${this.baseUrl}/import/prerequis`, { params: { periode, chantierId } });
+  }
+
+  /** Rapport PDF de toutes les lignes du périmètre filtré, recherché et trié de la vue Tabulaire. */
+  exporterPdf(criteria: HeuresSuppSearchCriteria, sort: string): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/export/pdf`, { ...criteria, tri: sort }, { responseType: 'blob' });
   }
 
   telechargerModele(): Observable<Blob> {
