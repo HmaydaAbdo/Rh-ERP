@@ -245,6 +245,26 @@ licence et du bénéfice mesuré. Toute grille respecte les exigences suivantes 
 * **Filtres en temps réel** (délai de saisie de 300 ms) : aucun bouton « Rechercher », seul un bouton
   « Réinitialiser » reste dans la barre de filtres.
 
+## Tri, recherche et export : exigence de tout tableau et de tout domaine
+
+Dans **tout tableau et tout domaine**, présent ou futur, trois fonctions sont obligatoires et bout en bout (écran **et**
+serveur) :
+
+* **Tri** : chaque colonne de données déclare son `sortField` (chemin de propriété côté serveur) ; le composant émet le champ
+  et le sens, l'écran les **transmet** à l'API, et l'API les applique après **liste blanche** des propriétés triables (un tri
+  inconnu est refusé avec un message clair). Un tri qui change seulement l'affichage de la page courante est un défaut.
+* **Recherche et filtres** : chaque filtre visible (texte, mois, listes) est transmis à l'API et s'applique à **toutes les
+  vues** du domaine (tabulaire, cartes, analytique, export), pas seulement à la première.
+* **Export PDF** : l'export d'un tableau couvre **toutes les lignes du périmètre** (jamais la seule page affichée) et reprend
+  exactement les **filtres, la recherche et le tri** de l'écran ; il porte l'en-tête du rapport de l'organisation, rappelle le
+  périmètre en tête, borne le nombre de lignes avec un message clair et laisse une entrée d'audit `ACCES`. Les colonnes
+  retirées de l'interface ne figurent pas dans l'export.
+
+Chaque nouveau tableau est livré avec ses tests de non-régression : un test par sens de tri transmis au serveur, un test de
+recherche par vue, un test d'export qui reçoit les filtres et le tri. **Pendant une migration** (FastAPI, Next.js), ces
+fonctions sont inventoriées par écran avant la bascule et vérifiées à l'identique après : une migration ne livre pas un
+tableau qui perd son tri, sa recherche ou son export.
+
 ## Style unique
 
 Tous les tableaux interactifs ont **le même style**, défini une seule fois dans le design system Staport
