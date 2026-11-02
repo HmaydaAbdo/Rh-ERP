@@ -51,8 +51,8 @@ Deux règles imposées par le propriétaire, sans exception :
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
   lu est écrit « non vérifié » ; la mémoire du modèle n'est pas une source.
 - **Jira et le code, seules sources de suivi.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
-  `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E14 y sont des
-  epics et chaque tâche porte son préfixe (`E9.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit
+  `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E19 y sont des
+  epics et chaque tâche porte son préfixe (`E12.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit
   l'avancement** (plan, handoff, TODO d'état) : on n'en crée pas. Toute nouvelle tâche ou tout constat durable est créé
   dans Jira ; le statut passe À faire → En cours → Revue en cours → Terminé(e) avec la preuve en commentaire (test, trace,
   capture, lien de PR), jamais sans. L'état technique se lit dans le code, les tests et la CI. Les principes, décisions du

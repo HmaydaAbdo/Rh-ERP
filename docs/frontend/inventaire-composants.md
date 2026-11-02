@@ -32,7 +32,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 | Assistants d'import et d'export | `paie/export` (7 composants), `paie/import` (2), `heures-supp/import` | 980 | `stepper`, `file-drop`, `summary-list` |
 | Carte des chantiers | `chantier/carte` (2) | 356 | `map` |
 | Filtres, détails, journaux | `paie/filtres`, `employee/details`, `admin/*`, `audit/*` | ~700 | `filter-bar`, `detail-list`, `timeline` |
-| Assistant IA | `core/assistant/*` (8) | ~350 | `chat-*` (reprise avec E9) |
+| Assistant IA | `core/assistant/*` (8) | ~350 | `chat-*` (reprise avec E12) |
 
 ## Ordre de résorption proposé
 
@@ -40,7 +40,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 2. Authentification (`stp-auth-card` : fait ; reste `access-denied`).
 3. Coquille d'application (`stp-app-shell` : fait).
 4. Tableaux de bord, assistants d'import et d'export, filtres et détails.
-5. Carte et assistant IA (avec E0.7 et E9).
+5. Carte et assistant IA (avec E0.7 et E12).
 
 Chaque lot : composants ajoutés à `shared/ui/` et montrés dans le catalogue (`/catalogue`, E0.3), vérification des deux thèmes sur
 ordinateur et téléphone, tests, liste de référence mise à jour dans le même commit.
@@ -72,4 +72,4 @@ l'assistant sont retirés ; seuls les exports produits par le backend subsistent
 La page `/catalogue` (développement) montre chaque composant de `shared/ui/` puis le vocabulaire des feuilles `src/styles/` (assistant en
 étapes, tableau de bord, cartes, fiche, réglages, droits, barre de filtres), dans les deux thèmes. Elle est contrôlée par axe (aucune
 violation, clair et sombre). Les captures de référence — clair et sombre, ordinateur et téléphone — sont dans `docs/frontend/references/` ;
-`npm run e2e:references` (depuis `frontend/`, avec `E2E_PORT` pointant vers un serveur de développement) les régénère.
+`npm run e2e:references` (depuis `frontend/`, avec `E6E_PORT` pointant vers un serveur de développement) les régénère.
