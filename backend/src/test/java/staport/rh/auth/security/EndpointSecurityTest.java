@@ -93,6 +93,7 @@ class EndpointSecurityTest {
             Map.entry("HeuresSuppController.rechercherParId", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.periodes", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.analyser", "HEURES_SUP_READ&PAIE_READ"),
+            Map.entry("HeuresSuppExportController.telecharger", "HEURES_SUP_READ&PAIE_READ"),
             Map.entry("HeuresSuppController.modifier", "HEURES_SUP_IMPORT&PAIE_READ"),
             Map.entry("HeuresSuppController.creer", "HEURES_SUP_IMPORT&PAIE_READ&EMPLOYEE_READ&CHANTIER_READ"),
             Map.entry("HeuresSuppController.supprimer", "HEURES_SUP_DELETE&PAIE_READ"),

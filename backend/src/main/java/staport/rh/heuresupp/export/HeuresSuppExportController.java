@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/heures-supp/export")
-@Tag(name = "Heures supplémentaires", description = "Heures supplémentaires et forfaits mensuels")
+@Tag(name = "Heures supplémentaires", description = "Heures supplémentaires mensuelles et forfaits par chantier")
 public class HeuresSuppExportController {
 
     private final HeuresSuppExportPdfService service;
