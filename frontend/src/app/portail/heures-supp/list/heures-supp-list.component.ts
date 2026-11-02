@@ -26,11 +26,14 @@ const TABLE: CollectionTableConfig = { countLabel: (n) => `${n} ligne${n > 1 ? '
 export class HeuresSuppListComponent {
   protected readonly table = TABLE;
   protected readonly columns = new ColumnState([
-    { field: 'periode', header: 'Mois' }, { field: 'chantier', header: 'Chantier' }, { field: 'employe', header: 'Employé' },
-    { field: 'cin', header: 'CIN' }, { field: 'fonction', header: 'Fonction' }, { field: 'salaireReferenceDh', header: 'Salaire référence' },
-    { field: 'salaireHoraireDh', header: 'S/H' },
-    { field: 'heuresSupplementaires', header: 'P/H' }, { field: 'montantDh', header: 'Montant' },
-    { field: 'stcDh', header: 'STC' }, { field: 'forfaitDh', header: 'Forfait' }, { field: 'netAPayerDh', header: 'Net à payer' }, { field: 'actions', header: 'Actions' }
+    { field: 'periode', header: 'Mois', sortField: 'periode' }, { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
+    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom', minWidth: 200 },
+    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
+    { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference' },
+    { field: 'salaireHoraireDh', header: 'S/H', sortField: 'salaireHoraire' },
+    { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant' },
+    { field: 'stcDh', header: 'STC', sortField: 'stcDh' }, { field: 'forfaitDh', header: 'Forfait', sortField: 'forfait' },
+    { field: 'netAPayerDh', header: 'Net à payer', sortField: 'netAPayer' }, { field: 'actions', header: 'Actions', sortable: false }
   ]);
   protected readonly lignes = signal<HeuresSupp[]>([]);
   protected readonly total = signal(0);
@@ -48,6 +51,7 @@ export class HeuresSuppListComponent {
   private readonly router = inject(Router);
   protected criteres: HeuresSuppSearchCriteria = {};
   private dernierEvenement: TableLazyLoadEvent | null = null;
+  private dernierTri = 'periode,desc';
   private dernierCritereAnalytique = '';
 
 
@@ -115,7 +119,8 @@ export class HeuresSuppListComponent {
   protected charger(event: TableLazyLoadEvent): void {
     this.dernierEvenement = event;
     this.chargement.set(true); this.erreur.set(null);
-    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows).pipe(finalize(() => this.chargement.set(false))).subscribe({
+    if (event.sortField) this.dernierTri = `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`;
+    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.dernierTri).pipe(finalize(() => this.chargement.set(false))).subscribe({
       next: (page) => { this.lignes.set(page.content); this.total.set(page.page.totalElements); },
       error: () => this.erreur.set('Les heures supplémentaires n’ont pas pu être chargées. Réessayez.')
     });

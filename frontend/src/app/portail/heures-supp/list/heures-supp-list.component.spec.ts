@@ -46,7 +46,7 @@ describe('HeuresSuppListComponent', () => {
 
   it('applique tous les filtres d’URL, affiche CIN et S/H, et calcule le total filtré', () => {
     component.charger({ first: 0, rows: 20, sortField: 'periode', sortOrder: -1 });
-    expect(service['search']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 0, 20);
+    expect(service['search']).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4, 5], equipeIds: [0], fonctionIds: [8], cin: 'AB123', nomPrenom: 'Salma' }, 0, 20, 'periode,desc');
     expect(component.totalNetAPayer()).toBe(20);
     expect(fixture.nativeElement.querySelector('.app-table-bar__summary')?.textContent).toContain('Net à payer');
     expect(fixture.nativeElement.textContent).toContain('S/H');
@@ -62,6 +62,13 @@ describe('HeuresSuppListComponent', () => {
     expect(texte).not.toContain('Type salaire');
     expect(texte).toContain('Chantier');
     expect(texte).toContain('Forfait');
+  });
+
+  it('transmet le champ et le sens du tri au serveur', () => {
+    component.charger({ first: 0, rows: 20, sortField: 'employee.nomPrenom', sortOrder: 1 });
+    expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 0, 20, 'employee.nomPrenom,asc');
+    component.charger({ first: 20, rows: 20, sortField: 'montant', sortOrder: -1 });
+    expect(service['search']).toHaveBeenLastCalledWith(expect.anything(), 1, 20, 'montant,desc');
   });
 
   it('reçoit une erreur de recherche sans masquer l’écran', () => {

@@ -10,8 +10,8 @@ export class HeuresSuppService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'heures-supp';
 
-  search(criteria: HeuresSuppSearchCriteria, page = 0, size = 20): Observable<Page<HeuresSupp>> {
-    const params = new HttpParams().set('page', page).set('size', size).set('sort', 'periode,desc');
+  search(criteria: HeuresSuppSearchCriteria, page = 0, size = 20, sort = 'periode,desc'): Observable<Page<HeuresSupp>> {
+    const params = new HttpParams().set('page', page).set('size', size).set('sort', sort);
     return this.http.post<Page<HeuresSupp>>(`${this.baseUrl}/search`, criteria, { params });
   }
 
