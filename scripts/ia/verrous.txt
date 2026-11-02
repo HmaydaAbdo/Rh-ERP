@@ -12,7 +12,10 @@
 #   notre catalogue ERP (testé). Défaut zod 4 signalé : https://github.com/a2ui-project/a2ui/issues/3812
 # - @a2ui/angular 0.13.0 et @a2ui/web_core 0.14.0 : la montée à 0.14.0 / 0.15.0 (2026-11-02) casse 4 fichiers de test, car
 #   web_core 0.15.0 appelle ZodType.prototype.describe, absent de zod 4 (KAN-151). À retester à chaque revue mensuelle.
-# - zod reste en 4.6.7 (surcharge) : ne jamais repasser en 3, avis GHSA-mrhx-c7xc-m3w5 (versions < 4.6.6 sans correctif en 3.x).
+# - zod : décision du propriétaire (2026-11-02) de repasser en 3, version que déclarent @a2ui/web_core, @copilotkit/angular et
+#   @ag-ui/client, pour adopter toutes leurs fonctionnalités (KAN-151 retire la surcharge zod 4.6.7 de frontend/package.json ;
+#   d'ici là elle y reste). Risque accepté par le propriétaire : avis GHSA-mrhx-c7xc-m3w5 (déni de service par épuisement
+#   mémoire sur une très grande liste, versions < 4.6.6, sans correctif en 3.x). Exception motivée et audit CI : KAN-152.
 # - typescript reste en 6.0.3 : @angular/build 22.2.5 déclare le pair >=6.0 <6.1 ; Dependabot ignore ses montées.
 # - agentevals 0.0.9 : bibliothèque dormante (dernière publication 2025-07-24), conservée, à surveiller.
 # - deepagents : absent du code, adoption décidée (tâche E2.0, KAN-31) ; CopilotKit « next » (2.0.0-rc.7) : préversion

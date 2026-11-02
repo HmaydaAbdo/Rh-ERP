@@ -66,6 +66,13 @@ Deux règles imposées par le propriétaire, sans exception :
   verts sur le dernier commit, fusion, branche supprimée, `main` à jour, ticket en « Terminé(e) » avec la preuve en
   commentaire. Tant qu'il n'est pas achevé, on n'ouvre ni autre branche ni autre PR ; pendant l'attente de la CI, seules
   la lecture et les mesures sans branche sont permises. Un ticket clos reste rouvrable si sa preuve est incomplète.
+- **Toutes les fonctionnalités que le stack et l'industrie permettent.** Décision du propriétaire (2026-11-02) : on adopte
+  les dernières versions et chaque fonctionnalité que le stack et l'industrie rendent possible (protocoles, API, mises à
+  jour), y compris les préversions décidées par le propriétaire. Si une version ou un protocole ne fonctionne pas avec le
+  reste du stack, on ne le contourne pas en silence : ticket Jira avec reproduction, signalement chez l'éditeur, retard
+  déclaré dans `scripts/ia/veille-versions.mjs`, puis adoption dès que c'est possible. Un risque de sécurité connu n'est
+  accepté que par décision écrite du propriétaire, avec une exception motivée et datée (tâche Jira et `verrous.txt`),
+  jamais en silence.
 - **Travail IA, épopée par épopée.** On avance dans l'ordre des épopées, on relit en entier la documentation officielle
   concernée à l'entrée de chaque épopée (§ 3 de `docs/ia/decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
   en dehors du périmètre de la tâche en cours sans l'accord du propriétaire. Les versions IA suivent la dernière stable

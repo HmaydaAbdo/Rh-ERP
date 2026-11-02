@@ -338,7 +338,7 @@ aux utilisateurs visible.
 | Vérificateur de chiffres (T10) | ~~Décidé le 2026-10-26 : gardé, en middleware officiel (`after_model`)~~ **Décision du 2026-10-27 appliquée en V1f après V1d** : suppression complète (T22), sans remplaçant maison | — |
 | Texte en flux et vérification (T11) | **Décision du 2026-10-27 appliquée en V1f** : le texte reste diffusé tel quel ; l'état partagé `verification` et la mention « vérification en cours » ont été retirés | — |
 | Raisonnement affiché (T11) | **Décidé le 2026-10-26** : raisonnement brut du modèle, dans un bloc « Réflexion » replié | — |
-| Dépendances du client (T12, T13) | **Décidé le 2026-10-26** : dernières versions des frameworks adoptées même préliminaires (CopilotKit Angular, A2UI) ; `zod` forcé en version 4 contre la faille GHSA-mrhx-c7xc-m3w5, compatibilité vérifiée | — |
+| Dépendances du client (T12, T13) | **Décidé le 2026-10-26** : dernières versions des frameworks adoptées même préliminaires (CopilotKit Angular, A2UI) ; `zod` forcé en version 4 contre la faille GHSA-mrhx-c7xc-m3w5, compatibilité vérifiée. **Révisé le 2026-11-02 par le propriétaire** : `zod` repasse en 3 (celui que déclarent A2UI, CopilotKit et AG-UI) pour adopter toutes leurs fonctionnalités, risque de la faille accepté (KAN-151, KAN-152, `scripts/ia/verrous.txt`) ; cible protocole A2UI v1.0 (KAN-154) | — |
 | Langues (T3.9) | Français seul ; français, arabe et darija écrits | Mesurer la demande au pilote ; arabe écrit en priorité si les utilisateurs l'emploient |
 
 ### Objectif : aucun code IA fait maison, aucun service payant
