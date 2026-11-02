@@ -19,7 +19,7 @@ public record HeuresSuppImportForfaitsDto(@Valid @Size(max = 500) List<Forfait> 
 
     public record Forfait(
             @NotBlank @Size(max = 30) String cin,
-            @NotNull @DecimalMin("0.00") @Digits(integer = 14, fraction = 2) BigDecimal montantDh
+            @NotNull @DecimalMin("0") @Digits(integer = 14, fraction = 0) BigDecimal montantDh
     ) {
     }
 }

@@ -1,32 +1,40 @@
-/* Rapport PDF des heures supplémentaires : A4 paysage, pages pré-découpées côté Java (une division .page par page
-   physique, hauteur fixe, lignes de hauteur fixe), même police et même bandeau que le rapport de paie. */
-@page { size: 842pt 595pt; margin: 0; }
+/* Rapport PDF des heures supplémentaires : A4 paysage, tableau qui s'écoule (aucun nombre de lignes par page fixé : chaque ligne
+   prend la place dont elle a besoin), bandeau et pied répétés sur chaque page par les marges de @page, même police et même bandeau
+   que le rapport de paie. */
+@page {
+  size: 842pt 595pt;
+  margin: 84pt 20pt 34pt 20pt;
+  @top-left { content: element(entete); width: 802pt; }
+  @bottom-left { content: element(pied); width: 640pt; }
+  @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: 'Liberation Serif', serif; font-size: 8pt; width: 162pt; text-align: right; }
+}
 html, body { margin: 0; padding: 0; font-family: 'Liberation Serif', serif; color: #1a1a1a; }
-.page { position: relative; width: 842pt; height: 595pt; overflow: hidden; page-break-after: always; }
-.page:last-child { page-break-after: auto; }
 
-.page-header { position: absolute; top: 20pt; left: 20pt; width: 802pt; height: 52pt; }
-.page-header .logo { position: absolute; left: 0; top: 0; width: 60pt; height: 40pt; }
-.page-header .sep { position: absolute; top: 4pt; height: 32pt; width: 0; border-left: 1pt solid #8a8a8a; }
+.page-header { position: running(entete); width: 802pt; height: 56pt; }
+.page-header .logo { position: absolute; left: 0; top: 20pt; width: 60pt; height: 40pt; }
+.page-header .sep { position: absolute; top: 24pt; height: 32pt; width: 0; border-left: 1pt solid #8a8a8a; }
 .page-header .sep.s1 { left: 68pt; }
 .page-header .sep.s2 { left: 212pt; }
-.page-header .bloc { position: absolute; top: 8pt; font-size: 11pt; font-weight: bold; }
+.page-header .sep.s3 { left: 600pt; }
+.page-header .bloc { position: absolute; top: 28pt; font-size: 11pt; font-weight: bold; }
 .page-header .bloc.b1 { left: 78pt; width: 130pt; }
-.page-header .bloc.b2 { left: 222pt; width: 560pt; }
-.page-header .bloc.b2 .contexte { display: block; margin-top: 3pt; font-size: 8pt; font-weight: normal; line-height: 10pt; }
-.page-header .filet { position: absolute; left: 0; top: 46pt; width: 802pt; border-top: 1.2pt solid #1a1a1a; }
+.page-header .bloc.b2 { left: 222pt; width: 330pt; }
+.page-header .bloc.b2 { top: 22pt; font-size: 14pt; }
+.page-header .bloc.b2 .contexte { display: block; margin-top: 4pt; font-size: 9pt; font-weight: normal; line-height: 11pt; color: #444; }
+.page-header .filtres { position: absolute; left: 614pt; top: 22pt; width: 188pt; font-size: 8.5pt; line-height: 11pt; }
+.page-header .filtres .lib { display: inline-block; width: 52pt; font-weight: bold; }
+.page-header .filet { position: absolute; left: 0; top: 66pt; width: 802pt; border-top: 1.2pt solid #1a1a1a; }
 
-.page-body { position: absolute; top: 84pt; left: 20pt; width: 802pt; }
-table.heures { width: 797pt; border-collapse: collapse; table-layout: fixed; font-size: 8pt; }
-table.heures th, table.heures td { height: 20pt; padding: 0 3pt; border: 0.5pt solid #9a9a9a; overflow: hidden; white-space: nowrap; }
-table.heures th { height: 20pt; background: #e6e6e6; font-weight: bold; text-align: left; }
+.pied { position: running(pied); font-size: 8pt; color: #444; border-top: 0.6pt solid #8a8a8a; padding-top: 4pt; }
+
+table.heures { width: 802pt; border-collapse: collapse; font-size: 8pt; }
+table.heures thead { display: table-header-group; }
+table.heures tr { page-break-inside: avoid; }
+table.heures th, table.heures td { padding: 5pt 4pt; border: 0.5pt solid #9a9a9a; white-space: nowrap; }
+table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
-table.heures col.mois { width: 45pt; } table.heures col.chantier { width: 80pt; } table.heures col.employe { width: 120pt; }
-table.heures col.cin { width: 55pt; } table.heures col.fonction { width: 80pt; } table.heures col.salaire { width: 50pt; }
-table.heures col.sh { width: 40pt; } table.heures col.ph { width: 35pt; } table.heures col.montant { width: 55pt; }
-table.heures col.stc { width: 50pt; } table.heures col.forfait { width: 55pt; } table.heures col.net { width: 62pt; } table.heures col.emargement { width: 70pt; }
-
-.page-footer { position: absolute; left: 20pt; top: 560pt; width: 802pt; font-size: 8pt; border-top: 0.6pt solid #8a8a8a; padding-top: 4pt; }
-.page-footer .pagination { position: absolute; right: 0; top: 4pt; }
+/* Émargement : cellule vide, assez large et haute pour une signature. */
+table.heures th.emargement, table.heures td.emargement { width: 90pt; }
+table.heures td.emargement { height: 24pt; }
 .vide { margin-top: 30pt; font-size: 11pt; }

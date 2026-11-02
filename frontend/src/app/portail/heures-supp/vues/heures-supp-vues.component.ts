@@ -13,6 +13,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
+import { HeuresSuppSearchCriteria } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 
@@ -32,7 +33,7 @@ const CONFIG: CollectionShellConfig = {
   template: `
     <app-collection-shell [configuration]="configuration">
       <stp-split-button collection-actions label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="telechargementModele()" (clicked)="ouvrirImport()" />
-      @if (exportEtat.exporter(); as exporter) { <button collection-actions stp-button variant="secondary" icon="download" type="button" [loading]="exportEtat.enCours()" (click)="exporter()">Exporter</button> }
+      <button collection-actions stp-button variant="secondary" icon="download" type="button" [loading]="exportEtat.enCours()" (click)="exporterPdf()">Exporter</button>
       @if (peutAjouter()) { <a collection-actions stp-button variant="primary" icon="plus" routerLink="/heures-supp/new">Ajouter une ligne</a> }
       <form collection-filters class="app-toolbar" aria-label="Filtres des heures supplémentaires" (submit)="$event.preventDefault()">
         <stp-month-input ariaLabel="Période des heures supplémentaires" [value]="mois()" (valueChange)="choisirMois($event)" />
@@ -110,6 +111,29 @@ export class HeuresSuppVuesComponent {
     void this.router.navigate([], { relativeTo: this.route, queryParams: { periode: null, nom: null, cin: null, chantierIds: null, equipeIds: null, fonctionIds: null, page: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
   private lireIds(value: string | null): number[] { return value?.split(',').map(Number).filter((id) => Number.isInteger(id) && id >= 0) ?? []; }
+
+  /** Exporte en PDF le périmètre filtré dans l'ordre du tableau ; le bouton est présent dans les trois vues, les filtres étant communs. */
+  protected exporterPdf(): void {
+    if (this.exportEtat.enCours()) return;
+    const mois = this.mois();
+    const criteres: HeuresSuppSearchCriteria = {
+      periode: mois ? `${mois.getFullYear()}-${String(mois.getMonth() + 1).padStart(2, '0')}` : undefined,
+      nomPrenom: this.nomPrenom() || undefined,
+      cin: this.cin() || undefined,
+      chantierIds: this.chantierIds().length ? this.chantierIds() : undefined,
+      equipeIds: this.equipeIds().length ? this.equipeIds() : undefined,
+      fonctionIds: this.fonctionIds().length ? this.fonctionIds() : undefined
+    };
+    this.exportEtat.enCours.set(true);
+    this.service.exporterPdf(criteres, this.exportEtat.tri()).pipe(finalize(() => this.exportEtat.enCours.set(false))).subscribe((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `Heures_supplementaires_${criteres.periode ?? 'tous-les-mois'}.pdf`;
+      lien.click();
+      window.URL.revokeObjectURL(url);
+    });
+  }
 
   protected ouvrirImport(): void {
     void this.router.navigate(['/heures-supp/import']);

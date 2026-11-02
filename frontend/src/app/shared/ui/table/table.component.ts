@@ -163,10 +163,8 @@ export class TableComponent<T extends object> {
     const definitions: ColDef[] = this.columns().map((colonne, index) => ({
       colId: colonne.field,
       field: colonne.field,
-      // Le titre est toujours complet (jamais abrégé ni tronqué) : il passe à la ligne et l'en-tête prend la hauteur nécessaire.
-      headerName: colonne.header,
-      wrapHeaderText: true,
-      autoHeaderHeight: true,
+      headerName: colonne.shortHeader ?? colonne.header,
+      headerTooltip: colonne.header,
       // Le contenu vient du gabarit projeté (`stpCell`) ; sans gabarit, la cellule affiche cette valeur (vide pour un objet).
       valueFormatter: ({ value }) => (value == null || typeof value === 'object' ? '' : String(value)),
       sortable: colonne.sortable !== false,
@@ -174,8 +172,8 @@ export class TableComponent<T extends object> {
       comparator: () => 0,
       resizable: this.resizable(),
       suppressMovable: !this.reorderable(),
-      minWidth: colonne.minWidth ?? 90,
-      flex: colonne.minWidth ? colonne.minWidth / 90 : 1,
+      // Largeur = contenu : jamais de retour à la ligne ni de troncature, chaque colonne prend la place dont elle a besoin (`ajusterColonnes`).
+      minWidth: colonne.minWidth ?? 60,
       pinned: this.etroit() && index === 0 ? 'left' : null,
       lockPinned: true,
       cellClass: [colonne.align, colonne.cellClass].filter(Boolean).join(' ') || undefined,
@@ -232,8 +230,14 @@ export class TableComponent<T extends object> {
 
   protected onGridReady(evenement: GridReadyEvent): void {
     this.api = evenement.api;
+    this.ajusterColonnes();
     evenement.api.setGridAriaProperty('label', this.label());
     this.appliquerTriALaGrille(this.sortField(), this.sortOrder());
+  }
+
+  /** Ajuste chaque colonne de données à son contenu le plus large (en-tête compris) ; la colonne Actions garde sa largeur fixe. */
+  protected ajusterColonnes(): void {
+    this.api?.autoSizeColumns(this.columns().map((colonne) => colonne.field));
   }
 
   protected onSortChanged(evenement: SortChangedEvent): void {

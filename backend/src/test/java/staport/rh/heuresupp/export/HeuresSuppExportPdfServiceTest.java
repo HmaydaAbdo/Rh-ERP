@@ -1,6 +1,7 @@
 package staport.rh.heuresupp.export;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -113,10 +114,11 @@ class HeuresSuppExportPdfServiceTest {
         byte[] pdf = service.generer(new HeuresSuppExportRequestDto(YearMonth.of(2026, 10), List.of(4L), null, null, "AB", "Employé", "montant,desc"));
         String texte = texte(pdf);
 
-        // 60 lignes + la ligne de totaux = 61 lignes, 22 par page.
-        assertThat(pages(pdf)).isEqualTo(3);
-        assertThat(texte).contains("Ressources Humaines", "Heures supplémentaires 2026-10", "Mois : 2026-10", "Nom : Employé", "CIN : AB",
-                "1 chantier(s)", "Tri : Montant (décroissant)", "Employé 1 ", "Employé 60", "Total · 60 lignes", "Page 3 / 3", "Émargement");
+        // Aucun nombre de lignes par page n'est fixé : le tableau s'écoule sur plusieurs pages, en-tête de colonnes répété.
+        int nombrePages = pages(pdf);
+        assertThat(nombrePages).isGreaterThan(1);
+        assertThat(texte).contains("Ressources Humaines", "Heures supplémentaires — octobre 2026", "60 lignes · 60 employés",
+                "classées par montant décroissant", "Nom", "Employé", "CIN", "Édité le", "Employé 1 ", "Employé 60", "Total · 60 lignes", "Page " + nombrePages + " / " + nombrePages, "Émargement");
         // Les champs retirés de l'interface ne figurent pas dans le rapport.
         assertThat(texte).doesNotContain("Statut paie").doesNotContain("Type salaire");
         verify(repository).findAll(any(Specification.class), eq(HeuresSuppExportPdfService.trier("montant,desc")));
@@ -129,7 +131,7 @@ class HeuresSuppExportPdfServiceTest {
         byte[] pdf = service.generer(new HeuresSuppExportRequestDto(null, null, null, null, null, null, null));
 
         assertThat(pages(pdf)).isEqualTo(1);
-        assertThat(texte(pdf)).contains("Tous les mois", "Total · 0 ligne");
+        assertThat(texte(pdf)).contains("Heures supplémentaires", "Aucune ligne pour ce périmètre.", "Total · 0 ligne");
     }
 
     @Test

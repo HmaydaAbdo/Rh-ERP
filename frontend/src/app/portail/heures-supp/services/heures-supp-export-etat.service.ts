@@ -1,12 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
 /**
- * Pont entre la vue Tabulaire et le bouton « Exporter » de l'en-tête (posé à côté d'Importer) : le tableau connaît ses filtres et son
- * tri, l'en-tête porte le bouton. Sans tableau affiché (vues Cartes et Analytique), il n'y a rien à exporter et le bouton est absent.
+ * Pont entre le tableau (qui connaît son tri) et le bouton « Exporter » de l'en-tête, posé à côté d'« Importer » dans les trois vues :
+ * l'en-tête porte le bouton et les filtres, le tableau publie ici le tri courant pour que le PDF suive l'ordre affiché.
  */
 @Injectable({ providedIn: 'root' })
 export class HeuresSuppExportEtat {
-  /** Export du tableau affiché (filtres, recherche et tri courants) ; `null` quand la vue Tabulaire n'est pas affichée. */
-  readonly exporter = signal<(() => void) | null>(null);
+  /** Tri de la liste, au format `champ,asc|desc` (tri par défaut : mois décroissant). */
+  readonly tri = signal('periode,desc');
   readonly enCours = signal(false);
 }
