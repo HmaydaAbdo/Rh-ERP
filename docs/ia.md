@@ -101,6 +101,14 @@ est exécutée au moins une fois par mois, et à la demande du propriétaire lor
 La date de la dernière revue et ses conclusions sont consignées dans le journal de cette section. La veille ne se
 limite pas aux noms de modèles déjà inscrits ici, à une seule famille d'IA, ni aux fournisseurs actuellement configurés.
 
+**Une routine, pas une option.** Chaque mois, une tâche Jira « Veille mensuelle IA » est créée automatiquement (règle
+d'automatisation planifiée du projet `KAN`) et la revue est faite en entier, qu'il y ait du nouveau ou non. Elle
+couvre à chaque fois **toutes** les fonctions du point 2 ci-dessous : conversation, voix (ASR et TTS) en arabe, Darija
+et Arabizi, identification de langue ou de dialecte, OCR et traduction, ainsi que le relevé de versions
+(`scripts/ia/veille-versions.mjs`). « Rien de nouveau » est un résultat valable : une ligne au journal, la liste des
+fonctions réellement cherchées, ce qui n'a pas pu être lu, puis on passe. Toute fonction non cherchée est écrite comme
+telle dans le journal, jamais omise en silence.
+
 À chaque revue, l'assistant :
 
 1. Cherche les versions récentes et annonces crédibles à partir des fiches de modèles, dépôts, notes de version,
@@ -147,7 +155,7 @@ limite pas aux noms de modèles déjà inscrits ici, à une seule famille d'IA, 
 | Date | Résultat | Suite |
 |---|---|---|
 | 2026-10-30 | Revue initiale : Jais 3 32B, Atlas-Chat-27B et GemMaroc-27B retenus pour la comparaison conversationnelle ; Mtrini-SVL en observation. Le jeu Darija doit couvrir l'alphabet arabe et l'Arabizi. LIDstral est à évaluer avant adoption, car sa couverture publiée porte sur le texte arabe et pas l'Arabizi. L'adaptation Voxtral annoncée par le ministère est une piste ASR non encore qualifiable. Sawalni reste une piste API à éclaircir. | Construire/compléter le jeu Darija de T3.9, comparer les modèles conversationnels et mesurer l'utilité de LIDstral sans retirer la prise en charge Arabizi. Revue suivante au plus tard en novembre 2026. |
-| 2026-11-02 | Revue mensuelle (KAN-7, couche 5), sur fiches officielles Hugging Face lues le jour même : Jais 3 32B a des poids publiés (Apache-2.0, 512K) mais sa fiche ne couvre pas la Darija ; Atlas-Chat-27B inchangé ; LIDstral-Arabic confirmé (Apache-2.0, 51 classes, Arabizi non mentionné) ; Voxtral-Mini-4B-Realtime-Arabic nouvelle piste ASR (Apache-2.0). GemMaroc-27B, Mtrini-SVL et Sawalni : non revérifiés ce mois-ci. Le billet de blog de Jais 3 (ifm.ai) a répondu 403 : non lu. Relevé de versions : 30 composants, 3 en retard dont `openai` 3.42.0 → 3.42.1 sans cause, simple décalage du lockfile (sortie le 2026-11-01). | Aucun changement de modèle ni de configuration. Comparaisons en attente du jeu Darija de T3.9 et de la requalification des fournisseurs. `openai` à aligner dans KAN-6. Revue suivante au plus tard en décembre 2026. |
+| 2026-11-02 | Revue mensuelle (KAN-7, couche 5), sur fiches officielles Hugging Face lues le jour même : Jais 3 32B a des poids publiés (Apache-2.0, 512K) mais sa fiche ne couvre pas la Darija ; Atlas-Chat-27B inchangé ; LIDstral-Arabic confirmé (Apache-2.0, 51 classes, Arabizi non mentionné) ; Voxtral-Mini-4B-Realtime-Arabic nouvelle piste ASR (Apache-2.0). Non cherchés ce mois-ci : TTS, OCR et traduction ; GemMaroc-27B, Mtrini-SVL et Sawalni non revérifiés (à couvrir en décembre). Le billet de blog de Jais 3 (ifm.ai) a répondu 403 : non lu. Relevé de versions : 30 composants, 3 en retard dont `openai` 3.42.0 → 3.42.1 sans cause, simple décalage du lockfile (sortie le 2026-11-01). | Aucun changement de modèle ni de configuration. Comparaisons en attente du jeu Darija de T3.9 et de la requalification des fournisseurs. `openai` à aligner dans KAN-6. Revue suivante au plus tard en décembre 2026. |
 
 ## 5. Sécurité
 
