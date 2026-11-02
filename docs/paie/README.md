@@ -548,7 +548,7 @@ changement de filtre relance l'analyse (une demande encore en cours est abandonn
 | Synthèse | Le mois, puis masse salariale, effectif payé, coût moyen par personne, STC (nombre et montant) et chantiers — avec la variation par rapport au mois précédent (pourcentage pour la masse et le coût moyen, écart pour les autres). Sans bulletin le mois précédent sur ce périmètre : aucune variation, jamais un zéro ni une division par zéro |
 | Évolution | **Une seule mesure à la fois, sur un seul axe** : Masse (DH), Bulletins de paie, STC (bulletins) ou STC (DH). Les montants et les effectifs n'ont pas la même échelle, ils ne partagent jamais un graphique. Les données couvrent **tous** les mois qui ont de la paie dans le périmètre ; le mois analysé est agrandi |
 | Répartition | Barres par chantier, équipe ou fonction (« Répartir par », dimension pas encore choisie), mesure Masse (DH) ou Bulletins de paie ; les catégories à zéro sont exclues, aucune n'est regroupée sous « Autres ». **Un clic sur une barre ajoute ce groupe au périmètre** et approfondit l'analyse. Le tableau de données donne tous les groupes avec leurs STC |
-| Qualité des données | Bulletins sans équipe et sans observation, pour suivre la tâche Jira « Qualité des données » (KAN-159) |
+| Qualité des données | Bulletins sans équipe et sans observation, pour suivre la tâche Jira « Qualité des données » (KAN-177) |
 | Répartition des totaux | Histogramme du `salaireTotal` de tous les bulletins du mois, en 6 tranches de même largeur, la dernière ouverte |
 | Mouvements | Employés payés, entrées, sorties et mutations mois par mois (`POST /paie/effectifs`) |
 | Fiches Employé | Avec `EMPLOYEE_READ` : chiffres clés, pyramide des âges, ancienneté, répartition en poste / sortis |
@@ -608,7 +608,7 @@ Le suivi des évolutions est dans Jira (projet `KAN`) :
 - **Aucun calcul** : `salaireMensuel`, les primes et `salaireTotal` sont saisis ou importés. Rien ne vérifie
   leur cohérence entre eux (pas de contrôle « total = tarif × jours »).
 - **Qualité des données** : l'équipe, l'observation, les jours de récupération et les primes sont facultatifs.
-  Les éventuelles évolutions d'obligation restent dans la tâche dédiée KAN-159.
+  Les éventuelles évolutions d'obligation restent dans la tâche dédiée KAN-177.
 - **Pas de statut** provisoire / validé : un bulletin reste toujours modifiable et supprimable.
 - Audité (voir [../audit/README.md](../audit/README.md)) : création, modification, suppression (unitaire ou en groupe, **bulletin par
   bulletin**), restauration, import et exports Excel / PDF. Dans le détail d'une suppression de groupe réussie, un compte

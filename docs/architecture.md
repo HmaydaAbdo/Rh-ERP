@@ -190,4 +190,4 @@ Décisions, feuille de route et état : [ia.md](ia.md).
 ### Autres limites
 
 Suivis dans Jira (projet `KAN`) : domaine Pointage non construit (KAN-171), déploiement continu manuel,
-qualité des données (champs obligatoires et doublons : KAN-159 et KAN-160).
+qualité des données (champs obligatoires et doublons : KAN-177 et KAN-160).

@@ -307,4 +307,4 @@ partagées de présentation et d’export sont dans [Vues de périmètre](../fro
 | URL et recherches tardives, passage entre trois vues | Specs filtres/coque/liste/module et E2E Employé |
 
 Les suites et commandes transverses sont décrites dans [Tests](../testing.md). Le Pointage et les
-évolutions de qualité de données non arbitrées sont suivis dans Jira (KAN-171, KAN-159).
+évolutions de qualité de données non arbitrées sont suivis dans Jira (KAN-171, KAN-177).
