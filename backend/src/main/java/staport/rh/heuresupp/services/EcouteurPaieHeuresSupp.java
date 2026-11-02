@@ -9,8 +9,6 @@ import staport.rh.paie.events.PaieModifieeEvenement;
 import staport.rh.paie.events.PaieSuppressionDemandeeEvenement;
 import staport.rh.paie.exceptions.PaieLieeException;
 
-import java.math.BigDecimal;
-
 /**
  * Les lignes d'heures supplémentaires suivent leur bulletin : une modification du marqueur STC/sortie recalcule STC et
  * Net à payer (le forfait, interdit en STC/sortie, est annulé) ; la suppression d'un bulletin lié est refusée.
