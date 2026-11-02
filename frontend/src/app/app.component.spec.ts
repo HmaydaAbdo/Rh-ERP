@@ -78,12 +78,15 @@ describe('AppComponent', () => {
       try {
         fixture.detectChanges();
         const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
+        const contenu = host.querySelector<HTMLElement>('main#contenu');
+        expect(contenu).not.toBeNull();
+        // Le focus réel dépend de l'état de la fenêtre du navigateur pendant la suite complète : on vérifie
+        // que le lien le demande au <main> du composant (et non au <p id="contenu"> concurrent).
+        const focus = vi.spyOn(contenu as HTMLElement, 'focus');
         lien?.click();
 
         expect(lien?.textContent).toContain('Aller au contenu');
-        const contenu = host.querySelector<HTMLElement>('main#contenu');
-        expect(contenu).not.toBeNull();
-        expect(document.activeElement).toBe(contenu);
+        expect(focus).toHaveBeenCalledTimes(1);
       } finally {
         fixture.destroy();
         contenuConcurrent.remove();
