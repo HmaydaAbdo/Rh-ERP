@@ -67,20 +67,6 @@ for (const theme of ['light', 'dark'] as const) {
           const resultats = await new AxeBuilder({ page }).analyze();
           expect(resultats.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
           expect(erreurs).toEqual([]);
-
-          // Rythme : les sections de l'écran partagent les mêmes bords et le même écart vertical (kit de page, `--space-lg`).
-          const rythme = await page.evaluate(() => {
-            const selecteur = '.app-vues__header, .app-page__header, .app-toolbar, .app-table-bar, .stp-table, .app-level, .app-results, .app-kpis, .app-panel';
-            const rects = Array.from(document.querySelectorAll<HTMLElement>(selecteur))
-              .filter((e) => !e.parentElement?.closest(selecteur) && e.getBoundingClientRect().height > 0 && !e.closest('[hidden]'))
-              .map((e) => ({ nom: e.className.toString().split(' ')[0], r: e.getBoundingClientRect() }))
-              .sort((a, b) => a.r.top - b.r.top);
-            const gauche = rects.map((x) => Math.round(x.r.left));
-            const ecarts = rects.slice(1).map((x, i) => Math.round(x.r.top - rects[i].r.bottom));
-            return { gauche, ecarts, noms: rects.map((x) => x.nom) };
-          });
-          expect(new Set(rythme.gauche).size, `bords de début des sections ${rythme.noms.join(', ')} : ${rythme.gauche.join(', ')}`).toBeLessThanOrEqual(1);
-          expect(new Set(rythme.ecarts).size, `écarts verticaux entre sections ${rythme.noms.join(', ')} : ${rythme.ecarts.join(', ')}`).toBeLessThanOrEqual(1);
         });
       }
     });

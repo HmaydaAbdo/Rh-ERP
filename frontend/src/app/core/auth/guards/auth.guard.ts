@@ -38,9 +38,9 @@ export const permissionGuard: CanActivateFn = (route) => {
 };
 
 /**
- * Arrivée (`/`) : redirige vers le premier écran du menu auquel l'utilisateur a accès, ou vers la page « accès refusé » s'il n'en
- * a aucun. Évite toute boucle de redirection : un écran dont la permission manque n'est jamais l'arrivée. L'Accueil
- * personnalisé deviendra l'arrivée quand les fiches de poste seront définies (plan, E9.8).
+ * Arrivée (`/`) : redirige vers le premier écran du menu auquel l'utilisateur a accès — son accueil personnalisé (`ACCUEIL_READ`)
+ * en premier —, ou vers la page « accès refusé » s'il n'en a aucun. Évite toute boucle de redirection : un écran dont la
+ * permission manque n'est jamais l'arrivée.
  */
 export const homeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -51,5 +51,5 @@ export const homeGuard: CanActivateFn = () => {
   }
 
   const premier = NAV_ITEMS.find((item) => authService.hasPermission(item.permission));
-  return router.createUrlTree([premier ? (premier.ouverture ?? premier.route) : '/acces-refuse']);
+  return router.createUrlTree([premier ? premier.route : '/acces-refuse']);
 };

@@ -90,9 +90,9 @@ html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
   }
 }
 
-// Le lanceur flottant de CopilotKit est remplacé par le mode Staport Intelligence de la barre Staport (`stp-dock`).
 .copilot-sidebar-host .copilot-sidebar-toggle {
-  display: none !important; // la bibliothèque impose son propre display
+  background: var(--assistant-accent);
+  color: var(--assistant-accent-contrast);
 }
 
 // Le texte des réponses (typographie `prose` de la bibliothèque) suit les jetons : son mode sombre dépend d'une classe `dark`
@@ -115,6 +115,11 @@ html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
   --tw-prose-pre-bg: var(--color-surface-alt);
   --tw-prose-th-borders: var(--color-border-strong);
   --tw-prose-td-borders: var(--color-border);
+}
+
+// Ouverte, la barre a sa propre croix dans l'en-tête : le lanceur flottant ne recouvre pas la saisie.
+.copilot-sidebar-host .copilot-sidebar-toggle[aria-expanded='true'] {
+  display: none;
 }
 
 // --- Finitions de la discussion (classes stables des composants CopilotKit) ---

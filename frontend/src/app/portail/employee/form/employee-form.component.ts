@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField, FormRoot, maxLength, min, required, validate } from '@angular/forms/signals';
@@ -56,7 +55,7 @@ interface EmployeeSaisie {
 
 @Component({
   selector: 'app-employee-form',
-  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, LazySelectComponent, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent, DateInputComponent, NumberInputComponent, MessageComponent],
+  imports: [FormField, FormRoot, RouterLink, LazySelectComponent, ButtonComponent, FieldErrorComponent, IconComponent, SelectComponent, DateInputComponent, NumberInputComponent, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './employee-form.component.html'
 })

@@ -1,4 +1,3 @@
-import { DockDeclencheurComponent } from '../../../shared/ui/dock/dock-declencheur.component';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -13,7 +12,7 @@ import { FunctionService } from '../services/function.service';
 
 @Component({
   selector: 'app-function-form',
-  imports: [DockDeclencheurComponent, FormField, FormRoot, RouterLink, ButtonComponent, FieldErrorComponent, IconComponent],
+  imports: [FormField, FormRoot, RouterLink, ButtonComponent, FieldErrorComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './function-form.component.html'
 })
