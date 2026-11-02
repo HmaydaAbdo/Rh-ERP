@@ -1,0 +1,39 @@
+# Verrous de versions et seuils de l'IA ERP-RH, vérifiés en CI par scripts/ia/check-docs-code.mjs contre
+# ia/uv.lock, les package-lock.json, ia/src/erp_rh_ia/agent.py et les @McpTool du backend.
+# Mettre ce fichier à jour dans le même commit que le code : le contrôle échoue sinon. Les lignes « # » sont des
+# limites connues (cause, état) ; la tâche qui lève une limite est suivie dans Jira (projet KAN).
+#
+# Format : « py <paquet> <version> », « npm <dossier> <paquet> <version> », « seuil <nom> <valeur> ».
+#
+# Limites connues
+# - openai : 3.42.0 avec litellm 1.109.0.dev2 (préversion adoptée par le propriétaire le 2026-11-01 ; aucune version stable
+#   de litellm ne lève encore la borne openai<3). Sortie de LiteLLM : épopée E14 (KAN-30).
+# - @a2ui/web_core 0.14.0 : le rendu de @copilotkit/angular 0.6.0 est écrit pour 0.10.4 ; la compatibilité est assurée par
+#   notre catalogue ERP (testé). Défaut zod 4 signalé : https://github.com/a2ui-project/a2ui/issues/3812
+# - zod reste en 4.6.7 (surcharge) : ne jamais repasser en 3, avis GHSA-mrhx-c7xc-m3w5 (versions < 4.6.6 sans correctif en 3.x).
+# - typescript reste en 6.0.3 : @angular/build 22.2.5 déclare le pair >=6.0 <6.1 ; Dependabot ignore ses montées.
+# - agentevals 0.0.9 : bibliothèque dormante (dernière publication 2025-07-24), conservée, à surveiller.
+# - deepagents : absent du code, adoption décidée (tâche E2.0, KAN-31) ; CopilotKit « next » (2.0.0-rc.7) : préversion
+#   suivie, non adoptée.
+py langchain 1.4.7
+py langchain-core 1.7.3
+py langgraph 1.2.19
+py langgraph-checkpoint-postgres 3.2.0
+py langchain-litellm 0.11.2
+py ag-ui-langgraph 0.0.47
+py ag-ui-protocol 1.0.0
+py copilotkit 0.1.96
+py mcp 2.3.0
+py litellm 1.109.0.dev2
+py openai 3.42.0
+npm frontend @copilotkit/angular 0.6.0
+npm frontend @a2ui/angular 0.13.0
+npm frontend @a2ui/web_core 0.14.0
+npm frontend @ag-ui/client 1.0.3
+npm frontend typescript 6.0.3
+npm copilot-runtime @copilotkit/runtime 1.83.0
+seuil resume_jetons 40000
+seuil resume_messages 12
+seuil appels_modele 8
+seuil appels_outils 8
+seuil outils_mcp 31
