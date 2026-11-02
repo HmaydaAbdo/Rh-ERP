@@ -59,10 +59,13 @@ test.describe('Employés — Cartes et Analytique', () => {
 
     await expect(page.getByRole('navigation', { name: 'Vue des employés' }).getByRole('link')).toHaveCount(3);
     await page.setViewportSize({ width: 390, height: 844 });
-    const largeurApresRedimensionnement = await page.evaluate(() => new Promise<number>(resolve => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve(document.documentElement.scrollWidth)));
-    }));
-    expect(largeurApresRedimensionnement).toBeLessThanOrEqual(390);
+    // Contenu des cartes rendu avant de mesurer : le serveur de développement de la CI charge les données après la navigation.
+    await expect(page.getByRole('button', { name: 'Ouvrir C168' })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => new Promise<number>(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(document.documentElement.scrollWidth)));
+      })))
+      .toBeLessThanOrEqual(390);
     await page.getByRole('button', { name: 'Ouvrir C168' }).click();
     await expect(page).toHaveURL(/\/employees\/cartes\?chantierIds=3$/);
     await expect(page.getByRole('navigation', { name: /Position dans les employés/ })).toContainText('Chantier C168');
