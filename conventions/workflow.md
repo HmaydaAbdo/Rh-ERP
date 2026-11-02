@@ -12,6 +12,9 @@ Ne pas y recopier de secrets ni le transcript de la conversation.
 
 ## 1. Reprendre le contexte
 
+0. Consulter Jira (projet `KAN`, source de vérité des tâches : statut, preuve, historique) pour la tâche reprise ou à
+   créer ; le plan `docs/ia/plan-de-travail.md` en garde la conception et les décisions. Une tâche termine en Jira avec
+   sa preuve en commentaire, jamais sans.
 1. Lire `docs/handoff/etat-du-projet.md`, puis les conventions applicables et `docs/README.md`.
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
 3. Vérifier les fichiers modifiés, la branche, les derniers commits et, lorsqu'une livraison est en

@@ -56,6 +56,12 @@ Deux règles imposées par le propriétaire, sans exception :
   travail, et on ne supprime ni fichier, ni branche, ni donnée en dehors du périmètre de la tâche en cours sans l'accord du
   propriétaire. Les versions IA suivent la dernière stable (veille : E1.2) ; une limite de version causée par une
   dépendance (par exemple `openai` bloqué par LiteLLM) est consignée au § 3 du plan.
+- **Jira, source de vérité des tâches.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
+  `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`, épopée E1 = KAN-4) ; le plan de
+  travail IA garde la conception, les décisions et les verrous. Toute nouvelle tâche ou tout nouveau constat durable est
+  créé dans Jira (clé reportée dans la ligne du plan), le statut passe En cours → Revue en cours → Terminé avec la preuve
+  en commentaire, et rien n'est supprimé de l'historique. Si le connecteur Jira est indisponible, consigner la tâche dans
+  le plan et la reporter dans Jira dès son retour.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
   `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
   recommandation. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
