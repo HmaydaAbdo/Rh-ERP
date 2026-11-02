@@ -75,7 +75,7 @@
                 @switch (col.field) {
                   @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
                   @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
-                  @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-2') }} }
+                  @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') }} }
                   @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') }} }
                   @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.2-2' }}</strong> }
                   @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} }

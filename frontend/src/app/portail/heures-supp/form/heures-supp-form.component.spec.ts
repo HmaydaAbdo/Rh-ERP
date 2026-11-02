@@ -25,8 +25,8 @@ class LazySelectStub {
 const LIGNE: HeuresSupp = {
   id: 1, version: 0, employeeId: 7, nomPrenom: 'Salma Alaoui', cin: 'AB123', fonction: 'Chauffeur', chantierId: 4,
   codeChantier: 'C4', chantier: 'Site', periode: '2026-10', salaireReferenceDh: 4000, typeSalaireReference: 'MENSUEL',
-  salaireHoraireDh: 15.38, heuresSupplementaires: 2, montantDh: 30.76, stcOuSortie: false, stcDh: 0, forfaitDh: 100,
-  netAPayerDh: 130.76
+  salaireHoraireDh: 15, heuresSupplementaires: 2, montantDh: 30, stcOuSortie: false, stcDh: 0, forfaitDh: 100,
+  netAPayerDh: 130
 };
 
 describe('HeuresSuppFormComponent', () => {
@@ -82,7 +82,7 @@ describe('HeuresSuppFormComponent', () => {
     await afficher('1');
     expect(service['get']).toHaveBeenCalledWith(1);
     expect(fixture.nativeElement.textContent).toContain('AB123');
-    expect(fixture.nativeElement.textContent).toContain('15.38 DH/h');
+    expect(fixture.nativeElement.textContent).toContain('15 DH/h');
     expect(fixture.nativeElement.textContent).toContain('4,000.00 DH');
     const form = formulaire();
     form.heuresSupplementaires().value.set(3);

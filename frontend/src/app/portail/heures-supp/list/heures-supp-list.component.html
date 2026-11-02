@@ -1,7 +1,8 @@
 
-    @if (canPurge() && criteres.periode) {
-      <div class="app-page__actions app-page__actions--liste"><button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button></div>
-    }
+    <div class="app-page__actions app-page__actions--liste">
+      <button stp-button variant="secondary" icon="download" type="button" [loading]="exportEnCours()" (click)="exporterPdf()">Exporter en PDF</button>
+      @if (canPurge() && criteres.periode) { <button stp-button variant="danger" type="button" (click)="preparerPurge()">Supprimer tout le mois {{ criteres.periode }}</button> }
+    </div>
     @if (purgeNombre() !== null) {
       <stp-dialog [header]="'Supprimer toutes les lignes du mois ' + criteres.periode + ' ?'" width="34rem" [(open)]="purgeDialogueOuvert" (closed)="fermerPurge()">
         <p>La suppression concerne tous les chantiers et toutes les lignes de ce mois. Pour confirmer, retapez {{ purgeNombre() }}.</p>
@@ -23,7 +24,7 @@
           @case ('cin') { {{ ligne.cin }} }
           @case ('fonction') { {{ ligne.fonction }} }
           @case ('salaireReferenceDh') { {{ ligne.salaireReferenceDh === null ? '—' : (ligne.salaireReferenceDh | number:'1.2-2') + ' DH' }} }
-          @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.2-4') + ' DH/h' }} }
+          @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') + ' DH/h' }} }
           @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? '—' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
           @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} DH }
           @case ('stcDh') { {{ ligne.stcDh | number:'1.2-2' }} DH }

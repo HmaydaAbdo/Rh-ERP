@@ -40,6 +40,7 @@ export class HeuresSuppListComponent {
   protected readonly totalNetAPayer = signal<number | null>(null);
   protected readonly erreurTotal = signal(false);
   protected readonly chargement = signal(false);
+  protected readonly exportEnCours = signal(false);
   protected readonly erreur = signal<string | null>(null);
   protected readonly purgeNombre = signal<number | null>(null);
   protected readonly purgeSaisie = signal<number | null>(null);
@@ -54,6 +55,22 @@ export class HeuresSuppListComponent {
   private dernierTri = 'periode,desc';
   private dernierCritereAnalytique = '';
 
+
+  protected exporterPdf(): void {
+    if (this.exportEnCours()) return;
+    this.exportEnCours.set(true); this.erreur.set(null);
+    this.service.exporterPdf(this.criteres, this.dernierTri).pipe(finalize(() => this.exportEnCours.set(false))).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const lien = document.createElement('a');
+        lien.href = url;
+        lien.download = `Heures_supplementaires_${this.criteres.periode ?? 'tous-les-mois'}.pdf`;
+        lien.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.erreur.set('Le PDF n’a pas pu être généré. Affinez les filtres (5 000 lignes au plus) puis réessayez.')
+    });
+  }
 
   protected canDelete(): boolean { return this.auth.hasPermission('HEURES_SUP_DELETE'); }
   protected canPurge(): boolean { return this.auth.hasPermission('HEURES_SUP_PURGE'); }

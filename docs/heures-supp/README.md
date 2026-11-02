@@ -37,6 +37,7 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 | `DELETE /heures-supp/{id}` | Supprime une ligne avec audit. |
 | `POST /heures-supp/suppression-mois` | Supprime toutes les lignes d'un mois, tous chantiers confondus, si le nombre correspond à celui confirmé. |
 | `GET /heures-supp/periodes` | Mois ayant au moins un import. |
+| `POST /heures-supp/export/pdf` | Rapport PDF A4 paysage (bandeau et police du rapport de paie, totaux en dernière ligne) de TOUTES les lignes du périmètre filtré, recherché et trié de la vue Tabulaire ; tri limité aux colonnes de l'écran, 5 000 lignes au plus, action d'audit `HEURES_SUP_EXPORT_PDF` (catégorie `ACCES`). |
 | `GET /heures-supp/import/prerequis?periode=aaaa-MM&chantierId=…` | Confirme que le mois de paie et le chantier permettent d'ouvrir l'étape du fichier. |
 | `GET /heures-supp/import/modele` | Télécharge le modèle Excel `.xlsx`. |
 | `POST /heures-supp/import/analyse` | Lit le fichier et les forfaits sans écrire ; retourne lignes, erreurs, calculs et indicateur `pret`. |
@@ -52,7 +53,7 @@ les lignes importées, les zéros conservés, les forfaits seuls, remplacements,
 permissions endpoint par endpoint sont décrites dans [RBAC](../rbac/heures-supp.md).
 
 Les routes `/heures-supp`, `/heures-supp/cartes` et `/heures-supp/analytique` gardent les filtres dans l'URL.
-Tabulaire est la vue détaillée. Cartes et Analytique utilisent les composants partagés, avec le mois et le
+Tabulaire est la vue détaillée, la vue par défaut, triable sur chaque colonne ; son bouton « Exporter en PDF » (Tabulaire seulement) suit les filtres, la recherche et le tri affichés. Les actions de ligne sont des icônes. Cartes et Analytique utilisent les composants partagés, avec le mois et le
 périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employés à zéro heure n'est injecté dans Cartes.
 
 ## Données d'entrée et provenance

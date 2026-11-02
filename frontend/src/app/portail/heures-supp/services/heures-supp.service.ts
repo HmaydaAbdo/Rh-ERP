@@ -41,6 +41,11 @@ export class HeuresSuppService {
     return this.http.get<HeuresSuppImportPrerequis>(`${this.baseUrl}/import/prerequis`, { params: { periode, chantierId } });
   }
 
+  /** Rapport PDF de toutes les lignes du périmètre filtré, recherché et trié de la vue Tabulaire. */
+  exporterPdf(criteria: HeuresSuppSearchCriteria, sort: string): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/export/pdf`, { ...criteria, tri: sort }, { responseType: 'blob' });
+  }
+
   telechargerModele(): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/import/modele`, { responseType: 'blob' });
   }
