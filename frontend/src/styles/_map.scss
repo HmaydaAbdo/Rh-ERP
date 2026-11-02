@@ -224,6 +224,10 @@
   --color-primary: var(--map-ui-primary);
   --color-focus: var(--map-ui-focus);
   --color-focus-soft: var(--map-ui-focus-soft);
+  // Messages d'erreur : palette sombre de l'application, le texte clair de la carte ne se pose jamais sur le fond rose du thème clair.
+  --color-danger: #ffb4ad;
+  --color-danger-bg: #4a1f1d;
+  --color-danger-contrast: #2a0a09;
   --map-icon-filter: none;
   position: relative;
   width: 100%;
