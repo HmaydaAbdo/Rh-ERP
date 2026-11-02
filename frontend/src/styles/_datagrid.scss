@@ -84,6 +84,11 @@
   &.app-datagrid__cell--num { justify-content: flex-end; font-variant-numeric: tabular-nums; }
 }
 .app-datagrid__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   font: inherit;

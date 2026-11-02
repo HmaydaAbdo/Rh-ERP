@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { CatalogComponent } from '@a2ui/angular/v0_9';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import type { ChartData, ChartOptions } from 'chart.js';
 
 import { animationGraphique, grille, infobulle, jeton, police } from '../../../shared/ui/chart/chart-theme';
 import { ChartComponent } from '../../../shared/ui/chart/chart.component';
 import { ThemeService } from '../../theme/theme.service';
+import { ChartApi } from './api-catalogue';
 
 type TypeGraphique = 'bar' | 'line' | 'doughnut';
 interface Serie {
@@ -24,45 +26,48 @@ const PALETTE = ['--color-primary', '--color-success', '--color-warning', '--col
   imports: [ChartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="app-panel__head">
-      @if (props().title) {
-        <h3 class="app-section-title">{{ props().title }}</h3>
+    <div class="app-panel__head">
+      @if (titre()) {
+        <h3 class="app-section-title">{{ titre() }}</h3>
       }
-      @if (props().series.length > 1 && props().type !== 'doughnut') {
+      @if (series().length > 1 && type() !== 'doughnut') {
         <div class="app-chips" role="group" aria-label="Série affichée">
-          @for (serie of props().series; track serie.name; let i = $index) {
+          @for (serie of series(); track serie.name; let i = $index) {
             <button type="button" [attr.aria-pressed]="i === choix()" (click)="choix.set(i)">
               {{ serie.name }}
             </button>
           }
         </div>
       }
-    </header>
+    </div>
     <div class="app-chart app-chart--short mt-2">
-      <stp-chart [type]="props().type" [data]="donnees()" [options]="options()" [ariaLabel]="props().title ?? 'Graphique'" />
+      <stp-chart [type]="type()" [data]="donnees()" [options]="options()" [ariaLabel]="titre() ?? 'Graphique'" />
     </div>
   `
 })
-export class A2uiChartComponent {
-  readonly props = input.required<{ title?: string; type: TypeGraphique; labels: string[]; series: Serie[] }>();
+export class A2uiChartComponent extends CatalogComponent<typeof ChartApi> {
+  protected readonly titre = computed(() => this.props().title?.value());
+  protected readonly type = computed(() => (this.props().type?.value() ?? 'bar') as TypeGraphique);
+  protected readonly labels = computed(() => (this.props().labels?.value() ?? []) as string[]);
+  protected readonly series = computed(() => (this.props().series?.value() ?? []) as Serie[]);
 
   protected readonly choix = signal(0);
   private readonly theme = inject(ThemeService);
 
-  private readonly serie = computed<Serie | undefined>(() => this.props().series[this.choix()] ?? this.props().series[0]);
+  private readonly serie = computed<Serie | undefined>(() => this.series()[this.choix()] ?? this.series()[0]);
 
   protected readonly donnees = computed<ChartData<TypeGraphique>>(() => {
     this.theme.theme(); // reconstruit à la bascule clair / sombre : Chart.js ne lit pas le CSS
     const couleurs = PALETTE.map(jeton);
     const serie = this.serie();
-    const anneau = this.props().type === 'doughnut';
+    const anneau = this.type() === 'doughnut';
     return {
-      labels: this.props().labels,
+      labels: this.labels(),
       datasets: [
         {
           label: serie?.name ?? '',
           data: serie?.values ?? [],
-          backgroundColor: anneau ? this.props().labels.map((_, i) => couleurs[i % couleurs.length]) : couleurs[0],
+          backgroundColor: anneau ? this.labels().map((_, i) => couleurs[i % couleurs.length]) : couleurs[0],
           borderColor: anneau ? jeton('--color-surface') : couleurs[0],
           borderRadius: anneau ? 0 : 4,
           tension: 0.3
@@ -74,7 +79,7 @@ export class A2uiChartComponent {
   protected readonly options = computed<ChartOptions<TypeGraphique>>(() => {
     this.theme.theme();
     const texte = jeton('--color-text-muted');
-    const anneau = this.props().type === 'doughnut';
+    const anneau = this.type() === 'doughnut';
     return {
       responsive: true,
       maintainAspectRatio: false,

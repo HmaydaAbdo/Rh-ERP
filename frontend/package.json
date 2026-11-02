@@ -17,13 +17,16 @@
     "check:logique": "node ../scripts/check-proprietes-logiques.mjs ..",
     "check:contraste": "node ../scripts/check-contraste-jetons.mjs ..",
     "audit:deps": "npm audit --audit-level=moderate",
-    "audit:licences": "license-checker-rseidelsohn --production --summary --excludePrivatePackages --onlyAllow \"MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;OFL-1.1;BlueOak-1.0.0;CC0-1.0\""
+    "audit:licences": "license-checker-rseidelsohn --production --summary --excludePrivatePackages --onlyAllow \"MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;OFL-1.1;BlueOak-1.0.0;CC0-1.0;Python-2.0\""
   },
   "private": true,
   "engines": {
     "node": "^24.15.0"
   },
   "dependencies": {
+    "@a2ui/angular": "^0.13.0",
+    "@a2ui/markdown-it": "^0.2.2",
+    "@a2ui/web_core": "^0.14.0",
     "@ag-ui/client": "1.0.3",
     "@angular/aria": "^22.2.5",
     "@angular/cdk": "^22.2.2",
@@ -73,7 +76,13 @@
     "@ag-ui/client": "$@ag-ui/client",
     "@ag-ui/core": "1.0.3",
     "@ag-ui/a2ui-middleware": "0.0.14",
+    "dompurify": "3.4.17",
     "minimatch": "11.0.3",
-    "glob": "14.0.3"
+    "glob": "14.0.3",
+    "@a2ui/angular": {
+      "@angular/core": "$@angular/core",
+      "@angular/common": "$@angular/common",
+      "@angular/platform-browser": "$@angular/platform-browser"
+    }
   }
 }
