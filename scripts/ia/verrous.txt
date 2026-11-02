@@ -6,10 +6,12 @@
 # Format : « py <paquet> <version> », « npm <dossier> <paquet> <version> », « seuil <nom> <valeur> ».
 #
 # Limites connues
-# - openai : 3.42.0 avec litellm 1.109.0.dev2 (préversion adoptée par le propriétaire le 2026-11-01 ; aucune version stable
+# - openai : 3.42.1 avec litellm 1.109.0.dev2 (préversion adoptée par le propriétaire le 2026-11-01 ; aucune version stable
 #   de litellm ne lève encore la borne openai<3). Sortie de LiteLLM : épopée E14 (KAN-30).
 # - @a2ui/web_core 0.14.0 : le rendu de @copilotkit/angular 0.6.0 est écrit pour 0.10.4 ; la compatibilité est assurée par
 #   notre catalogue ERP (testé). Défaut zod 4 signalé : https://github.com/a2ui-project/a2ui/issues/3812
+# - @a2ui/angular 0.13.0 et @a2ui/web_core 0.14.0 : la montée à 0.14.0 / 0.15.0 (2026-11-02) casse 4 fichiers de test, car
+#   web_core 0.15.0 appelle ZodType.prototype.describe, absent de zod 4 (KAN-151). À retester à chaque revue mensuelle.
 # - zod reste en 4.6.7 (surcharge) : ne jamais repasser en 3, avis GHSA-mrhx-c7xc-m3w5 (versions < 4.6.6 sans correctif en 3.x).
 # - typescript reste en 6.0.3 : @angular/build 22.2.5 déclare le pair >=6.0 <6.1 ; Dependabot ignore ses montées.
 # - agentevals 0.0.9 : bibliothèque dormante (dernière publication 2025-07-24), conservée, à surveiller.
@@ -25,7 +27,7 @@ py ag-ui-protocol 1.0.0
 py copilotkit 0.1.96
 py mcp 2.3.0
 py litellm 1.109.0.dev2
-py openai 3.42.0
+py openai 3.42.1
 npm frontend @copilotkit/angular 0.6.0
 npm frontend @a2ui/angular 0.13.0
 npm frontend @a2ui/web_core 0.14.0
