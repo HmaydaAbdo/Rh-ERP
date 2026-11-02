@@ -81,7 +81,7 @@ dans le document indiqué.
 
 ## Ce qui reste à faire
 
-Le suivi des sujets ouverts est dans Jira (projet `KAN`, épopée E17 pour l'exploitation, la qualité des données et les
+Le suivi des sujets ouverts est dans Jira (projet `KAN`, épopée E4 pour l'exploitation, la qualité des données et les
 domaines restants : « Qualité des données » KAN-177 et KAN-160, domaine Pointage KAN-171, déploiement KAN-161 à KAN-164).
 
 ---

@@ -132,7 +132,7 @@ jobs:
       - name: Verify domain documentation covers permissions and MCP tools
         run: node scripts/check-docs-domaines.mjs .
 
-      # Versions verrouillées, seuils de l'agent et nombre d'outils MCP consignés au plan IA = code (E1.5).
+      # Versions verrouillées, seuils de l'agent et nombre d'outils MCP consignés au plan IA = code (E5.5).
       - name: Verify AI documentation matches code
         run: node scripts/ia/check-docs-code.mjs .
 
@@ -326,8 +326,8 @@ jobs:
         working-directory: frontend
         run: npx ng build --configuration production
 
-      # Parcours E2E (connexion, permissions, fonctions, paie, composants, téléphone) contre une API simulée, avec axe.
-      - name: Run frontend E2E tests
+      # Parcours E6E (connexion, permissions, fonctions, paie, composants, téléphone) contre une API simulée, avec axe.
+      - name: Run frontend E6E tests
         working-directory: frontend
         run: npm run e2e
 
@@ -346,7 +346,7 @@ jobs:
           path: frontend/sbom-frontend.cdx.json
 
       # Traces et rapport des parcours en échec, pour comprendre un échec propre au CI sans le rejouer.
-      - name: Upload E2E report on failure
+      - name: Upload E6E report on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
@@ -428,7 +428,7 @@ jobs:
         working-directory: frontend
         run: npx playwright test e2e/full-stack.spec.ts
         env:
-          E2E_FULL_STACK: "1"
+          E6E_FULL_STACK: "1"
           ADMIN_USERNAME: ci-admin
           ADMIN_PASSWORD: ci-admin-password
           BACKEND_URL: http://localhost:8080

@@ -12,7 +12,7 @@ Décisions du propriétaire (2026-11-01) :
   permissions autorisent** ;
 - **la configuration par défaut par fiche de poste attend E6** (sécurité par fiche de poste) : la « fiche de poste » n'existe pas
   encore dans l'erp. Tant qu'aucun choix n'est enregistré, l'utilisateur voit **tous les indicateurs que ses permissions autorisent**,
-  dans l'ordre du catalogue. Quand E6 créera la fiche de poste, un accueil par défaut s'y rattachera (couche entre « choix de
+  dans l'ordre du catalogue. Quand E9 créera la fiche de poste, un accueil par défaut s'y rattachera (couche entre « choix de
   l'utilisateur » et « tous les indicateurs autorisés ») par une migration ; voir le plan de travail, ligne E0.5b.
 
 ## Catalogue des indicateurs

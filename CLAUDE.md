@@ -26,7 +26,7 @@ ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 
-Les tâches se suivent dans Jira (projet `KAN`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`, épopées E0 à E14) :
+Les tâches se suivent dans Jira (projet `KAN`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`, épopées E0 à E19) :
 créer toute nouvelle tâche, tenir le statut et la preuve à jour (règle d'`AGENTS.md`). **Jira et le code sont les seules
 sources de suivi : ne créer aucun fichier markdown d'avancement.** Pour tout travail IA : avancer épopée par épopée,
 principes et décisions dans [`docs/ia/decisions.md`](docs/ia/decisions.md). Ne jamais supposer le comportement d'un
