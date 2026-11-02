@@ -1,7 +1,7 @@
-// Veille de versions des composants IA (plan de travail IA, E1.2, couche 1) : compare les versions verrouillées
+// Veille de versions des composants IA (couche 1 de la veille, tâche Jira KAN-7) : compare les versions verrouillées
 // (ia/uv.lock, frontend/package-lock.json, copilot-runtime/package-lock.json) à la dernière version stable publiée sur
 // PyPI et npm, et signale les préversions plus récentes. À lancer à l'ouverture de toute tâche IA et au moins une fois par
-// mois ; consigner le résultat au § 3 de docs/ia/plan-de-travail.md.
+// mois ; consigner le résultat en commentaire de la tâche Jira de veille et mettre à jour scripts/ia/verrous.txt.
 //
 //   node scripts/ia/veille-versions.mjs            relevé (code de sortie 0)
 //   node scripts/ia/veille-versions.mjs --strict   code de sortie 1 s'il reste un retard non expliqué
@@ -13,9 +13,9 @@ const racine = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--'))
 
 // Retards connus et expliqués : ils n'échouent pas le mode strict. Les retirer dès que la cause disparaît.
 const blocages = {
-  'litellm': 'préversion 1.109.0.dev2 adoptée sur décision du propriétaire (2026-11-01) : seule à lever openai<3 (plan, § 3)',
-  '@a2ui/web_core': '@copilotkit/angular 0.6.0 épingle 0.10.4 (plan, § 3)',
-  'agentevals': 'bibliothèque dormante : dernière publication le 2025-07-24 (plan, § 3)',
+  'litellm': 'préversion 1.109.0.dev2 adoptée sur décision du propriétaire (2026-11-01) : seule à lever openai<3 (scripts/ia/verrous.txt)',
+  '@a2ui/web_core': '@copilotkit/angular 0.6.0 épingle 0.10.4 (scripts/ia/verrous.txt)',
+  'agentevals': 'bibliothèque dormante : dernière publication le 2025-07-24 (scripts/ia/verrous.txt)',
 };
 
 const pypi = ['langchain', 'langchain-core', 'langchain-litellm', 'langgraph', 'langgraph-checkpoint-postgres', 'langgraph-sdk',
