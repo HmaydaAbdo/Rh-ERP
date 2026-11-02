@@ -125,6 +125,7 @@ une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia
 - `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à deux décimales, STC et Net.
 - `LecteurFichierHeuresSuppTest` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
 - `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, arrondi du S/H aux frontières, employé STC/sorti (heures acceptées, Montant en STC, Net à payer nul), forfait STC et doublon de forfait.
+- `EcouteurPaieHeuresSuppTest` : recalcul STC/forfait/net à la modification d'une paie et refus de suppression d'un bulletin lié.
 - `HeuresSuppServiceTest` : ajout et modification unitaires (bulletin absent, doublon, S/H arrondi, heures acceptées pour un bulletin STC/sorti, forfait STC refusé).
 - `HeuresSuppAnalytiqueServiceTest` : agrégats, groupes et périodes.
 - `EndpointSecurityTest`, `OpenApiContractTest` et `McpOutilsLectureIntegrationTest` : permissions, contrats HTTP/OpenAPI et outils MCP.
@@ -137,5 +138,9 @@ Décisions du propriétaire (KAN-169) :
 
 - **Bornes** : aucune borne métier sur les heures ni sur les forfaits (seules les limites techniques s'appliquent).
 - **Employé STC/sorti** : ses heures sont acceptées (voir ci-dessus) ; aucun contrôle de rattachement de l'employé au chantier choisi.
-- **Paie modifiée ou supprimée après l'import** : les lignes liées doivent être recalculées automatiquement.
-  Ce recalcul n'est pas encore implémenté et reste suivi dans KAN-169.
+- **Paie modifiée après l'import** : les lignes liées suivent le marqueur STC/sortie du bulletin
+  (`EcouteurPaieHeuresSupp`, dans la transaction de la paie). Si la paie devient STC/sortie, le Montant passe en
+  STC (DH), le **forfait est annulé** (interdit en STC) et le Net à payer est recalculé ; si elle ne l'est plus,
+  STC retombe à 0 et le Net à payer reprend le Montant. Salaire, S/H, heures et fonction de la ligne restent figés.
+- **Paie supprimée** (unitaire ou par groupe) : la suppression est **refusée** (409) tant qu'une ligne d'heures
+  supplémentaires s'appuie sur le bulletin ; supprimez d'abord ces lignes.

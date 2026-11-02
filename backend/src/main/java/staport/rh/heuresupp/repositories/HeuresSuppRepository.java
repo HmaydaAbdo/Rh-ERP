@@ -15,6 +15,10 @@ public interface HeuresSuppRepository extends JpaRepository<HeureSupp, Long>, Jp
 
     boolean existsByEmployee_IdAndPeriodeAndForfaitIsNotNullAndChantier_IdNot(Long employeeId, YearMonth periode, Long chantierId);
 
+    List<HeureSupp> findByPaie_Id(Long paieId);
+
+    long countByPaie_IdIn(java.util.Collection<Long> paieIds);
+
     long deleteByEmployee_IdAndPeriodeAndChantier_Id(Long employeeId, YearMonth periode, Long chantierId);
 
     List<HeureSupp> findByPeriodeAndChantier_IdOrderByEmployee_NomPrenomAsc(YearMonth periode, Long chantierId);

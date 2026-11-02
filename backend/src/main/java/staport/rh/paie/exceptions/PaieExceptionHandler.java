@@ -49,6 +49,11 @@ public class PaieExceptionHandler {
         return build(HttpStatus.CONFLICT, "Une contrainte d'intégrité empêche cette opération.", request);
     }
 
+    @ExceptionHandler(PaieLieeException.class)
+    public ResponseEntity<ErrorResponseDto> handlePaieLiee(PaieLieeException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(PaieGroupeModifieException.class)
     public ResponseEntity<ErrorResponseDto> handleGroupeModifie(PaieGroupeModifieException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);

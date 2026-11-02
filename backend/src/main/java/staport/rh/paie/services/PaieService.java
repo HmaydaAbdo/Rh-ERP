@@ -78,6 +78,7 @@ public class PaieService implements IPaieService {
     private final IEquipeService equipeService;
     private final EntityManager entityManager;
     private final IAuditJournalService auditJournalService;
+    private final org.springframework.context.ApplicationEventPublisher evenements;
 
     public PaieService(PaieRepository repository,
                         PaieMapper mapper,
@@ -86,7 +87,8 @@ public class PaieService implements IPaieService {
                         IChantierService chantierService,
                         IEquipeService equipeService,
                         EntityManager entityManager,
-                        IAuditJournalService auditJournalService) {
+                        IAuditJournalService auditJournalService,
+                        org.springframework.context.ApplicationEventPublisher evenements) {
         this.repository = repository;
         this.mapper = mapper;
         this.employeeService = employeeService;
@@ -95,6 +97,7 @@ public class PaieService implements IPaieService {
         this.equipeService = equipeService;
         this.entityManager = entityManager;
         this.auditJournalService = auditJournalService;
+        this.evenements = evenements;
     }
 
     @Override
@@ -159,6 +162,7 @@ public class PaieService implements IPaieService {
         entity.setEquipe(equipe);
 
         Paie updated = repository.saveAndFlush(entity);
+        evenements.publishEvent(new staport.rh.paie.events.PaieModifieeEvenement(updated.getId(), updated.getObservation()));
         return mapper.toDto(updated);
     }
 
@@ -225,6 +229,7 @@ public class PaieService implements IPaieService {
     @AuditableAction(action = "PAIE_SUPPRESSION", type = TypeOperation.DELETE, entite = Paie.class)
     public void delete(Long id) {
         Paie entity = getEntityById(id);
+        evenements.publishEvent(new staport.rh.paie.events.PaieSuppressionDemandeeEvenement(List.of(id)));
         repository.delete(entity);
     }
 
@@ -243,6 +248,8 @@ public class PaieService implements IPaieService {
         }
         // Entité par entité, jamais en masse (deleteAllInBatch) : seul moyen pour que l'audit voie chaque bulletin
         // supprimé (conventions/audit.md).
+        evenements.publishEvent(new staport.rh.paie.events.PaieSuppressionDemandeeEvenement(
+                groupe.stream().map(Paie::getId).toList()));
         repository.deleteAll(groupe);
         return groupe.size();
     }
