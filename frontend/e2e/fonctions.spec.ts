@@ -78,6 +78,8 @@ test.describe('Fonctions', () => {
     await page.getByRole('searchbox', { name: 'Libellé' }).fill('mac');
     await expect.poll(() => (mock.bodies['POST /functions/search'] ?? []).at(-1)).toEqual({ libelle: 'mac' });
 
+    // Le titre est ajusté à son contenu, donc proche du menu : on écarte la souris pour que le menu survolé ne se déplie pas par-dessus.
+    await page.mouse.move(1000, 500);
     await page.getByRole('columnheader', { name: /Libellé/ }).click();
     await expect(page.getByRole('columnheader', { name: /Libellé/ })).toHaveAttribute('aria-sort', 'ascending');
   });
