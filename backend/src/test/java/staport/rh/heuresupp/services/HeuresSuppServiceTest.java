@@ -111,10 +111,99 @@ class HeuresSuppServiceTest {
     void creerRefuseForfaitStcEtForfaitStcDejaLieAutreChantier() {
         when(paie.observation()).thenReturn("STC");
         when(repository.existsByEmployee_IdAndPeriodeAndChantier_Id(5L, PERIODE, 8L)).thenReturn(false);
-        assertThrows(HeuresSuppImportException.class, () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, BigDecimal.ONE, BigDecimal.TEN)));
+        assertThrows(HeuresSuppImportException.class, () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, null, BigDecimal.TEN)));
 
         when(repository.existsByEmployee_IdAndPeriodeAndForfaitIsNotNullAndChantier_IdNot(5L, PERIODE, 8L)).thenReturn(true);
-        assertThrows(HeuresSuppImportException.class, () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, BigDecimal.ONE, null)));
+        assertThrows(HeuresSuppImportException.class, () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, BigDecimal.ZERO, null)));
+    }
+
+    @Test
+    void creerRefuseDesHeuresPourUnBulletinStcOuSortieAvecNomCinEtMois() {
+        for (String observation : new String[]{"STC", " sortie "}) {
+            when(paie.observation()).thenReturn(observation);
+            lenient().when(repository.existsByEmployee_IdAndPeriodeAndChantier_Id(5L, PERIODE, 8L)).thenReturn(false);
+
+            var erreur = assertThrows(HeuresSuppImportException.class,
+                    () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, new BigDecimal("2"), null)));
+
+            assertTrue(erreur.getMessage().contains("Salma Alaoui"), erreur.getMessage());
+            assertTrue(erreur.getMessage().contains("AB123"), erreur.getMessage());
+            assertTrue(erreur.getMessage().contains("employé STC/sorti sur la paie d'octobre 2026"), erreur.getMessage());
+        }
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void creerAccepteZeroHeureSurUnBulletinStc() {
+        when(paie.observation()).thenReturn("STC");
+        when(repository.existsByEmployee_IdAndPeriodeAndChantier_Id(5L, PERIODE, 8L)).thenReturn(false);
+        when(entityManager.getReference(Employee.class, 5L)).thenReturn(mock(Employee.class));
+        when(entityManager.getReference(Paie.class, 9L)).thenReturn(mock(Paie.class));
+        when(entityManager.getReference(Function.class, 7L)).thenReturn(mock(Function.class));
+        when(entityManager.getReference(Chantier.class, 8L)).thenReturn(mock(Chantier.class));
+
+        service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, BigDecimal.ZERO, null));
+
+        var ligne = capturerLigneSauvee();
+        assertTrue(ligne.isStcOuSortie());
+        assertEquals(0, BigDecimal.ZERO.compareTo(ligne.getHeures()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(ligne.getMontant()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(ligne.getNetAPayer()));
+    }
+
+    @Test
+    void creerRefuseSansBulletinDuMois() {
+        when(paies.findByEmployeeIdAndPeriode(5L, PERIODE)).thenReturn(Optional.empty());
+
+        var erreur = assertThrows(HeuresSuppImportException.class,
+                () -> service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, BigDecimal.ONE, null)));
+
+        assertTrue(erreur.getMessage().contains("Aucune paie"));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void creerArrondiLeTauxMensuelALEntierAuxFrontieres() {
+        String[][] cas = {{"4027.40", "15"}, {"4030.00", "15"}, {"4032.60", "16"}};
+        when(entityManager.getReference(Employee.class, 5L)).thenReturn(mock(Employee.class));
+        when(entityManager.getReference(Paie.class, 9L)).thenReturn(mock(Paie.class));
+        when(entityManager.getReference(Function.class, 7L)).thenReturn(mock(Function.class));
+        when(entityManager.getReference(Chantier.class, 8L)).thenReturn(mock(Chantier.class));
+        for (String[] c : cas) {
+            when(employes.findById(5L)).thenReturn(new EmployeeResponseDto(5L, 0L, "Salma Alaoui", "AB123", null, null,
+                    new FunctionSummaryDto(7L, "Chauffeur"), null, null, new BigDecimal(c[0]), TypeSalaire.MENSUEL, null));
+
+            service.creer(new HeuresSuppCreationDto(5L, PERIODE, 8L, new BigDecimal("2"), null));
+        }
+
+        var captor = org.mockito.ArgumentCaptor.forClass(HeureSupp.class);
+        verify(repository, times(3)).save(captor.capture());
+        for (int i = 0; i < cas.length; i++) {
+            var ligne = captor.getAllValues().get(i);
+            assertEquals(0, new BigDecimal(cas[i][1]).compareTo(ligne.getSalaireHoraire()), cas[i][0]);
+            assertEquals(0, new BigDecimal(cas[i][1]).multiply(new BigDecimal("2")).compareTo(ligne.getMontant()), cas[i][0]);
+        }
+    }
+
+    @Test
+    void modifierRefuseDesHeuresPositivesSurUneLigneStcMaisAccepteZero() {
+        HeureSupp stc = ligneExistante(3L, BigDecimal.TEN, true);
+        stc.setPeriode(PERIODE);
+        var employeLigne = mock(Employee.class);
+        when(employeLigne.getNomPrenom()).thenReturn("Salma Alaoui");
+        when(employeLigne.getCin()).thenReturn("AB123");
+        stc.setEmployee(employeLigne);
+        when(repository.findById(4L)).thenReturn(Optional.of(stc));
+
+        var erreur = assertThrows(HeuresSuppImportException.class,
+                () -> service.modifier(4L, new HeuresSuppModificationDto(3L, new BigDecimal("1.5"), null)));
+        assertTrue(erreur.getMessage().contains("Salma Alaoui (CIN AB123) : employé STC/sorti sur la paie d'octobre 2026"), erreur.getMessage());
+        verify(repository, never()).save(any());
+
+        when(repository.save(stc)).thenReturn(stc);
+        service.modifier(4L, new HeuresSuppModificationDto(3L, BigDecimal.ZERO, null));
+        assertEquals(0, BigDecimal.ZERO.compareTo(stc.getMontant()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(stc.getNetAPayer()));
     }
 
     @Test
