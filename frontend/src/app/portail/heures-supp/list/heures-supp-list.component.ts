@@ -9,6 +9,7 @@ import { ColumnState } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableLazyLoadEvent } from '../../../shared/ui/table/table.component';
 import { HeuresSupp, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
+import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
@@ -27,8 +28,8 @@ export class HeuresSuppListComponent {
   protected readonly table = TABLE;
   protected readonly columns = new ColumnState([
     { field: 'periode', header: 'Mois', sortField: 'periode' }, { field: 'chantier', header: 'Chantier', sortField: 'chantier.code' },
-    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom', minWidth: 200 },
-    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
+    { field: 'employe', header: 'Employé', sortField: 'employee.nomPrenom' },
+    { field: 'cin', header: 'CIN', sortField: 'employee.cin' }, { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle' },
     { field: 'salaireReferenceDh', header: 'Salaire référence', sortField: 'salaireReference' },
     { field: 'salaireHoraireDh', header: 'S/H', sortField: 'salaireHoraire' },
     { field: 'heuresSupplementaires', header: 'P/H', sortField: 'heures' }, { field: 'montantDh', header: 'Montant', sortField: 'montant' },
@@ -40,7 +41,7 @@ export class HeuresSuppListComponent {
   protected readonly totalNetAPayer = signal<number | null>(null);
   protected readonly erreurTotal = signal(false);
   protected readonly chargement = signal(false);
-  protected readonly exportEnCours = signal(false);
+  private readonly exportEtat = inject(HeuresSuppExportEtat);
   protected readonly erreur = signal<string | null>(null);
   protected readonly purgeNombre = signal<number | null>(null);
   protected readonly purgeSaisie = signal<number | null>(null);
@@ -52,25 +53,8 @@ export class HeuresSuppListComponent {
   private readonly router = inject(Router);
   protected criteres: HeuresSuppSearchCriteria = {};
   private dernierEvenement: TableLazyLoadEvent | null = null;
-  private dernierTri = 'periode,desc';
   private dernierCritereAnalytique = '';
 
-
-  protected exporterPdf(): void {
-    if (this.exportEnCours()) return;
-    this.exportEnCours.set(true); this.erreur.set(null);
-    this.service.exporterPdf(this.criteres, this.dernierTri).pipe(finalize(() => this.exportEnCours.set(false))).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const lien = document.createElement('a');
-        lien.href = url;
-        lien.download = `Heures_supplementaires_${this.criteres.periode ?? 'tous-les-mois'}.pdf`;
-        lien.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.erreur.set('Le PDF n’a pas pu être généré. Affinez les filtres (5 000 lignes au plus) puis réessayez.')
-    });
-  }
 
   protected canDelete(): boolean { return this.auth.hasPermission('HEURES_SUP_DELETE'); }
   protected canPurge(): boolean { return this.auth.hasPermission('HEURES_SUP_PURGE'); }
@@ -136,8 +120,8 @@ export class HeuresSuppListComponent {
   protected charger(event: TableLazyLoadEvent): void {
     this.dernierEvenement = event;
     this.chargement.set(true); this.erreur.set(null);
-    if (event.sortField) this.dernierTri = `${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`;
-    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.dernierTri).pipe(finalize(() => this.chargement.set(false))).subscribe({
+    if (event.sortField) this.exportEtat.tri.set(`${event.sortField},${event.sortOrder === -1 ? 'desc' : 'asc'}`);
+    this.service.search(this.criteres, Math.floor(event.first / event.rows), event.rows, this.exportEtat.tri()).pipe(finalize(() => this.chargement.set(false))).subscribe({
       next: (page) => { this.lignes.set(page.content); this.total.set(page.page.totalElements); },
       error: () => this.erreur.set('Les heures supplémentaires n’ont pas pu être chargées. Réessayez.')
     });

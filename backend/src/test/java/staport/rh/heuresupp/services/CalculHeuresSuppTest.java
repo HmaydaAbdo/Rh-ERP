@@ -60,9 +60,9 @@ class CalculHeuresSuppTest {
     }
 
     @Test
-    void montant_est_arrondi_a_deux_decimales() {
+    void montant_est_arrondi_a_l_entier_demi_vers_le_bas() {
         assertThat(CalculHeuresSupp.montant(new BigDecimal("12.345"), new BigDecimal("1.1")))
-                .isEqualByComparingTo("13.58");
+                .isEqualByComparingTo("14");
     }
 
     @Test

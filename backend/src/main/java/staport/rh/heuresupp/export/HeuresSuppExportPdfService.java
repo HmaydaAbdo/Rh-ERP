@@ -24,6 +24,9 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -32,14 +35,13 @@ import java.util.Map;
 /**
  * Rapport PDF des heures supplémentaires : mêmes filtres, même recherche et même tri que la vue Tabulaire, sur toutes
  * les lignes du périmètre. Même moteur (openhtmltopdf), même police et même bandeau que le rapport de paie ; les
- * pages sont découpées ici (hauteur de ligne fixe) et le DOM est construit par jsoup, sans jamais interpréter de HTML
+ * pagination est faite par le moteur (le tableau s'écoule, sans nombre de lignes fixé) et le DOM est construit par jsoup, sans jamais interpréter de HTML
  * issu des données (tout passe par {@code text(...)}).
  */
 @Service
 public class HeuresSuppExportPdfService {
 
     static final int LIGNES_MAX = 5000;
-    static final int LIGNES_PAR_PAGE = 26;
     private static final String CHEMIN_CSS = "report/heures-supp/rapport.css";
 
     /** Colonnes de la vue Tabulaire (propriété triable) : seul ce tri est accepté, comme à l'écran. */
@@ -99,39 +101,28 @@ public class HeuresSuppExportPdfService {
     private Document construire(HeuresSuppExportRequestDto requete, List<HeureSuppResponseDto> lignes) {
         Document doc = Document.createShell("");
         doc.head().appendElement("style").appendChild(new DataNode(css));
-        String titre = "Heures supplémentaires " + (requete.periode() == null ? "· tous les mois" : requete.periode());
-        String contexte = contexte(requete);
+        String titre = "Heures supplémentaires" + (requete.periode() == null ? "" : " — " + moisEnToutesLettres(requete.periode()));
+        String contexte = contexte(requete, lignes);
+        List<String[]> filtres = filtres(requete, lignes);
 
-        // La dernière ligne du tableau porte les totaux du périmètre ; elle suit la pagination des autres lignes.
-        List<Object> elements = new ArrayList<>(lignes);
-        elements.add(totaux(lignes));
-        int pages = Math.max(1, (elements.size() + LIGNES_PAR_PAGE - 1) / LIGNES_PAR_PAGE);
-        for (int p = 0; p < pages; p++) {
-            Element page = doc.body().appendElement("div").addClass("page");
-            entete(page, titre, contexte);
-            Element table = page.appendElement("div").addClass("page-body").appendElement("table").addClass("heures");
-            for (String colonne : List.of("mois", "chantier", "employe", "cin", "fonction", "salaire", "sh", "ph", "montant", "stc", "forfait", "net")) {
-                table.appendElement("col").addClass(colonne);
-            }
-            enteteTableau(table);
-            Element corps = table.appendElement("tbody");
-            for (Object element : elements.subList(p * LIGNES_PAR_PAGE, Math.min(elements.size(), (p + 1) * LIGNES_PAR_PAGE))) {
-                Element tr = corps.appendElement("tr");
-                if (element instanceof HeureSuppResponseDto ligne) {
-                    ligne(tr, ligne);
-                } else if (element instanceof Totaux total) {
-                    ligneTotaux(tr, total);
-                }
-            }
-            Element pied = page.appendElement("div").addClass("page-footer");
-            pied.appendElement("span").text(contexte);
-            pied.appendElement("div").addClass("pagination").text("Page " + (p + 1) + " / " + pages);
+        // Bandeau et pied sont des éléments « running » repris sur chaque page par les marges de @page ; le tableau, lui, s'écoule
+        // naturellement : chaque ligne prend la place dont elle a besoin et le moteur coupe les pages (en-tête de colonnes répété).
+        entete(doc.body(), titre, contexte, filtres);
+        doc.body().appendElement("div").addClass("pied")
+                .text("Édité le " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm", Locale.FRANCE)));
+        Element table = doc.body().appendElement("table").addClass("heures");
+        enteteTableau(table);
+        Element corps = table.appendElement("tbody");
+        for (HeureSuppResponseDto ligne : lignes) {
+            ligne(corps.appendElement("tr"), ligne);
         }
+        // La dernière ligne du tableau porte les totaux du périmètre.
+        ligneTotaux(corps.appendElement("tr"), totaux(lignes));
         return doc;
     }
 
-    private void entete(Element page, String titre, String contexte) {
-        Element entete = page.appendElement("div").addClass("page-header");
+    private void entete(Element parent, String titre, String contexte, List<String[]> filtres) {
+        Element entete = parent.appendElement("div").addClass("page-header");
         entete.appendElement("img").addClass("logo").attr("src", ressources.logoDataUri());
         entete.appendElement("div").addClass("sep").addClass("s1");
         entete.appendElement("div").addClass("bloc").addClass("b1").text("Ressources Humaines");
@@ -139,12 +130,21 @@ public class HeuresSuppExportPdfService {
         Element bloc = entete.appendElement("div").addClass("bloc").addClass("b2");
         bloc.appendElement("span").text(titre);
         bloc.appendElement("span").addClass("contexte").text(contexte);
+        if (!filtres.isEmpty()) {
+            entete.appendElement("div").addClass("sep").addClass("s3");
+            Element zone = entete.appendElement("div").addClass("filtres");
+            for (String[] filtre : filtres) {
+                Element ligne = zone.appendElement("div");
+                ligne.appendElement("span").addClass("lib").text(filtre[0]);
+                ligne.appendElement("span").text(filtre[1]);
+            }
+        }
         entete.appendElement("div").addClass("filet");
     }
 
     private void enteteTableau(Element table) {
         String[][] colonnes = {{"Mois", ""}, {"Chantier", ""}, {"Employé", ""}, {"CIN", ""}, {"Fonction", ""}, {"Salaire réf.", "num"},
-                {"S/H", "num"}, {"P/H", "num"}, {"Montant", "num"}, {"STC", "num"}, {"Forfait", "num"}, {"Net à payer", "num"}};
+                {"S/H", "num"}, {"P/H", "num"}, {"Montant", "num"}, {"STC", "num"}, {"Forfait", "num"}, {"Net à payer", "num"}, {"Émargement", ""}};
         Element tr = table.appendElement("thead").appendElement("tr");
         for (String[] colonne : colonnes) {
             Element th = tr.appendElement("th").text(colonne[0]);
@@ -163,10 +163,11 @@ public class HeuresSuppExportPdfService {
         nombre(tr, l.salaireReferenceDh(), 2);
         nombre(tr, l.salaireHoraireDh(), 0);
         nombre(tr, l.heuresSupplementaires(), 1);
-        nombre(tr, l.montantDh(), 2);
-        nombre(tr, l.stcDh(), 2);
-        nombre(tr, l.forfaitDh(), 2);
-        nombre(tr, l.netAPayerDh(), 2);
+        nombre(tr, l.montantDh(), 0);
+        nombre(tr, l.stcDh(), 0);
+        nombre(tr, l.forfaitDh(), 0);
+        nombre(tr, l.netAPayerDh(), 0);
+        tr.appendElement("td").addClass("emargement");
     }
 
     private void ligneTotaux(Element tr, Totaux t) {
@@ -175,10 +176,11 @@ public class HeuresSuppExportPdfService {
         tr.appendElement("td").addClass("num");
         tr.appendElement("td").addClass("num");
         nombre(tr, t.heures(), 1);
-        nombre(tr, t.montant(), 2);
-        nombre(tr, t.stc(), 2);
-        nombre(tr, t.forfait(), 2);
-        nombre(tr, t.net(), 2);
+        nombre(tr, t.montant(), 0);
+        nombre(tr, t.stc(), 0);
+        nombre(tr, t.forfait(), 0);
+        nombre(tr, t.net(), 0);
+        tr.appendElement("td");
     }
 
     private record Totaux(int lignes, BigDecimal heures, BigDecimal montant, BigDecimal stc, BigDecimal forfait, BigDecimal net) {
@@ -200,29 +202,46 @@ public class HeuresSuppExportPdfService {
         return new Totaux(lignes.size(), heures, montant, stc, forfait, net);
     }
 
-    private String contexte(HeuresSuppExportRequestDto r) {
-        List<String> parties = new ArrayList<>();
-        parties.add(r.periode() == null ? "Tous les mois" : "Mois : " + r.periode());
-        if (r.nomPrenom() != null && !r.nomPrenom().isBlank()) {
-            parties.add("Nom : " + r.nomPrenom().trim());
+    private static String moisEnToutesLettres(YearMonth mois) {
+        return mois.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.FRANCE));
+    }
+
+    /** Sous le titre : le contenu du document et son ordre de lecture (le mois est dans le titre, les montants dans les totaux). */
+    private String contexte(HeuresSuppExportRequestDto r, List<HeureSuppResponseDto> lignes) {
+        if (lignes.isEmpty()) {
+            return "Aucune ligne pour ce périmètre.";
         }
-        if (r.cin() != null && !r.cin().isBlank()) {
-            parties.add("CIN : " + r.cin().trim());
-        }
-        if (r.chantierIds() != null && !r.chantierIds().isEmpty()) {
-            parties.add(r.chantierIds().size() + " chantier(s)");
-        }
-        if (r.equipeIds() != null && !r.equipeIds().isEmpty()) {
-            parties.add(r.equipeIds().size() + " équipe(s)");
-        }
-        if (r.fonctionIds() != null && !r.fonctionIds().isEmpty()) {
-            parties.add(r.fonctionIds().size() + " fonction(s)");
-        }
+        long employes = lignes.stream().map(HeureSuppResponseDto::employeeId).distinct().count();
         boolean trie = r.tri() != null && !r.tri().isBlank();
         String propriete = trie ? r.tri().split(",")[0].trim() : "periode";
         boolean decroissant = !trie || r.tri().toLowerCase(Locale.ROOT).endsWith(",desc");
-        parties.add("Tri : " + TRIS.getOrDefault(propriete, "Mois") + (decroissant ? " (décroissant)" : " (croissant)"));
-        return String.join(" · ", parties);
+        return lignes.size() + (lignes.size() > 1 ? " lignes" : " ligne") + " · " + employes + (employes > 1 ? " employés" : " employé")
+                + " · classées par " + TRIS.getOrDefault(propriete, "Mois").toLowerCase(Locale.FRANCE) + (decroissant ? " décroissant" : " croissant");
+    }
+
+    /** Zone de droite : uniquement les filtres réellement appliqués, un par ligne ; un filtre absent n'est pas mentionné. */
+    private List<String[]> filtres(HeuresSuppExportRequestDto r, List<HeureSuppResponseDto> lignes) {
+        List<String[]> filtres = new ArrayList<>();
+        if (r.nomPrenom() != null && !r.nomPrenom().isBlank()) {
+            filtres.add(new String[] {"Nom", r.nomPrenom().trim()});
+        }
+        if (r.cin() != null && !r.cin().isBlank()) {
+            filtres.add(new String[] {"CIN", r.cin().trim()});
+        }
+        if (r.chantierIds() != null && !r.chantierIds().isEmpty()) {
+            filtres.add(new String[] {"Chantiers", liste(lignes.stream().map(HeureSuppResponseDto::codeChantier).distinct().sorted().toList(), "chantiers")});
+        }
+        if (r.equipeIds() != null && !r.equipeIds().isEmpty()) {
+            filtres.add(new String[] {"Équipes", r.equipeIds().size() + (r.equipeIds().size() > 1 ? " équipes" : " équipe")});
+        }
+        if (r.fonctionIds() != null && !r.fonctionIds().isEmpty()) {
+            filtres.add(new String[] {"Fonctions", liste(lignes.stream().map(HeureSuppResponseDto::fonction).distinct().sorted().toList(), "fonctions")});
+        }
+        return filtres;
+    }
+
+    private static String liste(List<String> valeurs, String pluriel) {
+        return valeurs.size() <= 3 ? String.join(", ", valeurs) : valeurs.size() + " " + pluriel;
     }
 
     private static void nombre(Element tr, BigDecimal valeur, int decimales) {

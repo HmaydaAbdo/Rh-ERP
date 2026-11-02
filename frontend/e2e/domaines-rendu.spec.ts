@@ -15,7 +15,6 @@ const DROITS = [
 ];
 
 const ECRANS: string[] = [
-  '/accueil',
   '/employees',
   '/chantiers',
   '/chantiers/cartes',

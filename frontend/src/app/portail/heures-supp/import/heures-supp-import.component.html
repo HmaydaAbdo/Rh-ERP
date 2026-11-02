@@ -8,7 +8,7 @@
       @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
       @if (resultat(); as bilan) {
         <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="bilan.lignesHeures + ' lignes importées · ' + bilan.lignesZero + ' à 0'">
-          <p class="m-0">{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.2-2' }} DH</p>
+          <p class="m-0">{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.0-0' }} DH</p>
           <a stp-button variant="primary" routerLink="/heures-supp">Voir les heures supplémentaires</a>
         </stp-wizard-state>
       } @else if (etape() === 1) {
@@ -37,7 +37,7 @@
           @if (forfaits().length) {
             <div class="app-wizard__forfaits" aria-label="Forfaits ajoutés">
               @for (forfait of forfaits(); track forfait.cin) {
-                <article class="app-wizard__forfait"><div><strong>{{ forfait.nomPrenom }}</strong><span>{{ forfait.cin }}</span></div><strong>{{ forfait.montantDh | number:'1.2-2' }} DH</strong><button stp-button variant="text" icon="trash-2" iconOnly type="button" [attr.aria-label]="'Retirer le forfait de ' + forfait.nomPrenom" (click)="retirerForfait(forfait.cin)"></button></article>
+                <article class="app-wizard__forfait"><div><strong>{{ forfait.nomPrenom }}</strong><span>{{ forfait.cin }}</span></div><strong>{{ forfait.montantDh | number:'1.0-0' }} DH</strong><button stp-button variant="text" icon="trash-2" iconOnly type="button" [attr.aria-label]="'Retirer le forfait de ' + forfait.nomPrenom" (click)="retirerForfait(forfait.cin)"></button></article>
               }
             </div>
           } @else {
@@ -76,10 +76,10 @@
                   @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
                   @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
                   @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') }} }
-                  @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.2-2') }} }
-                  @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.2-2' }}</strong> }
-                  @case ('montantDh') { {{ ligne.montantDh | number:'1.2-2' }} }
-                  @case ('stcDh') { {{ ligne.stcDh | number:'1.2-2' }} }
+                  @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.0-0') }} }
+                  @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.0-0' }}</strong> }
+                  @case ('montantDh') { {{ ligne.montantDh | number:'1.0-0' }} }
+                  @case ('stcDh') { {{ ligne.stcDh | number:'1.0-0' }} }
                   @default { {{ ligne[col.field] }} }
                 }
               </ng-template>
@@ -94,7 +94,7 @@
       <stp-dialog header="Montant du forfait" width="30rem" [(open)]="forfaitDialogueOuvert" (closed)="annulerForfait()">
         @if (forfaitEmploye(); as employe) { <p><strong>{{ employe.nomPrenom }}</strong><br /><span>{{ employe.cin }}</span></p> }
         @if (forfaitEmploye()) {
-          <label class="field" for="hs-forfait-montant">Montant du forfait (DH) <stp-number-input inputId="hs-forfait-montant" ariaLabel="Montant du forfait en DH" [value]="montantForfait()" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" (valueChange)="montantForfait.set($event)" /></label>
+          <label class="field" for="hs-forfait-montant">Montant du forfait (DH) <stp-number-input inputId="hs-forfait-montant" ariaLabel="Montant du forfait en DH" [value]="montantForfait()" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="0" (valueChange)="montantForfait.set($event)" /></label>
         }
         @if (forfaitEmploye()) {
           <div stpDialogFooter><button stp-button variant="secondary" type="button" (click)="annulerForfait()">Annuler</button><button stp-button variant="primary" type="button" [disabled]="montantForfait() === null || montantForfait()! < 0" (click)="enregistrerForfait()">Ajouter le forfait</button></div>
