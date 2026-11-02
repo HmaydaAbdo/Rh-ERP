@@ -129,5 +129,5 @@ une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia
 
 ## Limites métier à arbitrer
 
-Les décisions métier qui restent à prendre sont suivies dans [TODO du domaine](TODO.md) ; elles ne sont pas
+Les décisions métier qui restent à prendre sont suivies dans Jira (KAN-169) ; elles ne sont pas
 interprétées comme des règles par l'import ou par l'assistant IA.

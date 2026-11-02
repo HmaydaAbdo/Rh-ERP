@@ -331,7 +331,7 @@ Constats issus de la relecture du code pour clôturer le domaine. Chacun est un 
 | # | Constat | Question |
 |---|---|---|
 | 1 | Une fonction n'a **qu'un libellé** (pas de code) : l'import, l'unicité et les sélecteurs reposent uniquement dessus | Un code de fonction est-il nécessaire (échanges, import Paie) ? |
-| 2 | Pas de fusion ni d'archivage ; les quasi-doublons de libellés sont seulement suivis dans « Qualité des données » du [TODO](../../TODO.md) | Faut-il une fusion guidée de fonctions ? |
+| 2 | Pas de fusion ni d'archivage ; les quasi-doublons de libellés sont seulement suivis dans « Qualité des données » (KAN-160) | Faut-il une fusion guidée de fonctions ? |
 | 3 | L'import Excel de la paie **crée** une fonction inconnue sans permission `FUNCTION_*` | Ce droit implicite est-il voulu, ou doit-il demander une validation ? |
 | 4 | Renommer une fonction change le libellé dans tous les bulletins historiques | Faut-il conserver le libellé d'époque dans le bulletin ? |
 | 5 | Les vues analysent la fonction du **bulletin** ; la fonction de la fiche Employé peut différer | Quelle fonction fait foi pour les rapports ? |
@@ -347,4 +347,4 @@ Les tests du domaine vérifient les règles et parcours suivants :
 - filtre conservé entre les trois vues, hiérarchie Fonction → Chantier → Équipe et données Paie selon les permissions;
 - période récente dans Cartes et Analytique, cartes triées par masse salariale puis effectif payé, répartition Paie avec STC, suivi mensuel, mois sans bulletin et exports PDF.
 
-Les quasi-doublons de libellés restent suivis dans « Qualité des données » du [TODO global](../../TODO.md); aucune fusion automatique n’est faite dans ce domaine.
+Les quasi-doublons de libellés restent suivis dans « Qualité des données » (KAN-160) ; aucune fusion automatique n’est faite dans ce domaine.

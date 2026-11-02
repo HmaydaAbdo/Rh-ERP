@@ -24,7 +24,7 @@ Après toute modification :
 - vérifier que le projet compile ;
 - supprimer le dead code ;
 - mettre à jour la documentation concernée (le README du domaine, `docs/rbac/` si une permission change,
-  `docs/data-model.md` si le schéma change, `TODO.md` si un sujet est traité ou découvert).
+  `docs/data-model.md` si le schéma change, et Jira (projet `KAN`) si un sujet est traité ou découvert).
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 

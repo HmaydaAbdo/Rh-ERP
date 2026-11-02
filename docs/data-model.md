@@ -109,7 +109,7 @@ Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMig
 Limites actuelles : les index fonctionnels bloquent l'égalité après normalisation, mais pas les
 quasi-doublons sémantiques (`TECHNICIEN DE QUALITE` / `THECNICIEN DE QUALITE`). Ces cas et les
 doublons préexistants éventuels sont instruits dans la
-tâche « Qualité des données » ([../TODO.md](../TODO.md)).
+tâches « Qualité des données » (KAN-159 et KAN-160).
 
 ### Que se passe-t-il à la suppression ?
 

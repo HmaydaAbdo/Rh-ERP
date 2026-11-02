@@ -234,5 +234,5 @@ par l'enregistrement.
 
 * Supprimer immédiatement le code inutilisé (`git rm`).
 * Ne jamais conserver du code "au cas où".
-* Si une suppression est temporairement impossible, documenter le cas dans `TODO.md`.
+* Si une suppression est temporairement impossible, créer la tâche Jira (projet `KAN`) qui la porte.
 * Toute valeur configurable doit respecter les conventions de `configuration.md`.

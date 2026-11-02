@@ -208,7 +208,7 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
   `postgres-log-retention` purge au démarrage puis chaque jour à 03:00 UTC les fichiers `postgresql-*.csv*` âgés de plus
   de 90 jours. Le nom configuré omet le suffixe `.csv`, que PostgreSQL ajoute lui-même. L'activation et la purge effective
   doivent encore être vérifiées en production ; les droits d'accès au volume et les alertes d'exploitation restent suivis
-  dans [`TODO.md`](../../TODO.md). Les CSV restent sur le serveur et sont exposés au risque de perte de ce volume.
+  dans Jira (KAN-163). Les CSV restent sur le serveur et sont exposés au risque de perte de ce volume.
 - **Limite de confiance** : une modification faite directement en base par le détenteur du compte propriétaire n'est pas
   capturée par l'application. pgAudit est préparé pour tracer le SQL direct après migration de production vers PostgreSQL 18 ;
   un superutilisateur peut toutefois modifier la configuration ou réécrire les journaux locaux.
