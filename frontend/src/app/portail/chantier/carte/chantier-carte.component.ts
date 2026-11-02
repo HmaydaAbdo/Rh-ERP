@@ -63,8 +63,8 @@ const MESSAGES_SOURCE: Readonly<Record<string, string>> = {
 
 /**
  * Carte du monde, initialisée sur le Maroc puis cadrée sur les points qualifiés reçus en entrée. Composant « bête » : il ne connaît ni la page,
- * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, conserve son style sombre malgré
- * le thème applicatif, la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
+ * ni les droits, ni l'origine des chantiers. Il crée la carte quand son conteneur existe, suit le thème applicatif (clair ou sombre),
+ * la redessine au changement d'affichage (plan ou satellite, relief), suit son conteneur quand il change de taille, signale une source introuvable et
  * détruit la carte à sa destruction.
  *
  * Styles sans encapsulation : MapLibre crée ses propres éléments (contrôles, mention légale, fiches) hors du gabarit Angular.
@@ -88,7 +88,7 @@ export class ChantierCarteComponent {
 
   private carte?: CarteMapLibre;
   private observateur?: ResizeObserver;
-  /** Affichage du style en place ; le thème cartographique reste sombre et indépendant du thème applicatif. */
+  /** Affichage du style en place ; le plan cartographique suit le thème applicatif (clair par défaut). */
   private styleAffiche?: Affichage;
   private styleTheme?: 'light' | 'dark';
 
