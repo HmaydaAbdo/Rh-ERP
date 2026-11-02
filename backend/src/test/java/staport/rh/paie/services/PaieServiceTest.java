@@ -82,6 +82,9 @@ class PaieServiceTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher evenements;
+
     @InjectMocks
     private PaieService paieService;
 
