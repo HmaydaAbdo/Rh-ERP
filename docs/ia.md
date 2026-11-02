@@ -99,7 +99,8 @@ Le Nginx extérieur et le relais intérieur transmettent les événements SSE sa
 Cette routine est commune à Claude et Codex : `CLAUDE.md` renvoie à `AGENTS.md`, qui renvoie à ce document. Elle
 est exécutée au moins une fois par mois, et à la demande du propriétaire lorsqu'une nouvelle version est signalée.
 La date de la dernière revue, ses sources et ses conclusions sont consignées en commentaire de la tâche Jira du mois
-(label `veille-ia`), jamais dans ce document : l'état des candidats et le journal des revues vivent dans Jira. La veille ne se
+(label `veille-ia`, que la règle d'automatisation ne sait pas poser : le premier geste de la revue est de l'ajouter à la
+tâche du mois), jamais dans ce document : l'état des candidats et le journal des revues vivent dans Jira. La veille ne se
 limite pas aux noms de modèles déjà inscrits ici, à une seule famille d'IA, ni aux fournisseurs actuellement configurés.
 
 **Une routine, pas une option.** Chaque mois, une tâche Jira « Veille mensuelle IA » est créée automatiquement (règle
