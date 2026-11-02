@@ -91,7 +91,7 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 
 Les décisions de cadrage communes restent dans le présent PV. Les règles confirmées propres à Équipe
 sont décrites dans son [README](../equipe/README.md). La signification et le libellé des codes provisoires
-`A`, `LABO`, `ASPHALET` et `8` restent suivis dans la tâche globale « Qualité des données » de `TODO.md`.
+`A`, `LABO`, `ASPHALET` et `8` restent suivis dans la tâche Jira « Qualité des données » (KAN-160).
 
 ## 8. Compte rendu de signature
 
@@ -136,7 +136,7 @@ Les règles de qualification ci-dessus sont confirmées par le propriétaire ; l
 - **Renommage :** le comportement actuel est conservé. Le nouveau libellé s’applique partout, historique de paie compris; c’est le moyen de corriger une faute de frappe.
 - **Suppression :** le refus actuel est conservé. Une fonction référencée par une fiche Employé ou un bulletin ne peut pas être supprimée.
 
-Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés très proches ont été inventoriées, toutes utilisées) est suivi dans le sujet « Qualité des données » du [TODO](../../TODO.md). Il suppose le choix du libellé conservé et le rattachement des fiches et bulletins concernés, par migration auditée; il n’est pas traité ici.
+Hors de ce bloc : le **nettoyage des quasi-doublons** (neuf paires de libellés très proches ont été inventoriées, toutes utilisées) est suivi dans le sujet « Qualité des données » (KAN-160). Il suppose le choix du libellé conservé et le rattachement des fiches et bulletins concernés, par migration auditée; il n’est pas traité ici.
 
 ### 9.4 Preuves et accords à recueillir
 
@@ -197,7 +197,7 @@ lorsque l'affichage est désactivé. Le détail du contrat et des scénarios fig
 - supprimer un chantier référencé par une fiche Employé ou un bulletin est refusé; la clôture est l’alternative;
 - modifier le code d’un chantier le change pour tous les bulletins et fiches qui le référencent, historique compris : **décision du propriétaire du 23 octobre 2026, ce comportement est conservé**, c’est le moyen de corriger une faute de saisie.
 
-Les règles de qualification ci-dessus sont confirmées par le propriétaire ; les avis des intervenants restent à recueillir selon le présent PV. Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans le [TODO](../../TODO.md).
+Les règles de qualification ci-dessus sont confirmées par le propriétaire ; les avis des intervenants restent à recueillir selon le présent PV. Hors de ce bloc, le doublon apparent du chantier `C157A` reste suivi dans Jira (KAN-160).
 
 ### 10.4 Preuves et accords à recueillir
 

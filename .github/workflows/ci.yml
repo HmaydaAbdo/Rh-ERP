@@ -132,7 +132,7 @@ jobs:
       - name: Verify domain documentation covers permissions and MCP tools
         run: node scripts/check-docs-domaines.mjs .
 
-      # Versions verrouillées, seuils de l'agent et nombre d'outils MCP consignés au plan IA = code (E1.5).
+      # Versions verrouillées, seuils de l'agent et nombre d'outils MCP consignés au plan IA = code (E5.5).
       - name: Verify AI documentation matches code
         run: node scripts/ia/check-docs-code.mjs .
 

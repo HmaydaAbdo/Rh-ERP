@@ -240,7 +240,7 @@ Détail : [../auth/README.md](../auth/README.md).
 widgets tierce). Un composant n'écrit ni couleur ni durée en dur. Le **catalogue** (`/catalogue`, route de développement seulement,
 `app.routes.ts`) les montre dans leurs états et sert aux tests E2E d'accessibilité.
 
-La règle de réutilisation, le registre des éléments à présenter au catalogue et l'inventaire des domaines à aligner sont suivis dans [l'audit des composants partagés](audit-composants-partages.md). Le travail de migration planifié pour samedi est isolé dans le [TODO frontend dédié](TODO-2026-10-31-harmonisation.md), hors du TODO général. Tout composant d'interface rejoint le socle et le catalogue ; les hôtes de domaine raccordent leurs données, permissions et événements métier aux API partagées sans créer de style ou de contrôles locaux.
+La règle de réutilisation, le registre des éléments à présenter au catalogue et l'inventaire des domaines à aligner sont suivis dans [l'audit des composants partagés](audit-composants-partages.md). Le travail de migration est suivi dans Jira (KAN-178). Tout composant d'interface rejoint le socle et le catalogue ; les hôtes de domaine raccordent leurs données, permissions et événements métier aux API partagées sans créer de style ou de contrôles locaux.
 
 | Composant | Rôle | Base |
 |---|---|---|

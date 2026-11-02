@@ -65,7 +65,7 @@ Remove-Item "$env:USERPROFILE\.m2\repository\.locks\*.lock" -Force
 
 La migration de production PG17→PG18 a été réalisée le 2026-10-14 ; la comparaison des données
 restaurées et la conservation vérifiée du volume PG17 restent des opérations d'exploitation suivies
-dans [deployment.md](deployment.md) et `TODO.md`.
+dans [deployment.md](deployment.md) et Jira (KAN-164).
 
 Les tests d'intégration démarrent eux-mêmes un PostgreSQL 18 + pgvector jetable avec **Testcontainers** (`staport.rh.support.PostgresPartage`, une seule fois pour toute la JVM, à la première classe `@SpringBootTest`) : **Docker doit tourner**, mais aucune base ni variable `DB_*` n'est à préparer, en local comme en CI. La CI utilise des variables d'environnement factices
 (`JWT_SECRET` de test, etc.) et installe une police système, nécessaire au rendu des graphiques SVG du rapport en

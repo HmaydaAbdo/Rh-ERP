@@ -204,7 +204,7 @@ la vérification initiale des droits d'accès du volume et la configuration des 
 La migration locale PG17→PG18 du 2026-10-10 était une répétition isolée. La bascule de production a
 été effectuée le 2026-10-14 et le propriétaire confirme qu'il n'y a plus de suivi à faire sur l'ancien
 volume PG17. Les prochains essais de migrations et de restauration se feront sur des instances isolées,
-comme indiqué dans [`TODO.md`](../TODO.md).
+comme suivi dans Jira (KAN-164).
 
 ### Tags des images en production
 
@@ -293,7 +293,7 @@ backend `latest` est sain, `ddl-auto=validate` a réussi et Flyway est en V27. A
 PG17 n'est requis, selon le propriétaire. Le service de rétention CSV est déployé et ses exécutions
 planifiées sont vérifiées. Le contrôle hôte confirme les permissions des fichiers, les seuls services
 montant le volume et la capacité disponible ; les alertes pgAudit restent à raccorder à la supervision
-dans [`TODO.md`](../TODO.md).
+(Jira, KAN-163).
 
 Après correction de `BACKUP_AGE_RECIPIENT` dans le `.env` de l'hôte et redémarrage des services, le
 contrôle du 2026-10-17 montre `backup` et `postgres-log-retention` démarrés et sains. Les ports hôte
@@ -350,7 +350,7 @@ le contexte d'une pull request.
 l'état de santé des huit services (dont `litellm-cles`, terminé en `Exited (0)`) et les parcours critiques avant
 de terminer la fenêtre. Aucun accès SSH ni déploiement
 automatisé n'est souhaité. La migration PG17→PG18 et l'émission pgAudit sont confirmées ; les contrôles
-restants sont dans `TODO.md`.
+restants sont suivis dans Jira (KAN-161 à KAN-164).
 
 Secrets CI requis (variables secrètes GitHub Actions, jamais dans le dépôt) :
 `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (token d'accès Docker Hub, pas le mot de passe du compte).
@@ -452,6 +452,4 @@ secours protégée hors serveur. Le contrôle hôte du 2026-10-17 montre les con
 sommes ; le job de rétention a terminé sans erreur le 16 et le 17 octobre. La suppression d'un fichier
 de plus de 90 jours n'a pas été observée car l'inventaire précédent n'en comptait aucun. L'accès au
 volume et sa capacité ont été contrôlés le 2026-10-17 ; le routage des alertes reste ouvert dans
-`TODO.md`.
-
-Voir `TODO.md` pour le suivi.
+Jira (KAN-163).

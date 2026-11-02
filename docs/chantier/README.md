@@ -214,7 +214,7 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
   `UPPER(BTRIM(code))`, et bloque les nouvelles valeurs entourées d'espaces en base. Les collisions
   existantes font échouer V27 pour être résolues explicitement, sans fusion implicite.
 - À la création manuelle, `code` et `designation` sont obligatoires (`designation` : 500 caractères au plus) ;
-  `nom` est facultatif (255 caractères au plus). Voir « Qualité des données » dans [TODO.md](../../TODO.md).
+  `nom` est facultatif (255 caractères au plus). Voir « Qualité des données » (KAN-177).
 - **Qualification.** Toute création ou modification complète manuelle exige `nature` et `afficherSurCarte` (oui ou non).
   Les six natures sont AO, Dépôt, Émulsion, Concassage, Poste d'enrobé et Centrale à béton. Les anciens chantiers et
   les nouveaux chantiers ERP restent sans nature et hors carte jusqu'à leur qualification ; la synchronisation
@@ -435,12 +435,12 @@ Constats issus de la relecture du code pour clôturer le domaine. Chacun est un 
 
 ## Limites connues
 
-Voir [TODO.md](../../TODO.md) pour le détail :
+Le suivi des évolutions est dans Jira (projet `KAN`) :
 
 - **Pas de mise à jour depuis l'ERP** : si la désignation d'un chantier change dans l'ERP, elle ne change pas ici
   (décision du 2026-10-03). Un chantier supprimé ou désactivé dans l'ERP reste tel quel.
 - **Qualité des données** : `nom` et `designation` ne sont pas obligatoires en base (la désignation l'est à la
-  saisie) ; tâche dédiée dans le TODO.
+  saisie) ; tâche dédiée KAN-177.
 - Audité (voir [../audit/README.md](../audit/README.md)) : chaque création, modification et suppression de chantier, et chaque
   synchronisation (une entrée pour l'ensemble, une révision par chantier créé), sont tracées ; la synchronisation planifiée
   est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.

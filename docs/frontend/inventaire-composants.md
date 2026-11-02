@@ -32,7 +32,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 | Assistants d'import et d'export | `paie/export` (7 composants), `paie/import` (2), `heures-supp/import` | 980 | `stepper`, `file-drop`, `summary-list` |
 | Carte des chantiers | `chantier/carte` (2) | 356 | `map` |
 | Filtres, détails, journaux | `paie/filtres`, `employee/details`, `admin/*`, `audit/*` | ~700 | `filter-bar`, `detail-list`, `timeline` |
-| Assistant IA | `core/assistant/*` (8) | ~350 | `chat-*` (reprise avec E9) |
+| Assistant IA | `core/assistant/*` (8) | ~350 | `chat-*` (reprise avec E12) |
 
 ## Ordre de résorption proposé
 
@@ -40,7 +40,7 @@ La liste ne fait que diminuer et doit être **vide à la fin d'E0.7**.
 2. Authentification (`stp-auth-card` : fait ; reste `access-denied`).
 3. Coquille d'application (`stp-app-shell` : fait).
 4. Tableaux de bord, assistants d'import et d'export, filtres et détails.
-5. Carte et assistant IA (avec E0.7 et E9).
+5. Carte et assistant IA (avec E0.7 et E12).
 
 Chaque lot : composants ajoutés à `shared/ui/` et montrés dans le catalogue (`/catalogue`, E0.3), vérification des deux thèmes sur
 ordinateur et téléphone, tests, liste de référence mise à jour dans le même commit.

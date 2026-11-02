@@ -32,7 +32,7 @@ updates:
     directory: /frontend
     schedule:
       interval: quarterly
-  # Composants IA (plan de travail IA, E1.2, couche 3) : un rythme mensuel, parce que ces bibliothèques publient souvent.
+  # Composants IA (plan de travail IA, E5.2, couche 3) : un rythme mensuel, parce que ces bibliothèques publient souvent.
   # Les PR Dependabot lancent la CI automatiquement : décision du propriétaire du 2026-10-31.
   - package-ecosystem: uv
     directory: /ia
