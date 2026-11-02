@@ -1,8 +1,9 @@
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
-import { injectA2UIComponentContext } from '@copilotkit/angular/a2ui';
+import { CatalogComponent } from '@a2ui/angular/v0_9';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { LucideArrowDown, LucideArrowUp, LucideMaximize2, LucideMinimize2, LucideSearch } from '@lucide/angular';
 
+import { DataTableApi } from './api-catalogue';
 import { type FormatColonne, comparer, formater } from './formats';
 
 interface Colonne {
@@ -26,10 +27,10 @@ const HAUTEUR_LIGNE = 40;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-datagrid', '[class.app-datagrid--fullscreen]': 'pleinEcran()', '(document:keydown.escape)': 'pleinEcran.set(false)' },
   template: `
-    <header class="app-datagrid__bar">
+    <div class="app-datagrid__bar">
       <div class="app-datagrid__titles">
-        @if (props().title) {
-          <h3 class="app-datagrid__title">{{ props().title }}</h3>
+        @if (titre()) {
+          <h3 class="app-datagrid__title">{{ titre() }}</h3>
         }
         <p class="app-datagrid__meta">
           {{ affichees().length }}
@@ -37,8 +38,8 @@ const HAUTEUR_LIGNE = 40;
             sur {{ lignes().length }}
           }
           ligne{{ affichees().length > 1 ? 's' : '' }}
-          @if (props().caption) {
-            · {{ props().caption }}
+          @if (legende()) {
+            · {{ legende() }}
           }
         </p>
       </div>
@@ -65,30 +66,30 @@ const HAUTEUR_LIGNE = 40;
           <svg lucideMaximize2 aria-hidden="true"></svg>
         }
       </button>
-    </header>
+    </div>
     <div class="app-datagrid__grid" role="table" [attr.aria-rowcount]="affichees().length + 1" [style.--colonnes]="colonnes().length">
       <div class="app-datagrid__row app-datagrid__row--head" role="row">
         @for (colonne of colonnes(); track colonne.key) {
-          <button
-            type="button"
-            class="app-datagrid__cell app-datagrid__sort"
+          <div
+            class="app-datagrid__cell"
             role="columnheader"
             [class.app-datagrid__cell--num]="numerique(colonne)"
             [attr.aria-sort]="ariaTri(colonne)"
-            (click)="trier(colonne)"
           >
-            {{ colonne.label }}
-            @if (tri()?.cle === colonne.key) {
-              @if (tri()?.sens === 'asc') {
-                <svg lucideArrowUp aria-hidden="true"></svg>
-              } @else {
-                <svg lucideArrowDown aria-hidden="true"></svg>
+            <button type="button" class="app-datagrid__sort" (click)="trier(colonne)">
+              {{ colonne.label }}
+              @if (tri()?.cle === colonne.key) {
+                @if (tri()?.sens === 'asc') {
+                  <svg lucideArrowUp aria-hidden="true"></svg>
+                } @else {
+                  <svg lucideArrowDown aria-hidden="true"></svg>
+                }
               }
-            }
-          </button>
+            </button>
+          </div>
         }
       </div>
-      <cdk-virtual-scroll-viewport class="app-datagrid__body" [itemSize]="hauteurLigne" [style.height.px]="hauteurCorps()">
+      <cdk-virtual-scroll-viewport class="app-datagrid__body" role="rowgroup" tabindex="0" aria-label="Lignes du tableau" [itemSize]="hauteurLigne" [style.height.px]="hauteurCorps()">
         <div class="app-datagrid__row" role="row" *cdkVirtualFor="let ligne of affichees(); trackBy: suivre">
           @for (colonne of colonnes(); track colonne.key) {
             <div class="app-datagrid__cell" role="cell" [class.app-datagrid__cell--num]="numerique(colonne)">
@@ -106,15 +107,20 @@ const HAUTEUR_LIGNE = 40;
     }
   `
 })
-export class A2uiDataTableComponent {
-  readonly props = input.required<{ title?: string; caption?: string; columns: Colonne[]; rows: unknown }>();
+export class A2uiDataTableComponent extends CatalogComponent<typeof DataTableApi> {
+  protected readonly titre = computed(() => this.props().title?.value());
+  protected readonly legende = computed(() => this.props().caption?.value());
 
   protected readonly hauteurLigne = HAUTEUR_LIGNE;
   protected readonly recherche = signal('');
   protected readonly tri = signal<{ cle: string; sens: 'asc' | 'desc' } | null>(null);
   protected readonly pleinEcran = signal(false);
-  protected readonly lignes = signal<Ligne[]>([]);
-  protected readonly colonnes = computed(() => this.props().columns ?? []);
+  // Les lignes sont littérales ou liées au modèle de données de la surface (`{ path }`) : le rendu résout la liaison.
+  protected readonly lignes = computed<Ligne[]>(() => {
+    const valeur = this.props().rows?.value();
+    return Array.isArray(valeur) ? (valeur as Ligne[]) : [];
+  });
+  protected readonly colonnes = computed(() => (this.props().columns?.value() ?? []) as Colonne[]);
 
   protected readonly affichees = computed(() => {
     const requete = this.recherche().trim().toLocaleLowerCase('fr');
@@ -136,25 +142,6 @@ export class A2uiDataTableComponent {
   protected readonly hauteurCorps = computed(() =>
     this.pleinEcran() ? Math.max(240, window.innerHeight - 190) : Math.min(Math.max(this.affichees().length, 1), 9) * HAUTEUR_LIGNE
   );
-
-  private readonly contexte = injectA2UIComponentContext();
-
-  constructor() {
-    // Les lignes sont littérales ou liées au modèle de données de la surface (`{ path }`) : on suit alors ce dernier.
-    effect((nettoyer) => {
-      const brut = this.props().rows;
-      if (Array.isArray(brut)) {
-        this.lignes.set(brut as Ligne[]);
-      } else if (brut && typeof brut === 'object' && 'path' in brut) {
-        const abonnement = this.contexte.dataContext.subscribeDynamicValue<Ligne[] | undefined>(
-          brut as { path: string },
-          (valeur) => this.lignes.set(Array.isArray(valeur) ? valeur : [])
-        );
-        this.lignes.set(Array.isArray(abonnement.value) ? abonnement.value : []);
-        nettoyer(() => abonnement.unsubscribe());
-      }
-    });
-  }
 
   protected numerique(colonne: Colonne): boolean {
     return colonne.format === 'nombre' || colonne.format === 'montant';

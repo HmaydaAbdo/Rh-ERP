@@ -229,8 +229,9 @@ elle y reste ouverte jusqu'à son remplacement testé. Une fonction payante d'un
 exemple) se remplace par une alternative gratuite, jamais par un achat.
 
 **Lecture de la documentation (2026-10-31).** Avant d'affirmer ou de coder le comportement d'un framework, lire en entier
-sa page officielle ; à l'entrée de chaque épopée du [plan de travail IA](../docs/ia/plan-de-travail.md), relire toute la
-documentation concernée (§ 4.0 du plan). Une limite de version imposée par une dépendance est consignée au § 3 du plan.
+sa page officielle ; à l'entrée de chaque épopée (tâche Jira « E*n*.R »), relire toute la documentation concernée
+(§ 3 de [decisions.md](../docs/ia/decisions.md)). Une limite de version imposée par une dépendance est consignée dans
+[`scripts/ia/verrous.txt`](../scripts/ia/verrous.txt).
 
 Dans ERP-RH (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
 LangChain, LangGraph, Deep Agents, l'intégration AG-UI et leurs paquets : aucune implémentation

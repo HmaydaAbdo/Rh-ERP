@@ -50,12 +50,26 @@ Deux règles imposées par le propriétaire, sans exception :
   compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
   lu est écrit « non vérifié » ; la mémoire du modèle n'est pas une source.
-- **Plan de travail IA unique.** Le travail IA restant est suivi dans [`docs/ia/plan-de-travail.md`](docs/ia/plan-de-travail.md)
-  : on avance épopée par épopée dans l'ordre du plan, on relit en entier la documentation officielle concernée à l'entrée
-  de chaque épopée (§ 4.0 du plan), on marque l'état (Terminé, Partiel, Incomplet, Non touché) dans le même commit que le
-  travail, et on ne supprime ni fichier, ni branche, ni donnée en dehors du périmètre de la tâche en cours sans l'accord du
-  propriétaire. Les versions IA suivent la dernière stable (veille : E1.2) ; une limite de version causée par une
-  dépendance (par exemple `openai` bloqué par LiteLLM) est consignée au § 3 du plan.
+- **Jira et le code, seules sources de suivi.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
+  `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E14 y sont des
+  epics et chaque tâche porte son préfixe (`E9.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit
+  l'avancement** (plan, handoff, TODO d'état) : on n'en crée pas. Toute nouvelle tâche ou tout constat durable est créé
+  dans Jira ; le statut passe À faire → En cours → Revue en cours → Terminé(e) avec la preuve en commentaire (test, trace,
+  capture, lien de PR), jamais sans. L'état technique se lit dans le code, les tests et la CI. Les principes, décisions du
+  propriétaire et sources officielles de l'IA sont dans [`docs/ia/decisions.md`](docs/ia/decisions.md) ; les versions
+  verrouillées dans [`scripts/ia/verrous.txt`](scripts/ia/verrous.txt) (vérifiées en CI). Si le connecteur Jira est
+  indisponible, le dire au propriétaire et reporter dans Jira dès son retour ; ne pas ouvrir de fichier de suivi.
+- **Une tâche Jira, une branche, une PR.** Chaque PR traite une seule tâche `KAN-n` : branche `KAN-n-slug`, clé `KAN-n` au
+  début du titre de la PR et de chaque message de commit. L'application gratuite « GitHub for Jira » relie alors branches,
+  commits et PR à la tâche ; on avance une tâche à la fois, preuve en commentaire Jira, puis fusion, puis la suivante.
+- **Travail IA, épopée par épopée.** On avance dans l'ordre des épopées, on relit en entier la documentation officielle
+  concernée à l'entrée de chaque épopée (§ 3 de `docs/ia/decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
+  en dehors du périmètre de la tâche en cours sans l'accord du propriétaire. Les versions IA suivent la dernière stable
+  (veille : `scripts/ia/veille-versions.mjs`) ; une limite de version causée par une dépendance (par exemple `openai`
+  bloqué par LiteLLM) est consignée dans `scripts/ia/verrous.txt`.
+- **Apprendre de ses erreurs.** [`conventions/lecons.md`](conventions/lecons.md) liste les erreurs déjà commises et la
+  règle qui les évite : la lire à l'ouverture d'une tâche, et y ajouter une ligne, dans le commit qui la corrige, pour toute
+  nouvelle erreur ou surprise coûteuse.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
   `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
   recommandation. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
@@ -80,8 +94,9 @@ contourner les contrôles de protection. La livraison et la fusion suivent
 
 # Ordre de lecture
 
-Pour reprendre le travail en cours (état du projet, règles du propriétaire, déploiement, sujets ouverts), lire
-d'abord `docs/handoff/etat-du-projet.md`.
+Pour reprendre le travail en cours, consulter d'abord Jira (projet `KAN`) pour l'état et les tâches, puis
+[`docs/developpement-local.md`](docs/developpement-local.md) pour l'environnement local et les décisions durables du
+propriétaire, et [`conventions/lecons.md`](conventions/lecons.md) pour les erreurs à ne pas répéter.
 
 Lire ensuite `conventions/workflow.md` pour la routine commune, puis les conventions applicables
 dans l'ordre ci-dessous.

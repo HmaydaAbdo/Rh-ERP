@@ -19,6 +19,7 @@ from collections.abc import Sequence
 from importlib import resources
 from typing import Any, cast
 
+import httpx
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
@@ -29,11 +30,15 @@ from langchain.agents.middleware import (
     SummarizationMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
+    ToolCallRequest,
+    ToolErrorMiddleware,
+    ToolRetryMiddleware,
     dynamic_prompt,
 )
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.errors import GraphBubbleUp
 from langgraph.graph.state import CompiledStateGraph
 
 from erp_rh_ia.contexte import ContexteErp
@@ -198,6 +203,24 @@ def _guide_composition(composants: dict[str, Any]) -> str:
     return "\n".join(lignes)
 
 
+def _panne_transitoire(erreur: Exception) -> bool:
+    """Une coupure réseau ou un délai dépassé se rejoue ; un refus (401, 403) ou une erreur de requête, jamais."""
+    return isinstance(erreur, httpx.TransportError | TimeoutError | ConnectionError)
+
+
+def _erreur_outil(erreur: Exception, requete: ToolCallRequest) -> str | None:
+    """Le modèle voit que l'outil a échoué, sans le message brut de l'exception (qui peut porter un détail interne).
+
+    Les interruptions de LangGraph (question posée à l'utilisateur) ne sont pas des pannes : elles remontent."""
+    if isinstance(erreur, GraphBubbleUp):
+        return None
+    nom = requete.tool_call["name"]
+    return (
+        f"L'outil `{nom}` a échoué ({type(erreur).__name__}). Dis à l'utilisateur que cette information n'a pas pu "
+        "être consultée pour le moment, sans inventer de valeur."
+    )
+
+
 def creer_agent(
     modele: BaseChatModel,
     outils: Sequence[BaseTool],
@@ -217,6 +240,10 @@ def creer_agent(
         TodoListMiddleware(),
         ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
         ToolCallLimitMiddleware(run_limit=appels_outils),
+        # Tolérance aux pannes d'outil (middlewares officiels) : reprise des coupures transitoires seulement
+        # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).
+        ToolErrorMiddleware(on_error=_erreur_outil),
+        ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
     ]
     if resumeur is not None:
         # Conversation durable : au-delà de SEUIL_RESUME_JETONS, le début est résumé ; les 12 derniers messages restent.

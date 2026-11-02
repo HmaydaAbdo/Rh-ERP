@@ -4,20 +4,24 @@ Cette routine s'applique à chaque tâche du dépôt, dans le périmètre demand
 Elle organise l'application des conventions ; les exigences détaillées restent dans leurs documents
 de référence. `AGENTS.md` en est la porte d'entrée.
 
-`CLAUDE.md` renvoie à cette même porte d'entrée. Lors d'un changement d'assistant, actualiser le
-handoff technique du chantier avec l'objectif en cours, les décisions approuvées, les questions
-encore ouvertes, l'état des fichiers et de la branche, les vérifications réellement effectuées et la
-prochaine action. Le nouvel assistant confronte ces informations à l'état réel avant de reprendre.
-Ne pas y recopier de secrets ni le transcript de la conversation.
+`CLAUDE.md` renvoie à cette même porte d'entrée. Lors d'un changement d'assistant, actualiser la tâche
+Jira du chantier (projet `KAN`) avec l'objectif en cours, les décisions approuvées, les questions encore
+ouvertes, les vérifications réellement effectuées et la prochaine action, en commentaire ; l'état des
+fichiers et de la branche se lit dans Git. Le nouvel assistant confronte ces informations à l'état réel
+avant de reprendre. Ne pas y recopier de secrets ni le transcript de la conversation. **Jira et le code
+sont les seules sources de suivi : aucun fichier markdown d'avancement ni de handoff n'est créé.**
 
 ## 1. Reprendre le contexte
 
-1. Lire `docs/handoff/etat-du-projet.md`, puis les conventions applicables et `docs/README.md`.
+0. Consulter Jira (projet `KAN`, source de vérité des tâches : statut, preuve, historique) pour la tâche reprise ou à
+   créer. Une tâche termine en Jira avec sa preuve en commentaire, jamais sans.
+1. Lire [`docs/developpement-local.md`](../docs/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
+   commises et règle qui les évite), puis les conventions applicables et `docs/README.md`.
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
 3. Vérifier les fichiers modifiés, la branche, les derniers commits et, lorsqu'une livraison est en
    cours, la PR et les contrôles associés. Préserver le travail existant et les chantiers séparés.
 4. Reprendre les décisions déjà approuvées dans la session. Une consigne plus récente du propriétaire
-   prime sur une ancienne préférence. Une information du handoff ou d'une mémoire susceptible d'avoir
+   prime sur une ancienne préférence. Une information d'un commentaire Jira ou d'une mémoire susceptible d'avoir
    changé est vérifiée dans le code ou l'environnement avant d'être présentée comme actuelle.
 
 ## 2. Cadrer puis exécuter
@@ -66,7 +70,7 @@ Ne pas y recopier de secrets ni le transcript de la conversation.
   domaines consommateurs modifiés. Une brique d'interface locale n'est pas justifiée par sa seule
   spécificité métier : toute exception temporaire suit les preuves et l'accord préalable prévus dans
   [frontend.md](frontend.md) et figure à l'inventaire avec son plan de sortie.
-* Respecter les services et ports du propriétaire décrits dans le handoff. Utiliser `localhost`
+* Respecter les services et ports du propriétaire décrits dans [developpement-local.md](../docs/developpement-local.md). Utiliser `localhost`
   pour la revue locale lorsqu'il est demandé ; les serveurs de test utilisent leur environnement
   dédié. Déclarer les contrôles impossibles ou interrompus et leur cause.
 
@@ -84,7 +88,8 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 | Travail transversal, qualité des données ou supports de formation différés | `TODO.md` à la racine ; garder chaque tâche dans une seule liste |
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |
-| Reprise opérationnelle | Handoff : état et sujets ouverts, avec renvois vers les sources détaillées |
+| Reprise opérationnelle, état et sujets ouverts | Jira (projet `KAN`) : statut, preuve et commentaire de reprise de la tâche ; jamais un fichier markdown |
+| Erreur ou surprise coûteuse rencontrée | Une ligne dans [`lecons.md`](lecons.md), dans le commit qui la corrige |
 
 Centraliser les explications du domaine dans son dossier ; ailleurs, conserver les index, liens et
 contrats transverses nécessaires. Éviter les copies qui divergent. Les README métier et PV ne servent

@@ -5,6 +5,7 @@
 
 from typing import Any
 
+import httpx
 import pytest
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage
@@ -103,3 +104,41 @@ def test_les_consignes_envoient_les_comparaisons_vers_l_outil_et_admettent_la_co
     assert "catalogue de capacités" in SYSTEME
     assert "Ne calcule rien" in SYSTEME
     assert "Une conversation se poursuit" in SYSTEME
+
+
+async def test_une_coupure_transitoire_d_un_outil_est_rejouee_puis_la_reponse_arrive() -> None:
+    essais: list[int] = []
+
+    def indicateurs(**_: Any) -> dict[str, Any]:
+        essais.append(1)
+        if len(essais) < 3:
+            raise httpx.ConnectError("réseau coupé")
+        return INDICATEURS
+
+    agent = creer_agent(
+        modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Masse : 1 250 000,50 MAD.")),
+        [outil("paie_indicateurs", indicateurs)],  # pyright: ignore[reportArgumentType]
+    )
+    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")]})
+
+    assert len(essais) == 3  # un appel, puis deux reprises (ToolRetryMiddleware)
+    assert resultat["messages"][-1].content == "Masse : 1 250 000,50 MAD."
+
+
+async def test_un_refus_n_est_pas_rejoue_et_le_modele_voit_une_erreur_sans_le_message_brut() -> None:
+    essais: list[int] = []
+
+    def indicateurs(**_: Any) -> dict[str, Any]:
+        essais.append(1)
+        raise PermissionError("403 secret-interne")
+
+    faux = modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Je n'ai pas pu consulter la paie."))
+    agent = creer_agent(faux, [outil("paie_indicateurs", indicateurs)])  # pyright: ignore[reportArgumentType]
+    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")]})
+
+    assert len(essais) == 1  # pas de reprise : ce n'est pas une panne transitoire
+    retour = next(m for m in resultat["messages"] if m.type == "tool")
+    assert retour.status == "error"
+    assert "PermissionError" in retour.content
+    assert "secret-interne" not in retour.content
+    assert resultat["messages"][-1].content == "Je n'ai pas pu consulter la paie."
