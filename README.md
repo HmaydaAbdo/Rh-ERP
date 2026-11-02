@@ -6,7 +6,7 @@ et travaux publics).
 Domaines métier en place : **Fonction** (référentiel des fonctions), **Chantier** (référentiel, chantiers
 manquants ajoutés depuis l'ERP existant), **Équipe** (référentiel des équipes), **Employé** (fiche d'identité,
 affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapport PDF de synthèse) et **Auth**
-(comptes, rôles, permissions). Le domaine **Pointage** reste à construire (voir [TODO.md](TODO.md)).
+(comptes, rôles, permissions). Le domaine **Pointage** reste à construire (voir Jira, KAN-171).
 
 > **Documentation** : tout est indexé dans [`docs/README.md`](docs/README.md). Les conventions de
 > développement, génériques et réutilisables, sont dans [`conventions/`](conventions) et font foi pour toute
@@ -117,7 +117,6 @@ docs/         Documentation propre à ce projet : architecture, modèle de donn�
 docker-compose.yml  Stack de production (images publiées uniquement, voir docs/deployment.md)
 backend/Dockerfile, frontend/Dockerfile
 CLAUDE.md, AGENTS.md  Point d'entrée du projet et ordre de lecture des conventions (contenu identique)
-TODO.md       Sujets ouverts et décisions différées
 ```
 
 ---
@@ -183,11 +182,11 @@ la première fois, puis changer le mot de passe via l'UI.
 
 ## État du projet
 
-- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options restantes et leurs déclencheurs sont dans [TODO.md](TODO.md).
-- Domaine Pointage non construit. Voir [TODO.md](TODO.md).
-- Prochaine tâche : qualité des données (tous champs obligatoires, aucun doublon). Voir [TODO.md](TODO.md).
+- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
+- Domaine Pointage non construit : KAN-171.
+- Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-177 et KAN-160.
 
 L'architecture de déploiement (Docker Compose de production, nginx inner/outer, CI) est en place —
 voir [`docs/deployment.md`](docs/deployment.md). Le service de backup PostgreSQL démarre par défaut
 avec le reste de la pile, sans profil Compose. Les éléments qui restent à préparer pour la mise en
-production sont suivis dans ce même document et dans [TODO.md](TODO.md).
+production sont suivis dans ce même document et dans Jira (KAN-161 à KAN-164).

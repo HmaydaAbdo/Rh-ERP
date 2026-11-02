@@ -22,7 +22,7 @@ chemin ; le contrôle hôte du 2026-10-17 confirme cette valeur dans le `.env`. 
 spécification OpenAPI ou d'interface Swagger aux deux URL publiques. Ces sorties ne permettent pas de
 confirmer que le JWT est unique à la production. `COOKIE_SECURE=false` est actuellement cohérent avec
 HTTP ; il devra être activé après HTTPS. L'extrait ne montre pas de listener HTTPS. Aucune configuration
-Nginx du serveur n'a été modifiée ; HTTPS reste suivi dans `TODO.md`.
+Nginx du serveur n'a été modifiée ; HTTPS reste suivi dans Jira (KAN-162).
 
 ## Décision CD — 2026-10-16
 

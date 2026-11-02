@@ -84,8 +84,7 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 |---|---|
 | Fonctionnement du domaine | `docs/<domaine>/README.md` : règles, modèle de données, DTO exposés (types, contraintes, descriptions), contrats, permissions et accès associés, vues, imports/exports et scénarios liés aux tests |
 | Procédure de l'agent sur ce domaine | `docs/<domaine>/skills/SKILL.md`, avec renvois aux sources faisant autorité |
-| Travail ouvert propre au domaine | `docs/<domaine>/TODO.md` ; retirer les tâches terminées et supprimer le fichier lorsqu'aucune tâche ne reste |
-| Travail transversal, qualité des données ou supports de formation différés | `TODO.md` à la racine ; garder chaque tâche dans une seule liste |
+| Travail ouvert (domaine ou transversal), décision à prendre, support différé | Tâche Jira (projet `KAN`), rattachée à son épopée ; jamais un `TODO.md` |
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |
 | Reprise opérationnelle, état et sujets ouverts | Jira (projet `KAN`) : statut, preuve et commentaire de reprise de la tâche ; jamais un fichier markdown |

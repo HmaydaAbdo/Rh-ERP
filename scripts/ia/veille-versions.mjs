@@ -44,7 +44,7 @@ const json = async (url) => {
 
 const lignes = [];
 const ajouter = (nom, verrouille, stable, prerelease, date) => {
-  const retard = verrouille !== null && stable !== verrouille; // absent = composant non adopté (ex. deepagents avant E2.0)
+  const retard = verrouille !== null && stable !== verrouille; // absent = composant non adopté (ex. deepagents avant E6.0)
   lignes.push({ nom, verrouille: verrouille ?? 'absent', stable, prerelease, date, retard, cause: retard ? (blocages[nom] ?? null) : null });
 };
 
