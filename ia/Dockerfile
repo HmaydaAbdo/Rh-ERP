@@ -10,11 +10,18 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 COPY src ./src
 RUN uv sync --locked --no-dev --no-editable
+# Modèle d'embeddings du routage des compétences (docs/ia.md, T32), gratuit et local : téléchargé à la construction,
+# jamais au démarrage ni pendant une requête.
+ENV FASTEMBED_CACHE_PATH=/app/modeles
+RUN /app/.venv/bin/python -c "from erp_rh_ia.routage import MODELE_EMBEDDINGS; from fastembed import TextEmbedding; TextEmbedding(MODELE_EMBEDDINGS)"
+# Le service tourne sans droits (uid 10001) : le modèle doit être lisible par lui.
+RUN chmod -R a+rX /app/modeles
 
 FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 RUN groupadd --system --gid 10001 ia && useradd --system --uid 10001 --gid ia --no-create-home ia
 COPY --from=build --chown=root:root /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+COPY --from=build --chown=root:root /app/modeles /app/modeles
+ENV FASTEMBED_CACHE_PATH=/app/modeles HF_HUB_OFFLINE=1 PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 # Traces OpenTelemetry (docs/ia.md, T18) : lancées par l'auto-instrumentation officielle (FastAPI, httpx, LangChain par
 # OpenInference), coupées tant que Compose ne les active pas (OTEL_SDK_DISABLED=false et l'adresse de Phoenix).
 ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf

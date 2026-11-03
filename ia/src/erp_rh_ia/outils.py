@@ -1,7 +1,7 @@
 """Outils métier d'ERP-RH, uniquement par MCP et avec le jeton agent de l'utilisateur (docs/ia.md, § 5 et T10).
 
 Les outils viennent du support MCP intégré à LangChain (``langchain.mcp``, client FastMCP) : chaque outil MCP de
-Spring devient un outil LangChain pour ``create_agent``. Seule la délégation d'identité reste à nous : Spring
+Spring devient un outil LangChain pour ``create_deep_agent``. Seule la délégation d'identité reste à nous : Spring
 échange le jeton de connexion contre un jeton agent court, porté par chaque appel MCP.
 """
 

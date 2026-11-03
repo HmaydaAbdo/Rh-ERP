@@ -13,7 +13,7 @@ Ne restent ici que deux protections qu'aucun framework ne fournit :
 """
 
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any, Protocol, cast
 
 import httpx
@@ -38,6 +38,9 @@ ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ou
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
 FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any] | None], CompiledStateGraph[Any, Any, Any, Any]]
 
+# Routage hors modèle : les compétences de domaine à épingler pour la question (``routage.py``, sans appel de modèle).
+Routage = Callable[[str, Sequence[BaseTool]], Awaitable[list[str]]]
+
 
 class _SansDetail(logging.Filter):
     """L'intégration journalise l'exception d'un run en échec : on garde le message, jamais la trace ni son texte."""
@@ -61,6 +64,16 @@ class AccesErp(Protocol):
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
+
+
+def texte_question(entree: RunAgentInput) -> str:
+    """Le texte de la dernière question de l'utilisateur (la réponse à ``poser_question`` n'est pas une question)."""
+    for message in reversed(entree.messages):
+        if isinstance(message, UserMessage):
+            if isinstance(message.content, str):
+                return message.content
+            return " ".join(str(getattr(p, "text", "")) for p in message.content if getattr(p, "type", "") == "text")
+    return ""
 
 
 def verifier_question(entree: RunAgentInput) -> None:
@@ -135,6 +148,7 @@ def routeur_agui(
     acces: Callable[[], AccesErp],
     actif: Callable[[], bool],
     memoire: Callable[[], BaseCheckpointSaver[Any]] | None = None,
+    routage: Callable[[], Routage] | None = None,
 ) -> APIRouter:
     routeur = APIRouter()
 
@@ -154,7 +168,9 @@ def routeur_agui(
         # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
         # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
         fil = espace_conversation(sujet(jeton), entree.thread_id)
-        entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+        # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
+        epinglees = await routage()(texte_question(entree), outils) if routage else []
+        entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
