@@ -53,14 +53,14 @@ def test_une_valeur_est_citee_quel_que_soit_son_format() -> None:
 def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
     reponse = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_indicateurs"], outil_attendu_appele=True)
     assert juger("reponse", "paie_indicateurs", [("nombre", 3000)], reponse) == (True, "conforme")
-    # Une valeur qui semble juste ne qualifie pas le scénario sans l'outil métier attendu.
-    autre = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["employes_compter"], outil_attendu_appele=False)
-    succes, raison = juger("reponse", ["employes_compter"], [("nombre", 3000)], autre)
-    assert not succes and raison == "outil métier attendu non appelé (employes_compter; outils : employes_compter)"
+    # Le chemin est libre : une valeur juste trouvée avec un autre outil réussit.
+    autre = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_repartition"], outil_attendu_appele=False)
+    assert juger("reponse", ["paie_indicateurs"], [("nombre", 3000)], autre) == (True, "conforme")
+    # Une valeur citée sans avoir consulté aucun outil n'est pas fondée sur les données.
     sans_outil = Reponse("Masse : 3 000 MAD.", abstention=False, outils=[], outil_attendu_appele=False)
     assert juger("reponse", ["paie_indicateurs"], [("nombre", 3000)], sans_outil) == (
         False,
-        "outil métier attendu non appelé (paie_indicateurs; outils : aucun)",
+        "réponse sans avoir consulté aucun outil",
     )
     alternatif = Reponse(
         "Masse : 3 000 MAD.",
