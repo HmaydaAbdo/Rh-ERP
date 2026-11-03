@@ -15,6 +15,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from staport.platform.validation_fr import message_fr
+
 journal = logging.getLogger(__name__)
 
 MESSAGE_CONFLIT = "L'enregistrement a été modifié depuis son chargement. Rechargez-le avant de réessayer."
@@ -75,7 +77,7 @@ def _message_validation(erreur: RequestValidationError) -> str:
     parties: list[str] = []
     for detail in erreur.errors():
         champ = ".".join(str(p) for p in detail["loc"] if p not in ("body", "query", "path"))
-        parties.append(f"{champ} : {detail['msg']}")
+        parties.append(f"{champ} : {message_fr(detail)}")
     return ", ".join(parties)
 
 

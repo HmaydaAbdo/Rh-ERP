@@ -49,6 +49,9 @@ rejoue le même scénario sur les deux et compare réponses et lignes d'audit. R
 | Temps de démarrage | à relever pile démarrée | à mesurer |
 | Génération du PDF de paie (jeu de référence) | à relever | à mesurer |
 
+**Décision du propriétaire (2026-11-03) : les mesures « avant » et « après » sont faites après la clôture de E2**, sur une pile
+d'essai, avec le même protocole pour Spring et FastAPI.
+
 Les valeurs « à relever » exigent la pile Docker démarrée, qui est l'environnement du propriétaire : elles sont relevées sur une pile
 d'essai à part, jamais en arrêtant la sienne. **Non relevées à ce jour.**
 
