@@ -43,6 +43,11 @@ class AccesSimule:
         return self._outils
 
 
+async def _routage_paie(_question: str, _outils: Sequence[BaseTool]) -> list[str]:
+    """Le routeur réel charge un modèle d'embeddings : les tests de l'API le remplacent par un choix fixe."""
+    return ["paie"]
+
+
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
     def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer)
@@ -72,7 +77,9 @@ def _poster(
     faux: ModeleScripte, acces: AccesSimule, corps: dict[str, Any], enabled: bool = True, jeton: str | None = "c"
 ):
     entetes = {"Accept": "text/event-stream"} | ({"Authorization": f"Bearer {jeton}"} if jeton else {})
-    with TestClient(creer_app(_settings(enabled), fabrique=_fabrique(faux), acces=acces)) as client:
+    with TestClient(
+        creer_app(_settings(enabled), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie)
+    ) as client:
         return client.post("/agui", json=corps, headers=entetes)
 
 

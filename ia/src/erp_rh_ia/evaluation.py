@@ -4,7 +4,7 @@
 """Évaluation de l'agent sur le jeu de référence (docs/ia.md, § 4 et T12) : ``python -m erp_rh_ia.evaluation``.
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
-le vrai agent (``create_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
+le vrai agent (``create_deep_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
 répond sans s'abstenir et cite chaque valeur attendue — ou s'abstient (ou signale le refus) quand le cas l'exige. La
 trajectoire d'outils est comparée par ``agentevals`` (l'outil attendu doit figurer parmi les appels) et rapportée.
 

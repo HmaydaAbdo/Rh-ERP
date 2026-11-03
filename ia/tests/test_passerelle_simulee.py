@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Évaluation hors ligne (docs/ia.md, T12) : le vrai client ``ChatLiteLLM`` et la vraie boucle ``create_agent`` face à
+"""Évaluation hors ligne (docs/ia.md, T12) : le vrai client ``ChatLiteLLM`` et la vraie boucle Deep Agents face à
 une passerelle simulée par CopilotKit ``aimock`` — aucun réseau, aucun quota, résultat déterministe.
 
 Chaque scénario scripte les appels successifs du modèle (``sequenceIndex``) et vérifie ce que l'agent en fait : réponse
@@ -36,15 +36,19 @@ def _config(aimock: Any) -> Settings:
 
 
 def _scenario(aimock: Any, question: str, *reponses: dict[str, Any]) -> None:
-    """Réponses successives à la question."""
+    """Réponses successives du scénario. Seul l'ordre compte : une compétence épinglée ajoute son SKILL.md après la
+    question, donc le dernier message de l'utilisateur n'est plus la question."""
     aimock.reset()
     for index, reponse in enumerate(reponses):
-        aimock.add_fixture(match={"userMessage": question, "sequenceIndex": index}, response=reponse)
+        aimock.add_fixture(match={"sequenceIndex": index}, response=reponse)
 
 
-async def _repondre(aimock: Any, question: str, appels: list[str]) -> dict[str, Any]:
+async def _repondre(
+    aimock: Any, question: str, appels: list[str], epinglees: list[str] | None = None
+) -> dict[str, Any]:
+    """``epinglees`` : compétences épinglées hors modèle ; leur SKILL.md suit la question dans la conversation."""
     agent = creer_agent(modele(_config(aimock), Tache.COMPLEX), [outil("paie_indicateurs", INDICATEURS, appels)])
-    return await agent.ainvoke({"messages": [HumanMessage(content=question)]})
+    return await agent.ainvoke({"messages": [HumanMessage(content=question)], "pinned_skills": epinglees or []})
 
 
 async def test_un_message_simple_est_repondu_en_un_appel(aimock: Any) -> None:
@@ -67,7 +71,7 @@ async def test_une_question_de_donnees_appelle_l_outil_puis_repond(aimock: Any) 
     )
     appels: list[str] = []
 
-    etat = await _repondre(aimock, question, appels)
+    etat = await _repondre(aimock, question, appels, ["paie"])
 
     assert appels == ["paie_indicateurs"]
     assert etat["messages"][-1].content == "En 2026-09 : masse 1 250 000,50 MAD."

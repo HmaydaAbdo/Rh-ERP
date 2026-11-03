@@ -20,14 +20,18 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
   Seule la conversation du run existe (mémoire durable : T19).
 - **Modèles** — `modeles.py` : `ChatLiteLLM` (le seul connecteur qui transmet le raisonnement) sur les groupes
   `ai-gateway-{simple,medium,complex,code,ocr}`, choisis par capacité, aucune nouvelle tentative côté service (la passerelle bascule).
-  Aucun plafond applicatif `max_tokens` : réponse, sélection d'outils et résumé utilisent les limites natives du modèle.
+  Aucun plafond applicatif `max_tokens` : réponse et résumé utilisent les limites natives du modèle.
   Compose et le banc réel activent `LITELLM_LOCAL_MODEL_COST_MAP=True` : catalogue fourni par le SDK,
   sans téléchargement GitHub au démarrage ou pendant une requête ; la passerelle conserve la comptabilité des coûts.
-- **Agent (T10)** — `agent.py` : `create_agent` (LangChain sur LangGraph). Le modèle choisit seul sa forme de
+- **Agent (T10, T33)** — `agent.py` : `create_deep_agent` (Deep Agents sur LangGraph, décision du 2026-11-03). Le modèle choisit seul sa forme de
   réponse : directe pour un message simple, avec outils pour une question de données, avec un plan (`write_todos`,
   `TodoListMiddleware`) pour une demande à plusieurs étapes. Middlewares officiels : `CopilotKitMiddleware` (outils du
   navigateur), `TodoListMiddleware`, `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` (8 par run),
-  `LLMToolSelectorMiddleware` (modèle interne de tâche `simple`, toujours actif).
+  `SkillsMiddleware` (outils de compétence) et `FilesystemMiddleware` limité à `read_file` (lecture des `SKILL.md`).
+- **Outils par compétence (T32)** — `competences/<domaine>/SKILL.md` (7 outils au plus chacune) et `competences.py` : un outil
+  métier n'est exposé que par sa compétence ; l'appel d'un outil non épinglé échoue sans s'exécuter. `routage.py` choisit,
+  hors modèle (embeddings MiniLM locaux, `evaluation/routage.json`), les compétences à épingler (`pinned_skills`) ; si le
+  routage se trompe, le modèle lit lui-même le `SKILL.md` du bon domaine. Aucun appel de modèle de langage pour choisir les outils.
 - **Exactitude** — aucun vérificateur de réponse maison : les outils métier renvoient leurs calculs et l'agent reprend
   leurs valeurs, s'appuie sur les faits déjà établis dans la conversation, relit l'ERP si une valeur a pu changer et
   pose une question si l'ambiguïté peut changer le résultat. Le jeu de référence mesure l'exactitude.

@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Agent ``create_agent`` et faux modèle de LangChain : forme de réponse, outils, plan, surface et consignes."""
+"""Agent ``create_deep_agent`` et faux modèle de LangChain : forme de réponse, outils, plan, surface et consignes."""
 
 from typing import Any
 
@@ -30,7 +30,7 @@ async def _repondre(
         # L'outil d'interface composée, tel que CopilotKitMiddleware l'injecte : il rend une enveloppe A2UI.
         outils.append(outil(OUTIL_A2UI, surface))
     agent = creer_agent(agent_modele, outils)  # pyright: ignore[reportArgumentType]
-    return await agent.ainvoke({"messages": [HumanMessage(content=question)]})
+    return await agent.ainvoke({"messages": [HumanMessage(content=question)], "pinned_skills": ["paie"]})
 
 
 def _surface(masse: float) -> dict[str, Any]:
@@ -119,7 +119,9 @@ async def test_une_coupure_transitoire_d_un_outil_est_rejouee_puis_la_reponse_ar
         modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Masse : 1 250 000,50 MAD.")),
         [outil("paie_indicateurs", indicateurs)],  # pyright: ignore[reportArgumentType]
     )
-    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")]})
+    resultat = await agent.ainvoke(
+        {"messages": [HumanMessage(content="Masse de septembre ?")], "pinned_skills": ["paie"]}
+    )
 
     assert len(essais) == 3  # un appel, puis deux reprises (ToolRetryMiddleware)
     assert resultat["messages"][-1].content == "Masse : 1 250 000,50 MAD."
@@ -134,7 +136,9 @@ async def test_un_refus_n_est_pas_rejoue_et_le_modele_voit_une_erreur_sans_le_me
 
     faux = modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Je n'ai pas pu consulter la paie."))
     agent = creer_agent(faux, [outil("paie_indicateurs", indicateurs)])  # pyright: ignore[reportArgumentType]
-    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")]})
+    resultat = await agent.ainvoke(
+        {"messages": [HumanMessage(content="Masse de septembre ?")], "pinned_skills": ["paie"]}
+    )
 
     assert len(essais) == 1  # pas de reprise : ce n'est pas une panne transitoire
     retour = next(m for m in resultat["messages"] if m.type == "tool")
