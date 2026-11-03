@@ -3,7 +3,7 @@
 Même image que les tests Java (`PostgresPartage`). Sans Docker, les tests sont ignorés avec la cause.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -13,14 +13,11 @@ from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import BigInteger, Column, MetaData, String, Table, create_engine, text
 from sqlalchemy.engine import make_url
-from testcontainers.community.postgres import PostgresContainer  # pyright: ignore[reportMissingTypeStubs]
 
 RACINE = Path(__file__).resolve().parent.parent
 SCRIPTS_V44 = list((RACINE / "src" / "staport" / "migrations" / "flyway_v44").glob("V*.sql"))
-IMAGE = "pgvector/pgvector:0.8.7-pg18"
 COMPTE_APP = "staport_app"
 MOT_DE_PASSE_APP = "mdp-app-essai"
-MOT_DE_PASSE_PROPRIETAIRE = "mdp-proprietaire"
 
 
 def _config(url: str, compte: str | None = None) -> Config:
@@ -33,35 +30,8 @@ def _config(url: str, compte: str | None = None) -> Config:
     return config
 
 
-@pytest.fixture(scope="module")
-def postgres() -> Iterator[PostgresContainer]:
-    try:
-        conteneur = PostgresContainer(
-            IMAGE, username="staport", password=MOT_DE_PASSE_PROPRIETAIRE, dbname="essai", driver="psycopg"
-        )
-        conteneur.start()
-    except Exception as cause:  # Docker absent ou image indisponible
-        pytest.skip(f"PostgreSQL de test indisponible : {type(cause).__name__}")
-    try:
-        yield conteneur
-    finally:
-        conteneur.stop()
-
-
-def _url(postgres: PostgresContainer, base: str) -> str:
-    return make_url(postgres.get_connection_url()).set(database=base).render_as_string(hide_password=False)
-
-
-def _base_vierge(postgres: PostgresContainer, nom: str) -> str:
-    admin = create_engine(_url(postgres, "essai"), isolation_level="AUTOCOMMIT")
-    with admin.connect() as c:
-        c.execute(text(f'CREATE DATABASE "{nom}"'))
-    admin.dispose()
-    return _url(postgres, nom)
-
-
-def test_la_base_construit_le_schema_et_les_donnees_de_reference(postgres: PostgresContainer) -> None:
-    url = _base_vierge(postgres, "neuve")
+def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Callable[[str], str]) -> None:
+    url = creer_base("neuve")
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
@@ -77,8 +47,8 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(postgres: Postg
     assert len(SCRIPTS_V44) == 44
 
 
-def test_le_compte_applicatif_ne_peut_pas_reecrire_l_audit(postgres: PostgresContainer) -> None:
-    url = _base_vierge(postgres, "droits")
+def test_le_compte_applicatif_ne_peut_pas_reecrire_l_audit(creer_base: Callable[[str], str]) -> None:
+    url = creer_base("droits")
     command.upgrade(_config(url, COMPTE_APP), "head")
     appli = make_url(url).set(username=COMPTE_APP, password=MOT_DE_PASSE_APP).render_as_string(hide_password=False)
     moteur = create_engine(appli)
@@ -90,8 +60,8 @@ def test_le_compte_applicatif_ne_peut_pas_reecrire_l_audit(postgres: PostgresCon
     moteur.dispose()
 
 
-def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(postgres: PostgresContainer) -> None:
-    url = _base_vierge(postgres, "estampillee")
+def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_base: Callable[[str], str]) -> None:
+    url = creer_base("estampillee")
     moteur = create_engine(url)
     with moteur.begin() as c:
         c.execute(text("CREATE TABLE flyway_schema_history (installed_rank int)"))  # base déjà gérée par Flyway
@@ -110,11 +80,11 @@ def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(postgr
     moteur.dispose()
 
 
-def test_les_modeles_correspondent_exactement_a_la_base_alembic(postgres: PostgresContainer) -> None:
+def test_les_modeles_correspondent_exactement_a_la_base_alembic(creer_base: Callable[[str], str]) -> None:
     """Contrôle de dérive : l'autogénération ne doit proposer aucune différence (modèles migrés vs base réelle)."""
     from staport.migrations.derive import Base, inclure
 
-    url = _base_vierge(postgres, "derive")
+    url = creer_base("derive")
     command.upgrade(_config(url), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:

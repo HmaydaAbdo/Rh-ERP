@@ -11,8 +11,9 @@ from http import HTTPStatus
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
+from sqlalchemy.orm.exc import StaleDataError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from staport.platform.validation_fr import message_fr
@@ -65,6 +66,14 @@ class AccesRefuse(ErreurMetier):
         super().__init__(MESSAGE_REFUS)
 
 
+class NonAuthentifie(Exception):
+    """Jeton absent ou invalide (HTTP 401 sans corps, en-tête `WWW-Authenticate: Bearer`, comme Spring Security)."""
+
+    def __init__(self, jeton_invalide: bool = False) -> None:
+        super().__init__("non authentifié")
+        self.jeton_invalide = jeton_invalide
+
+
 def reponse(requete: Request, statut: HTTPStatus, message: str) -> JSONResponse:
     corps = ReponseErreur(
         timestamp=datetime.now(UTC), status=statut.value, error=statut.phrase, message=message, path=requete.url.path
@@ -85,6 +94,19 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
     @app.exception_handler(ErreurMetier)
     async def _metier(requete: Request, exc: ErreurMetier) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
         return reponse(requete, exc.statut, exc.message)
+
+    @app.exception_handler(NonAuthentifie)
+    async def _non_authentifie(  # pyright: ignore[reportUnusedFunction]
+        _requete: Request, exc: NonAuthentifie
+    ) -> Response:
+        en_tete = 'Bearer error="invalid_token"' if exc.jeton_invalide else "Bearer"
+        return Response(status_code=HTTPStatus.UNAUTHORIZED, headers={"WWW-Authenticate": en_tete})
+
+    @app.exception_handler(StaleDataError)
+    async def _conflit_orm(  # pyright: ignore[reportUnusedFunction]
+        requete: Request, _exc: StaleDataError
+    ) -> JSONResponse:
+        return reponse(requete, HTTPStatus.CONFLICT, MESSAGE_CONFLIT)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(  # pyright: ignore[reportUnusedFunction]

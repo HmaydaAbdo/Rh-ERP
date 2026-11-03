@@ -90,6 +90,9 @@ s'appuyant **uniquement sur la documentation officielle** de chaque composant, j
 - Aujourd'hui : jeton d'accès utilisateur signé HS256, jeton MCP signé RS256 avec rotation de clé. Cible : **RS256 pour tous les
   jetons** (clé privée seule sur le serveur, clé publique publiable), via une bibliothèque JWT maintenue ; le passage de HS256 à
   RS256 est une rupture de session assumée, planifiée avec la bascule du domaine `auth` (KAN-46), non faite en silence.
+  Précision (KAN-213) : un **seul jeu de clés** signe les jetons utilisateur et les jetons de l'agent IA, séparés par leur
+  audience ; il reprend les variables `MCP_JWT_*` déjà obligatoires en production, donc aucun nouveau secret à créer.
+  Les empreintes BCrypt de Spring restent vérifiables et sont remplacées par Argon2 à la première connexion réussie.
 - RBAC et périmètres par fiche de poste : dépendances FastAPI et façade `platform/identite` ; chaque route et chaque outil MCP
   déclare sa permission, comme le font les contrôles actuels (`EndpointSecurityTest` est réécrit en test de couverture des routes).
 

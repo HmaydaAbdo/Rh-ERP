@@ -28,6 +28,15 @@ class Configuration(BaseSettings):
     cors_allowed_origins: str
     cookie_secure: bool
 
+    # Jetons : un seul jeu de clés RSA (PKCS#8 en base64) signe les jetons d'accès utilisateur et ceux de l'agent IA,
+    # séparés par leur audience. Rotation : clé précédente en clé publique (X.509) pendant la transition.
+    # MCP_ENABLED n'active que l'agent IA (émission du jeton délégué, JWKS public, route /mcp).
+    mcp_enabled: bool
+    mcp_jwt_private_key: SecretStr
+    mcp_jwt_key_id: str
+    mcp_jwt_previous_public_key: str = ""
+    mcp_jwt_previous_key_id: str = ""
+
     # Compte SYSTEM_ADMIN de bootstrap
     admin_username: str
     admin_email: str

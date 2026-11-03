@@ -7,6 +7,7 @@ avec `session.begin()` ; la dépendance FastAPI fournit seulement la session et 
 
 from collections.abc import AsyncIterator
 
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -26,4 +27,10 @@ def creer_fabrique_sessions(moteur: AsyncEngine) -> async_sessionmaker[AsyncSess
 async def fournir_session(fabrique: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncSession]:
     """Corps de la dépendance FastAPI (liée à la fabrique de l'application par `Depends` dans `main.py`)."""
     async with fabrique() as session:
+        yield session
+
+
+async def session_requete(requete: Request) -> AsyncIterator[AsyncSession]:
+    """Dépendance FastAPI : une session par requête, issue de la fabrique de l'application (`app.state`)."""
+    async for session in fournir_session(requete.app.state.fabrique_sessions):
         yield session
