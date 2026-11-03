@@ -674,13 +674,15 @@ transferts multi-agents, sous-agents et compétences de Deep Agents (dont les ou
    il serait exécutable sans protection.
 2. **Filtre d'accès d'abord, dans le résolveur.** Le résolveur de `SkillsMiddleware` lit l'identité dans `runtime.context` et ne renvoie que les outils que cette identité peut appeler.
    Un outil non autorisé n'est jamais exposé, même si sa compétence est épinglée ou lue. Le contrôle du serveur à chaque appel reste l'autorité (règle de [`mcp.md`](mcp.md)).
-3. **Routage hors modèle.** L'application choisit les compétences à épingler avant l'invocation, en millisecondes, par recherche hybride (mots-clés `websearch_to_tsquery` + vecteurs
-   pgvector, fusion RRF k=60) sur le registre léger des outils, puis épingle les domaines des meilleurs résultats ainsi que le domaine actif de la conversation. **Aucun appel de modèle.**
+3. **Routage hors modèle.** L'application choisit les compétences à épingler avant l'invocation, en quelques millisecondes (5,9 ms au p50 mesuré), par similarité entre la question et la
+   description de chaque outil du catalogue de l'utilisateur (embeddings MiniLM locaux, `ia/src/erp_rh_ia/routage.py`) : les domaines des 7 meilleurs outils sont épinglés, 3 au plus. **Aucun appel de modèle de langage.**
 4. **Repli.** Si le routage se trompe, le modèle lit lui-même le `SKILL.md` du bon domaine (divulgation progressive officielle). Il n'y a donc pas d'outil `request_broader_tools`
    maison : le mécanisme documenté le remplace. Coût : un tour, seulement dans ce cas.
 5. **Élagage.** L'épinglage est recalculé à chaque invocation : un domaine qui ne sert plus n'est pas réépinglé. Le comportement des compétences lues lors de tours précédents n'est pas
    documenté en détail : non vérifié, à mesurer avec le banc de T32.
 
+**Ces nombres ne limitent jamais ce que l'agent sait faire.** Le plafond de 7 outils par compétence structure les domaines ; il n'y a aucun plafond sur le total d'un tour : une demande à plusieurs domaines épingle
+jusqu'à 3 compétences, et le repli (lecture d'un `SKILL.md`) ajoute n'importe quel domaine supplémentaire. Le jeu d'évaluation vérifie que chaque scénario, y compris à plusieurs domaines, garde tous ses outils atteignables.
 Le nombre limite les **schémas en contexte**, jamais les données accessibles : un outil de lecture reste paginé sans plafond (règle de complétude de [`mcp.md`](mcp.md)).
 Les outils du harnais (`ls`, `read_file`, `write_file`, `edit_file`, `delete`, `glob`, `grep`, `task`, et `execute` avec un backend bac à sable) ne sont jamais touchés par ce mécanisme ;
 leur restriction se fait par les moyens documentés (profil d'harnais `excluded_tools`, liste blanche `FilesystemMiddleware(tools=...)`, permissions).
@@ -710,9 +712,10 @@ La documentation officielle ne confirme pas tout ce que la formulation initiale 
 
 ### Pièce maison déclarée
 
-Une seule : la **fonction de routage** qui calcule `pinned_skills` (recherche hybride sur le registre léger des outils, filtrée par permission avant le classement). Elle utilise
-pgvector et la recherche plein texte de PostgreSQL, et un modèle d'embedding gratuit exécuté en local. Elle est inscrite à l'inventaire du § 7 de [`ia.md`](../docs/ia.md) (T32) avec sa piste de
-remplacement : toute fonction native de Deep Agents ou de LangChain qui ferait ce choix sans modèle.
+Une seule : la **fonction de routage** (`routage.py`, une centaine de lignes) qui calcule `pinned_skills` par similarité entre la question et la description de chaque outil du catalogue de l'utilisateur (déjà limité à ses droits par
+le serveur MCP). Elle utilise `fastembed` (embeddings gratuits exécutés en local, modèle préchargé dans l'image) ; ni PostgreSQL ni lexical : le catalogue est celui de l'utilisateur, calculé à chaque requête, et les 31 outils tiennent en
+mémoire (l'alternative mesurée, pgvector, reste valable au-delà de plusieurs milliers d'outils). Elle est inscrite à l'inventaire du § 7 de [`ia.md`](../docs/ia.md) (T32) avec sa piste de remplacement : toute fonction native de Deep Agents ou
+de LangChain qui ferait ce choix sans modèle de langage.
 
 Mesures sur les 31 outils actuels (banc du 2026-11-03, 36 requêtes dont 6 paraphrases, jeu d'évaluation provisoire) :
 
@@ -721,9 +724,11 @@ Mesures sur les 31 outils actuels (banc du 2026-11-03, 36 requêtes dont 6 parap
 | `paraphrase-multilingual-MiniLM-L12-v2` (Apache-2.0, 0,22 Go, 384 dimensions) | 1,0 | 0,944 | 8 ms |
 | `paraphrase-multilingual-mpnet-base-v2` (Apache-2.0, 1,0 Go, 768 dimensions) | 1,0 | 0,972 | 20 ms |
 
-Décision : **MiniLM d'abord** (l'écart d'une requête sur 36 ne justifie ni 4,5 fois la taille ni 2,5 fois la latence) ; passage à mpnet seulement si le jeu d'évaluation de T32, construit sur
-des demandes réelles, passe sous le seuil de 0,95 en r@7. Les paraphrases sont mieux classées par le vecteur seul que par l'hybride (mpnet : 1,0 contre 0,667) : le poids du lexical est un
-réglage mesuré par le banc, non un choix arbitraire. `multilingual-e5-large` (MIT, 2,24 Go) n'a pas été mesuré ; `jina-v3` est exclu (licence non commerciale).
+Le vecteur seul égale l'hybride avec le plein texte pour MiniLM (0,944 aux deux) et le lexical seul est plus faible sur les paraphrases (0,5 contre 0,833) : **le lexical est écarté**, ce qui retire BM25, RRF et la base du chemin. Mesure sur les compétences
+(41 demandes dont 5 à plusieurs domaines, `ia/evaluation/routage.json`) : 39 couvertes, les 2 autres exigent un domaine implicite (le chantier cité par son nom) rattrapé par la lecture du `SKILL.md` indiquée dans les compétences.
+
+Décision : **MiniLM d'abord** (l'écart d'une requête sur 36 ne justifie ni 4,5 fois la taille ni 2,5 fois la latence) ; passage à mpnet seulement si le jeu d'évaluation du routage, enrichi de
+demandes réelles, passe sous le seuil de couverture de 0,95 (test `test_le_routage_couvre_les_demandes_du_jeu_d_evaluation`). Les paraphrases sont mieux classées par le vecteur seul que par l'hybride (mpnet : 1,0 contre 0,667). `multilingual-e5-large` (MIT, 2,24 Go) n'a pas été mesuré ; `jina-v3` est exclu (licence non commerciale).
 
 ### Garde d'exécution obligatoire (vérifié le 2026-11-03)
 
