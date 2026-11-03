@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { TableColumn } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
@@ -10,7 +11,6 @@ import { StepperComponent, StepperEtape } from '../../../shared/ui/stepper/stepp
 import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
-import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
@@ -20,6 +20,8 @@ import { EmployeeReferenceOption, EmployeeReferenceService } from '../../../shar
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
+import { libellePeriode } from '../../paie/paie-format';
+import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../services/heures-supp.service';
 
 type DonneeCreation = Omit<HeuresSuppCreationEmploye, 'numeroLigne'>;
@@ -28,7 +30,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, MonthInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
   templateUrl: './heures-supp-import.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -53,7 +55,17 @@ export class HeuresSuppImportComponent {
     { id: '3', libelle: 'Forfaits' },
     { id: '4', libelle: 'Contrôle et import' }
   ];
-  protected readonly mois = signal<Date | null>(null);
+  /** Mois de la dernière paie : figé, jamais choisi par l'utilisateur. */
+  protected readonly periode = signal('');
+  protected readonly moisLibelle = computed(() => (this.periode() ? libellePeriode(this.periode()) : ''));
+  protected readonly modeleOuvert = signal(false);
+  protected readonly telechargementModele = signal(false);
+  protected readonly colonnesModele: TableColumn[] = [
+    { field: 'nomPrenom', header: 'Nom et prénom' },
+    { field: 'cin', header: 'CIN' },
+    { field: 'hs', header: 'HS', align: 'text-end' }
+  ];
+  protected readonly lignesModele = [{ nomPrenom: 'Exemple Nom Prénom', cin: 'AB123456', hs: '12,5' }];
   protected readonly chantierId = signal<number | null>(null);
   protected readonly chantierLibelle = signal('');
   protected readonly fichier = signal<File | null>(null);
@@ -77,7 +89,29 @@ export class HeuresSuppImportComponent {
   private readonly alignements = signal<number[]>([]);
   private readonly service = inject(HeuresSuppService);
   private readonly confirmation = inject(ConfirmDialogService);
-  protected readonly periode = computed(() => { const d = this.mois(); return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : ''; });
+  private readonly paie = inject(PaieService);
+  private readonly router = inject(Router);
+
+  constructor() {
+    this.paie.listerPeriodes().subscribe({
+      next: (periodes) => this.periode.set(periodes.map((p) => p.periode).sort().at(-1) ?? ''),
+      error: () => this.erreur.set('Le mois de la dernière paie n’a pas pu être chargé.')
+    });
+  }
+
+  protected fermer(): void { void this.router.navigate(['/heures-supp']); }
+  protected telechargerModele(): void {
+    if (this.telechargementModele()) return;
+    this.telechargementModele.set(true);
+    this.service.telechargerModele().pipe(finalize(() => this.telechargementModele.set(false))).subscribe((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = 'Modele_Heures_Supplementaires.xlsx';
+      lien.click();
+      window.URL.revokeObjectURL(url);
+    });
+  }
 
   protected choisirChantier(value: unknown): void { this.chantierId.set(typeof value === 'number' ? value : null); }
   protected choisirFonction(numero: number, value: unknown): void { this.modifierCreation(numero, 'fonctionId', typeof value === 'number' ? value : 0); }

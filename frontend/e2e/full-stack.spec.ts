@@ -144,7 +144,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   );
   expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30 });
   await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantierHeuresSupp.id}`);
-  await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heures sup.' })).toBeVisible();
   await expect(page.getByText(cinHs)).toBeVisible();
 
   await api(page, adminToken, 'POST', '/paie', {
