@@ -39,6 +39,11 @@ seule fois, ici. Format : constat, cause, règle.
 | Des tests unitaires ont été réécrits pour passer au lieu de corriger la cause. | Corriger la cause ; ne pas affaiblir une assertion métier. |
 | Une borne de contexte (7 outils par compétence) a été présentée comme une limite de capacité, ce qui a fait craindre des scénarios sans outil. | Écrire dans la règle ce que le nombre borne (schémas par domaine) et ce qu'il ne borne pas (le total d'un tour, les domaines atteignables par le repli) ; un test de couverture prouve que chaque scénario garde ses outils. |
 | Un test d'API lançait le vrai modèle d'embeddings de routage. | Injecter le routage dans `creer_app` pour les tests d'API ; un seul test charge le vrai modèle (MiniLM, préchargé dans l'image Docker, jamais téléchargé au démarrage). |
+| Le prompt seul n'a pas suffi contre l'injection : deux cas (consigne dans le prompt système, consigne dans le texte cité) échouaient encore une fois sur trois. | Une règle de prompt demande au modèle de se retenir, elle ne l'y oblige pas. Toute protection contre une fuite (prompt, noms d'outils, valeur interdite) est doublée d'un contrôle déterministe de la réponse avant envoi ; le prompt ne sert qu'à réduire la fréquence. |
+| L'agent a inventé le libellé d'une fonction que l'outil ne renvoyait pas. | La description de chaque outil dit ce que la réponse contient et ce qu'elle ne contient pas, et que l'agent s'abstient quand un champ manque. Le critère `fondement` du banc vérifie les libellés comme les chiffres. |
+| Un mois de paie non importé a été présenté comme une masse de 0 MAD. | Un outil dont l'absence de donnée se confond avec zéro l'écrit dans sa description et indique l'outil de vérification (ici `paie_periodes`). |
+| Un cas homonyme a été résolu en prenant le premier résultat. | Plusieurs correspondances : l'agent demande une précision, il ne choisit pas au hasard (règle de prompt, cas du jeu). |
+| Les défauts d'un domaine ne sont apparus qu'avec 60 cas × 3 essais et la lecture des traces. | Tout nouveau domaine suit la procédure de `conventions/agents-ia.md`, section « Intégrer un nouveau domaine à l'agent » : cas ajoutés au jeu avant la livraison, traces lues, descriptions d'outils corrigées à partir des traces. |
 
 ## Documentation
 
