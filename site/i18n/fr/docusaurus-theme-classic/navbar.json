@@ -1,0 +1,14 @@
+{
+  "title": {
+    "message": "Staport Intelligence",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "Staport Intelligence",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Documentation": {
+    "message": "Documentation",
+    "description": "Navbar item with label Documentation"
+  }
+}
