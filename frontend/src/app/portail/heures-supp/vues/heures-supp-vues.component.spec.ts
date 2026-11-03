@@ -71,7 +71,7 @@ describe('HeuresSuppVuesComponent', () => {
     }
 
     TestBed.inject(HeuresSuppExportEtat).tri.set('montant,desc');
-    const component = harness.routeDebugElement!.componentInstance as HeuresSuppVuesComponent & Record<string, any>;
+    const component = harness.routeDebugElement!.componentInstance as HeuresSuppVuesComponent & Record<string, (...args: unknown[]) => unknown>;
     Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
     expect(component['exportOuvert']()).toBe(true);
     expect(component['moisExport']()).toEqual(['2026-10']);
