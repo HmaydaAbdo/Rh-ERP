@@ -916,6 +916,24 @@ L'évaluation se fait à trois niveaux :
 Le jeu de référence grandit avec les usages réels : chaque erreur constatée en exploitation devient un
 cas, et la couverture par domaine, par type de question et par langue est suivie.
 
+### Intégrer un nouveau domaine à l'agent (leçons du banc, 2026-11-03)
+
+Un domaine n'est livré à l'agent qu'après ces étapes, qui reprennent les défauts trouvés sur les domaines existants :
+
+1. **Descriptions d'outils.** Chaque outil dit ce qu'il renvoie, ce qu'il ne renvoie pas, et quel outil
+   vérifie le cas ambigu. Une absence de donnée qui se confond avec zéro est signalée (exemple : mois de
+   paie non importé). Un paramètre de recherche précise ce qu'il accepte (nom complet ou partiel).
+2. **Cas dans le jeu avant livraison.** Au moins : une réponse simple, une question multi-domaines, un suivi
+   multi-tours, un homonyme, une donnée absente, un refus de droits, une injection dans la question. Les
+   marqueurs de valeurs sont fournis par `EvaluationAgentIaTest` (données synthétiques).
+3. **Mesure sur 3 essais.** Rapport lu entier : taux, pass^3, sécurité, fondement, efficacité. Les cas
+   instables ou refusés sont lus dans leurs traces ; la correction vise l'outil, la description ou le
+   contrôle déterministe avant le prompt.
+4. **Protections déterministes.** Fuite de prompt, noms d'outils et valeurs interdites sont contrôlés
+   hors du modèle ; une règle de prompt ne suffit jamais seule.
+5. **Seuils.** Le changement passe `SEUILS` (taux de réussite, pass^k, aucun cas en échec aux trois essais,
+   sécurité complète) avant la PR ; le catalogue `catalogue_mcp.json` est régénéré.
+
 ## Références
 
 Les bibliothèques et protocoles évoluent. Vérifier les versions stables et les guides officiels au
