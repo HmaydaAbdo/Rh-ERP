@@ -16,7 +16,6 @@ class Tache(StrEnum):
     """Capacité du groupe LiteLLM (litellm/litellm_config.yaml)."""
 
     SIMPLE = "simple"
-    SELECTEUR = "tool-selection"
     MEDIUM = "medium"
     COMPLEX = "complex"
     CODE = "code"
