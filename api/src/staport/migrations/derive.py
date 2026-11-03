@@ -4,6 +4,8 @@ from typing import Any
 
 from sqlalchemy.schema import SchemaItem
 
+from staport.domains.audit import models as _audit  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.auth import audit as _historique_auth  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.auth import models as _auth  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.platform.base_de_donnees import Base
 
@@ -20,6 +22,15 @@ TABLES_MODELISEES = frozenset(
         "utilisateur_permission_refusee",
         "refresh_token",
         "reset_password_token",
+        "audit_revision",
+        "audit_revision_entite",
+        "audit_journal",
+        "permission_aud",
+        "role_aud",
+        "utilisateur_aud",
+        "role_permission_aud",
+        "utilisateur_role_aud",
+        "utilisateur_permission_refusee_aud",
     }
 )
 

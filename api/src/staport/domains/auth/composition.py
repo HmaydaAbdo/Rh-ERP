@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from staport.domains.audit.api import Audit
+from staport.domains.auth import audit as _historique_auth  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.auth.courriel import ServiceCourriel
 from staport.domains.auth.parametres import ParametresSecurite, ParametresSecuriteSql
 from staport.domains.auth.securite import EmetteurJetons, Hacheur, JeuDeCles
@@ -9,7 +11,7 @@ from staport.domains.auth.service_agent import ServiceAgent
 from staport.domains.auth.service_auth import ServiceAuth
 from staport.domains.auth.service_role import ServiceRole
 from staport.domains.auth.service_utilisateur import ServiceUtilisateur
-from staport.domains.common.securite import PublicationEvenements, PublicationJournal
+from staport.domains.common.audit_contexte import Auditeur
 from staport.platform.configuration import Configuration
 
 
@@ -21,7 +23,7 @@ class ContexteAuth:
     agent: ServiceAgent
     emetteur: EmetteurJetons
     courriel: ServiceCourriel
-    evenements: PublicationEvenements
+    audit: Auditeur
     origines_autorisees: frozenset[str]
     cookie_secure: bool
 
@@ -42,7 +44,7 @@ def creer_contexte(
     configuration: Configuration,
     *,
     parametres: ParametresSecurite | None = None,
-    evenements: PublicationEvenements | None = None,
+    audit: Auditeur | None = None,
 ) -> ContexteAuth:
     cles = JeuDeCles.depuis_configuration(
         configuration.mcp_jwt_private_key.get_secret_value(),
@@ -54,17 +56,17 @@ def creer_contexte(
     hacheur = Hacheur()
     emetteur = EmetteurJetons(cles)
     params = parametres or ParametresSecuriteSql()
-    publication = evenements or PublicationJournal()
+    publication = audit or Audit()
     courriel = ServiceCourriel(configuration)
     service_auth = ServiceAuth(hacheur, emetteur, params, publication, courriel)
     return ContexteAuth(
         auth=service_auth,
         utilisateurs=ServiceUtilisateur(hacheur, params, publication, service_auth),
-        roles=ServiceRole(),
+        roles=ServiceRole(publication),
         agent=ServiceAgent(cles if configuration.mcp_enabled else None, publication),
         emetteur=emetteur,
         courriel=courriel,
-        evenements=publication,
+        audit=publication,
         origines_autorisees=origines(configuration.cors_allowed_origins),
         cookie_secure=configuration.cookie_secure,
     )

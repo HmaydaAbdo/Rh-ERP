@@ -9,5 +9,6 @@ Ce dossier garde la stratégie, l'inventaire de sortie et les mesures ; l'avance
 | [strategie.md](strategie.md) | Bascule : ordre, définition de fin de domaine, parité, mesures, retour arrière | KAN-46 |
 | [prototype-common.md](prototype-common.md) | Prototype du domaine `common` (`api/`), ce qui est prouvé et ce qui ne l'est pas, mesures de départ | KAN-47 |
 | [auth.md](auth.md) | Domaine `auth` en Python : organisation, décisions, écarts avec Spring, parité vérifiée | KAN-213 |
+| [audit.md](audit.md) | Domaine `audit` en Python : historique, journal, événements de sécurité, intégrité, décision « opérations seulement » | KAN-214 |
 
 Régénérer l'inventaire : `python scripts/migration/inventaire-backend.py`.

@@ -54,6 +54,9 @@ class Configuration(BaseSettings):
     # Synchronisation des chantiers
     chantier_sync_base_url: str
 
+    # Audit : période de la vérification de la chaîne d'intégrité du journal (par défaut une fois par jour)
+    audit_integrite_chaine_delai_ms: int = 86_400_000
+
     # Documentation d'API : éteinte par défaut, donc en production
     springdoc_api_docs_enabled: bool = False
     springdoc_swagger_ui_enabled: bool = False

@@ -25,8 +25,9 @@ from staport.domains.auth.models import RefreshToken, ResetPasswordToken, Utilis
 from staport.domains.auth.parametres import ParametresSecurite
 from staport.domains.auth.schemas import ConnexionReponse
 from staport.domains.auth.securite import EmetteurJetons, Hacheur, generer_jeton_brut, hasher_jeton
+from staport.domains.common.audit_contexte import Auditeur
 from staport.domains.common.securite import ActionSecurite as Action
-from staport.domains.common.securite import EvenementSecurite, PublicationEvenements
+from staport.domains.common.securite import EvenementSecurite
 
 journal = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class ServiceAuth:
         hacheur: Hacheur,
         emetteur: EmetteurJetons,
         parametres: ParametresSecurite,
-        evenements: PublicationEvenements,
+        evenements: Auditeur,
         courriel: ServiceCourriel,
     ) -> None:
         self._hacheur = hacheur
@@ -86,49 +87,51 @@ class ServiceAuth:
             # Même travail de hachage que pour un compte existant : sans lui, la rapidité de la réponse révélerait
             # qu'un identifiant n'existe pas. L'identifiant saisi n'est pas conservé : ce peut être un mot de passe.
             await self._hacheur.verifier_et_mettre_a_jour(mot_de_passe, self._hacheur.empreinte_factice)
-            self._evenements.publier(EvenementSecurite(Action.CONNEXION_ECHOUEE, motif="COMPTE_INCONNU"))
+            await self._evenements.publier(EvenementSecurite(Action.CONNEXION_ECHOUEE, motif="COMPTE_INCONNU"))
             return IdentifiantsInvalides()
         # Le mot de passe est toujours vérifié, même pour un compte inactif : la durée ne distingue pas les cas.
         valide, nouvelle_empreinte = await self._hacheur.verifier_et_mettre_a_jour(
             mot_de_passe, utilisateur.mot_de_passe_hash
         )
         if not utilisateur.actif:
-            return self._refuser(utilisateur, "COMPTE_INACTIF")
+            return await self._refuser(utilisateur, "COMPTE_INACTIF")
         maintenant_utc = datetime.now(UTC)
         verrou = utilisateur.verrouillage_jusqua
         if verrou is not None and verrou > maintenant_utc:
-            return self._refuser(utilisateur, "COMPTE_TEMPORAIREMENT_BLOQUE")
+            return await self._refuser(utilisateur, "COMPTE_TEMPORAIREMENT_BLOQUE")
         if verrou is not None:
             _reinitialiser_echecs(utilisateur)
         if not valide:
-            self._enregistrer_echec(utilisateur, maintenant_utc)
+            await self._enregistrer_echec(utilisateur, maintenant_utc)
             return IdentifiantsInvalides()
         _reinitialiser_echecs(utilisateur)
         if nouvelle_empreinte is not None:  # empreinte BCrypt de Spring remplacée par Argon2
             utilisateur.mot_de_passe_hash = nouvelle_empreinte
         connexion = await self._emettre_connexion(session, utilisateur, str(uuid.uuid4()))
-        self._evenements.publier(EvenementSecurite(Action.CONNEXION_REUSSIE, utilisateur.id, utilisateur.username))
+        await self._evenements.publier(
+            EvenementSecurite(Action.CONNEXION_REUSSIE, utilisateur.id, utilisateur.username)
+        )
         return connexion
 
-    def _refuser(self, utilisateur: Utilisateur, motif: str) -> IdentifiantsInvalides:
+    async def _refuser(self, utilisateur: Utilisateur, motif: str) -> IdentifiantsInvalides:
         """La réponse reste identique quel que soit le motif ; seul le journal le connaît."""
-        self._evenements.publier(
+        await self._evenements.publier(
             EvenementSecurite(Action.CONNEXION_ECHOUEE, utilisateur.id, utilisateur.username, motif)
         )
         return IdentifiantsInvalides()
 
-    def _enregistrer_echec(self, utilisateur: Utilisateur, maintenant_utc: datetime) -> None:
+    async def _enregistrer_echec(self, utilisateur: Utilisateur, maintenant_utc: datetime) -> None:
         derniere = utilisateur.derniere_echec_connexion
         dans_la_fenetre = derniere is not None and derniere + FENETRE_ECHECS_CONNEXION > maintenant_utc
         echecs = utilisateur.nombre_echecs_connexion + 1 if dans_la_fenetre else 1
         utilisateur.nombre_echecs_connexion = echecs
         utilisateur.derniere_echec_connexion = maintenant_utc
-        self._evenements.publier(
+        await self._evenements.publier(
             EvenementSecurite(Action.CONNEXION_ECHOUEE, utilisateur.id, utilisateur.username, "IDENTIFIANTS_INVALIDES")
         )
         if echecs >= SEUIL_ECHECS_CONNEXION:
             utilisateur.verrouillage_jusqua = maintenant_utc + DUREE_VERROUILLAGE_CONNEXION
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     Action.COMPTE_BLOQUE_TEMPORAIREMENT,
                     utilisateur.id,
@@ -155,7 +158,9 @@ class ServiceAuth:
     async def _refresh(self, session: AsyncSession, refresh_brut: str) -> Connexion | RefreshTokenInvalide:
         existant = await repository.refresh_par_empreinte(session, hasher_jeton(refresh_brut))
         if existant is None:
-            self._evenements.publier(EvenementSecurite(Action.SESSION_RENOUVELLEMENT_REFUSE, motif="JETON_INCONNU"))
+            await self._evenements.publier(
+                EvenementSecurite(Action.SESSION_RENOUVELLEMENT_REFUSE, motif="JETON_INCONNU")
+            )
             return RefreshTokenInvalide()
         proprietaire = await repository.utilisateur_par_id(session, existant.utilisateur_id)
         if proprietaire is None:  # impossible : clé étrangère
@@ -167,7 +172,7 @@ class ServiceAuth:
             journal.warning(
                 "Refresh token déjà consommé réutilisé : famille révoquée, sessions coupées=%d", len(famille)
             )
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     Action.JETON_REUTILISE,
                     proprietaire.id,
@@ -177,7 +182,7 @@ class ServiceAuth:
             )
             return RefreshTokenInvalide()
         if existant.expire_le < maintenant():
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     Action.SESSION_RENOUVELLEMENT_REFUSE, proprietaire.id, proprietaire.username, "JETON_EXPIRE"
                 )
@@ -186,14 +191,16 @@ class ServiceAuth:
         existant.revoque = True
         # Une session ne survit pas à la désactivation du compte, quelle que soit la façon dont il a été désactivé.
         if not proprietaire.actif:
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     Action.SESSION_RENOUVELLEMENT_REFUSE, proprietaire.id, proprietaire.username, "COMPTE_INACTIF"
                 )
             )
             return RefreshTokenInvalide()
         connexion = await self._emettre_connexion(session, proprietaire, existant.famille)
-        self._evenements.publier(EvenementSecurite(Action.SESSION_RENOUVELEE, proprietaire.id, proprietaire.username))
+        await self._evenements.publier(
+            EvenementSecurite(Action.SESSION_RENOUVELEE, proprietaire.id, proprietaire.username)
+        )
         return connexion
 
     # --- Déconnexion ------------------------------------------------------------------------------------------------
@@ -201,16 +208,18 @@ class ServiceAuth:
     async def logout(self, session: AsyncSession, refresh_brut: str | None) -> None:
         async with session.begin():
             if refresh_brut is None or not refresh_brut.strip():
-                self._evenements.publier(EvenementSecurite(Action.DECONNEXION))
+                await self._evenements.publier(EvenementSecurite(Action.DECONNEXION))
                 return
             jeton = await repository.refresh_par_empreinte(session, hasher_jeton(refresh_brut))
             if jeton is None:
-                self._evenements.publier(EvenementSecurite(Action.DECONNEXION, motif="SESSION_INCONNUE"))
+                await self._evenements.publier(EvenementSecurite(Action.DECONNEXION, motif="SESSION_INCONNUE"))
                 return
             jeton.revoque = True
             proprietaire = await repository.utilisateur_par_id(session, jeton.utilisateur_id)
             if proprietaire is not None:
-                self._evenements.publier(EvenementSecurite(Action.DECONNEXION, proprietaire.id, proprietaire.username))
+                await self._evenements.publier(
+                    EvenementSecurite(Action.DECONNEXION, proprietaire.id, proprietaire.username)
+                )
 
     # --- Mot de passe oublié ----------------------------------------------------------------------------------------
 
@@ -220,9 +229,9 @@ class ServiceAuth:
             compte = await repository.utilisateur_par_email(session, email.strip())
             # Un événement à chaque demande (repère les demandes en rafale) : le compte s'il existe, jamais l'adresse.
             if compte is None:
-                self._evenements.publier(EvenementSecurite(Action.MOT_DE_PASSE_OUBLIE))
+                await self._evenements.publier(EvenementSecurite(Action.MOT_DE_PASSE_OUBLIE))
                 return
-            self._evenements.publier(EvenementSecurite(Action.MOT_DE_PASSE_OUBLIE, compte.id, compte.username))
+            await self._evenements.publier(EvenementSecurite(Action.MOT_DE_PASSE_OUBLIE, compte.id, compte.username))
             validite = await self._parametres.duree_lien_reinitialisation(session)
             brut = generer_jeton_brut()
             session.add(
@@ -251,7 +260,7 @@ class ServiceAuth:
             utilisateur.mot_de_passe_hash = await self._hacheur.hacher(nouveau)
             jeton.utilise = True
             await self.revoquer_sessions_sans_transaction(session, utilisateur.id)
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(Action.MOT_DE_PASSE_REINITIALISE, utilisateur.id, utilisateur.username)
             )
 
@@ -270,7 +279,7 @@ class ServiceAuth:
         for jeton in actifs:
             jeton.revoque = True
         if actifs:
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     Action.SESSIONS_REVOQUEES,
                     details={"utilisateurCibleId": utilisateur_id, "nombre": len(actifs)},

@@ -14,13 +14,16 @@ from staport.domains.auth.schemas import (
     RoleReponse,
 )
 from staport.domains.auth.service_utilisateur import resoudre_permissions
-from staport.domains.common.audit_contexte import TypeOperation, auditer
+from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import incrementer_version, verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 
 
 class ServiceRole:
+    def __init__(self, auditeur: Auditeur) -> None:
+        self._auditeur = auditeur
+
     async def rechercher(
         self, session: AsyncSession, criteres: RoleRecherche | None, pagination: Pagination
     ) -> Page[RoleReponse]:
@@ -35,18 +38,20 @@ class ServiceRole:
             return role_reponse(await self._obtenir(session, identifiant))
 
     async def creer(self, session: AsyncSession, requete: RoleCreationRequete) -> RoleReponse:
-        async with session.begin():
+        action = self._auditeur.auditer(session, "ROLE_CREATION", TypeOperation.CREATE, "Role")
+        async with session.begin(), action as cible:
             if await repository.role_existe_par_nom(session, requete.nom):
                 raise RoleDejaExistant(requete.nom)
             role = Role(nom=requete.nom, description=requete.description)
             role.permissions = await resoudre_permissions(session, requete.permission_ids)
-            with auditer("ROLE_CREATION", TypeOperation.CREATE, "Role"):
-                session.add(role)
-                await session.flush()
+            session.add(role)
+            await session.flush()
+            cible.identifiant = role.id
             return role_reponse(role)
 
     async def modifier(self, session: AsyncSession, identifiant: int, requete: RoleModificationRequete) -> RoleReponse:
-        async with session.begin():
+        action = self._auditeur.auditer(session, "ROLE_MODIFICATION", TypeOperation.UPDATE, "Role", identifiant)
+        async with session.begin(), action:
             role = await self._obtenir(session, identifiant)
             verifier_version(requete.version, role.version)
             permissions = await resoudre_permissions(session, requete.permission_ids)
@@ -55,25 +60,24 @@ class ServiceRole:
             for existant in await repository.tous_les_roles(session):
                 if existant.nom.strip().lower() == requete.nom.lower() and existant.id != identifiant:
                     raise RoleDejaExistant(requete.nom)
-            with auditer("ROLE_MODIFICATION", TypeOperation.UPDATE, "Role"):
-                role.nom = requete.nom
-                role.description = requete.description
-                role.permissions = permissions
-                incrementer_version(role)
-                await session.flush()
+            role.nom = requete.nom
+            role.description = requete.description
+            role.permissions = permissions
+            incrementer_version(role)
+            await session.flush()
             return role_reponse(role)
 
     async def supprimer(self, session: AsyncSession, identifiant: int) -> None:
-        async with session.begin():
+        action = self._auditeur.auditer(session, "ROLE_SUPPRESSION", TypeOperation.DELETE, "Role", identifiant)
+        async with session.begin(), action:
             role = await self._obtenir(session, identifiant)
             if role.nom == SYSTEM_ADMIN:
                 raise RoleProtege(role.nom, "supprimé")
             comptes = await repository.comptes_du_role(session, identifiant)
             if comptes > 0:
                 raise RoleUtilise(role.nom, comptes)
-            with auditer("ROLE_SUPPRESSION", TypeOperation.DELETE, "Role"):
-                await session.delete(role)
-                await session.flush()
+            await session.delete(role)
+            await session.flush()
 
     async def lister_permissions(self, session: AsyncSession) -> list[PermissionReponse]:
         async with session.begin():
