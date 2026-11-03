@@ -242,7 +242,7 @@ propriétaire avant d'écrire quoi que ce soit.
 | Besoin | Composant officiel |
 |---|---|
 | Boucle d'agent, appels d'outils | `create_deep_agent` (Deep Agents, au-dessus de `create_agent` de LangChain), exécuté par LangGraph |
-| Choix des outils utiles parmi le catalogue | Sélection juste-à-temps bornée par un middleware `wrap_model_call` (voir « Catalogue d'outils à grande échelle ») ; `LLMToolSelectorMiddleware` n'est plus le routeur systématique (décision du 2026-11-03) |
+| Choix des outils utiles parmi le catalogue | Sélection juste-à-temps bornée par les outils de compétence de Deep Agents et l'épinglage (voir « Catalogue d'outils à grande échelle ») ; `LLMToolSelectorMiddleware` n'est plus le routeur systématique (décision du 2026-11-03) |
 | Plan visible et suivi pour une tâche à plusieurs étapes | `TodoListMiddleware` (ou Deep Agents) |
 | Plafonds par run | Aucun plafond appliqué par nous (décision du 2026-10-31) ; `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` ne sont pas utilisés |
 | Nouvel essai, repli de modèle | `ModelRetryMiddleware`, `ToolRetryMiddleware`, `ModelFallbackMiddleware`, et la passerelle |
@@ -651,36 +651,39 @@ nouveau (voir `AGENTS.md`). Elle complète « Découverte des outils à la deman
 ### Les trois couches et ce que la documentation officielle fournit
 
 Sources lues le 2026-11-03 (docs LangChain, LangGraph, Deep Agents) : outils dynamiques, middleware personnalisé, API `Command`, sous-graphes,
-transferts multi-agents, sous-agents et compétences de Deep Agents, adaptateur MCP. Chaque ligne ci-dessous n'utilise que ce qui y est documenté.
+transferts multi-agents, sous-agents et compétences de Deep Agents (dont les outils de compétence et l'épinglage), adaptateur MCP. Chaque ligne ci-dessous n'utilise que ce qui y est documenté.
 
 | Besoin de la règle | Primitive officielle | Précision documentée |
 |---|---|---|
-| Outils liés à la volée, pas de liste statique | Middleware `wrap_model_call` : `handler(request.override(tools=...))` | Tous les outils sont enregistrés au départ ; le middleware ne montre au modèle que le sous-ensemble choisi. Le même mécanisme lit l'état, le contexte d'exécution (`request.runtime.context`) et le `Store` |
+| Outils d'un domaine exposés seulement quand le domaine est actif | **Outils de compétence** Deep Agents (≥ 0.7.22) : `SkillsMiddleware(backend, sources, tools=<liste ou résolveur(nom, runtime)>)` et `metadata.include_tools` dans le `SKILL.md` | Les outils sont **protégés** : tant que le `SKILL.md` n'est pas lu ou la compétence épinglée, l'appel échoue comme un outil inconnu. Le résolveur reçoit le `runtime` (donc le contexte d'exécution et l'identité) |
+| Routage de base sans tour de modèle | **Épinglage** (Deep Agents ≥ 0.7.23) : `invoke({"messages": ..., "pinned_skills": [...]})` | Le `SKILL.md` est ajouté en `HumanMessage` avant le prochain appel du modèle et les outils de la compétence sont exposés ; c'est l'application qui choisit les noms |
+| Repli quand le routage se trompe | Lecture du `SKILL.md` par le modèle (divulgation progressive) | Documenté : lire le fichier expose les outils de la compétence. Coût : un tour de modèle, seulement dans ce cas |
+| Outils liés à la volée hors compétences | Middleware `wrap_model_call` : `handler(request.override(tools=...))` | Tous les outils sont enregistrés au départ. Sans garde, un outil enregistré et non exposé reste exécutable : **aucun outil métier ne passe par ce chemin** (voir la garde plus bas) |
 | Outil découvert à l'exécution (registre MCP) | `wrap_model_call` pour l'ajouter **et** `wrap_tool_call` pour l'exécuter | Sans `wrap_tool_call`, l'agent ne sait pas exécuter un outil absent de la liste d'origine |
+| Recherche d'outils différés par le fournisseur | `ProviderToolSearchMiddleware` (`defer_loading`) | **Non retenu** : réservé à Anthropic et à OpenAI gpt-5.5+, les autres fournisseurs lèvent `ValueError` ; le pool gratuit multi-fournisseurs de LiteLLM est incompatible |
 | Typage strict des paramètres | Schéma d'entrée de l'outil (Pydantic / JSON Schema de l'outil MCP) | La validation a lieu à l'appel (Python n'a pas de compilation) : le schéma exact de l'outil retenu est transmis au modèle, jamais un dictionnaire libre |
 | Outils MCP côté agent | `langchain.mcp` (`MCPAdapter(...).list_tools()`), préfixe du nom de serveur par défaut | Noms limités à lettres, chiffres, `_` et `-` (64 caractères pour OpenAI) : noms de domaines courts, sans point ni espace |
 | Isolation par domaine | Sous-agent Deep Agents (`subagents=[{name, description, system_prompt, tools, skills, ...}]`, outil `task`) | `tools` d'un sous-agent **remplace** les outils hérités ; `mode: "isolated"` par défaut ; `skills` non hérités ; `response_format` donne un résultat typé |
-| Changement de domaine en cours de route | `Command(goto=..., update=..., graph=Command.PARENT)` dans un outil ou un nœud | Annoter le retour `Command[Literal[...]]` ; un **réducteur** est obligatoire pour toute clé d'état partagée mise à jour vers le parent ; `Command` ajoute des arêtes dynamiques et ne remplace pas les arêtes statiques (ne pas combiner les deux sur un même nœud) |
-| Connaissance détaillée à la demande | Compétences (`SKILL.md`) de Deep Agents, divulgation progressive | L'en-tête est lu au démarrage, le contenu complet seulement quand la tâche le demande |
+| Changement de domaine en cours de route | `Command(goto=..., update=..., graph=Command.PARENT)` dans un outil ou un nœud | Annoter le retour `Command[Literal[...]]` ; un **réducteur** est obligatoire pour toute clé d'état partagée mise à jour vers le parent ; `Command` ajoute des arêtes dynamiques et ne remplace pas les arêtes statiques |
 
-### Déroulement d'un tour
+### Déroulement d'un tour (décision d'architecte du 2026-11-03, vérifiée sur deepagents 0.7.32)
 
-1. **Registre maître** : une entrée légère par outil publié (nom préfixé du domaine, domaine, objectif, mots-clés, permission requise, référence du schéma). Ce sont les
-   « pointeurs ». Le schéma complet vient du serveur MCP et est conservé dans le cache de découverte déjà prévu (lié au serveur, à la version du catalogue et au
-   contexte d'autorisation ; aucune donnée métier mise en cache).
-2. **Filtre d'accès d'abord** : le registre est restreint aux outils que l'identité peut appeler (permission, périmètre) **avant** toute recherche. Un outil non autorisé n'est
-   jamais candidat, et la recherche ne remplace pas le contrôle du serveur à chaque appel (règle de sécurité inchangée).
-3. **Recherche hybride hors modèle** : mots-clés (BM25) et similarité vectorielle sur le registre, fusionnées, sur la demande de l'utilisateur et l'état du domaine actif.
-   Latence locale mesurée ; **aucun appel de modèle**.
-4. **Hydratation bornée** : 5 à 7 schémas d'outils métier maximum dans le tour (borne de la décision, ajustable seulement après évaluation chiffrée), plus les outils
-   intrinsèques de la plateforme (voir ci-dessous) et l'outil de repli. Le nombre limite les **schémas en contexte**, jamais les données accessibles : un outil de lecture
-   reste paginé sans plafond (règle de complétude de [`mcp.md`](mcp.md)).
-5. **Repli global** : un outil permanent `request_broader_tools(search_query: str)`. S'il est appelé, il met à jour une clé de l'état avec une autre tranche du registre
-   (mise à jour d'état par un outil, documentée), et le middleware la réhydrate au tour suivant. Le repli passe par les mêmes filtres d'accès.
-6. **Élagage** : les outils des tours précédents sont conservés tant que la tâche les utilise, retirés quand l'état montre qu'ils ne servent plus ; le jeu actif ne grandit pas sans borne.
+1. **Un domaine = une compétence.** Chaque domaine métier (paie, employés, heures supplémentaires, référentiels, administration…) a un `SKILL.md` dont l'en-tête (nom, description) est
+   l'unique chose lue au démarrage et dont `metadata.include_tools` liste ses outils. **Une compétence expose 7 outils métier au plus** (borne de la décision, ajustable seulement
+   après évaluation chiffrée) ; un domaine plus large est scindé en plusieurs compétences. Aucun outil métier n'est passé directement au paramètre `tools` de `create_deep_agent` :
+   il serait exécutable sans protection.
+2. **Filtre d'accès d'abord, dans le résolveur.** Le résolveur de `SkillsMiddleware` lit l'identité dans `runtime.context` et ne renvoie que les outils que cette identité peut appeler.
+   Un outil non autorisé n'est jamais exposé, même si sa compétence est épinglée ou lue. Le contrôle du serveur à chaque appel reste l'autorité (règle de [`mcp.md`](mcp.md)).
+3. **Routage hors modèle.** L'application choisit les compétences à épingler avant l'invocation, en millisecondes, par recherche hybride (mots-clés `websearch_to_tsquery` + vecteurs
+   pgvector, fusion RRF k=60) sur le registre léger des outils, puis épingle les domaines des meilleurs résultats ainsi que le domaine actif de la conversation. **Aucun appel de modèle.**
+4. **Repli.** Si le routage se trompe, le modèle lit lui-même le `SKILL.md` du bon domaine (divulgation progressive officielle). Il n'y a donc pas d'outil `request_broader_tools`
+   maison : le mécanisme documenté le remplace. Coût : un tour, seulement dans ce cas.
+5. **Élagage.** L'épinglage est recalculé à chaque invocation : un domaine qui ne sert plus n'est pas réépinglé. Le comportement des compétences lues lors de tours précédents n'est pas
+   documenté en détail : non vérifié, à mesurer avec le banc de T32.
 
-Le middleware de sélection ne retire **jamais** les outils intrinsèques du harnais (`task`, outils de fichiers, planification) : `request.tools` les contient aussi, et un filtre
-écrit sur « les 7 meilleurs » les supprimerait. Il ne touche que les outils métier du registre. Un test le prouve.
+Le nombre limite les **schémas en contexte**, jamais les données accessibles : un outil de lecture reste paginé sans plafond (règle de complétude de [`mcp.md`](mcp.md)).
+Les outils du harnais (`ls`, `read_file`, `write_file`, `edit_file`, `delete`, `glob`, `grep`, `task`, et `execute` avec un backend bac à sable) ne sont jamais touchés par ce mécanisme ;
+leur restriction se fait par les moyens documentés (profil d'harnais `excluded_tools`, liste blanche `FilesystemMiddleware(tools=...)`, permissions).
 
 ### Domaines, sous-agents et sous-graphes
 
@@ -696,32 +699,45 @@ Le middleware de sélection ne retire **jamais** les outils intrinsèques du har
 
 La documentation officielle ne confirme pas tout ce que la formulation initiale supposait ; la règle n'en retient que ce qui est documenté :
 
-* « `RunnableLambda` personnalisé autour de `bind_tools()` » : non retenu. Le mécanisme officiel actuel est le middleware `wrap_model_call` (`create_agent` et `create_deep_agent`).
-* « Hydratation automatique des pointeurs par Deep Agents » : **non documentée**. Deep Agents fournit sous-agents, compétences à divulgation progressive, outils MCP et profils
-  d'harnais ; l'hydratation des schémas est faite par notre middleware avec les crochets documentés ci-dessus, pas par une fonction supposée du harnais.
-* « Bac à sable qui évolue » : réalisé par l'état de l'agent (clé du jeu actif) et le système de fichiers virtuel du harnais ; aucun mécanisme implicite n'est présumé.
-* « Schémas Zod » : l'équivalent Python est Pydantic / JSON Schema. Spring AI ne participe pas à ce chemin : le service IA est en Python ; le serveur MCP d'ERP est celui du
-  monolithe (Spring AI aujourd'hui, SDK Python MCP après la bascule, voir l'ADR 0016).
-* `LLMToolSelectorMiddleware` : documenté, mais il **demande à un modèle** de choisir les outils (appel supplémentaire). Il ne sert plus de routeur systématique ; il reste adopté
-  (essai conservé) et n'est réactivé comme second étage que si l'évaluation chiffrée montre un gain sur les demandes ambiguës sans dépasser le budget de latence.
+* « `RunnableLambda` personnalisé autour de `bind_tools()` » : non retenu. Le mécanisme officiel est celui des outils de compétence de Deep Agents (middleware `SkillsMiddleware`, paramètre `middleware` de `create_deep_agent`).
+* « Hydratation automatique des pointeurs par Deep Agents » : le harnais fournit sous-agents, compétences à divulgation progressive, **outils de compétence protégés, épinglage**, outils MCP et profils
+  d'harnais. L'hydratation « à la volée » est réalisée par ces fonctions ; ce qui reste à l'application est le choix des compétences à épingler (voir « Pièce maison déclarée »).
+* « Bac à sable qui évolue » : réalisé par l'état de l'agent et le système de fichiers virtuel du harnais ; aucun mécanisme implicite n'est présumé.
+* « Schémas Zod » : l'équivalent Python est Pydantic / JSON Schema. Le service IA est en Python ; le serveur MCP d'ERP est celui du monolithe (Spring AI aujourd'hui, SDK Python MCP après la bascule, voir l'ADR 0016).
+* `LLMToolSelectorMiddleware` : documenté, mais il **demande à un modèle** de choisir les outils (appel supplémentaire). Il est retiré du chemin systématique et remplacé par les outils de compétence ;
+  il n'est réactivé que si l'évaluation chiffrée montre un gain sur les demandes ambiguës sans dépasser le budget de latence.
+* `ProviderToolSearchMiddleware` : voir le tableau ci-dessus, incompatible avec le pool multi-fournisseurs gratuit.
 
 ### Pièce maison déclarée
 
-Le middleware de sélection, le registre et la recherche hybride sont du code applicatif. Conformément à l'objectif « zéro code IA fait maison », ils sont inscrits à l'inventaire
-du § 7 de [`ia.md`](../docs/ia.md) avec leur piste de remplacement (composant officiel de récupération, ou fonction native d'un framework si elle apparaît). Les briques de recherche
-(BM25, magasin vectoriel pgvector) viennent des intégrations officielles LangChain ; leur choix précis est tranché par un banc de mesure sur le registre réel et consigné dans `decisions.md`.
+Une seule : la **fonction de routage** qui calcule `pinned_skills` (recherche hybride sur le registre léger des outils, filtrée par permission avant le classement). Elle utilise
+pgvector et la recherche plein texte de PostgreSQL, et un modèle d'embedding gratuit exécuté en local. Elle est inscrite à l'inventaire du § 7 de [`ia.md`](../docs/ia.md) (T32) avec sa piste de
+remplacement : toute fonction native de Deep Agents ou de LangChain qui ferait ce choix sans modèle.
+
+Mesures sur les 31 outils actuels (banc du 2026-11-03, 36 requêtes dont 6 paraphrases, jeu d'évaluation provisoire) :
+
+| Modèle d'embedding (licence, taille) | Hybride, requêtes directes (r@5) | Hybride, 36 requêtes (r@7) | Latence d'embedding d'une requête |
+|---|---|---|---|
+| `paraphrase-multilingual-MiniLM-L12-v2` (Apache-2.0, 0,22 Go, 384 dimensions) | 1,0 | 0,944 | 8 ms |
+| `paraphrase-multilingual-mpnet-base-v2` (Apache-2.0, 1,0 Go, 768 dimensions) | 1,0 | 0,972 | 20 ms |
+
+Décision : **MiniLM d'abord** (l'écart d'une requête sur 36 ne justifie ni 4,5 fois la taille ni 2,5 fois la latence) ; passage à mpnet seulement si le jeu d'évaluation de T32, construit sur
+des demandes réelles, passe sous le seuil de 0,95 en r@7. Les paraphrases sont mieux classées par le vecteur seul que par l'hybride (mpnet : 1,0 contre 0,667) : le poids du lexical est un
+réglage mesuré par le banc, non un choix arbitraire. `multilingual-e5-large` (MIT, 2,24 Go) n'a pas été mesuré ; `jina-v3` est exclu (licence non commerciale).
 
 ### Garde d'exécution obligatoire (vérifié le 2026-11-03)
 
-Le filtrage par `wrap_model_call` ne montre au modèle qu'un sous-ensemble, mais **ne protège rien** : test sur LangChain 1.4.7, un outil enregistré et non exposé qui est
-appelé quand même par le modèle **s'exécute** et renvoie ses données. Toute sélection d'outils s'accompagne donc de :
+Test sur `create_deep_agent` (deepagents 0.7.32) :
 
-* un `wrap_tool_call` qui refuse, avant exécution, tout appel d'un outil absent de l'ensemble exposé au tour (message d'erreur correctif pour le modèle, aucune exécution) ;
-* les contrôles serveur d'identité, de permission et de périmètre de `mcp.md`, qui restent l'autorité (la sélection est de l'ergonomie, jamais de la sécurité) ;
+* **Outil de compétence non exposé** : l'appel échoue (« is not a valid tool ») et **rien ne s'exécute**, que la compétence ne soit pas épinglée ou que l'identité n'ait pas la permission (compétence épinglée mais refusée par le résolveur). Le mécanisme officiel est donc la garde ; aucun `wrap_tool_call` maison n'est nécessaire pour ces outils.
+* Lire le `SKILL.md` ou épingler la compétence expose l'outil au tour suivant ; l'épinglage ne coûte aucun tour de modèle (2 appels de modèle pour un appel d'outil suivi de la réponse, identique à l'absence d'outil).
+* **Outil passé directement à `tools=`** puis filtré par `wrap_model_call` : un modèle qui l'appelle quand même **l'exécute** (vérifié sur LangChain et Deep Agents). Donc, soit l'outil passe par une compétence, soit
+  un `wrap_tool_call` refuse tout appel absent de l'ensemble exposé au tour.
+
+Dans tous les cas :
+
+* les contrôles serveur d'identité, de permission et de périmètre de `mcp.md` restent l'autorité (la sélection est de l'ergonomie, jamais de la sécurité) ;
 * un test d'autorisation par outil sensible : le modèle appelle un outil non exposé, l'exécution est refusée.
-
-`request_broader_tools` met à jour la clé d'état des outils exposés par `Command(update=...)` (vérifié) : l'élargissement coûte **un** tour de modèle supplémentaire, seulement
-quand le repli est utilisé ; le routage de base n'en coûte aucun. La même garde d'accès s'applique à l'élargissement.
 
 ### Définition des outils (règles officielles, audit de tous les outils)
 

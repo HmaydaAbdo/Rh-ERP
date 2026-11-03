@@ -30,8 +30,8 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 Deux règles imposées par le propriétaire, sans exception :
 
-- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, LangChain,
-  LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
+- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, **Deep Agents**,
+  LangChain, LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
   réécrire ce qu'un framework fournit déjà, même partiellement, ni copier le comportement d'un de ses composants.
   Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
   branché sur un point d'extension officiel. Si un besoin semble exiger du code maison, présenter d'abord au
@@ -46,9 +46,14 @@ Deux règles imposées par le propriétaire, sans exception :
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
+- **Deep Agents est le point d'entrée de tout agent (décision du 2026-11-03).** Tout agent se construit avec `create_deep_agent` et ses paramètres
+  documentés (`tools`, `middleware`, `subagents`, `backend`, profils d'harnais) ; `create_agent` de LangChain n'est plus utilisé directement
+  pour un nouvel agent, et le service existant migre (tâche T33 de `docs/ia.md`). Les composants LangChain et LangGraph servent à travers lui.
 - **Catalogue d'outils : sélection juste-à-temps bornée, jamais de chargement global.** Aucun agent (Deep Agents, sous-agent,
   sous-graphe LangGraph) ne reçoit le catalogue MCP entier : 5 à 7 schémas métier hydratés par tour, choisis hors modèle après
-  le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base, avec l'outil `request_broader_tools` en repli.
+  le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base. Mécanisme officiel Deep Agents : outils de compétence
+  protégés (`SkillsMiddleware`, `metadata.include_tools`, résolveur lié à l'identité) et épinglage (`pinned_skills`) ; repli par lecture du
+  `SKILL.md` par le modèle. Aucun outil métier n'est passé directement à `tools=`.
   **Toute fonctionnalité et toute capacité de Deep Agents, LangGraph et LangChain s'utilise, strictement** (registre des capacités
   dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
   [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,
