@@ -25,6 +25,9 @@ public final class HeuresSuppSpecification {
             if (criteres.periode() != null) {
                 predicates.add(cb.equal(root.get("periode"), criteres.periode()));
             }
+            if (criteres.periodes() != null && !criteres.periodes().isEmpty()) {
+                predicates.add(root.get("periode").in(criteres.periodes()));
+            }
             if (criteres.chantierIds() != null && !criteres.chantierIds().isEmpty()) {
                 predicates.add(root.get("chantier").get("id").in(criteres.chantierIds()));
             }

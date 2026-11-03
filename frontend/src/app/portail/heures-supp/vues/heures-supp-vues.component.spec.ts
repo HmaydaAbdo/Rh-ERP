@@ -17,7 +17,7 @@ describe('HeuresSuppVuesComponent', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({ providers: [provideRouter([{ path: 'heures-supp', component: HeuresSuppVuesComponent, children: [
       { path: '', component: ChildView }, { path: 'cartes', component: ChildView }, { path: 'analytique', component: ChildView }
-    ] }]), { provide: HeuresSuppService, useValue: { telechargerModele: vi.fn().mockReturnValue(of(new Blob(['modele']))) } }] });
+    ] }]), { provide: HeuresSuppService, useValue: { periodes: vi.fn().mockReturnValue(of(['2026-10', '2026-09'])), telechargerModele: vi.fn().mockReturnValue(of(new Blob(['modele']))) } }] });
     harness = await RouterTestingHarness.create();
   });
 
@@ -74,12 +74,13 @@ describe('HeuresSuppVuesComponent', () => {
     const component = harness.routeDebugElement!.componentInstance as HeuresSuppVuesComponent & Record<string, any>;
     Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
     expect(component['exportOuvert']()).toBe(true);
-    expect(component['moisExport']()).toEqual(new Date(2026, 9, 1));
+    expect(component['moisExport']()).toEqual(['2026-10']);
     component['exporterPdf']();
     expect(service.exporterPdf).not.toHaveBeenCalled();
-    component['choisirChantierExport'](4);
+    component['choisirMoisExport'](['2026-10', '2026-09']);
+    component['choisirChantiersExport']([4, 5]);
     component['exporterPdf']();
-    expect(service.exporterPdf).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4] }, 'montant,desc');
+    expect(service.exporterPdf).toHaveBeenCalledWith({ periodes: ['2026-09', '2026-10'], chantierIds: [4, 5] }, 'montant,desc');
     expect(component['exportOuvert']()).toBe(false);
   });
 });

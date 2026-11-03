@@ -32,7 +32,7 @@ public class HeuresSuppExportController {
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
     public ResponseEntity<byte[]> telecharger(@Valid @RequestBody HeuresSuppExportRequestDto requete) {
         byte[] pdf = service.generer(requete);
-        String nom = "Heures_supplementaires_" + (requete.periode() == null ? "tous-les-mois" : requete.periode()) + ".pdf";
+        String nom = "Heures_supplementaires_" + (requete.moisDemandes().size() == 1 ? requete.moisDemandes().get(0).toString() : requete.moisDemandes().isEmpty() ? "tous-les-mois" : "plusieurs-mois") + ".pdf";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + nom)
                 .contentType(MediaType.APPLICATION_PDF)

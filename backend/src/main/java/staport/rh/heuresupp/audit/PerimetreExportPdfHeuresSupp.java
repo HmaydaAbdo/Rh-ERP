@@ -17,7 +17,7 @@ public class PerimetreExportPdfHeuresSupp implements PerimetreAudit {
         Map<String, Object> perimetre = new LinkedHashMap<>();
         perimetre.put("format", "PDF");
         if (arguments[0] instanceof HeuresSuppExportRequestDto requete) {
-            perimetre.put("periode", requete.periode() == null ? null : requete.periode().toString());
+            perimetre.put("periode", requete.moisDemandes().isEmpty() ? null : String.join(",", requete.moisDemandes().stream().map(Object::toString).toList()));
             if (requete.chantierIds() != null && !requete.chantierIds().isEmpty()) perimetre.put("chantierIds", requete.chantierIds());
             if (requete.equipeIds() != null && !requete.equipeIds().isEmpty()) perimetre.put("equipeIds", requete.equipeIds());
             if (requete.fonctionIds() != null && !requete.fonctionIds().isEmpty()) perimetre.put("fonctionIds", requete.fonctionIds());

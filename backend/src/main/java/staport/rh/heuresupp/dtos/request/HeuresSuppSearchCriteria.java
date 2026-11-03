@@ -12,6 +12,13 @@ public record HeuresSuppSearchCriteria(
         @Size(max = 500) List<Long> equipeIds,
         @Size(max = 500) List<Long> fonctionIds,
         @Size(max = 30) String cin,
-        @Size(max = 150) String nomPrenom
+        @Size(max = 150) String nomPrenom,
+        @Size(max = 60) List<YearMonth> periodes
 ) {
+
+    /** Un seul mois (ou aucun) : la forme historique des filtres ; `periodes` complète `periode` pour les choix multiples. */
+    public HeuresSuppSearchCriteria(YearMonth periode, List<Long> chantierIds, List<Long> equipeIds, List<Long> fonctionIds,
+                                    String cin, String nomPrenom) {
+        this(periode, chantierIds, equipeIds, fonctionIds, cin, nomPrenom, null);
+    }
 }

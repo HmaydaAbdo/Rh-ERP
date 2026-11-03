@@ -7,7 +7,9 @@ import staport.rh.audit.support.DonneesDeTest.Referentiel;
 import staport.rh.chantier.entities.Chantier;
 import staport.rh.employee.entities.Employee;
 import staport.rh.function.entities.Function;
+import staport.rh.heuresupp.dtos.request.HeuresSuppSearchCriteria;
 import staport.rh.heuresupp.entities.HeureSupp;
+import staport.rh.heuresupp.specifications.HeuresSuppSpecification;
 import staport.rh.paie.entities.Paie;
 
 import java.math.BigDecimal;
@@ -47,5 +49,11 @@ class HeuresSuppPeriodesIntegrationTest extends AuditIntegrationTestBase {
         List<YearMonth> mois = repository.findDistinctPeriodeByOrderByPeriodeDesc();
 
         assertThat(mois).containsSubsequence(recent, ancien).doesNotHaveDuplicates();
+
+        List<Long> chantier = List.of(ref.chantierId());
+        assertThat(repository.findAll(HeuresSuppSpecification.rechercher(
+                new HeuresSuppSearchCriteria(null, chantier, null, null, null, null, List.of(recent, ancien))))).hasSize(2);
+        assertThat(repository.findAll(HeuresSuppSpecification.rechercher(
+                new HeuresSuppSearchCriteria(null, chantier, null, null, null, null, List.of(recent))))).hasSize(1);
     }
 }
