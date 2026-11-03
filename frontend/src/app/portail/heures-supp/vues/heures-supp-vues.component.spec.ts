@@ -71,7 +71,15 @@ describe('HeuresSuppVuesComponent', () => {
     }
 
     TestBed.inject(HeuresSuppExportEtat).tri.set('montant,desc');
+    const component = harness.routeDebugElement!.componentInstance as HeuresSuppVuesComponent & Record<string, any>;
     Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
-    expect(service.exporterPdf).toHaveBeenCalledWith({ periode: '2026-10', cin: 'AB1', nomPrenom: undefined, chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'montant,desc');
+    expect(component['exportOuvert']()).toBe(true);
+    expect(component['moisExport']()).toEqual(new Date(2026, 9, 1));
+    component['exporterPdf']();
+    expect(service.exporterPdf).not.toHaveBeenCalled();
+    component['choisirChantierExport'](4);
+    component['exporterPdf']();
+    expect(service.exporterPdf).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4] }, 'montant,desc');
+    expect(component['exportOuvert']()).toBe(false);
   });
 });

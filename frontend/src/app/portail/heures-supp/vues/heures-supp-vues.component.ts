@@ -9,6 +9,7 @@ import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.compo
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
@@ -18,7 +19,7 @@ import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 
 const CONFIG: CollectionShellConfig = {
-  titre: 'Heures supplémentaires',
+  titre: 'Heures sup.',
   libelleVue: 'Vues des heures supplémentaires',
   vues: [
     { libelle: 'Tabulaire', icone: 'table', lien: '/heures-supp' },
@@ -29,11 +30,11 @@ const CONFIG: CollectionShellConfig = {
 
 @Component({
   selector: 'app-heures-supp-vues',
-  imports: [CollectionShellComponent, SplitButtonComponent, MonthInputComponent, LazySelectComponent, ButtonComponent, RouterLink],
+  imports: [CollectionShellComponent, SplitButtonComponent, MonthInputComponent, LazySelectComponent, ButtonComponent, DialogComponent, RouterLink],
   template: `
     <app-collection-shell [configuration]="configuration">
       <stp-split-button collection-actions label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="telechargementModele()" (clicked)="ouvrirImport()" />
-      <button collection-actions stp-button variant="secondary" icon="download" type="button" [loading]="exportEtat.enCours()" (click)="exporterPdf()">Exporter</button>
+      <button collection-actions stp-button variant="secondary" icon="download" type="button" (click)="ouvrirExport()">Exporter</button>
       @if (peutAjouter()) { <a collection-actions stp-button variant="primary" icon="plus" routerLink="/heures-supp/new">Ajouter une ligne</a> }
       <form collection-filters class="app-toolbar" aria-label="Filtres des heures supplémentaires" (submit)="$event.preventDefault()">
         <stp-month-input ariaLabel="Période des heures supplémentaires" [value]="mois()" (valueChange)="choisirMois($event)" />
@@ -45,6 +46,16 @@ const CONFIG: CollectionShellConfig = {
         <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" aria-label="Effacer les filtres" [disabled]="!aDesFiltres()" (click)="effacerFiltres()">Effacer</button>
       </form>
     </app-collection-shell>
+    <stp-dialog header="Exporter les heures supplémentaires" width="30rem" [(open)]="exportOuvert">
+      <div class="app-form__grid">
+        <label class="field" for="hs-export-periode">Mois <stp-month-input inputId="hs-export-periode" ariaLabel="Mois à exporter" [value]="moisExport()" (valueChange)="moisExport.set($event)" /></label>
+        <label class="field" for="hs-export-chantier">Chantier <app-lazy-select inputId="hs-export-chantier" ariaLabel="Chantier à exporter" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierExport()" (valueChange)="choisirChantierExport($event)" /></label>
+      </div>
+      <div stpDialogFooter>
+        <button stp-button variant="secondary" type="button" (click)="exportOuvert.set(false)">Annuler</button>
+        <button stp-button variant="primary" icon="download" type="button" [loading]="exportEtat.enCours()" [disabled]="!moisExport() || !chantierExport()" (click)="exporterPdf()">Exporter en PDF</button>
+      </div>
+    </stp-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -61,6 +72,9 @@ export class HeuresSuppVuesComponent {
   protected readonly fonctions = inject(FunctionReferenceService);
   protected readonly exportEtat = inject(HeuresSuppExportEtat);
   protected readonly telechargementModele = signal(false);
+  protected readonly exportOuvert = signal(false);
+  protected readonly moisExport = signal<Date | null>(null);
+  protected readonly chantierExport = signal<number | null>(null);
   protected readonly menuImport: MenuAction[] = [{
     label: 'Télécharger le modèle Excel', icon: 'file-spreadsheet', command: () => this.telechargerModele()
   }];
@@ -112,24 +126,38 @@ export class HeuresSuppVuesComponent {
   }
   private lireIds(value: string | null): number[] { return value?.split(',').map(Number).filter((id) => Number.isInteger(id) && id >= 0) ?? []; }
 
-  /** Exporte en PDF le périmètre filtré dans l'ordre du tableau ; le bouton est présent dans les trois vues, les filtres étant communs. */
-  protected exporterPdf(): void {
+  /** Ouvre l'export : le mois proposé est le dernier mois importé, le chantier est à choisir. */
+  protected ouvrirExport(): void {
     if (this.exportEtat.enCours()) return;
-    const mois = this.mois();
+    this.chantierExport.set(null);
+    this.moisExport.set(this.mois());
+    this.exportOuvert.set(true);
+    if (!this.mois()) {
+      this.service.periodes().subscribe((periodes) => {
+        const derniere = [...periodes].sort().at(-1);
+        if (derniere && !this.moisExport()) this.moisExport.set(new Date(Number(derniere.slice(0, 4)), Number(derniere.slice(5, 7)) - 1, 1));
+      });
+    }
+  }
+
+  protected choisirChantierExport(value: unknown): void { this.chantierExport.set(typeof value === 'number' ? value : null); }
+
+  /** Exporte en PDF le mois et le chantier choisis dans le dialogue, dans l'ordre du tableau. */
+  protected exporterPdf(): void {
+    const mois = this.moisExport();
+    const chantierId = this.chantierExport();
+    if (this.exportEtat.enCours() || !mois || !chantierId) return;
     const criteres: HeuresSuppSearchCriteria = {
-      periode: mois ? `${mois.getFullYear()}-${String(mois.getMonth() + 1).padStart(2, '0')}` : undefined,
-      nomPrenom: this.nomPrenom() || undefined,
-      cin: this.cin() || undefined,
-      chantierIds: this.chantierIds().length ? this.chantierIds() : undefined,
-      equipeIds: this.equipeIds().length ? this.equipeIds() : undefined,
-      fonctionIds: this.fonctionIds().length ? this.fonctionIds() : undefined
+      periode: `${mois.getFullYear()}-${String(mois.getMonth() + 1).padStart(2, '0')}`,
+      chantierIds: [chantierId]
     };
     this.exportEtat.enCours.set(true);
     this.service.exporterPdf(criteres, this.exportEtat.tri()).pipe(finalize(() => this.exportEtat.enCours.set(false))).subscribe((blob) => {
+      this.exportOuvert.set(false);
       const url = window.URL.createObjectURL(blob);
       const lien = document.createElement('a');
       lien.href = url;
-      lien.download = `Heures_supplementaires_${criteres.periode ?? 'tous-les-mois'}.pdf`;
+      lien.download = `Heures_supplementaires_${criteres.periode}.pdf`;
       lien.click();
       window.URL.revokeObjectURL(url);
     });
