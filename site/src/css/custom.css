@@ -1,0 +1,61 @@
+/*
+ * Thème de la documentation, aligné sur DESIGN.md (jetons de l'application) : sombre par défaut avec gris chauds neutres
+ * et action blanc cassé, clair avec action bleue #1E40AF. Une seule couleur d'action, liens toujours soulignés.
+ * Les @import viennent en premier (règle CSS) : police Inter auto-hébergée (paquet npm) et styles de bpmn-js.
+ */
+@import '@fontsource-variable/inter';
+@import 'bpmn-js/dist/assets/diagram-js.css';
+@import 'bpmn-js/dist/assets/bpmn-js.css';
+
+:root {
+  --ifm-font-family-base: 'Inter Variable', system-ui, sans-serif;
+  --ifm-font-size-base: 100%;
+  --ifm-line-height-base: 1.5;
+  --ifm-heading-font-weight: 600;
+  --ifm-global-radius: 8px;
+  --ifm-code-font-size: 95%;
+  --ifm-link-decoration: underline;
+  --ifm-link-hover-decoration: underline;
+
+  /* Clair */
+  --ifm-color-primary: #1e40af;
+  --ifm-color-primary-dark: #1b3a9e;
+  --ifm-color-primary-darker: #1a3896;
+  --ifm-color-primary-darkest: #152e7b;
+  --ifm-color-primary-light: #2146c0;
+  --ifm-color-primary-lighter: #2349c8;
+  --ifm-color-primary-lightest: #2a58e8;
+  --ifm-background-color: #f3f4f1;
+  --ifm-background-surface-color: #ffffff;
+  --ifm-font-color-base: #111827;
+  --ifm-color-emphasis-300: #7f8796;
+  --ifm-toc-border-color: #7f8796;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #eceae3;
+  --ifm-color-primary-dark: #dedbd0;
+  --ifm-color-primary-darker: #d6d3c6;
+  --ifm-color-primary-darkest: #b3b09b;
+  --ifm-color-primary-light: #f8f7f4;
+  --ifm-color-primary-lighter: #ffffff;
+  --ifm-color-primary-lightest: #ffffff;
+  --ifm-background-color: #1f1e1d;
+  --ifm-background-surface-color: #2b2a28;
+  --ifm-font-color-base: #f5f4ef;
+  --ifm-color-emphasis-300: #8a877f;
+  --ifm-toc-border-color: #8a877f;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.08);
+}
+
+/* Bordures franches autour des tableaux et des blocs. */
+table th,
+table td {
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+/* Le fond du diagramme BPMN reste clair (bpmn-js dessine en noir) : bordure franche pour l'encadrer. */
+.djs-container {
+  border-radius: var(--ifm-global-radius);
+}

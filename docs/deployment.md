@@ -64,6 +64,31 @@ services locaux), jamais depuis l'extérieur.
 
 ---
 
+## Site de documentation
+
+Le conteneur `docs` (site Docusaurus du dossier `site/`, image `erp-rh-docs`) sert un site statique sur le port 8080 interne,
+publié sur `127.0.0.1:${DOCS_PORT}` (5003 par défaut). Il n'a aucune dépendance (ni base, ni backend) et démarre avec le reste de
+la pile (`docker compose pull` puis `docker compose up -d`). Il n'est **jamais public** : Docusaurus ne fournit pas d'authentification,
+elle est posée par nginx outer. Le site est construit avec `baseUrl: '/'` : il doit être servi à la racine d'un nom d'hôte dédié,
+pas sous un sous-chemin.
+
+```nginx
+server {
+    server_name docs.example.com;   # nom d'hôte dédié, à fournir par l'exploitant
+    # listen / TLS comme pour les autres applications du serveur
+
+    location / {
+        auth_basic           "Documentation Staport";
+        auth_basic_user_file /etc/nginx/htpasswd-docs;   # créé sur le serveur : htpasswd -c <fichier> <utilisateur>
+        proxy_pass http://127.0.0.1:${DOCS_PORT}/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Le conteneur ajoute `X-Robots-Tag: noindex` et refuse l'affichage dans un cadre tiers. Le fichier `htpasswd-docs` ne se commite jamais.
+
 ## Intégration à nginx outer
 
 Nginx outer existe déjà sur le serveur et est géré séparément (partagé avec d'autres applications).

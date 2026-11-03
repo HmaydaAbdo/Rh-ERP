@@ -67,7 +67,7 @@ URL = os.getenv("LITELLM_GATEWAY_URL", "http://127.0.0.1:4000/v1/chat/completion
 BASE = URL.split("/v1/", 1)[0]
 KEY = os.getenv("LITELLM_TEST_API_KEY", "")
 DEPLOYMENTS = load_deployments()
-CAPABILITIES = ["simple", "tool-selection", "medium", "complex", "code", "ocr"]
+CAPABILITIES = ["simple", "medium", "complex", "code", "ocr"]
 PROMPTS = {
     "simple": "Donne trois avantages du travail hybride, une phrase chacun.",
     "medium": "Rédige une courte description de poste pour un contrôleur de gestion (5 lignes).",
@@ -117,27 +117,6 @@ INVOICE_FORMAT = {
         },
     },
 }
-SELECTION_TOOLS = [
-    "audit_historique", "audit_rechercher", "chantier_fiche", "chantier_rechercher", "employe_fiche",
-    "employe_parcours", "employes_compter", "employes_rechercher", "employes_regrouper", "employes_sorties",
-    "equipe_fiche", "equipe_rechercher", "fonction_fiche", "fonction_rechercher", "paie_bulletins_rechercher",
-    "paie_comparer", "paie_evolution", "paie_indicateurs", "paie_mouvements", "paie_periodes", "paie_qualite",
-    "paie_repartition", "parametres_lire", "rapport_preparer", "roles_lister", "systeme_identite",
-]
-SELECTION_FORMAT = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "tool_selection",
-        "schema": {
-            "type": "object",
-            "properties": {"tools": {"type": "array", "items": {"type": "string", "enum": SELECTION_TOOLS}}},
-            "required": ["tools"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-}
-
 # 5x7 bitmap digits, so the OCR test needs no image file and no third-party library.
 DIGIT_GLYPHS = {
     "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
@@ -198,11 +177,8 @@ def chat(key, tags, messages, max_tokens=1000, response_format=None, model="ai-g
     global SENT
     if model == "ai-gateway":
         tag = (tags or ["medium"])[0]
-        # Le smoke test du sélecteur qualifie le groupe de production exact ; les autres capacités utilisent
-        # leurs alias de test afin d'éviter d'exercer les groupes de production pendant les sondes.
-        model = "ai-gateway-tool-selection" if tag == "tool-selection" else "ai-gateway-" + (
-            "test-" + tag[3:] if tag.startswith("id:") else tag
-        )
+        # Les capacités utilisent leurs alias de test afin d'éviter d'exercer les groupes de production pendant les sondes.
+        model = "ai-gateway-" + ("test-" + tag[3:] if tag.startswith("id:") else tag)
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens}
     if tags:
         payload["metadata"] = {"tags": tags}
@@ -280,8 +256,6 @@ def check_ocr(key, name, tags, expected):
 def check_capability(key, tag):
     if tag == "ocr":
         return check_ocr(key, "ocr (image réelle)", ["ocr"], pool("ocr"))
-    if tag == "tool-selection":
-        return check_tool_selection(key, [tag], pool(tag))
     reply = chat(key, [tag], [{"role": "user", "content": PROMPTS[tag]}])
     verdict(tag, reply, pool(tag))
 
@@ -293,26 +267,6 @@ def check_structured_output(key):
     data = parse_json(reply["text"]) or {}
     values = (data.get("montant_ht"), data.get("montant_tva"), data.get("montant_ttc"))
     verdict("json_schema (facture)", reply, pool("medium"), values == (1250, 250, 1500), f"valeurs lues : {values}")
-
-
-def check_tool_selection(key, tags, expected):
-    """Même JSON Schema strict que LLMToolSelectorMiddleware, avec les noms MCP autorisés."""
-    messages = [
-        {
-            "role": "system",
-            "content": "Sélectionne tous les outils nécessaires pour répondre à la question. Pour toute question portant "
-            "sur les données ERP, sélectionne au moins un outil métier pertinent. Pour savoir quels mois sont "
-            "importés ou combien il y en a, choisis `paie_periodes`. En cas d'incertitude, sélectionne les candidats "
-            "pertinents au lieu de répondre qu'aucun outil n'est disponible.",
-        },
-        {"role": "user", "content": "Combien de mois de paie ont été importés ?"},
-    ]
-    reply = chat(key, tags, messages, max_tokens=500, response_format=SELECTION_FORMAT)
-    data = parse_json(reply["text"]) or {}
-    selected = data.get("tools", [])
-    correct = "paie_periodes" in selected
-    verdict("json_schema (sélecteur MCP)", reply, expected, correct,
-            f"outils : {','.join(selected) or 'aucun'}; attendu : paie_periodes")
 
 
 def check_grounding(key):
@@ -367,9 +321,7 @@ def check_providers(key, only):
         sys.exit(f"Déploiement(s) inconnu(s) : {', '.join(unknown)}. Voir --list.")
     for dep in only or targets:
         tags = DEPLOYMENTS[dep][0]
-        if "tool-selection" in tags:
-            check_tool_selection(key, [f"id:{dep}"], {dep})
-        elif "ocr" in tags or "eval-ocr" in tags:
+        if "ocr" in tags or "eval-ocr" in tags:
             check_ocr(key, dep, [f"id:{dep}"], {dep})
         else:
             reply = chat(key, [f"id:{dep}"], [{"role": "user", "content": "Réponds uniquement par le mot : prêt"}])

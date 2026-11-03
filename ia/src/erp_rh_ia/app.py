@@ -12,13 +12,15 @@ from fastapi import FastAPI, Response, status
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel
 
 from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.agui import AccesErp, AccesSpring, FabriqueAgent, routeur_agui
+from erp_rh_ia.agui import AccesErp, AccesSpring, FabriqueAgent, Routage, routeur_agui
 from erp_rh_ia.config import Settings, get_settings
 from erp_rh_ia.memoire import ouvrir_memoire
 from erp_rh_ia.modeles import Tache, modele
+from erp_rh_ia.routage import Routeur
 
 
 class Sante(BaseModel):
@@ -28,26 +30,34 @@ class Sante(BaseModel):
 
 
 def fabrique_reelle(config: Settings) -> FabriqueAgent:
-    """L'agent servi : ``complex`` pour répondre, groupe compatible JSON Schema pour choisir les outils."""
+    """L'agent servi : ``complex`` pour répondre ; les outils sont choisis hors modèle (``routage.py``)."""
     # Laisser le fournisseur appliquer son comportement natif : `reasoning_effort` est incompatible avec certains
     # modèles Gemma 4 derrière LiteLLM et provoque une erreur 400 pendant le basculement.
     principal = modele(config, Tache.COMPLEX)
-    selecteur = modele(config, Tache.SELECTEUR, interne=True)
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
 
+    # Espace de fichiers par identité : en mémoire du processus tant que rien n'écrit (épopée d'écriture : PostgreSQL).
+    espaces = InMemoryStore()
+
     def fabriquer(
-        outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None
+        outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str
     ) -> CompiledStateGraph[Any, Any, Any, Any]:
-        return creer_agent(principal, outils, selecteur=selecteur, resumeur=resumeur, checkpointer=checkpointer)
+        return creer_agent(
+            principal, outils, resumeur=resumeur, checkpointer=checkpointer, utilisateur=utilisateur, store=espaces
+        )
 
     return fabriquer
 
 
 def creer_app(
-    settings: Settings | None = None, fabrique: FabriqueAgent | None = None, acces: AccesErp | None = None
+    settings: Settings | None = None,
+    fabrique: FabriqueAgent | None = None,
+    acces: AccesErp | None = None,
+    routage: Routage | None = None,
 ) -> FastAPI:
-    """``fabrique`` et ``acces`` remplacent les modèles et Spring dans les tests ; absents, les vrais sont créés."""
+    """``fabrique``, ``acces`` et ``routage`` remplacent les modèles, Spring et les embeddings dans les tests ;
+    absents, les vrais sont créés."""
     config = settings or get_settings()
 
     @asynccontextmanager
@@ -57,6 +67,7 @@ def creer_app(
             app.state.http = client
             app.state.memoire = memoire
             app.state.fabrique = fabrique or fabrique_reelle(config)
+            app.state.routage = routage or Routeur().adomaines
             app.state.acces = acces or AccesSpring(client, str(config.erp_api_url))
             yield
 
@@ -67,6 +78,7 @@ def creer_app(
             acces=lambda: app.state.acces,
             actif=lambda: config.enabled,
             memoire=lambda: app.state.memoire,
+            routage=lambda: app.state.routage,
         )
     )
 

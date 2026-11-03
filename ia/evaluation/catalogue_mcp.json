@@ -1,0 +1,188 @@
+[
+ {
+  "file": "OutilIdentite.java",
+  "name": "systeme_identite",
+  "title": "Identité et droits de l'utilisateur",
+  "description": "Rend l'identité de l'utilisateur pour qui tu agis et la liste complète de ses droits (permissions et rôles). À appeler quand la question porte sur ce que l'utilisateur peut faire ou voir, ou pour comprendre un refus « Access Denied » : il indique alors quelle permission manque. Ne rend aucune donnée métier (ni paie ni employés) : pour une donnée, utiliser l'outil du domaine concerné. Sans paramètre ; la liste des droits est rendue en entier, sans pagination."
+ },
+ {
+  "file": "OutilsAccueil.java",
+  "name": "accueil_lire",
+  "title": "Accueil de l'utilisateur",
+  "description": "Rend les indicateurs affichés sur l'écran d'accueil de l'utilisateur pour qui tu agis (dans leur ordre) et ceux qu'il peut y ajouter, avec libellé et explication. À appeler quand l'utilisateur demande ce que contient son accueil ou quels indicateurs il peut y mettre. Les valeurs des indicateurs se lisent avec les outils paie_* et employes_*. Ne rend pas les valeurs des indicateurs : pour leurs valeurs, `paie_indicateurs` ou `employes_compter`. Sans paramètre ; la liste est rendue en entier, sans pagination."
+ },
+ {
+  "file": "OutilsAdministration.java",
+  "name": "parametres_lire",
+  "title": "Paramètres de l'application",
+  "description": "Lit les paramètres de fonctionnement de l'application : clé, libellé, description, valeur, unité et bornes (durées de session, planification de la synchronisation des chantiers, etc.). Réservé aux administrateurs qui voient l'écran Paramètres. Lecture seule : ne modifie aucun paramètre. Sans paramètre ; tous les paramètres sont rendus en une fois, sans pagination. Pour savoir qui peut les gérer, `roles_lister`."
+ },
+ {
+  "file": "OutilsAdministration.java",
+  "name": "roles_lister",
+  "title": "Rôles et permissions",
+  "description": "Liste les rôles et les permissions que chacun accorde (jamais les comptes utilisateurs), avec un filtre facultatif sur le nom. À utiliser pour « qui peut voir la paie », « que permet le rôle X ». Réservé aux utilisateurs qui gèrent les rôles ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total. Pour les droits de l'utilisateur courant, utiliser `systeme_identite` ; pour savoir qui a modifié un rôle, `audit_historique`."
+ },
+ {
+  "file": "OutilsAdministration.java",
+  "name": "audit_rechercher",
+  "title": "Journal d'audit",
+  "description": "Cherche dans le journal d'audit, des entrées les plus récentes aux plus anciennes : horodatage, catégorie, action, résultat, utilisateur, entité, nombre d'éléments, motif. Tous les filtres sont facultatifs et se combinent. À utiliser pour « qui a fait quoi », « quels accès refusés cette semaine ». Pour l'historique d'un enregistrement précis, `audit_historique`. Réservé aux utilisateurs qui voient le journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total."
+ },
+ {
+  "file": "OutilsAdministration.java",
+  "name": "audit_historique",
+  "title": "Historique d'un enregistrement",
+  "description": "Historique d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle ou paramètre) : ses versions de la plus récente à la plus ancienne, avec l'auteur, l'opération et les champs modifiés (valeur avant et après). À utiliser pour « qui a modifié X et quand ». Réservé aux utilisateurs qui voient le journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total. Pour chercher dans tout le journal sans cibler un enregistrement, utiliser `audit_rechercher`."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employes_rechercher",
+  "title": "Rechercher des employés",
+  "description": "Trouve des employés par nom (partiel), CIN (partiel) et/ou par chantier, équipe, fonction ou statut ; au moins un critère est obligatoire. Rend, pour chaque employé : id, nom et prénom, CIN, dates de naissance et d'embauche, statut (EN_POSTE ou SORTI), fonction, chantier et équipe actuels, et le salaire seulement si l'utilisateur a le droit de voir la paie (`salaireVisible`). Résultats paginés avec le nombre total ; parcourir toutes les pages pour une réponse complète. Triable (`tri` : NOM par défaut, CIN, DATE_EMBAUCHE, DATE_NAISSANCE, SALAIRE si la paie est visible ; `sens` ASC ou DESC) et paginable (`page`) : « les cinq derniers embauchés » se demande avec tri DATE_EMBAUCHE, sens DESC, limite 5. Pour seulement compter ou répartir des employés, préférer `employes_compter` ou `employes_regrouper`. Citer les libellés (fonction, chantier, équipe) tels que rendus, jamais de mémoire : un champ absent du résultat reste inconnu."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employe_fiche",
+  "title": "Fiche d'un employé",
+  "description": "Lit la fiche complète d'un employé à partir de son identifiant : CIN, dates de naissance et d'embauche, fonction, chantier, équipe, statut, et la liste de ses départs enregistrés (période et motif) ; le salaire seulement avec le droit de voir la paie. Identifiant inconnu : le chercher d'abord avec `employes_rechercher`. Pour l'historique mois par mois, utiliser `employe_parcours`. Rend un seul employé, sans pagination."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employes_compter",
+  "title": "Effectif et statistiques des employés",
+  "description": "Compte les employés d'un périmètre (chantiers, équipes, fonctions, statut) : effectif total, en poste, sortis, âge moyen et ancienneté moyenne en années, embauches des 12 derniers mois et répartition par tranches d'âge et d'ancienneté. Mêmes chiffres que la vue Analytique des employés ; aucun salaire. État courant des fiches (issu du dernier mois de paie importé), pas un historique : pour l'évolution d'un mois à l'autre, utiliser `paie_mouvements`. Pour les chiffres d'un seul groupe, filtrer par identifiants. Rend un seul résultat agrégé, sans pagination."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employes_regrouper",
+  "title": "Effectif par chantier, équipe ou fonction",
+  "description": "Répartit l'effectif des employés par chantier, par équipe ou par fonction (total et en poste) sur un périmètre. Tous les groupes sont rendus, triés du plus grand au plus petit par défaut ; `tri` (EFFECTIF, EN_POSTE, LIBELLE, CODE) et `sens` (ASC ou DESC) donnent « les équipes les plus petites » ou l'ordre alphabétique. À utiliser pour « quels chantiers ont le plus d'employés », « combien par équipe ». Chaque groupe rend id, code, libellé, effectif et nombre en poste. Les montants de paie par groupe sont dans `paie_repartition`."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employes_sorties",
+  "title": "Départs d'un mois",
+  "description": "Liste les départs de l'entreprise constatés par la paie d'un mois (soldes de tout compte et absences confirmées) : nombre total, nombre par motif et la liste complète des employés concernés. Un départ ancien sans motif est compté « NON_PRECISE ». À ne pas confondre avec les « plus payés » de `paie_mouvements`, qui comptent aussi les absences non confirmées. Un mois par appel (`periode`, absent = dernier mois de paie importé) ; la liste est rendue en entier."
+ },
+ {
+  "file": "OutilsEmploye.java",
+  "name": "employe_parcours",
+  "title": "Parcours d'un employé",
+  "description": "Reconstitue le parcours complet d'un employé depuis ses bulletins de paie : indicateurs (mois payés, total perçu en dirhams, jours travaillés, premier et dernier mois), tous ses mois (chantier, équipe, fonction, jours, salaires, observation) et ses événements (entrée, mutation, changement de salaire, départ, retour). Réservé aux utilisateurs qui voient la paie. Identifiant inconnu : le chercher d'abord avec `employes_rechercher`. Un seul employé par appel ; tous ses mois et événements sont rendus, sans pagination."
+ },
+ {
+  "file": "OutilsHeuresSupp.java",
+  "name": "heures_supp_periodes",
+  "title": "Mois des heures supplémentaires",
+  "description": "Liste les mois ayant un import d'heures supplémentaires. Chaque ligne garde le mois de l'import ; une modification ultérieure du salaire ne recalcule pas les périodes déjà importées. Pour les chiffres d'un mois, utiliser `heures_supp_indicateurs`. Sans paramètre ; tous les mois importés sont rendus."
+ },
+ {
+  "file": "OutilsHeuresSupp.java",
+  "name": "heures_supp_import_prerequis",
+  "title": "Vérifier les prérequis d'import des heures supplémentaires",
+  "description": "Vérifie si un mois et un chantier permettent de démarrer l'import Excel des heures supplémentaires. Confirme l'existence de bulletins pour le mois et du chantier ; ne lit aucun fichier et ne modifie aucune donnée. À utiliser avant un import, avec une période aaaa-MM et l'identifiant rendu par chantier_rechercher. Un mois et un chantier par appel, les deux obligatoires."
+ },
+ {
+  "file": "OutilsHeuresSupp.java",
+  "name": "heures_supp_indicateurs",
+  "title": "Indicateurs d'heures supplémentaires",
+  "description": "Rend pour un mois et un périmètre les effectifs, heures décimales, Montant, STC (DH), Forfaits et Net à payer, avec toutes les répartitions par chantier, équipe et fonction. Accepte les filtres chantier, équipe, fonction, CIN et nom. Les définitions sont incluses dans la réponse. Montant, STC et Net sont calculés par Spring ; ne les recalculez pas. Pour des lignes individuelles, utiliser `heures_supp_rechercher` ; pour savoir quels mois existent, `heures_supp_periodes`."
+ },
+ {
+  "file": "OutilsHeuresSupp.java",
+  "name": "heures_supp_rechercher",
+  "title": "Rechercher des lignes d'heures supplémentaires",
+  "description": "Recherche les lignes importées par mois, chantier, fonction, CIN partiel ou nom partiel. Au moins un critère est obligatoire. Rend au plus 20 lignes par page avec le salaire horaire, P/H, Montant, STC (DH), Forfait et Net à payer. Les montants et leur source sont calculés par Spring. Pour des totaux et des répartitions plutôt que des lignes, utiliser `heures_supp_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_indicateurs",
+  "title": "Indicateurs de paie d'un mois",
+  "description": "Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale en dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de tout compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et tous les chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`. Un mois non importé rend des valeurs à zéro qui signifient « aucune donnée », pas une masse nulle : vérifier les mois importés avec `paie_periodes`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_periodes",
+  "title": "Mois de paie importés",
+  "description": "Liste les mois de paie importés, du plus récent au plus ancien, avec pour chacun le nombre de bulletins, le nombre de chantiers, la masse salariale en dirhams et les soldes de tout compte (STC), sur un périmètre. À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; tous les mois importés sont rendus. Pour les chiffres d'un mois, utiliser `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_repartition",
+  "title": "Paie par chantier, équipe ou fonction",
+  "description": "Répartit la paie d'un mois par chantier, par équipe ou par fonction : masse salariale en dirhams, effectif payé et soldes de tout compte (STC) de chaque groupe. Tous les groupes sont rendus. De la plus grosse masse à la plus petite par défaut ; `tri` (MASSE, EFFECTIF, STC, STC_MONTANT, LIBELLE, CODE) et `sens` (ASC ou DESC) donnent « le chantier le moins cher », « les équipes avec le plus de STC ». À utiliser pour « quel chantier coûte le plus », « masse par équipe ». Pour les effectifs sans montants, `employes_regrouper` ; pour un seul chiffre global, `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_evolution",
+  "title": "Évolution mensuelle de la paie",
+  "description": "Série mensuelle de la paie d'un périmètre, du mois le plus ancien au plus récent, jusqu'au mois donné : masse salariale en dirhams, effectif payé, soldes de tout compte (STC) et leur montant. À utiliser pour les tendances (« la masse augmente-t-elle ? »). Pour comparer seulement deux mois, `paie_indicateurs` rend déjà le mois précédent ; toute la série historique est rendue."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_comparer",
+  "title": "Comparer la paie de deux mois",
+  "description": "Compare la paie de deux mois, groupe par groupe (par chantier, équipe ou fonction) : masse salariale, effectif et coût moyen de chaque mois, variation de la masse en dirhams et en pourcentage, variation de l'effectif, et la fonction la plus représentée de chaque chantier ou équipe. Tous les calculs sont faits ici : ne calcule jamais toi-même un écart, un pourcentage ou une moyenne, cite les valeurs rendues. `periode` est le mois récent (absent = dernier mois de paie) et `periodeReference` le mois de comparaison (absent = le mois précédent). `tri` et `sens` classent les groupes (MASSE du mois récent par défaut, VARIATION_MASSE, VARIATION_POURCENTAGE, EFFECTIF, VARIATION_EFFECTIF, LIBELLE). Tous les groupes sont rendus ; `plusForteHausse` et `plusForteBaisse` sont calculées sur tout le périmètre, comme les mêmes sur tout le périmètre (`...DuPerimetre`) et le total des deux mois. À utiliser pour « les 3 chantiers les plus chers puis lequel a le plus augmenté », « qu'est-ce qui a changé depuis le mois dernier ». Pour une série sur plusieurs mois, `paie_evolution`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_mouvements",
+  "title": "Arrivées, départs et mutations par mois",
+  "description": "Mouvements d'effectif mois par mois selon la paie, sur un périmètre. Pour chaque mois : employés payés (`effectif`), effectif du mois précédent et écart net (`variation`), `entrees` (payés ce mois-ci et absents de la paie du mois précédent), `plusPayes` (payés le mois précédent, absents ce mois-ci), `sorties` (départs enregistrés sur la fiche employé) et `mutations` (changements de chantier). Chaque chiffre est défini dans `definitions` : citer ces définitions, et donner `variation` à côté des entrées, car « entrées » n'est pas l'écart net (entrées − plus payés = variation). Un mois précis ou tous les mois disponibles. Pour la liste des départs constatés d'un mois, `employes_sorties` ; pour les chiffres globaux de la paie, `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_qualite",
+  "title": "Qualité des données de paie",
+  "description": "Contrôle la qualité de la paie d'un mois sur un périmètre : nombre de bulletins sans équipe, nombre sans observation, et répartition des bulletins par tranches de salaire total. À utiliser pour « y a-t-il des anomalies », « combien de bulletins sans équipe ». Propose la liste des bulletins sans équipe. Les filtres chantier, équipe et fonction acceptent 50 identifiants au plus chacun. Pour les chiffres de la paie, utiliser `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "paie_bulletins_rechercher",
+  "title": "Rechercher des bulletins de paie",
+  "description": "Trouve les bulletins de paie d'un mois par nom, CIN et/ou périmètre. Chaque bulletin rend : employé (id, nom, CIN), fonction, chantier, équipe, jours travaillés, jours de récupération, salaire mensuel, primes, salaire total en dirhams et observation. Les résultats sont paginés avec le nombre total ; parcourir toutes les pages pour une réponse complète. Triable (`tri` : NOM par défaut, SALAIRE_TOTAL, SALAIRE_MENSUEL, JOURS_TRAVAILLES ; `sens` ASC ou DESC) et paginable (`page`) : « les dix plus gros salaires du mois » se demande avec tri SALAIRE_TOTAL, sens DESC, limite 10. À utiliser pour la paie d'une personne ou un classement ; pour des totaux, préférer `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsPaie.java",
+  "name": "rapport_preparer",
+  "title": "Préparer le rapport de paie",
+  "description": "Prépare le rapport de paie PDF d'un mois : vérifie les chantiers concernés (id, code, effectif, masse) et propose d'ouvrir l'assistant d'export déjà réglé sur ce mois et ces chantiers. Ne génère aucun fichier : l'utilisateur lance lui-même l'export. Réservé aux utilisateurs qui peuvent exporter la paie. `chantierIds` accepte 50 identifiants au plus (ceux de `chantier_rechercher`). Pour un seul chiffre de paie, utiliser `paie_indicateurs`."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "chantier_rechercher",
+  "title": "Rechercher des chantiers",
+  "description": "Trouve des chantiers (sites de construction) par leur code, nom ou désignation, éventuellement filtrés par statut. À utiliser en premier dès que la question cite un chantier par son nom ou son code : l'identifiant rendu (`id`) sert ensuite de filtre `chantierIds` aux outils Paie et Employé, ou de paramètre de `chantier_fiche`. Rend, pour chaque chantier : id, code, désignation, nom, origine ERP et statut (EN_COURS ou CLOTURE), plus le nombre total trouvé. 20 résultats au plus par page ; si `total` dépasse ce qui est rendu, parcourir toutes les pages (`page`) jusqu'au total pour une réponse complète. Triable : `tri` CODE (défaut), NOM ou DESIGNATION, `sens` ASC ou DESC."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "chantier_fiche",
+  "title": "Fiche d'un chantier",
+  "description": "Lit la fiche d'un chantier à partir de son identifiant : code, désignation, nom, origine ERP, statut. Identifiant inconnu : le chercher d'abord avec `chantier_rechercher`. Propose la vue Fiche du chantier. Rend un seul chantier, sans pagination."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "equipe_rechercher",
+  "title": "Rechercher des équipes",
+  "description": "Trouve des équipes (groupes d'ouvriers) par code ou libellé. À utiliser quand la question cite une équipe : l'identifiant rendu sert de filtre `equipeIds` aux outils Paie et Employé (l'identifiant 0 y désigne les employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au plus par page (`page`). Parcourir toutes les pages jusqu'au total pour une réponse complète. Triable : `tri` CODE (défaut) ou LIBELLE, `sens` ASC ou DESC. Pour la fiche d'une équipe connue par son identifiant, `equipe_fiche` ; pour l'effectif par équipe, `employes_regrouper`."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "equipe_fiche",
+  "title": "Fiche d'une équipe",
+  "description": "Lit la fiche d'une équipe à partir de son identifiant : code et libellé. Identifiant inconnu : le chercher d'abord avec `equipe_rechercher`. Rend une seule équipe, sans pagination."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "fonction_rechercher",
+  "title": "Rechercher des fonctions",
+  "description": "Trouve des fonctions (métiers : maçon, électricien, chef de chantier…) par libellé. À utiliser quand la question cite un métier : l'identifiant rendu sert de filtre `fonctionIds` aux outils Paie et Employé. Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`). Parcourir toutes les pages jusqu'au total pour une réponse complète ; triés par libellé (`sens` ASC ou DESC). Pour la fiche d'une fonction connue par son identifiant, `fonction_fiche` ; pour l'effectif par fonction, `employes_regrouper`."
+ },
+ {
+  "file": "OutilsReferentiels.java",
+  "name": "fonction_fiche",
+  "title": "Fiche d'une fonction",
+  "description": "Lit la fiche d'une fonction (métier) à partir de son identifiant. Identifiant inconnu : le chercher d'abord avec `fonction_rechercher`. Rend une seule fonction, sans pagination."
+ }
+]

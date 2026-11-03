@@ -55,7 +55,8 @@ def test_un_modele_interne_ne_diffuse_rien_dans_le_fil() -> None:
     )
 
 
-def test_la_fabrique_active_toujours_le_selecteur_officiel(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_la_fabrique_n_utilise_plus_de_modele_de_selection_d_outils(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Les outils sont choisis hors modèle (compétences épinglées) : seuls ``complex`` et ``simple`` sont construits."""
     modeles: list[tuple[Tache, object]] = []
     agents: list[dict[str, object]] = []
 
@@ -72,10 +73,11 @@ def test_la_fabrique_active_toujours_le_selecteur_officiel(monkeypatch: pytest.M
     monkeypatch.setattr("erp_rh_ia.app.creer_agent", creer_agent_factice)
     fabrique = fabrique_reelle(_settings())
 
-    fabrique([], None)  # type: ignore[arg-type]
+    fabrique([], None, "u1")  # type: ignore[arg-type]
 
-    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SELECTEUR, Tache.SIMPLE]
-    assert agents[0]["selecteur"] is modeles[1][1]
+    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SIMPLE]
+    assert "selecteur" not in agents[0]
+    assert agents[0]["resumeur"] is modeles[1][1]
 
 
 def test_sante_ne_depend_de_rien() -> None:

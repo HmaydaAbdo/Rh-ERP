@@ -49,7 +49,8 @@ public class OutilsHeuresSupp {
 
     @McpTool(name = "heures_supp_periodes", title = "Mois des heures supplémentaires", generateOutputSchema = true,
             description = "Liste les mois ayant un import d'heures supplémentaires. Chaque ligne garde le mois de l'import ; "
-                    + "une modification ultérieure du salaire ne recalcule pas les périodes déjà importées.",
+                    + "une modification ultérieure du salaire ne recalcule pas les périodes déjà importées."
+                    + " Pour les chiffres d'un mois, utiliser `heures_supp_indicateurs`. Sans paramètre ; tous les mois importés sont rendus.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
     @AuditableAction(action = "MCP_HEURES_SUP_PERIODES", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
@@ -61,7 +62,8 @@ public class OutilsHeuresSupp {
             generateOutputSchema = true,
             description = "Vérifie si un mois et un chantier permettent de démarrer l'import Excel des heures supplémentaires. "
                     + "Confirme l'existence de bulletins pour le mois et du chantier ; ne lit aucun fichier et ne modifie aucune donnée. "
-                    + "À utiliser avant un import, avec une période aaaa-MM et l'identifiant rendu par chantier_rechercher.",
+                    + "À utiliser avant un import, avec une période aaaa-MM et l'identifiant rendu par chantier_rechercher."
+                    + " Un mois et un chantier par appel, les deux obligatoires.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     @PreAuthorize("hasAuthority('HEURES_SUP_IMPORT') and hasAuthority('PAIE_READ') and hasAuthority('CHANTIER_READ')")
     @AuditableAction(action = "MCP_HEURES_SUP_IMPORT_PREREQUIS", categorie = CategorieAudit.ACCES,
@@ -81,7 +83,8 @@ public class OutilsHeuresSupp {
             description = "Rend pour un mois et un périmètre les effectifs, heures décimales, Montant, STC (DH), Forfaits et Net à payer, "
                     + "avec toutes les répartitions par chantier, équipe et fonction. Accepte les filtres chantier, équipe, fonction, CIN et nom. "
                     + "Les définitions sont incluses dans la réponse. "
-                    + "Montant, STC et Net sont calculés par Spring ; ne les recalculez pas.",
+                    + "Montant, STC et Net sont calculés par Spring ; ne les recalculez pas."
+                    + " Pour des lignes individuelles, utiliser `heures_supp_rechercher` ; pour savoir quels mois existent, `heures_supp_periodes`.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
     @AuditableAction(action = "MCP_HEURES_SUP_INDICATEURS", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
@@ -114,7 +117,8 @@ public class OutilsHeuresSupp {
     @McpTool(name = "heures_supp_rechercher", title = "Rechercher des lignes d'heures supplémentaires", generateOutputSchema = true,
             description = "Recherche les lignes importées par mois, chantier, fonction, CIN partiel ou nom partiel. Au moins "
                     + "un critère est obligatoire. Rend au plus 20 lignes par page avec le salaire horaire, P/H, Montant, "
-                    + "STC (DH), Forfait et Net à payer. Les montants et leur source sont calculés par Spring.",
+                    + "STC (DH), Forfait et Net à payer. Les montants et leur source sont calculés par Spring."
+                    + " Pour des totaux et des répartitions plutôt que des lignes, utiliser `heures_supp_indicateurs`.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     @PreAuthorize("hasAuthority('HEURES_SUP_READ') and hasAuthority('PAIE_READ')")
     @AuditableAction(action = "MCP_HEURES_SUP_RECHERCHER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)

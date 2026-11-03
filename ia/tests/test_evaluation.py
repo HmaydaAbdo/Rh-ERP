@@ -2,6 +2,7 @@
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 import json
+import re
 from typing import Any, cast
 
 import pytest
@@ -14,14 +15,42 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
+MARQUEURS = {
+    "periode_a", "periode_b", "chantier_a_id", "chantier_a_code", "equipe_a_id", "equipe_a_code", "employe_a_id",
+    "employe_a_nom", "employe_a_cin", "chantier_b_id", "chantier_b_code", "equipe_b_id", "equipe_b_code",
+    "employe_b_id", "employe_b_nom", "employe_b_cin",
+}  # fmt: skip
+TYPES = {"reponse", "ouvert", "abstention", "absence", "refus", "securite", "capacites", "simple"}
+
+
 def test_le_jeu_de_reference_est_complet_et_coherent() -> None:
-    jeu = json.loads(JEU.read_text(encoding="utf-8"))
+    texte = JEU.read_text(encoding="utf-8")
+    jeu = json.loads(texte)
     ids = [cas["id"] for cas in jeu["cas"]]
-    assert len(ids) == len(set(ids)) >= 24
+    assert len(ids) == len(set(ids)) >= 55
+    types = {cas.get("type", "reponse") for cas in jeu["cas"]}
+    assert types == TYPES
     for cas in jeu["cas"]:
-        if cas.get("type", "reponse") == "reponse":
-            assert cas["outil"] and cas["attendus"], cas["id"]
-    assert {cas.get("type", "reponse") for cas in jeu["cas"]} == {"reponse", "abstention", "refus"}
+        type_cas = cas.get("type", "reponse")
+        if type_cas in ("reponse", "ouvert"):
+            lectures = cas.get("verites") or [cas]
+            assert lectures and all(lec.get("outil") and lec.get("attendus") for lec in lectures), cas["id"]
+        if "tours" in cas:
+            assert type_cas == "reponse" and cas["tours"], cas["id"]
+        if type_cas == "refus" and cas.get("jeton") == "restreint":
+            assert cas.get("interdits"), cas["id"]
+    # Tout marqueur utilisé est fourni par EvaluationAgentIaTest.
+    assert set(re.findall(r"\{(\w+)\}", json.dumps(jeu["cas"]))) <= MARQUEURS
+    # Multi-tours, multi-domaines, adverses : les familles qui rendent l'évaluation exigeante existent.
+    assert sum("tours" in cas for cas in jeu["cas"]) >= 3
+    assert (
+        sum(
+            len(cas.get("verites", [])) > 1 or len(cas.get("verites", [{}])[0].get("attendus", [])) > 1
+            for cas in jeu["cas"]
+        )
+        >= 5
+    )
+    assert sum(cas.get("type") == "securite" for cas in jeu["cas"]) >= 4
 
 
 def test_un_marqueur_seul_garde_le_type_de_la_donnee() -> None:
@@ -53,14 +82,14 @@ def test_une_valeur_est_citee_quel_que_soit_son_format() -> None:
 def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
     reponse = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_indicateurs"], outil_attendu_appele=True)
     assert juger("reponse", "paie_indicateurs", [("nombre", 3000)], reponse) == (True, "conforme")
-    # Une valeur qui semble juste ne qualifie pas le scénario sans l'outil métier attendu.
-    autre = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["employes_compter"], outil_attendu_appele=False)
-    succes, raison = juger("reponse", ["employes_compter"], [("nombre", 3000)], autre)
-    assert not succes and raison == "outil métier attendu non appelé (employes_compter; outils : employes_compter)"
+    # Le chemin est libre : une valeur juste trouvée avec un autre outil réussit.
+    autre = Reponse("Masse : 3 000 MAD.", abstention=False, outils=["paie_repartition"], outil_attendu_appele=False)
+    assert juger("reponse", ["paie_indicateurs"], [("nombre", 3000)], autre) == (True, "conforme")
+    # Une valeur citée sans avoir consulté aucun outil n'est pas fondée sur les données.
     sans_outil = Reponse("Masse : 3 000 MAD.", abstention=False, outils=[], outil_attendu_appele=False)
     assert juger("reponse", ["paie_indicateurs"], [("nombre", 3000)], sans_outil) == (
         False,
-        "outil métier attendu non appelé (paie_indicateurs; outils : aucun)",
+        "réponse sans avoir consulté aucun outil",
     )
     alternatif = Reponse(
         "Masse : 3 000 MAD.",
@@ -132,7 +161,7 @@ async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) ->
     def fabrique_factice(settings: Settings) -> Any:
         assert settings is config
 
-        def construire(outils: object, checkpointer: object) -> AgentFactice:
+        def construire(outils: object, checkpointer: object, utilisateur: object) -> AgentFactice:
             construit.append((settings, outils, checkpointer))
             return AgentFactice()
 

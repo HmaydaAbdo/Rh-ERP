@@ -1,0 +1,434 @@
+{
+ "version": 1,
+ "description": "Jeu d'évaluation du routage des compétences (docs/ia.md, T32). Une demande est couverte quand toutes les compétences nécessaires sont épinglées ; sinon le modèle les obtient en lisant leur SKILL.md.",
+ "cas": [
+  {
+   "question": "combien coûte la masse salariale de septembre",
+   "outils": [
+    "paie_indicateurs"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "évolution de la paie sur six mois",
+   "outils": [
+    "paie_evolution"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "compare la paie de ce mois avec le mois précédent",
+   "outils": [
+    "paie_comparer"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "qui est parti ce mois-ci",
+   "outils": [
+    "employes_sorties",
+    "paie_mouvements"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes",
+    "paie"
+   ]
+  },
+  {
+   "question": "trouve l'employé Benali",
+   "outils": [
+    "employes_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "fiche de l'employé",
+   "outils": [
+    "employe_fiche"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "combien d'employés en poste",
+   "outils": [
+    "employes_compter"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "répartition de la masse salariale par chantier",
+   "outils": [
+    "paie_repartition"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "historique des modifications d'un employé",
+   "outils": [
+    "audit_historique"
+   ],
+   "type": "direct",
+   "domaines": [
+    "administration"
+   ]
+  },
+  {
+   "question": "qui a modifié ce dossier",
+   "outils": [
+    "audit_historique",
+    "audit_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "administration"
+   ]
+  },
+  {
+   "question": "quels rôles existent",
+   "outils": [
+    "roles_lister"
+   ],
+   "type": "direct",
+   "domaines": [
+    "administration"
+   ]
+  },
+  {
+   "question": "qui suis-je et quelles sont mes permissions",
+   "outils": [
+    "systeme_identite"
+   ],
+   "type": "direct",
+   "domaines": []
+  },
+  {
+   "question": "heures supplémentaires du mois",
+   "outils": [
+    "heures_supp_indicateurs",
+    "heures_supp_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "heures-supp"
+   ]
+  },
+  {
+   "question": "quels mois d'heures sup sont importés",
+   "outils": [
+    "heures_supp_periodes"
+   ],
+   "type": "direct",
+   "domaines": [
+    "heures-supp"
+   ]
+  },
+  {
+   "question": "préparer le rapport de paie",
+   "outils": [
+    "rapport_preparer"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie-bulletins-rapports"
+   ]
+  },
+  {
+   "question": "bulletins de paie de l'équipe",
+   "outils": [
+    "paie_bulletins_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie-bulletins-rapports"
+   ]
+  },
+  {
+   "question": "données manquantes ou incohérentes dans la paie",
+   "outils": [
+    "paie_qualite"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "parcours professionnel d'un employé chantiers successifs",
+   "outils": [
+    "employe_parcours"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "liste des chantiers",
+   "outils": [
+    "chantier_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "referentiels"
+   ]
+  },
+  {
+   "question": "détail d'un chantier",
+   "outils": [
+    "chantier_fiche"
+   ],
+   "type": "direct",
+   "domaines": [
+    "referentiels"
+   ]
+  },
+  {
+   "question": "quelles équipes travaillent sur le chantier",
+   "outils": [
+    "equipe_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "referentiels"
+   ]
+  },
+  {
+   "question": "liste des fonctions",
+   "outils": [
+    "fonction_rechercher"
+   ],
+   "type": "direct",
+   "domaines": [
+    "referentiels"
+   ]
+  },
+  {
+   "question": "paramètres de l'application",
+   "outils": [
+    "parametres_lire"
+   ],
+   "type": "direct",
+   "domaines": [
+    "administration"
+   ]
+  },
+  {
+   "question": "tableau de bord d'accueil",
+   "outils": [
+    "accueil_lire"
+   ],
+   "type": "direct",
+   "domaines": [
+    "administration"
+   ]
+  },
+  {
+   "question": "regrouper les employés par fonction",
+   "outils": [
+    "employes_regrouper"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "arrivées et départs d'effectif",
+   "outils": [
+    "paie_mouvements"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "quels mois de paie sont disponibles",
+   "outils": [
+    "paie_periodes"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "prérequis avant d'importer les heures supplémentaires",
+   "outils": [
+    "heures_supp_import_prerequis"
+   ],
+   "type": "direct",
+   "domaines": [
+    "heures-supp"
+   ]
+  },
+  {
+   "question": "salaire du chef d'équipe en juin",
+   "outils": [
+    "paie_bulletins_rechercher",
+    "employe_fiche"
+   ],
+   "type": "direct",
+   "domaines": [
+    "employes",
+    "paie-bulletins-rapports"
+   ]
+  },
+  {
+   "question": "indicateurs clés de la paie",
+   "outils": [
+    "paie_indicateurs"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "combien on dépense en salaires",
+   "outils": [
+    "paie_indicateurs"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "qui nous a quittés récemment",
+   "outils": [
+    "employes_sorties"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "je veux voir les équipes",
+   "outils": [
+    "equipe_rechercher"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "referentiels"
+   ]
+  },
+  {
+   "question": "est-ce que les chiffres sont fiables",
+   "outils": [
+    "paie_qualite"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "montre moi le dossier de Karim",
+   "outils": [
+    "employe_fiche",
+    "employes_rechercher"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "employes"
+   ]
+  },
+  {
+   "question": "tendance des coûts depuis janvier",
+   "outils": [
+    "paie_evolution"
+   ],
+   "type": "paraphrase",
+   "domaines": [
+    "paie"
+   ]
+  },
+  {
+   "question": "masse salariale du chantier Atlas en septembre",
+   "outils": [
+    "paie_indicateurs",
+    "chantier_rechercher"
+   ],
+   "type": "multi-domaine",
+   "domaines": [
+    "paie",
+    "referentiels"
+   ]
+  },
+  {
+   "question": "quel est le salaire de Benali en juin",
+   "outils": [
+    "employes_rechercher",
+    "paie_bulletins_rechercher"
+   ],
+   "type": "multi-domaine",
+   "domaines": [
+    "employes",
+    "paie-bulletins-rapports"
+   ]
+  },
+  {
+   "question": "heures supplémentaires du chantier Atlas et paie du même mois",
+   "outils": [
+    "heures_supp_indicateurs",
+    "paie_indicateurs",
+    "chantier_rechercher"
+   ],
+   "type": "multi-domaine",
+   "domaines": [
+    "heures-supp",
+    "paie",
+    "referentiels"
+   ]
+  },
+  {
+   "question": "qui a modifié la fiche de Karim",
+   "outils": [
+    "employes_rechercher",
+    "audit_historique"
+   ],
+   "type": "multi-domaine",
+   "domaines": [
+    "administration",
+    "employes"
+   ]
+  },
+  {
+   "question": "répartition des employés par équipe du chantier Atlas",
+   "outils": [
+    "employes_regrouper",
+    "chantier_rechercher",
+    "equipe_rechercher"
+   ],
+   "type": "multi-domaine",
+   "domaines": [
+    "employes",
+    "referentiels"
+   ]
+  }
+ ]
+}

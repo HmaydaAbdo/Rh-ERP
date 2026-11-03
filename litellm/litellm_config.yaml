@@ -107,19 +107,6 @@ model_list:
       max_parallel_requests: 2
       tags: [simple, "id:gemini-gemma-4-26b"]
 
-  # gpt-oss-120b a passé le smoke enum strict et le prompt ne demande plus les outils
-  # always_include, exclus du schéma officiel de sélection.
-  - model_name: ai-gateway-tool-selection
-    model_info: { id: groq-gpt-oss-120b--tool-selection, max_input_tokens: 5000 }
-    litellm_params:
-      model: groq/openai/gpt-oss-120b
-      api_key: os.environ/GROQ_API_KEY
-      weight: 4
-      rpm: 30
-      timeout: 45
-      max_parallel_requests: 4
-      tags: [tool-selection, "id:groq-gpt-oss-120b"]
-
   # ---------------------------------------------------------------- Groq (Free plan)
   # Limites documentées par modèle : 30 RPM, 1K RPD, 8K TPM, 200K TPD (au niveau de l'organisation).
   # 8K TPM compte entrée + sortie (raisonnement inclus) : garder les prompts sous ~5K tokens.
@@ -169,7 +156,7 @@ model_list:
       rpm: 30
       timeout: 45
       max_parallel_requests: 4
-      tags: [medium, code, default, tool-selection, "id:groq-gpt-oss-120b"]
+      tags: [medium, code, default, "id:groq-gpt-oss-120b"]
 
   - model_name: ai-gateway-simple
     model_info: { id: groq-gpt-oss-20b--simple, max_input_tokens: 5000 }

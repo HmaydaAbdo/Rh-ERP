@@ -98,7 +98,9 @@ async def test_l_agent_affiche_le_tableau_et_le_modele_ne_voit_que_les_donnees()
     faux = modele(appel("employes_regrouper"), AIMessage(content="Le chantier 5 compte 50 employés."))
     agent = creer_agent(faux, [outil])  # pyright: ignore[reportArgumentType]
 
-    etat = await agent.ainvoke({"messages": [HumanMessage(content="Effectif par chantier ?")]})
+    etat = await agent.ainvoke(
+        {"messages": [HumanMessage(content="Effectif par chantier ?")], "pinned_skills": ["employes"]}
+    )
 
     resultat = next(m for m in etat["messages"] if isinstance(m, ToolMessage))
     composants = json.loads(resultat.text)["a2ui_operations"][1]["updateComponents"]["components"]
