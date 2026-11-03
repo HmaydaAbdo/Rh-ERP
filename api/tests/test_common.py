@@ -2,7 +2,6 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 """Parité du domaine `common` avec Spring (KAN-47) : format d'erreur, messages, identifiant de requête, recherche."""
 
-import re
 import uuid
 
 import pytest
@@ -100,7 +99,7 @@ def test_validation_donne_400_avec_champ_et_message(client: TestClient) -> None:
     assert r.status_code == 400
     corps = r.json()
     assert corps["status"] == 400 and corps["error"] == "Bad Request"
-    assert re.search(r"nom : ", corps["message"]) and re.search(r"age : ", corps["message"])
+    assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)., age : Un nombre entier est attendu."
 
 
 def test_corps_illisible_donne_400_message_spring(client: TestClient) -> None:
@@ -130,3 +129,24 @@ def test_version_identique_ne_leve_pas() -> None:
     verifier_version(None, None)
     with pytest.raises(ConflitModification):
         verifier_version(3, 4)
+
+
+def test_les_types_pydantic_frequents_sont_traduits_et_sans_anglais() -> None:
+    from pydantic import TypeAdapter, ValidationError
+    from pydantic.types import conint, constr
+
+    from staport.platform.validation_fr import message_fr, types_traduits
+
+    cas = [
+        (constr(max_length=2), "abc", "string_too_long"),
+        (conint(ge=1), 0, "greater_than_equal"),
+        (conint(lt=5), 9, "less_than"),
+        (list[int], "x", "list_type"),
+    ]
+    for type_, valeur, attendu in cas:
+        with pytest.raises(ValidationError) as info:
+            TypeAdapter(type_).validate_python(valeur)
+        detail = info.value.errors()[0]
+        assert detail["type"] == attendu and attendu in types_traduits()
+        assert message_fr(detail) != detail["msg"]
+    assert message_fr({"type": "inconnu", "msg": "original"}) == "original"

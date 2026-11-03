@@ -20,9 +20,9 @@ Documentation lue (Context7, FastAPI) : remplacement des gestionnaires de `Reque
 
 ## Écarts connus, non cachés
 
-- **Messages de validation** : Spring rend `champ : <message de la contrainte Jakarta en français>` ; Pydantic rend ses propres
-  messages (anglais). Le format `champ : message` est identique, le texte du message non. À traiter dans la tranche transversale
-  (messages personnalisés par contrainte) et à couvrir par le test de contrat avant toute bascule.
+- **Messages de validation** : traduits en français (`platform/validation_fr.py`, un modèle par type d'erreur Pydantic, test des types
+  fréquents). Le texte exact des contraintes Jakarta de Spring (messages écrits à la main dans chaque DTO) sera comparé domaine par
+  domaine par le test de contrat ; un type non traduit retombe sur le message anglais de Pydantic, jamais sur un message masqué.
 - **`PageLoader`** (parcours paginé Spring Data) n'est pas porté : il n'a pas de sens sans le repository ; il renaît avec le premier
   domaine qui a un repository (SQLAlchemy).
 - **`YearMonthAttributeConverter`, `AsyncConfig`, `MailExecutorProperties`, `OpenApiConfig`, `SchedulingConfig`** ne sont pas portés :
