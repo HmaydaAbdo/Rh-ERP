@@ -20,6 +20,7 @@ restent applicables au code Java ; ce profil s'applique au code de la branche `m
 | [Tests et qualité](./tests.md) | mise en œuvre de `testing.md` (JUnit, ArchUnit, Checkstyle, JaCoCo) |
 | [Configuration](./configuration.md) | mise en œuvre de `configuration.md` (Spring) |
 | [Observabilité et performance](./observabilite.md) | mise en œuvre de `logging.md`, `metrics.md`, `performance.md` |
+| [Serveur MCP](./mcp.md) | mise en œuvre de `mcp.md` (Spring AI MCP) |
 | [Règles supprimées ou changées](./regles-changees.md) | liste exigée par KAN-44 |
 
 ## Sources lues (relecture d'entrée, 2026-11-03)
@@ -30,9 +31,10 @@ erreurs, sécurité OAuth2/JWT, `async`/`def`, réglages), SQLAlchemy 2.x (async
 (`stamp`, modèle `async`, `op.execute`), Pydantic et pydantic-settings, PyJWT, pytest, testcontainers-python, import-linter, Ruff,
 OpenTelemetry Python (instrumentation FastAPI).
 
-:::warning Non vérifié
-Ce qui suit n'a pas été lu dans la documentation officielle et reste à confirmer avant d'être appliqué (relecture d'entrée de KAN-47 et KAN-48) :
-le SDK MCP Python (donc **la convention MCP n'est pas encore écrite**, `mcp.md` s'applique jusque-là), pyright, WeasyPrint, openpyxl,
-pwdlib (migration de hachage), `pytest-asyncio`/anyio, coverage.py, le middleware CORS de Starlette, la gestion fine des transactions
-(`Session.begin`), les conventions de nommage de `MetaData`. Chaque point concerné est signalé « à confirmer » dans sa page.
+Lectures complémentaires du même jour : SDK MCP Python (ligne 2.x), pyright, coverage.py, pytest-asyncio et le plugin AnyIO, pwdlib, `CORSMiddleware` de Starlette,
+WeasyPrint, openpyxl, `Session.begin`/autobegin, `MetaData.naming_convention`, événements `before_flush`/`after_flush`.
+
+:::note Ce qui reste à prouver par des tests, pas par de la lecture
+Quelques points sont documentés mais se démontrent sur le code réel au premier domaine migré : lignes d'audit des objets nouveaux (`after_flush`), portée des fixtures
+asynchrones, rendu visuel des PDF (SVG, polices), mesure de couverture du code asynchrone. Chacun a son test obligatoire dans la page concernée.
 :::

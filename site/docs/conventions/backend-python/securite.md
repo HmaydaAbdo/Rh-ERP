@@ -18,8 +18,10 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
   d'un JWKS (`PyJWKClient`, qui met en cache et se rafraîchit quand le `kid` est inconnu).
 * Une signature valide ne signifie pas un jeton révocable : la durée, la révocation et le délai de propagation d'un changement de droits restent documentés.
 * Hachage des mots de passe : fonction adaptative maintenue ; la documentation FastAPI emploie `pwdlib` (Argon2). Les hachages **existants** doivent rester
-  vérifiables sans réinitialisation (format confirmé à l'inventaire KAN-45), avec nouveau hachage à la prochaine connexion si l'algorithme cible diffère
-  (à confirmer : API de réhachage de la bibliothèque).
+  vérifiables sans réinitialisation (format confirmé à l'inventaire KAN-45). `PasswordHash((Argon2Hasher(), BcryptHasher()))` vérifie contre tous les algorithmes activés
+  et hache avec le premier ; **`verify_and_update(mot_de_passe, hachage)`** renvoie `(valide, nouveau_hachage | None)` : si le hachage utilise un algorithme ancien ou des
+  paramètres (temps, mémoire) modifiés, le nouveau hachage est enregistré dans la même transaction que la connexion. Un hachage inconnu lève `UnknownHashError`, traité comme
+  un échec d'authentification (jamais une erreur 500 ni un message distinct).
 * Comparaison à temps constant et hachage factice quand le compte n'existe pas, pour ne pas révéler l'existence d'un compte (technique de la documentation FastAPI).
 * Limite d'essais et blocage de compte (cinq échecs en quinze minutes) : règle ERP-RH inchangée, journalisée dans la catégorie `SECURITE` sans mot de passe.
 
@@ -31,13 +33,19 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
   remplacer le contrôle côté serveur. La décision (permission + périmètre par fiche de poste) reste dans `platform/identite`.
 * Le périmètre de la ressource est toujours vérifié en plus de la permission d'action.
 * **Test de couverture des routes** (remplace `EndpointSecurityTest`) : parcourt les routes de l'application et échoue pour toute route sans permission déclarée
-  qui n'est pas explicitement publique (liste blanche courte et commentée). Mécanisme d'introspection à confirmer à la relecture de KAN-48.
+  qui n'est pas explicitement publique (liste blanche courte et commentée). Le test parcourt `app.routes` (les routes d'`APIRouter` incluses y figurent, avec les `dependencies`
+  du routeur et de la route, paramètres documentés de `APIRouter`, `include_router` et des décorateurs de route) et vérifie la présence de la dépendance de permission ; il se prouve
+  lui-même par une route de test volontairement non protégée qui doit le faire échouer.
 * Les agents, skills et descriptions d'outils ne confèrent aucun droit : chaque appel d'outil MCP réévalue identité et permissions.
 
 ## En-têtes, cookies, CORS
 
 * Cookie du jeton de rafraîchissement : attributs de sécurité, chemin et durée inchangés ; défense CSRF sur les opérations qui modifient l'état tant que des cookies authentifient.
-* CORS limité aux origines nécessaires, jamais d'identifiants avec une origine générique (middleware CORS de Starlette : **non vérifié**, à lire avant usage).
+* CORS par le `CORSMiddleware` de Starlette (documenté) : valeurs par défaut restrictives (`allow_methods=['GET']`, `allow_headers=[]`, `allow_credentials=False`). Origines, méthodes
+  et en-têtes sont **listés explicitement**. Avec `allow_credentials=True` (cookie de rafraîchissement), Starlette interdit `['*']` pour les origines, méthodes et en-têtes.
+  `allow_origin_regex` évite `.*` et `.+` (ils couvrent `/ @ # ?`) au profit de classes de caractères précises. Pour que les en-têtes CORS figurent aussi sur les réponses d'erreur
+  non gérées, le middleware enveloppe l'application entière. Les préflights (`OPTIONS` avec `Origin` et `Access-Control-Request-Method`) sont traités par le middleware avant
+  l'authentification.
 * Les en-têtes d'adresse transmis par un proxy ne sont fiables que d'un proxy explicitement approuvé (inchangé, voir `docs/deployment.md`).
 
 ## Données et entrées

@@ -31,4 +31,4 @@ ne changent pas. Seule la mise en œuvre change.
 * Requêtes : plan d'exécution des requêtes critiques, index justifiés, pas de N+1 (voir [persistance](./persistance.md)).
 * Tâches longues : hors de la requête (pool de threads ou tâche planifiée), idempotentes, avec reprise.
 
-À confirmer à la relecture de KAN-47 : version exacte des paquets d'instrumentation et configuration de l'export.
+Les versions exactes des paquets d'instrumentation sont épinglées dans le fichier de verrouillage et revues à chaque montée ; elles ne sont pas figées dans cette page.

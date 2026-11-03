@@ -34,7 +34,10 @@ de l'`UPDATE` et lève `StaleDataError` quand aucune ligne ne correspond. Règle
   d'« Open Session in View » : les accès aux données restent dans les frontières du service.
 * La frontière transactionnelle est dans le **service** : une opération métier = une transaction. Écritures regroupées, lectures sans écriture inutile.
   Aucune transaction ouverte pendant un appel réseau ou une attente longue.
-* À confirmer à la relecture de KAN-47 : forme exacte de la frontière (`async with session.begin()` ou équivalent) et comportement d'`autobegin`.
+* Mécanisme documenté par SQLAlchemy : la session « autobegin » (une transaction démarre au premier usage) et `commit()` la termine. On choisit le style **« une
+  transaction par bloc »** : le service ouvre `async with session.begin():` (validation à la sortie normale, annulation sur exception). `begin()` lève une erreur si la
+  session est déjà dans une transaction : un service n'en appelle pas un autre qui rouvre une transaction ; une sous-étape annulable séparément utilise
+  `begin_nested()` (SAVEPOINT). Les lectures qui précèdent le bloc déclenchent l'autobegin : la dépendance de session ne les laisse jamais ouvertes après la réponse.
 
 ## Requêtes
 
@@ -65,7 +68,11 @@ Mise en place documentée par Alembic :
 * base existante : `alembic stamp` écrit la révision de base sans exécuter de migration (schéma V44), les bases neuves sont construites à partir d'elle ;
 * **exécution** : étape de déploiement dédiée avant le démarrage de l'application, jamais dans son `lifespan` ; la table `flyway_schema_history` est conservée en lecture seule.
 
-À confirmer : gestion des noms de contraintes par `MetaData(naming_convention=...)`.
+Noms de contraintes : le `MetaData` de base déclare une `naming_convention` (clés `ix`, `uq`, `ck`, `fk`, `pk`), appliquée à tout objet sans nom explicite et visible dans les
+migrations générées par l'autogénération. Les préfixes existants en V1 à V44 sont `pk_`, `fk_`, `uk_`, `ck_` et `idx_` (relevé dans les migrations Flyway) ; la convention les reprend
+(`"uq"` → gabarit en `uk_...`). Certains noms existants sont abrégés à la main (`fk_chantier_aud_rev`) et ne se déduisent pas d'un gabarit : **les noms des objets existants sont déclarés
+explicitement dans les modèles** (`name=...`), la convention ne nomme que les objets nouveaux sans nom explicite. Le contrôle de dérive compare les noms : une différence est corrigée
+par une migration, jamais en modifiant la convention. Pour une contrainte `CHECK`, le jeton `%(constraint_name)s` exige un nom explicite sur la contrainte.
 
 ## Droits PostgreSQL
 

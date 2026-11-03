@@ -32,7 +32,24 @@ La CI valide la syntaxe OpenAPI et détecte les changements incompatibles. Le fr
 * Un conflit de version renvoie `409`, un accès refusé `403`, une absence d'authentification `401` (avec `WWW-Authenticate`), une ressource hors périmètre `404` ou `403`
   selon la règle du domaine, conservée à l'identique.
 
+## Exports PDF et Excel
+
+Le backend Java produit les PDF avec jsoup et openhtmltopdf (HTML → PDF, SVG par `openhtmltopdf-svg-support`) et les classeurs avec Apache POI (voir `docs/report/README.md`).
+Équivalents Python, lus dans leur documentation officielle :
+
+* **PDF : WeasyPrint** (HTML/CSS → PDF). `HTML(string=...).write_pdf()` renvoie les octets quand aucune cible n'est donnée ; `pdf_variant="pdf/a-3u"` produit du PDF/A si l'archivage
+  l'exige. Le rendu est **bloquant** : appel dans `run_in_threadpool` ou route `def` (voir [architecture](./architecture.md)).
+* **Sécurité de WeasyPrint (documentée)** : avec du HTML ou du CSS non fiable, un PDF peut embarquer n'importe quel fichier accessible à l'utilisateur du processus. Règle : le HTML est
+  produit par nos gabarits, **toute valeur saisie est échappée** (la règle tirée de l'incident de l'ancien pipeline reste valable) et un `URLFetcher` personnalisé
+  (`allowed_protocols`, aucune redirection, délai borné) refuse tout accès réseau ou fichier hors des ressources publiées. Les dépendances système (Pango) sont installées dans l'image
+  du conteneur, non-root, et couvertes par un test de rendu au démarrage de la CI.
+* **Excel : openpyxl.** Gros exports : mode `write_only=True` (lignes ajoutées par `append()` seulement, mémoire bornée, classeur enregistrable **une seule fois**, volets figés avant les
+  données) ; gros fichiers lus : `read_only=True` avec `close()` obligatoire. **Un fichier importé est non fiable** : installer `defusedxml` (openpyxl ne protège pas par défaut contre les
+  bombes XML « billion laughs ») et borner taille et nombre de lignes. Les montants sont écrits depuis des `Decimal` avec un format de nombre explicite, jamais un `float` arrondi à l'affichage.
+* Pour chaque export migré, le test de parité compare le contenu (valeurs, colonnes, formats) à celui produit par Java ; le rendu visuel PDF (SVG, polices, pagination) fait l'objet d'une
+  revue visuelle validée par le propriétaire avant la bascule du domaine.
+
 ## Documentation interactive
 
-`/docs`, `/redoc` et `/openapi.json` sont désactivés ou protégés hors développement (paramètres `docs_url`, `redoc_url`, `openapi_url` de l'application,
-à confirmer à la relecture de KAN-47). Les chemins nécessaires à leur chargement ne rendent pas les API décrites publiques.
+`/docs`, `/redoc` et `/openapi.json` sont désactivés ou protégés hors développement (paramètres `docs_url`, `redoc_url`, `openapi_url` de l'application, `None` pour désactiver).
+Les chemins nécessaires à leur chargement ne rendent pas les API décrites publiques ; un test vérifie la protection de ces chemins dans la configuration de production.
