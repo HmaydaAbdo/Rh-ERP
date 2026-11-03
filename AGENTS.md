@@ -46,6 +46,14 @@ Deux règles imposées par le propriétaire, sans exception :
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
+- **Catalogue d'outils : sélection juste-à-temps bornée, jamais de chargement global.** Aucun agent (Deep Agents, sous-agent,
+  sous-graphe LangGraph) ne reçoit le catalogue MCP entier : 5 à 7 schémas métier hydratés par tour, choisis hors modèle après
+  le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base, avec l'outil `request_broader_tools` en repli.
+  **Toute fonctionnalité et toute capacité de Deep Agents, LangGraph et LangChain s'utilise, strictement** (registre des capacités
+  dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
+  [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,
+  de catalogue, de graphe, de prompt ou de modèle déroule son protocole d'évaluation en quatre dimensions (contexte, latence,
+  sûreté des schémas, visibilité du plan) avant le code.
 - **Documentation officielle lue, jamais supposée.** Aucune affirmation sur le comportement, la version, la
   compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être

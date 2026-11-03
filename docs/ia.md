@@ -362,6 +362,7 @@ reprenne là où il s'est arrêté.
 | T28 — Banc d'évaluation | `evaluation.py` : rejoueur et notation | `agentevals` et `openevals` sous pytest, sans LangSmith ; supprimer le rejoueur | ⬜ |
 | T29 — Scripts de la passerelle | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` | `include` de fichiers de configuration LiteLLM par fournisseur ; contrôles de santé et sondes natifs ; clés virtuelles par l'API gérée en base | ⬜ |
 | T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
+| T32 — Sélection d'outils juste-à-temps | À écrire : registre maître d'outils, middleware `wrap_model_call`/`wrap_tool_call`, recherche hybride BM25 + vectorielle, outil `request_broader_tools` (règle « Catalogue d'outils à grande échelle » de `agents-ia.md`) | Composants officiels de récupération LangChain et pgvector pour la recherche ; middleware personnalisé = point d'extension documenté, donc pièce maison **déclarée** ; bornée à 5 à 7 outils métier par tour, banc de mesure avant adoption | ⬜ |
 | T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
 
 ### Middlewares officiels de LangChain et LangGraph : tous adoptés, sans exception
@@ -376,7 +377,7 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `TodoListMiddleware` | ✅ en place | — |
 | `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ✅ en place | — |
 | `SummarizationMiddleware` | ✅ en place (40 000 jetons, résumé interne) | — |
-| `LLMToolSelectorMiddleware` | ✅ activé systématiquement ; le petit modèle interne choisit les outils pertinents | — |
+| `LLMToolSelectorMiddleware` | ✅ adopté et testé ; **retiré du chemin systématique le 2026-11-03** (il ajoute un appel de modèle) : le routage de base est la sélection juste-à-temps hors modèle (T32) ; réactivable en second étage après évaluation chiffrée | T32 |
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
 | `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
 | `ToolErrorMiddleware`, `ToolRetryMiddleware`, `ModelRetryMiddleware` | ⬜ | M1 |
@@ -620,3 +621,23 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Modèle local, licence et provenance des poids | Absent : offres gratuites externes, données synthétiques | T3.1 |
 | Confirmation humaine, idempotence, reprise durable | Sans objet tant que tout est en lecture | J6 |
 | SBOM et analyse de vulnérabilités du service IA | Absent pour le service IA (dépendances verrouillées par `uv.lock`) ; en place pour le backend et le frontend | T3.7 |
+
+### Pratiques émergentes adoptées le 2026-11-03
+
+Décision du propriétaire : appliquer les pratiques actuelles de Deep Agents, LangChain et LangGraph, **sans ticket dédié** (elles s'intègrent au travail en cours et à chaque
+domaine). Les règles sont dans [`conventions/agents-ia.md`](../conventions/agents-ia.md) (« Catalogue d'outils à grande échelle » et « Pratiques de référence du harnais »).
+Cette table dit où le dépôt en est ; elle ne remplace pas la lecture des pages officielles.
+
+| Pratique | État réel du service IA |
+|---|---|
+| Sélection d'outils juste-à-temps bornée (5 à 7), repli `request_broader_tools` | Absent : `LLMToolSelectorMiddleware` actif jusqu'ici ; remplacé par T32 |
+| Délestage et résumé automatiques du harnais, outil `compact_conversation` | Résumé en place (40 000 jetons, § ci-dessus) ; délestage et compaction à la demande à vérifier sur la version verrouillée |
+| `StoreBackend` avec espace de noms par identité, `CompositeBackend` pour `/memories/` | Absent (T25, J4) |
+| Permissions de fichiers avec règle finale « tout refuser » | Absent |
+| Mode de durabilité du checkpointer explicite | Checkpointer PostgreSQL en place ; mode non fixé |
+| Profils de harnais par modèle | Absent |
+| Compétences d'agent en divulgation progressive | Prévu (E15.4, décision Q13) |
+| Sous-agents asynchrones (lancer, vérifier, mettre à jour, annuler, lister, notifications) | À mettre en place : bêta, serveur Agent Protocol requis ; version verrouillée et test de contrat |
+| Backends `FilesystemBackend` et `LocalShellBackend` | Sans objet **par la documentation** (interdits en déploiement) ; remplacés par un backend bac à sable |
+| Tout autre middleware, outil intégré, backend ou primitive de graphe | Suit le registre du § 7 ; relu et mis à jour à chaque relecture d'épopée |
+| Domaines en sous-agents, sous-graphes seulement si nécessaire | À instruire avec T32 |
