@@ -23,7 +23,8 @@ public class OutilIdentite {
             description = """
                     Rend l'identité de l'utilisateur pour qui tu agis et la liste complète de ses droits (permissions et rôles). \
                     À appeler quand la question porte sur ce que l'utilisateur peut faire ou voir, ou pour comprendre un refus \
-                    « Access Denied » : il indique alors quelle permission manque.""",
+                    « Access Denied » : il indique alors quelle permission manque. \
+                    Ne rend aucune donnée métier (ni paie ni employés) : pour une donnée, utiliser l'outil du domaine concerné. Sans paramètre ; la liste des droits est rendue en entier, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     public Map<String, Object> identite() {

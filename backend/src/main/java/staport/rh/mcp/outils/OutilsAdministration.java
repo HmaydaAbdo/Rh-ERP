@@ -68,7 +68,8 @@ public class OutilsAdministration {
             description = """
                     Lit les paramètres de fonctionnement de l'application : clé, libellé, description, valeur, unité et bornes \
                     (durées de session, planification de la synchronisation des chantiers, etc.). Réservé aux administrateurs \
-                    qui voient l'écran Paramètres.""",
+                    qui voient l'écran Paramètres. \
+                    Lecture seule : ne modifie aucun paramètre. Sans paramètre ; tous les paramètres sont rendus en une fois, sans pagination. Pour savoir qui peut les gérer, `roles_lister`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PARAMETRE_READ')")
@@ -85,7 +86,8 @@ public class OutilsAdministration {
             description = """
                     Liste les rôles et les permissions que chacun accorde (jamais les comptes utilisateurs), avec un filtre \
                     facultatif sur le nom. À utiliser pour « qui peut voir la paie », « que permet le rôle X ». Réservé aux \
-                    utilisateurs qui gèrent les rôles ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total.""",
+                    utilisateurs qui gèrent les rôles ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total. \
+                    Pour les droits de l'utilisateur courant, utiliser `systeme_identite` ; pour savoir qui a modifié un rôle, `audit_historique`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('ROLE_MANAGE')")
@@ -162,7 +164,8 @@ public class OutilsAdministration {
                     Historique d'un enregistrement (bulletin, employé, chantier, équipe, fonction, rôle ou paramètre) : ses \
                     versions de la plus récente à la plus ancienne, avec l'auteur, l'opération et les champs modifiés \
                     (valeur avant et après). À utiliser pour « qui a modifié X et quand ». Réservé aux utilisateurs qui voient \
-                    le journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total.""",
+                    le journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total. \
+                    Pour chercher dans tout le journal sans cibler un enregistrement, utiliser `audit_rechercher`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('AUDIT_READ')")
