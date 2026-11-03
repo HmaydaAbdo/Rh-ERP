@@ -12,6 +12,12 @@ repos:
         entry: uv run --project ia sh -c "cd ia && ruff check src tests && ruff format --check src tests"
         files: ^ia/.*\.py$
         pass_filenames: false
+      - id: api-ruff
+        name: api · ruff (lint et format)
+        language: system
+        entry: uv run --project api sh -c "cd api && ruff check src tests && ruff format --check src tests"
+        files: ^api/.*\.py$
+        pass_filenames: false
       - id: docs-code
         name: documentation · faits vérifiables contre le code
         language: system
@@ -29,6 +35,13 @@ repos:
         language: system
         entry: uv run --project ia sh -c "cd ia && pyright"
         files: ^ia/.*\.py$
+        pass_filenames: false
+        stages: [pre-push]
+      - id: api-pyright-pytest
+        name: api · pyright et pytest
+        language: system
+        entry: uv run --project api sh -c "cd api && pyright && pytest -q"
+        files: ^api/
         pass_filenames: false
         stages: [pre-push]
       - id: ia-pytest
