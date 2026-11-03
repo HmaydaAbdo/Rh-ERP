@@ -19,14 +19,8 @@ URL = os.environ.get("MCP_ERP_RH_URL", "")
 JETON = os.environ.get("MCP_ERP_RH_JETON", "")
 UTILISATEUR = os.environ.get("MCP_ERP_RH_UTILISATEUR", "")
 pytestmark = [
-    pytest.mark.anyio,
     pytest.mark.skipif(not URL, reason="MCP_ERP_RH_URL absent : lancé par McpClientPythonIntegrationTest"),
 ]
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
 
 
 @pytest.fixture(autouse=True)

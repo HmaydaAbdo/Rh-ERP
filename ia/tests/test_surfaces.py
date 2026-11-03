@@ -6,19 +6,12 @@
 import json
 from typing import Any
 
-import pytest
 from doubles import appel, modele
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
 from erp_rh_ia.agent import creer_agent
 from erp_rh_ia.surfaces import CATALOGUE_ERP, operations_pour, resultat_sans_surface
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
 
 LIGNES: list[dict[str, Any]] = [
     {"id": i, "code": f"CH{i}", "libelle": f"Chantier {i}", "effectif": 10 * i, "enPoste": 9 * i} for i in range(1, 6)
@@ -83,7 +76,6 @@ def test_le_modele_retrouve_le_resultat_d_origine() -> None:
     assert resultat_sans_surface('{"a": 1}') == '{"a": 1}'
 
 
-@pytest.mark.anyio
 async def test_l_agent_affiche_le_tableau_et_le_modele_ne_voit_que_les_donnees() -> None:
     async def regrouper(**_: Any) -> tuple[str, dict[str, Any]]:
         return json.dumps(GROUPES), {"structured_content": GROUPES}

@@ -18,6 +18,11 @@ code. L'avancement des tâches n'y figure pas : il vit dans Jira (projet `KAN`, 
   `npx ngc -p tsconfig.app.json --noEmit`.
 - **E2E instables sous charge** : avec 4 workers, quelques tests (écrans d'administration, axe des Fonctions) dépassent
   30 s pendant que `ng serve` compile à froid. Relancer avec `--workers=1` avant de soupçonner une régression.
+- **Contrôles locaux avant la CI (KAN-209)** : l'outil est `pre-commit`, configuré dans `.pre-commit-config.yaml` et installé par
+  le groupe `dev` de `ia/`. Une fois par clone : `uv run --project ia pre-commit install --hook-type pre-commit --hook-type pre-push`.
+  À chaque commit : ruff (lint et format) de `ia/`, faits documentation/code, domaines. À chaque push : pyright, pytest `ia/`
+  et eslint du frontend. Tout lancer à la demande : `uv run --project ia pre-commit run --all-files --hook-stage pre-push`.
+  Un test instable est corrigé à sa cause ou mis en quarantaine par ticket, jamais relancé jusqu'à ce qu'il passe.
 - Les fichiers du dépôt sont en partie en CRLF : normaliser avant un remplacement de texte par script.
 - **Pièges de code connus** : Java **21** dans le `pom.xml` ; pas de `${VAR:defaut}` dans les `yml` ; toute méthode
   d'écriture d'un service porte `@AuditableAction` (test d'architecture) ; une migration qui modifie des données auditées

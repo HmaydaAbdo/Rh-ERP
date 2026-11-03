@@ -5,15 +5,7 @@ import json
 import re
 from typing import Any, cast
 
-import pytest
-
 from erp_rh_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, synthese
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
 
 MARQUEURS = {
     "periode_a", "periode_b", "chantier_a_id", "chantier_a_code", "equipe_a_id", "equipe_a_code", "employe_a_id",
@@ -118,7 +110,8 @@ def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
 
 
 def test_une_limite_expliquee_est_reconnue_comme_abstention() -> None:
-    from erp_rh_ia.evaluation import _ABSTENTION, _sans_accents  # pyright: ignore[reportPrivateUsage]
+    from erp_rh_ia.criteres import sans_accents
+    from erp_rh_ia.evaluation import _ABSTENTION  # pyright: ignore[reportPrivateUsage]
 
     reponses = (
         "Je ne peux donc pas vous donner cette valeur.",
@@ -126,7 +119,7 @@ def test_une_limite_expliquee_est_reconnue_comme_abstention() -> None:
         "Les outils ne permettent pas d'accéder à cette donnée.",
         "L'ERP ne fournit pas de prévision; nous ne pouvons donc pas donner cette information.",
     )
-    assert all(any(motif in _sans_accents(texte) for motif in _ABSTENTION) for texte in reponses)
+    assert all(any(motif in sans_accents(texte) for motif in _ABSTENTION) for texte in reponses)
 
 
 def test_la_synthese_calcule_exactitude_et_latences() -> None:
@@ -139,7 +132,6 @@ def test_la_synthese_calcule_exactitude_et_latences() -> None:
     assert bilan["par_type"] == {"reponse": "1/2"}
 
 
-@pytest.mark.anyio
 async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) -> None:
     from langchain_core.messages import AIMessage
 

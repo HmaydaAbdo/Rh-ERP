@@ -10,20 +10,12 @@ directe, appel d'outil puis réponse, comportement sans vérificateur, tag de t�
 
 from typing import Any
 
-import pytest
 from doubles import INDICATEURS, outil
 from langchain_core.messages import HumanMessage
 
 from erp_rh_ia.agent import creer_agent
 from erp_rh_ia.config import Settings
 from erp_rh_ia.modeles import Tache, modele
-
-pytestmark = pytest.mark.anyio
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
 
 
 def _config(aimock: Any) -> Settings:

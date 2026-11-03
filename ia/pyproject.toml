@@ -38,6 +38,8 @@ dev = [
     "openevals>=0.2.2",
     "agentevals>=0.0.9",
     "aimock-pytest>=0.7.0",
+    "pre-commit>=4.7.0",
+    "pytest-asyncio>=1.4.1.post1",
 ]
 
 [build-system]
@@ -69,4 +71,5 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = ["tests"]

@@ -23,16 +23,10 @@ from mcp.types import INVALID_PARAMS, CallToolResult, Implementation, TextConten
 
 URL = os.environ.get("MCP_COMPATIBILITY_URL", "")
 pytestmark = [
-    pytest.mark.anyio,
     pytest.mark.skipif(not URL, reason="MCP_COMPATIBILITY_URL absent : lancé par McpCompatibilityTest"),
 ]
 TRACE_INTERNE = re.compile(r"java\.|Exception|\bat .+\(.+:\d+\)")
 DELAI = 5.0
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
 
 
 @pytest.fixture(autouse=True)

@@ -1,0 +1,47 @@
+# Contrôles locaux avant la CI (KAN-209). Outil : pre-commit (https://pre-commit.com), installé par le groupe `dev` de `ia/`.
+# Les mêmes commandes tournent en CI ; ici elles évitent une exécution perdue pour une ligne trop longue ou un type faux.
+#   installation : uv run --project ia pre-commit install --hook-type pre-commit --hook-type pre-push
+#   tout lancer  : uv run --project ia pre-commit run --all-files --hook-stage pre-push
+default_install_hook_types: [pre-commit, pre-push]
+repos:
+  - repo: local
+    hooks:
+      - id: ia-ruff
+        name: ia · ruff (lint et format)
+        language: system
+        entry: uv run --project ia sh -c "cd ia && ruff check src tests && ruff format --check src tests"
+        files: ^ia/.*\.py$
+        pass_filenames: false
+      - id: docs-code
+        name: documentation · faits vérifiables contre le code
+        language: system
+        entry: node scripts/ia/check-docs-code.mjs .
+        files: ^(docs/|conventions/|AGENTS\.md|CLAUDE\.md|scripts/ia/|ia/|backend/src/)
+        pass_filenames: false
+      - id: docs-domaines
+        name: documentation · domaines
+        language: system
+        entry: node scripts/check-docs-domaines.mjs .
+        files: ^(docs/|conventions/|backend/src/)
+        pass_filenames: false
+      - id: ia-pyright
+        name: ia · pyright
+        language: system
+        entry: uv run --project ia sh -c "cd ia && pyright"
+        files: ^ia/.*\.py$
+        pass_filenames: false
+        stages: [pre-push]
+      - id: ia-pytest
+        name: ia · pytest
+        language: system
+        entry: uv run --project ia sh -c "cd ia && pytest -q"
+        files: ^ia/
+        pass_filenames: false
+        stages: [pre-push]
+      - id: frontend-lint
+        name: frontend · eslint
+        language: system
+        entry: npm --prefix frontend run lint
+        files: ^frontend/src/
+        pass_filenames: false
+        stages: [pre-push]

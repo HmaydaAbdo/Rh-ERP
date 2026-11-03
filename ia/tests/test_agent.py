@@ -6,20 +6,11 @@
 from typing import Any
 
 import httpx
-import pytest
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage
 
 from erp_rh_ia.agent import SYSTEME, creer_agent
 from erp_rh_ia.surfaces import OUTIL_A2UI
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
-
-pytestmark = pytest.mark.anyio
 
 
 async def _repondre(
