@@ -37,6 +37,8 @@ seule fois, ici. Format : constat, cause, règle.
 | Le comportement d'un framework a été affirmé de mémoire. | Lire la page officielle ou le code source en entier avant d'affirmer ; sinon écrire « non vérifié » (règle d'`AGENTS.md`). |
 | Un tableau a été livré avec un tri qui ne changeait que la page affichée, des vues sans recherche et sans export. | Tri, recherche et export PDF (mêmes filtres et tri que l'écran) sont exigés dans tout tableau et tout domaine, y compris pendant une migration : voir `conventions/frontend.md`, section « Tri, recherche et export ». |
 | Des tests unitaires ont été réécrits pour passer au lieu de corriger la cause. | Corriger la cause ; ne pas affaiblir une assertion métier. |
+| Une borne de contexte (7 outils par compétence) a été présentée comme une limite de capacité, ce qui a fait craindre des scénarios sans outil. | Écrire dans la règle ce que le nombre borne (schémas par domaine) et ce qu'il ne borne pas (le total d'un tour, les domaines atteignables par le repli) ; un test de couverture prouve que chaque scénario garde ses outils. |
+| Un test d'API lançait le vrai modèle d'embeddings de routage. | Injecter le routage dans `creer_app` pour les tests d'API ; un seul test charge le vrai modèle (MiniLM, préchargé dans l'image Docker, jamais téléchargé au démarrage). |
 
 ## Documentation
 
