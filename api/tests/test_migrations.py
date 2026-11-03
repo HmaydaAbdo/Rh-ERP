@@ -8,8 +8,10 @@ from pathlib import Path
 
 import pytest
 from alembic import command
+from alembic.autogenerate import compare_metadata
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from alembic.migration import MigrationContext
+from sqlalchemy import BigInteger, Column, MetaData, String, Table, create_engine, text
 from sqlalchemy.engine import make_url
 from testcontainers.community.postgres import PostgresContainer  # pyright: ignore[reportMissingTypeStubs]
 
@@ -106,3 +108,24 @@ def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(postgr
             == 1
         )
     moteur.dispose()
+
+
+def test_les_modeles_correspondent_exactement_a_la_base_alembic(postgres: PostgresContainer) -> None:
+    """Contrôle de dérive : l'autogénération ne doit proposer aucune différence (modèles migrés vs base réelle)."""
+    from staport.migrations.derive import Base, inclure
+
+    url = _base_vierge(postgres, "derive")
+    command.upgrade(_config(url), "head")
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        contexte = MigrationContext.configure(c, opts={"include_object": inclure, "compare_type": True})
+        differences = compare_metadata(contexte, Base.metadata)
+        # Témoin : le contrôle détecte bien une dérive (colonne plus courte que dans la base).
+        fausse = MetaData()
+        Table("permission", fausse, Column("id", BigInteger, primary_key=True), Column("code", String(10)))
+        temoin = compare_metadata(
+            MigrationContext.configure(c, opts={"include_object": inclure, "compare_type": True}), fausse
+        )
+    moteur.dispose()
+    assert differences == []
+    assert temoin != []
