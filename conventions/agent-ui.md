@@ -390,6 +390,15 @@ Ne pas journaliser prompts, données personnelles ou contenu sensible de surface
 les identifiants de corrélation, décisions d'accès et résultats nécessaires à l'audit, avec
 minimisation et rétention selon `security.md`, `audit.md` et `logging.md`.
 
+## Cohérence avec le harnais de l'agent (décision du 2026-11-03)
+
+L'interface générative et le système de conception suivent la même règle que le reste de l'IA : l'agent est un Deep Agent et l'interface ne reçoit que ce que son catalogue
+connaît. Les composants que l'agent peut afficher (catalogue A2UI, outils du navigateur) sont **un catalogue borné comme celui des outils métier** : l'agent voit les
+composants utiles à la tâche, pas le catalogue entier, et un composant absent du catalogue du design system n'est jamais généré. Les outils exécutés par le navigateur sont
+petits, typés, sérialisables, avec un état visible (en attente, succès, erreur) et une revue humaine pour toute action sensible. Le choix des événements, des fils et de
+l'état partagé s'appuie sur les primitives officielles de CopilotKit et d'AG-UI ; voir [`agents-ia.md`](agents-ia.md), « Catalogue d'outils à grande échelle » et
+« Pratiques de référence du harnais ».
+
 ## Références officielles
 
 Vérifier ces documents au moment de chaque adoption ou mise à niveau :
