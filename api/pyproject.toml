@@ -20,6 +20,7 @@ dev = [
     "httpx",
     "ruff",
     "pyright",
+    "testcontainers[postgres]>=4.15.0",
 ]
 
 [build-system]

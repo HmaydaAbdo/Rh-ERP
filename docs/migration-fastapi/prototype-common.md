@@ -36,3 +36,23 @@ Documentation lue (Context7, FastAPI) : remplacement des gestionnaires de `Reque
 
 Le choix « MCP ou appel direct par outil LangChain » (ADR § 1) n'est pas tranché ici : il exige l'absorption du service IA et une
 mesure de latence (tranche KAN-48).
+
+## Socle de la plateforme (KAN-212)
+
+Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/src/staport/migrations/`.
+
+- **Configuration** : mêmes variables d'environnement que Spring ; une variable absente fait échouer le démarrage ; secrets masqués.
+- **Base de données** : SQLAlchemy asynchrone, psycopg 3, `expire_on_commit=False` (documentation officielle lue).
+- **Migrations** : Alembic, révision `0001_base_v44` qui rejoue les 44 scripts Flyway (copiés dans `migrations/flyway_v44/`) dans
+  l'ordre numérique, **une transaction par script** comme Flyway (V9, V28, V32 créent des tables temporaires `ON COMMIT DROP`
+  de même nom ; deux scripts dans une même transaction échouent). Schéma et données de référence sont donc identiques par
+  construction ; ce n'est pas une preuve par comparaison avec une base Flyway réelle, qui reste à faire sur une copie de la base
+  du propriétaire (étape de la répétition générale, `strategie.md`).
+- **Droits** : `droits.py` reprend `afterMigrate.sql` (compte applicatif SELECT/INSERT seul sur `audit_*` et `*_aud`), avec
+  `psycopg.sql` pour échapper identifiants et mot de passe (Flyway insérait le mot de passe par substitution de texte).
+- **Déploiement** : étape dédiée avant le démarrage, jamais dans le `lifespan`.
+  Base neuve : `alembic -c api/alembic.ini upgrade head` (compte propriétaire, `compte_applicatif` et `mot_de_passe_applicatif`
+  passés en options). Base existante gérée par Flyway : `alembic stamp 0001_base_v44` puis `upgrade head`.
+  `PGAUDIT_ENABLED=true` en production, comme aujourd'hui.
+- **Tests** (3, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et des
+  données de référence, droits du compte applicatif sur l'audit, estampillage d'une base existante.
