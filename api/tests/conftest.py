@@ -10,7 +10,7 @@ import asyncio
 import base64
 import uuid
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +26,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine, make_url
 from testcontainers.community.postgres import PostgresContainer  # pyright: ignore[reportMissingTypeStubs]
 
+from staport.domains.audit.api import Audit
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.auth.securite import Hacheur
 from staport.domains.common.securite import EvenementSecurite
@@ -87,16 +88,18 @@ def cle_rsa_b64() -> str:
     return base64.b64encode(der).decode("ascii")
 
 
-@dataclass
-class Journal:
-    """Événements de sécurité et courriels capturés pendant les tests."""
+class Journal(Audit):
+    """Vrai audit (écrit en base) qui capture en plus les événements de sécurité et les courriels des tests."""
 
-    evenements: list[EvenementSecurite] = field(default_factory=lambda: [])
-    courriels: list[tuple[str, str]] = field(default_factory=lambda: [])  # (destinataire, jeton brut)
-    saturation: bool = False
+    def __init__(self) -> None:
+        super().__init__()
+        self.evenements: list[EvenementSecurite] = []
+        self.courriels: list[tuple[str, str]] = []  # (destinataire, jeton brut)
+        self.saturation = False
 
-    def publier(self, evenement: EvenementSecurite) -> None:
+    async def publier(self, evenement: EvenementSecurite) -> None:
         self.evenements.append(evenement)
+        await super().publier(evenement)
 
     def de(self, utilisateur: str | None = None, action: str | None = None) -> list[EvenementSecurite]:
         return [
@@ -151,7 +154,7 @@ def construire_configuration(url: str, cle_b64: str, **remplacements: Any) -> Co
 
 
 def construire_contexte(configuration: Configuration, journal: Journal) -> ContexteAuth:
-    contexte = creer_contexte(configuration, evenements=journal)
+    contexte = creer_contexte(configuration, audit=journal)
 
     def capture(destinataire: str, jeton: str, _validite: object) -> None:
         if journal.saturation:

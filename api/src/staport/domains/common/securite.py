@@ -1,16 +1,12 @@
 """Événements de sécurité (parité avec `EvenementSecurite` / `ActionSecurite` de Spring).
 
-Les domaines publient un événement par le port `PublicationEvenements` ; le domaine `audit` (KAN-214) fournit
-l'implémentation qui l'écrit dans le journal. Par défaut, `PublicationJournal` le consigne dans le journal technique
-(sans donnée sensible : jamais de mot de passe ni de jeton).
+Les domaines publient un événement par le port `Auditeur` (`audit_contexte`) ; le domaine `audit` l'écrit dans le
+journal d'audit. Un événement ne contient jamais de mot de passe ni de jeton.
 """
 
-import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Protocol
-
-journal = logging.getLogger("staport.securite")
+from typing import Any
 
 
 class ActionSecurite(StrEnum):
@@ -31,6 +27,19 @@ class ActionSecurite(StrEnum):
     JETON_AGENT_REFUSE = "JETON_AGENT_REFUSE"
 
 
+RESULTATS_ECHEC = frozenset(
+    {
+        ActionSecurite.CONNEXION_ECHOUEE,
+        ActionSecurite.SESSION_RENOUVELLEMENT_REFUSE,
+        ActionSecurite.JETON_REUTILISE,
+        ActionSecurite.ACCES_REFUSE,
+        ActionSecurite.ACCES_ANONYME_REFUSE,
+        ActionSecurite.JETON_AGENT_REFUSE,
+    }
+)
+"""Actions dont l'entrée du journal est un échec (les autres sont des succès)."""
+
+
 @dataclass(frozen=True)
 class EvenementSecurite:
     action: ActionSecurite
@@ -38,19 +47,3 @@ class EvenementSecurite:
     utilisateur_nom: str | None = None
     motif: str | None = None
     details: dict[str, Any] = field(default_factory=lambda: {})
-
-
-class PublicationEvenements(Protocol):
-    def publier(self, evenement: EvenementSecurite) -> None: ...
-
-
-class PublicationJournal:
-    """Implémentation par défaut : journal technique seulement (le journal d'audit arrive avec KAN-214)."""
-
-    def publier(self, evenement: EvenementSecurite) -> None:
-        journal.info(
-            "evenement_securite action=%s utilisateur_id=%s motif=%s",
-            evenement.action,
-            evenement.utilisateur_id,
-            evenement.motif,
-        )

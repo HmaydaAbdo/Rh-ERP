@@ -12,8 +12,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from staport.domains.audit import router as routes_audit
+from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
+from staport.domains.common.audit_contexte import Origine, contexte_batch
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
@@ -27,13 +30,14 @@ async def _amorcer_admin(
     async with fabrique() as session:
         if await contexte.utilisateurs.admin_existe(session):
             return
-    async with fabrique() as session:
-        await contexte.utilisateurs.creer_admin_initial(
-            session,
-            configuration_.admin_username,
-            configuration_.admin_email,
-            configuration_.admin_password.get_secret_value(),
-        )
+    with contexte_batch("Système", Origine.DEMARRAGE):
+        async with fabrique() as session:
+            await contexte.utilisateurs.creer_admin_initial(
+                session,
+                configuration_.admin_username,
+                configuration_.admin_email,
+                configuration_.admin_password.get_secret_value(),
+            )
 
 
 def creer_app(
@@ -51,11 +55,22 @@ def creer_app(
         fabrique = creer_fabrique_sessions(moteur_)
         app.state.fabrique_sessions = fabrique
         app.state.auth = contexte or creer_contexte(configuration_)
+        audit = app.state.auth.audit
+        verification: VerificationIntegrite | None = None
+        if isinstance(audit, Audit):
+            audit.lier(fabrique)
+            verification = VerificationIntegrite(
+                fabrique, audit.metriques, configuration_.audit_integrite_chaine_delai_ms
+            )
         if amorcer_admin:
             await _amorcer_admin(app.state.auth, configuration_, fabrique)
+        if verification is not None:
+            await verification.demarrer()
         try:
             yield
         finally:
+            if verification is not None:
+                await verification.arreter()
             await app.state.auth.courriel.attendre_envois()
             if moteur is None:
                 await moteur_.dispose()
@@ -73,7 +88,13 @@ def creer_app(
             expose_headers=[EN_TETE_REQUEST_ID],
             allow_credentials=True,
         )
-        for routeur in (routes_auth.auth, routes_auth.agent, routes_auth.utilisateurs, routes_auth.roles):
+        for routeur in (
+            routes_auth.auth,
+            routes_auth.agent,
+            routes_auth.utilisateurs,
+            routes_auth.roles,
+            routes_audit.logs,
+        ):
             app.include_router(routeur)
     return app
 

@@ -14,7 +14,8 @@ from staport.domains.auth.exceptions import IaDesactivee, JetonAgentRefuse
 from staport.domains.auth.mappage import noms_des_roles, permissions_effectives
 from staport.domains.auth.schemas import JetonAgentReponse
 from staport.domains.auth.securite import DUREE_JETON_AGENT, PERMISSION_IA, JeuDeCles, emettre_jeton_agent
-from staport.domains.common.securite import ActionSecurite, EvenementSecurite, PublicationEvenements
+from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.common.securite import ActionSecurite, EvenementSecurite
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,7 @@ class IdentiteAgent:
 
 
 class ServiceAgent:
-    def __init__(self, cles: JeuDeCles | None, evenements: PublicationEvenements) -> None:
+    def __init__(self, cles: JeuDeCles | None, evenements: Auditeur) -> None:
         self._cles = cles
         self._evenements = evenements
 
@@ -36,12 +37,12 @@ class ServiceAgent:
         async with session.begin():
             identite = await self.identite_active(session, utilisateur_id)
             if identite is None:
-                self._refuser(utilisateur_id, "COMPTE_INACTIF")
+                await self._refuser(utilisateur_id, "COMPTE_INACTIF")
             if PERMISSION_IA not in identite.permissions:
-                self._refuser(utilisateur_id, "DROIT_IA_RETIRE")
+                await self._refuser(utilisateur_id, "DROIT_IA_RETIRE")
         jeton, jti = emettre_jeton_agent(self._cles, identite.utilisateur_id, identite.username)
         # Le jeton lui-même n'est jamais journalisé : seulement son identifiant et sa durée.
-        self._evenements.publier(
+        await self._evenements.publier(
             EvenementSecurite(
                 ActionSecurite.JETON_AGENT_EMIS,
                 identite.utilisateur_id,
@@ -72,8 +73,8 @@ class ServiceAgent:
             frozenset(noms_des_roles(utilisateur)),
         )
 
-    def _refuser(self, utilisateur_id: int, motif: str) -> NoReturn:
-        self._evenements.publier(
+    async def _refuser(self, utilisateur_id: int, motif: str) -> NoReturn:
+        await self._evenements.publier(
             EvenementSecurite(ActionSecurite.JETON_AGENT_REFUSE, utilisateur_id=utilisateur_id, motif=motif)
         )
         raise JetonAgentRefuse

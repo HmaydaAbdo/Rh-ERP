@@ -303,7 +303,10 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
 def _routes(p: Plateforme) -> set[tuple[str, str]]:
     """Routes réellement montées, lues dans le schéma OpenAPI (API publique de FastAPI)."""
     return {
-        (methode.upper(), chemin) for chemin, operations in p.app.openapi()["paths"].items() for methode in operations
+        (methode.upper(), chemin)
+        for chemin, operations in p.app.openapi()["paths"].items()
+        if not chemin.startswith("/logs")  # routes du domaine audit, testées dans test_audit_consultation.py
+        for methode in operations
     }
 
 

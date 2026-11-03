@@ -24,11 +24,11 @@ from staport.domains.auth.schemas import (
 )
 from staport.domains.auth.securite import Hacheur
 from staport.domains.auth.service_auth import ServiceAuth, exiger_mot_de_passe_conforme
-from staport.domains.common.audit_contexte import TypeOperation, auditer
+from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import incrementer_version, verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
-from staport.domains.common.securite import ActionSecurite, EvenementSecurite, PublicationEvenements
+from staport.domains.common.securite import ActionSecurite, EvenementSecurite
 
 
 async def resoudre_roles(session: AsyncSession, identifiants: set[int]) -> set[Role]:
@@ -55,7 +55,7 @@ class ServiceUtilisateur:
         self,
         hacheur: Hacheur,
         parametres: ParametresSecurite,
-        evenements: PublicationEvenements,
+        evenements: Auditeur,
         service_auth: ServiceAuth,
     ) -> None:
         self._hacheur = hacheur
@@ -77,7 +77,8 @@ class ServiceUtilisateur:
             return await utilisateur_reponse(session, await self._obtenir(session, identifiant))
 
     async def creer(self, session: AsyncSession, requete: UtilisateurCreationRequete) -> UtilisateurReponse:
-        async with session.begin():
+        action = self._evenements.auditer(session, "UTILISATEUR_CREATION", TypeOperation.CREATE, "Utilisateur")
+        async with session.begin(), action as cible:
             longueur = await self._parametres.longueur_minimale_mot_de_passe(session)
             exiger_mot_de_passe_conforme(requete.mot_de_passe, requete.username, longueur)
             if await repository.username_existe(session, requete.username):
@@ -95,15 +96,18 @@ class ServiceUtilisateur:
             )
             utilisateur.roles = roles
             utilisateur.permissions_refusees = set()
-            with auditer("UTILISATEUR_CREATION", TypeOperation.CREATE, "Utilisateur"):
-                session.add(utilisateur)
-                await session.flush()
+            session.add(utilisateur)
+            await session.flush()
+            cible.identifiant = utilisateur.id
             return await utilisateur_reponse(session, utilisateur)
 
     async def modifier(
         self, session: AsyncSession, identifiant: int, requete: UtilisateurModificationRequete
     ) -> UtilisateurReponse:
-        async with session.begin():
+        action = self._evenements.auditer(
+            session, "UTILISATEUR_MODIFICATION", TypeOperation.UPDATE, "Utilisateur", identifiant
+        )
+        async with session.begin(), action:
             utilisateur = await self._obtenir(session, identifiant)
             verifier_version(requete.version, utilisateur.version)
             autre = await repository.utilisateur_par_email(session, requete.email)
@@ -112,13 +116,12 @@ class ServiceUtilisateur:
             desactive = utilisateur.actif and not requete.actif
             await self._verifier_employe(session, requete.employee_id)
             roles = await resoudre_roles(session, requete.role_ids)
-            with auditer("UTILISATEUR_MODIFICATION", TypeOperation.UPDATE, "Utilisateur"):
-                utilisateur.email = requete.email
-                utilisateur.actif = requete.actif
-                utilisateur.employee_id = requete.employee_id
-                utilisateur.roles = roles
-                incrementer_version(utilisateur)
-                await session.flush()
+            utilisateur.email = requete.email
+            utilisateur.actif = requete.actif
+            utilisateur.employee_id = requete.employee_id
+            utilisateur.roles = roles
+            incrementer_version(utilisateur)
+            await session.flush()
             if desactive:
                 await self._auth.revoquer_sessions_sans_transaction(session, identifiant)
             return await utilisateur_reponse(session, utilisateur)
@@ -126,14 +129,16 @@ class ServiceUtilisateur:
     async def definir_permissions_refusees(
         self, session: AsyncSession, identifiant: int, requete: RefusPermissionsRequete
     ) -> UtilisateurReponse:
-        async with session.begin():
+        action = self._evenements.auditer(
+            session, "UTILISATEUR_PERMISSIONS_REFUSEES", TypeOperation.UPDATE, "Utilisateur", identifiant
+        )
+        async with session.begin(), action:
             utilisateur = await self._obtenir(session, identifiant)
             verifier_version(requete.version, utilisateur.version)
             refusees = await resoudre_permissions(session, requete.permission_ids)
-            with auditer("UTILISATEUR_PERMISSIONS_REFUSEES", TypeOperation.UPDATE, "Utilisateur"):
-                utilisateur.permissions_refusees = refusees
-                incrementer_version(utilisateur)
-                await session.flush()
+            utilisateur.permissions_refusees = refusees
+            incrementer_version(utilisateur)
+            await session.flush()
             return await utilisateur_reponse(session, utilisateur)
 
     async def reinitialiser_mot_de_passe_par_admin(
@@ -147,7 +152,7 @@ class ServiceUtilisateur:
             # Comme la réinitialisation par lien : l'ancien mot de passe est peut-être celui que l'on cherche à écarter.
             sessions = await self._auth.revoquer_sessions_sans_transaction(session, identifiant)
             # L'acteur est l'administrateur authentifié (contexte) ; le compte visé est dans le détail.
-            self._evenements.publier(
+            await self._evenements.publier(
                 EvenementSecurite(
                     ActionSecurite.MOT_DE_PASSE_REINITIALISE_PAR_ADMIN,
                     details={
@@ -163,7 +168,8 @@ class ServiceUtilisateur:
             return await repository.admin_existe(session, SYSTEM_ADMIN)
 
     async def creer_admin_initial(self, session: AsyncSession, username: str, email: str, mot_de_passe: str) -> int:
-        async with session.begin():
+        action = self._evenements.auditer(session, "UTILISATEUR_CREATION", TypeOperation.CREATE, "Utilisateur")
+        async with session.begin(), action as cible:
             role = next((r for r in await repository.tous_les_roles(session) if r.nom == SYSTEM_ADMIN), None)
             if role is None:
                 raise RoleIntrouvable(-1)
@@ -175,9 +181,9 @@ class ServiceUtilisateur:
             )
             admin.roles = {role}
             admin.permissions_refusees = set()
-            with auditer("UTILISATEUR_CREATION", TypeOperation.CREATE, "Utilisateur"):
-                session.add(admin)
-                await session.flush()
+            session.add(admin)
+            await session.flush()
+            cible.identifiant = admin.id
             return admin.id
 
     async def _verifier_employe(self, session: AsyncSession, employee_id: int | None) -> None:
