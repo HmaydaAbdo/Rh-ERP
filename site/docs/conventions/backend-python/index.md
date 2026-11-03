@@ -8,7 +8,7 @@ sidebar_position: 1
 Profil Python des conventions du backend, qui remplace le profil Java/Spring à la bascule décidée par l'[ADR 0016](../../decisions/index.md).
 Les principes (monolithe modulaire, refus par défaut, audit, tests par couches, mesures avant optimisation) ne changent pas : ces pages
 les traduisent dans l'idiome de FastAPI, Pydantic, SQLAlchemy et Alembic. Tant que Spring sert la production, les conventions Java
-restent applicables au code Java ; ce profil s'applique au code de la branche `migration/fastapi`.
+restent applicables au code Java ; ce profil s'applique au code Python du backend, écrit pendant la migration (E2, ADR 0016).
 
 | Page | Remplace |
 | --- | --- |
