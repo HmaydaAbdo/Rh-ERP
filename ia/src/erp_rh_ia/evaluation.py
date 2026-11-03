@@ -39,6 +39,7 @@ from langchain_core.tools import BaseTool
 from erp_rh_ia.app import fabrique_reelle
 from erp_rh_ia.config import Settings
 from erp_rh_ia.outils import jeton_agent, outils_erp
+from erp_rh_ia.routage import Routeur
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
 _MARQUEUR = re.compile(r"\{(\w+)\}")
@@ -205,12 +206,18 @@ async def verite(outils: list[BaseTool], nom: str, arguments: dict[str, Any]) ->
     return cast(dict[str, Any], structure) if structure else cast(dict[str, Any], json.loads(message.text))
 
 
+_ROUTEUR = Routeur()  # le même routage hors modèle que le service (app.py), chargé une fois par évaluation
+
+
 async def repondre(
     config: Settings, outils: list[BaseTool], question: str, outils_attendus: list[str] | None
 ) -> Reponse:
-    # Mesurer le même agent que le service : modèle principal, sélecteur de tools et résumeur officiels.
+    # Même agent que le service : modèle principal, résumeur officiel et compétences épinglées par le routage.
     agent = fabrique_reelle(config)(outils, None)
-    etat = await agent.ainvoke({"messages": [HumanMessage(content=question)]}, {"recursion_limit": 200})
+    epinglees = await _ROUTEUR.adomaines(question, outils)
+    etat = await agent.ainvoke(
+        {"messages": [HumanMessage(content=question)], "pinned_skills": epinglees}, {"recursion_limit": 200}
+    )
     messages: list[BaseMessage] = list(etat["messages"])
     texte = messages[-1].text if messages else ""
     appeles = [a["name"] for m in messages if isinstance(m, AIMessage) for a in m.tool_calls]

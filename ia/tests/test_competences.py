@@ -4,15 +4,19 @@
 """Outils par compétence (Deep Agents 0.7.32, T32/T33) : exposition, garde d'exécution, repli et routage."""
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import pytest
+from deepagents.backends import FilesystemBackend
+from deepagents.middleware import FilesystemMiddleware
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
-from erp_rh_ia.agent import creer_agent
+from erp_rh_ia import agent as module_agent
+from erp_rh_ia.agent import PERMISSIONS_FICHIERS, creer_agent
 from erp_rh_ia.competences import OUTILS_MAX_PAR_COMPETENCE, OUTILS_PERMANENTS, charger, competence_de
 from erp_rh_ia.routage import DOMAINES_MAX, Routeur
 
@@ -193,3 +197,58 @@ def test_le_routage_n_epingle_pas_plus_de_trois_domaines_et_ignore_une_question_
     )
     assert routeur.domaines("   ", outils) == []
     assert routeur.domaines("Bonjour", []) == []
+
+
+def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Un outil de ``tools=`` reste exécutable même s'il n'est pas exposé : seuls les outils permanents y passent."""
+    captures: list[dict[str, Any]] = []
+    reel: Any = vars(module_agent)["create_deep_agent"]
+
+    def espion(**kwargs: Any) -> Any:
+        captures.append(kwargs)
+        return reel(**kwargs)
+
+    monkeypatch.setattr(module_agent, "create_deep_agent", espion)
+    outils = [*_outils_du_catalogue(), outil("generate_a2ui", {"a2ui_operations": []})]
+
+    creer_agent(modele(AIMessage(content="Bonjour.")), outils)
+
+    lies = {o.name for o in captures[0]["tools"]}
+    assert lies <= OUTILS_PERMANENTS
+    assert lies == {"systeme_identite", "generate_a2ui"}
+    assert captures[0]["permissions"] == PERMISSIONS_FICHIERS
+
+
+@pytest.mark.anyio
+async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() -> None:
+    """Avec ``write_file`` lié par erreur, les permissions refusent et le fichier reste intact."""
+    with tempfile.TemporaryDirectory() as dossier:
+        racine = Path(dossier)
+        (racine / "paie").mkdir()
+        cible = racine / "paie" / "SKILL.md"
+        cible.write_text("original", encoding="utf-8")
+        backend = FilesystemBackend(root_dir=racine, virtual_mode=True)
+        faux = modele(
+            appel("write_file", file_path="/paie/SKILL.md", content="piraté"),
+            appel("write_file", identifiant="b2", file_path="/nouveau.md", content="piraté"),
+            AIMessage(content="Refusé."),
+        )
+        creer: Any = vars(module_agent)["create_deep_agent"]
+        agent: Any = creer(
+            model=faux,
+            backend=backend,
+            permissions=PERMISSIONS_FICHIERS,
+            middleware=[
+                FilesystemMiddleware(
+                    backend=backend, tools=["read_file", "write_file"], permissions=PERMISSIONS_FICHIERS
+                )
+            ],
+        )
+
+        etat: dict[str, Any] = await agent.ainvoke({"messages": [HumanMessage(content="Écris.")]})
+
+        retours = [m.text.lower() for m in etat["messages"] if isinstance(m, ToolMessage)]
+        assert len(retours) == 2
+        assert all("permission" in r or "denied" in r for r in retours), retours
+        assert cible.read_text(encoding="utf-8") == "original"
+        assert not (racine / "nouveau.md").exists()

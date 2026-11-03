@@ -46,3 +46,4 @@ seule fois, ici. Format : constat, cause, règle.
 |---|---|
 | Des nombres écrits en dur dans la documentation (versions, nombre d'outils MCP, seuils) devenaient faux. | Les faits vérifiables sont dans `scripts/ia/verrous.txt` ; `scripts/ia/check-docs-code.mjs` les compare au code en CI. Un nouveau fait de ce type y est ajouté. |
 | Des fichiers supprimés ont perdu des informations utiles. | Avant de supprimer un document, vérifier que chacune de ses informations durables figure ailleurs ; indiquer le commit qui le conserve (`git show <commit>:<chemin>`). |
+| Le banc d'évaluation réel contournait le routage (aucune compétence épinglée) : il mesurait le seul repli, +1 tour de modèle presque partout. | Tout banc doit construire l'état d'entrée comme le service (`pinned_skills` calculé par `Routeur`) ; vérifier qu'un changement de chemin d'exécution est bien celui que mesure le banc. |

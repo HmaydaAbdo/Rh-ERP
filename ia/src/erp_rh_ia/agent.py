@@ -25,7 +25,7 @@ from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
 from deepagents.backends import FilesystemBackend
-from deepagents.middleware import FilesystemMiddleware, SkillsMiddleware
+from deepagents.middleware import FilesystemMiddleware, FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
     ModelCallLimitMiddleware,
@@ -53,6 +53,12 @@ from erp_rh_ia.surfaces import SurfacesResultats
 PROFIL_HARNAIS = HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False))
 #: Le fournisseur des modèles de l'ERP (``ChatLiteLLM``) ; les tests enregistrent celui de leur faux modèle.
 register_harness_profile("litellm", PROFIL_HARNAIS)
+
+#: Permissions documentées du système de fichiers de Deep Agents : le seul contenu visible est celui des compétences,
+#: en lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
+#: d'écriture était lié un jour par erreur. Pas d'espace de noms par identité tant que rien n'est écrit : les
+#: conversations sont déjà par utilisateur (``memoire.py``) ; il sera exigé avec la première fonction qui écrit.
+PERMISSIONS_FICHIERS = [FilesystemPermission(operations=["write"], paths=["/**"], mode="deny")]
 
 SYSTEME = """Tu es Staport Intelligence, l'assistant numérique de Staport. Tu réponds en français.
 Tu aides l'utilisateur à travers les capacités métier disponibles pour son compte dans les applications de Staport.
@@ -255,13 +261,14 @@ def creer_agent(
     # Un outil métier n'est exposé que par une compétence : un appel non épinglé échoue sans s'exécuter (testé).
     intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
     # Le harnais n'expose que la lecture des SKILL.md : pas d'écriture, de recherche ni de commande.
-    intergiciels.append(FilesystemMiddleware(backend=backend, tools=["read_file"]))
+    intergiciels.append(FilesystemMiddleware(backend=backend, tools=["read_file"], permissions=PERMISSIONS_FICHIERS))
     return create_deep_agent(
         model=modele,
         tools=[outil for outil in outils if outil.name in OUTILS_PERMANENTS],
         system_prompt=SYSTEME,
         middleware=[*intergiciels, _capacites_dynamiques(outils)],
         backend=backend,
+        permissions=PERMISSIONS_FICHIERS,
         checkpointer=checkpointer,
         name="staport-intelligence",
     )
