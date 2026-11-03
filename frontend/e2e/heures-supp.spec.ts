@@ -19,7 +19,7 @@ test('la liste filtrée affiche les champs métier et le total', async ({ page }
   });
 
   await page.goto('/heures-supp?periode=2026-10&cin=AB123&nom=Salma');
-  await expect(page.getByRole('heading', { name: 'Heures supplémentaires' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heures sup.' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
   await expect(page.getByText(/15 DH\/h/)).toBeVisible();
   await expect(page.getByText(/130 DH/).first()).toBeVisible();
@@ -96,4 +96,21 @@ test('les vues Cartes et Analytique affichent les heures supplémentaires et sui
   await expect(page.getByRole('button', { name: /Importer/ }).first()).toBeVisible();
   await expect(page.getByText(/130 DH/).first()).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10', cin: 'AB123' });
+});
+
+test('sans mois dans l’URL, Cartes et Analytique prennent le dernier mois d’heures supplémentaires', async ({ page }) => {
+  const groupe = { id: 4, code: 'C4', libelle: 'Site', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 };
+  const api = await mockApi(page, { username: 'rh', permissions }, {
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
+    'GET /heures-supp/periodes': () => ['2026-10', '2026-09']
+  });
+
+  await page.goto('/heures-supp/cartes');
+  await expect(page.getByText('C4', { exact: true })).toBeVisible();
+  expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10' });
+
+  await page.goto('/heures-supp/analytique');
+  await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
+  await expect(page.getByText(/130 DH/).first()).toBeVisible();
+  expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10' });
 });

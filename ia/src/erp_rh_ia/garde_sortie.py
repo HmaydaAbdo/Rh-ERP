@@ -6,7 +6,6 @@ reproduit les consignes du système ou nomme un outil technique. Le texte est d�
 la garde protège l'historique conservé et les sorties non diffusées (évaluation, reprise de conversation).
 """
 
-import unicodedata
 from collections.abc import Iterable
 from typing import Any
 
@@ -14,13 +13,9 @@ from langchain.agents.middleware import AgentMiddleware, AgentState, after_agent
 from langchain_core.messages import AIMessage
 from langgraph.runtime import Runtime
 
-from erp_rh_ia.criteres import OUTILS_HARNAIS, fuite_systeme, noms_techniques
+from erp_rh_ia.criteres import OUTILS_HARNAIS, fuite_systeme, noms_techniques, sans_accents
 
 REPONSE_REMPLACEMENT = "Je ne peux pas répondre ainsi. Posez-moi une question sur vos données RH."
-
-
-def sans_accents(texte: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFKD", texte.lower()) if not unicodedata.combining(c))
 
 
 def motifs(reponse: str, noms_outils: Iterable[str]) -> list[str]:

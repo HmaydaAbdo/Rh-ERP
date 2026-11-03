@@ -348,7 +348,10 @@ reconstruisibles à partir d'un snapshot puis de deltas, sans dépendre d'un seu
 
 ## Application existante
 
-Ne pas réécrire les vues métier pour adopter ces protocoles. Ajouter progressivement :
+Dans l'application existante, ne pas réécrire les vues métier pour adopter ces protocoles : ajouter progressivement ce qui
+suit. À la migration du frontend (E3), chaque page est au contraire conçue avec son contrat agentique : état partagé, actions
+propres à la page, surface A2UI, cas d'évaluation (voir [`ingenierie-agentique.md`](ingenierie-agentique.md), § 5). L'agent
+ne navigue pas entre pages ni vues : l'agentification se fait au niveau de chaque page. Ajouter progressivement :
 
 1. un point d'entrée et panneau assistant intégrés à la coque existante, isolés derrière une
    permission/feature flag ;

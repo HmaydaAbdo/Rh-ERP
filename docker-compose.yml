@@ -233,7 +233,7 @@ services:
       - web-net
     ports:
       # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (docs/deployment.md).
-      - "127.0.0.1:${DOCS_PORT:-5003}:8080"
+      - "127.0.0.1:${DOCS_PORT:-5005}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health"]
       interval: 10s

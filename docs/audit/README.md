@@ -27,6 +27,11 @@ Les composants transverses, dont la sécurité, écrivent via la façade `IAudit
 `AuditJournalWriter` gère les écritures dans la transaction courante ou dans une transaction séparée ; les consommateurs
 hors du domaine audit dépendent de l'interface.
 
+> **Backend Python (FastAPI)** : sur décision du propriétaire (2026-11-03), l'audit ne trace que les opérations qui
+> changent l'état et les événements de sécurité. Les catégories `ACCES` et `LECTURE_METIER` (lectures, exports, appels MCP
+> de lecture) ne sont plus écrites ; l'historique déjà produit par Spring reste lisible. Voir
+> [migration-fastapi/audit.md](../migration-fastapi/audit.md).
+
 ### Ce qui est audité
 
 | Entité | Instantanés | Remarques |

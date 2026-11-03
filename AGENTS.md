@@ -36,11 +36,33 @@ Deux règles imposées par le propriétaire, sans exception :
   Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
   branché sur un point d'extension officiel. Si un besoin semble exiger du code maison, présenter d'abord au
   propriétaire l'option framework, ou l'absence d'option, avant d'écrire quoi que ce soit.
+- **Ingénierie agentique et objectif permanent de 0 % de code fait maison (décision du 2026-11-03).** Quatre principes
+  s'appliquent à toute tâche, avant d'écrire du code ; le détail et le registre sont dans
+  [`conventions/ingenierie-agentique.md`](conventions/ingenierie-agentique.md).
+  1. *Abstraction à sa place* : à l'assistant de **proposer** l'abstraction officielle de chaque cas d'usage (registre cas
+     d'usage → framework → code maison restant), au propriétaire de la valider ; une abstraction maison exige deux usages
+     réels ou une frontière ; une règle ne vit que dans une couche.
+  2. *Bon framework* : choisi par le besoin, documentation lue en entier, intégration de première classe (sinon ADR).
+  3. *Bon outillage* : contrôles locaux avant la CI, un outil officiel par tâche, un test instable est une défaillance
+     d'outillage traitée par ticket.
+  4. *Transfert technologique voulu* : toute pratique reprise d'un autre domaine écrit sa source, ce qui se transfère, ce
+     qui ne se transfère pas, et sa preuve. **A2UI** est le transfert retenu pour l'interface agentique et s'utilise à
+     pleine capacité ; il se superpose à AG-UI (qui reste la couche de connexion) et ne le remplace pas.
+  Le code maison restant est une dette déclarée au registre, suivie dans l'épopée E10 (KAN-23), jusqu'à ce qu'il n'en
+  reste plus. **L'application est agentique de bout en bout, au niveau de la page** : chaque page livre ses actions et son
+  état à l'agent ; l'agent ne navigue pas entre pages ni vues. **Le site de documentation (`site/`) reflète l'état réel à
+  la fin de chaque épopée** : une épopée ne passe à « Terminé(e) » qu'avec ses pages à jour et publiées.
 - **Un seul `docker compose pull` puis `docker compose up -d` suffit à tout lancer.** Toute nouvelle brique (service,
   image, réseau, migration, clé générée) est intégrée à `docker-compose.yml` et aux images publiées par la CI ; aucune
   étape manuelle, aucun script à lancer à part, aucun profil à activer pour le fonctionnement normal. Les variables
   obligatoires sont documentées dans `.env.example`.
 
+- **Avertir le propriétaire avant chaque fusion vers `main` de ce qui change en production.** La production n'est pilotée
+  que par deux fichiers, `docker-compose.yml` et le fichier `.env` du serveur. Avant toute fusion vers `main`, comparer le diff de
+  la PR à `docker-compose.yml` et `.env.example`, et donner au propriétaire, dans la demande de fusion : les variables à
+  **ajouter**, **modifier** ou **retirer** dans le `.env` de production, les changements de ports, volumes, réseaux, images
+  ou tags du compose, et les étapes de migration. S'il n'y a rien à changer, le dire explicitement (« aucun changement de
+  compose ni de `.env` »). Tout nouveau paramètre est ajouté à `.env.example` avec son commentaire dans la même PR.
 - **Tout nouveau domaine est intégré à l'IA ERP-RH.** Dès sa conception, documenter ses cas d'usage IA et ses
   données autorisées dans `docs/ia.md`, puis exposer par MCP les capacités métier pertinentes à travers les façades
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
@@ -162,6 +184,8 @@ dans l'ordre ci-dessous.
 19. conventions/frontend.md
 20. conventions/design-system.md
 21. `conventions/integrations.md` (choix des protocoles et intégrations selon le besoin)
+22. `conventions/ingenierie-agentique.md` (abstraction à sa place, bon framework, bon outillage, transfert technologique,
+    livraison agentique par page, documentation à jour en fin d'épopée ; **à lire à l'ouverture de toute tâche**)
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
