@@ -106,7 +106,8 @@ public class OutilsReferentiels {
     @McpTool(name = "chantier_fiche", title = "Fiche d'un chantier", generateOutputSchema = true,
             description = """
                     Lit la fiche d'un chantier à partir de son identifiant : code, désignation, nom, origine ERP, statut. \
-                    Identifiant inconnu : le chercher d'abord avec `chantier_rechercher`. Propose la vue Fiche du chantier.""",
+                    Identifiant inconnu : le chercher d'abord avec `chantier_rechercher`. Propose la vue Fiche du chantier. \
+                    Rend un seul chantier, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('CHANTIER_READ')")
@@ -124,7 +125,8 @@ public class OutilsReferentiels {
                     l'identifiant rendu sert de filtre `equipeIds` aux outils Paie et Employé (l'identifiant 0 y désigne les \
                     employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au plus par page \
                     (`page`). Parcourir toutes les pages jusqu'au total pour une réponse complète. Triable : `tri` CODE \
-                    (défaut) ou LIBELLE, `sens` ASC ou DESC.""",
+                    (défaut) ou LIBELLE, `sens` ASC ou DESC. \
+                    Pour la fiche d'une équipe connue par son identifiant, `equipe_fiche` ; pour l'effectif par équipe, `employes_regrouper`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
@@ -148,7 +150,8 @@ public class OutilsReferentiels {
 
     @McpTool(name = "equipe_fiche", title = "Fiche d'une équipe", generateOutputSchema = true,
             description = "Lit la fiche d'une équipe à partir de son identifiant : code et libellé. Identifiant inconnu : le "
-                    + "chercher d'abord avec `equipe_rechercher`.",
+                    + "chercher d'abord avec `equipe_rechercher`."
+                    + " Rend une seule équipe, sans pagination.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EQUIPE_READ')")
@@ -165,7 +168,8 @@ public class OutilsReferentiels {
                     Trouve des fonctions (métiers : maçon, électricien, chef de chantier…) par libellé. À utiliser quand la \
                     question cite un métier : l'identifiant rendu sert de filtre `fonctionIds` aux outils Paie et Employé. \
                     Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`). Parcourir toutes les \
-                    pages jusqu'au total pour une réponse complète ; triés par libellé (`sens` ASC ou DESC).""",
+                    pages jusqu'au total pour une réponse complète ; triés par libellé (`sens` ASC ou DESC). \
+                    Pour la fiche d'une fonction connue par son identifiant, `fonction_fiche` ; pour l'effectif par fonction, `employes_regrouper`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('FUNCTION_READ')")
@@ -188,7 +192,8 @@ public class OutilsReferentiels {
 
     @McpTool(name = "fonction_fiche", title = "Fiche d'une fonction", generateOutputSchema = true,
             description = "Lit la fiche d'une fonction (métier) à partir de son identifiant. Identifiant inconnu : le chercher "
-                    + "d'abord avec `fonction_rechercher`.",
+                    + "d'abord avec `fonction_rechercher`."
+                    + " Rend une seule fonction, sans pagination.",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('FUNCTION_READ')")

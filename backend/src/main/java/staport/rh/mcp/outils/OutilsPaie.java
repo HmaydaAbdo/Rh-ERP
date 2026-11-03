@@ -137,7 +137,8 @@ public class OutilsPaie {
             description = """
                     Liste les mois de paie importés, du plus récent au plus ancien, avec pour chacun le nombre de bulletins, le \
                     nombre de chantiers, la masse salariale en dirhams et les soldes de tout compte (STC), sur un périmètre. \
-                    À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; tous les mois importés sont rendus.""",
+                    À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; tous les mois importés sont rendus. \
+                    Pour les chiffres d'un mois, utiliser `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -289,7 +290,8 @@ public class OutilsPaie {
                     de la paie du mois précédent), `plusPayes` (payés le mois précédent, absents ce mois-ci), `sorties` (départs \
                     enregistrés sur la fiche employé) et `mutations` (changements de chantier). Chaque chiffre est défini dans \
                     `definitions` : citer ces définitions, et donner `variation` à côté des entrées, car « entrées » n'est pas \
-                    l'écart net (entrées − plus payés = variation). Un mois précis ou tous les mois disponibles.""",
+                    l'écart net (entrées − plus payés = variation). Un mois précis ou tous les mois disponibles. \
+                    Pour la liste des départs constatés d'un mois, `employes_sorties` ; pour les chiffres globaux de la paie, `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -327,7 +329,8 @@ public class OutilsPaie {
             description = """
                     Contrôle la qualité de la paie d'un mois sur un périmètre : nombre de bulletins sans équipe, nombre sans \
                     observation, et répartition des bulletins par tranches de salaire total. À utiliser pour « y a-t-il des \
-                    anomalies », « combien de bulletins sans équipe ». Propose la liste des bulletins sans équipe.""",
+                    anomalies », « combien de bulletins sans équipe ». Propose la liste des bulletins sans équipe. \
+                    Les filtres chantier, équipe et fonction acceptent 50 identifiants au plus chacun. Pour les chiffres de la paie, utiliser `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
@@ -414,7 +417,8 @@ public class OutilsPaie {
             description = """
                     Prépare le rapport de paie PDF d'un mois : vérifie les chantiers concernés (id, code, effectif, masse) et \
                     propose d'ouvrir l'assistant d'export déjà réglé sur ce mois et ces chantiers. Ne génère aucun fichier : \
-                    l'utilisateur lance lui-même l'export. Réservé aux utilisateurs qui peuvent exporter la paie.""",
+                    l'utilisateur lance lui-même l'export. Réservé aux utilisateurs qui peuvent exporter la paie. \
+                    `chantierIds` accepte 50 identifiants au plus (ceux de `chantier_rechercher`). Pour un seul chiffre de paie, utiliser `paie_indicateurs`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_EXPORT') and hasAuthority('PAIE_READ')")
