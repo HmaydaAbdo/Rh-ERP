@@ -630,7 +630,8 @@ Cette table dit où le dépôt en est ; elle ne remplace pas la lecture des page
 
 | Pratique | État réel du service IA |
 |---|---|
-| Sélection d'outils juste-à-temps bornée (5 à 7), repli `request_broader_tools` | Absent : `LLMToolSelectorMiddleware` actif jusqu'ici ; remplacé par T32 |
+| Sélection d'outils juste-à-temps bornée (5 à 7), repli `request_broader_tools` | Absent : `LLMToolSelectorMiddleware` actif jusqu'ici ; remplacé par T32. Mécanisme vérifié sur LangChain 1.4.7 (sous-ensemble exposé, 0 tour supplémentaire, élargissement par `Command`) ; garde `wrap_tool_call` obligatoire ; choix du composant de recherche en attente (Q25) |
+| Définition des outils selon les sources officielles (Q24) | Audit fait le 2026-11-03 : les 31 outils ont `title`, schéma de sortie et annotations ; descriptions à compléter (limites d'usage), `input_examples` et `response_format` absents ; jeu d'évaluation du choix d'outil à bâtir |
 | Délestage et résumé automatiques du harnais, outil `compact_conversation` | Résumé en place (40 000 jetons, § ci-dessus) ; délestage et compaction à la demande à vérifier sur la version verrouillée |
 | `StoreBackend` avec espace de noms par identité, `CompositeBackend` pour `/memories/` | Absent (T25, J4) |
 | Permissions de fichiers avec règle finale « tout refuser » | Absent |

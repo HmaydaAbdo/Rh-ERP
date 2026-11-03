@@ -711,6 +711,41 @@ Le middleware de sélection, le registre et la recherche hybride sont du code ap
 du § 7 de [`ia.md`](../docs/ia.md) avec leur piste de remplacement (composant officiel de récupération, ou fonction native d'un framework si elle apparaît). Les briques de recherche
 (BM25, magasin vectoriel pgvector) viennent des intégrations officielles LangChain ; leur choix précis est tranché par un banc de mesure sur le registre réel et consigné dans `decisions.md`.
 
+### Garde d'exécution obligatoire (vérifié le 2026-11-03)
+
+Le filtrage par `wrap_model_call` ne montre au modèle qu'un sous-ensemble, mais **ne protège rien** : test sur LangChain 1.4.7, un outil enregistré et non exposé qui est
+appelé quand même par le modèle **s'exécute** et renvoie ses données. Toute sélection d'outils s'accompagne donc de :
+
+* un `wrap_tool_call` qui refuse, avant exécution, tout appel d'un outil absent de l'ensemble exposé au tour (message d'erreur correctif pour le modèle, aucune exécution) ;
+* les contrôles serveur d'identité, de permission et de périmètre de `mcp.md`, qui restent l'autorité (la sélection est de l'ergonomie, jamais de la sécurité) ;
+* un test d'autorisation par outil sensible : le modèle appelle un outil non exposé, l'exécution est refusée.
+
+`request_broader_tools` met à jour la clé d'état des outils exposés par `Command(update=...)` (vérifié) : l'élargissement coûte **un** tour de modèle supplémentaire, seulement
+quand le repli est utilisé ; le routage de base n'en coûte aucun. La même garde d'accès s'applique à l'élargissement.
+
+### Définition des outils (règles officielles, audit de tous les outils)
+
+Chaque règle cite sa source ; l'audit des 31 outils existants est consigné en commentaire de KAN-44 et corrigé outil par outil.
+
+| Règle | Source officielle |
+|---|---|
+| Nom en `snake_case` (lettres, chiffres, `_`, `-`), préfixé par le domaine ou la ressource (`paie_indicateurs`), 128 caractères au plus | LangChain « Tools » (avertissement sur `snake_case`) ; Anthropic « Define tools » (regex `^[a-zA-Z0-9_-]{1,128}$`, espaces de noms) ; spécification MCP 2025-11-25 |
+| Description très détaillée : ce que fait l'outil, quand l'utiliser **et quand ne pas l'utiliser**, sens de chaque paramètre, limites et ce qu'il ne renvoie pas ; au moins 3 à 4 phrases | Anthropic « Define tools » (« by far the most important factor ») |
+| Peu d'outils, chacun à but distinct ; regrouper les opérations voisines ; remplacer « tout lister » par une recherche ciblée ; pas d'outils qui se recouvrent | Anthropic « Writing tools for agents » |
+| `title` lisible pour l'affichage, `inputSchema` objet JSON Schema valide (jamais `null`) ; outil sans paramètre : `{"type":"object","additionalProperties":false}` | Spécification MCP 2025-11-25 (« Tool ») |
+| `outputSchema` pour toute réponse structurée, `structuredContent` conforme ; annotations `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` renseignées, **jamais crues sans serveur de confiance** | Spécification MCP 2025-11-25 (« ToolAnnotations ») |
+| Paramètres au nom sans ambiguïté (`employe_id`, pas `employe`), énumérations pour les valeurs fermées, `input_examples` pour les entrées complexes (valides pour le schéma, coût d'environ 20 à 200 jetons) | Anthropic « Define tools » et « Writing tools for agents » |
+| Réponse à fort signal : noms lisibles à côté des identifiants stables, pagination / filtrage / troncature avec valeurs par défaut sensées, paramètre `response_format` (concis / détaillé) quand la réponse est volumineuse | Anthropic « Writing tools for agents » |
+| Erreur qui dit ce qui s'est passé et montre l'entrée corrigée ; erreur de métier corrigeable par le modèle = erreur d'outil (`ToolError` / `isError`), pas exception technique | Anthropic « Writing tools for agents » ; SDK Python MCP (`ToolError`) |
+| Un paramètre ne demande pas au modèle son raisonnement mais une courte explication | Anthropic « Define tools » (risque de refus `reasoning_extraction`) |
+| Outil défini en Python : décorateur `@tool`, annotations de types obligatoires, docstring informative et concise, `args_schema` Pydantic quand le schéma doit être précis | LangChain « Tools » |
+| Les descriptions s'évaluent comme du code : jeu de référence de choix d'outil et d'arguments, suivi des erreurs de paramètres, du nombre d'appels et des jetons | Anthropic « Writing tools for agents » |
+
+**Constat de l'audit du 2026-11-03 (31 outils, descriptions de 135 à 1 076 caractères, médiane 377).** Conformes : les 31 outils portent `title`, `outputSchema` généré et annotations
+(`readOnlyHint`…) ; 17 sur 31 renvoient vers l'outil voisin adapté. Écarts : 6 sur 31 seulement énoncent ce que l'outil ne fait pas (recherche par mots-clés, indicative, à relire à la main) ;
+aucun `input_examples` ni paramètre `response_format` n'existe ; l'évaluation du choix d'outil sur jeu de référence reste à bâtir. Ces écarts sont à corriger tant qu'ils ne sont pas justifiés par
+une source officielle contraire.
+
 ### Utilisation intégrale des capacités (règle stricte, 2026-11-03)
 
 **Toute fonctionnalité et toute capacité exposée par Deep Agents, LangChain et LangGraph s'utilise ; aucune n'est ignorée, contournée ni réimplémentée à la main.**

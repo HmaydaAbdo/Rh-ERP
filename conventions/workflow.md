@@ -63,6 +63,9 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   protocole d'évaluation de [agents-ia.md](agents-ia.md) (« Catalogue d'outils à grande échelle » : contexte, latence, sûreté des
   schémas, visibilité du plan, accès, rappel) et consigner les mesures en commentaire de la tâche Jira. Utiliser les capacités de
   Deep Agents, LangGraph et LangChain par leurs primitives documentées, après lecture de leur page officielle.
+* Pour chaque choix de code, de style, de format ou de définition d'outil, citer la source officielle qui le recommande dans la
+  description de la tâche ou de la PR (règle « Aucun choix arbitraire » d'`AGENTS.md`). Un choix sans source n'est pas livré : il
+  est soumis au propriétaire.
 * Vérifier la compilation et supprimer le code devenu inutile. Pour une modification exclusivement
   documentaire, vérifier les liens locaux, la cohérence des références et le diff ; ne pas lancer de
   suites applicatives sans changement de comportement à vérifier.

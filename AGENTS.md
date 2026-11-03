@@ -64,6 +64,15 @@ Deux règles imposées par le propriétaire, sans exception :
   jour, avant d'écrire ou d'affirmer quoi que ce soit, même pour une bibliothèque connue. Les serveurs de documentation
   dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `docs/ia/decisions.md`) complètent Context7 ; ils ne
   le remplacent pas pour le reste.
+- **Aucun choix arbitraire : tout style, format, nom, structure ou réglage se justifie par la source officielle (décision du
+  2026-11-03).** Style de code, format d'un fichier, forme d'une définition d'outil (nom, titre, description, schémas
+  d'entrée et de sortie, annotations, messages d'erreur, forme des réponses), seuil, paramètre ou bibliothèque : chacun cite la
+  page officielle du framework ou le guide de l'éditeur qui le recommande (style de code : le guide du langage ou de
+  l'outil de formatage officiel ; outils d'agents : spécification MCP, documentation LangChain / Deep Agents, guides
+  Anthropic). Sans source, le choix n'est pas fait : on le propose au propriétaire avec l'option officielle ou l'absence
+  d'option. Une règle de convention porte sa source ; une règle sans source est une dette inscrite dans
+  `conventions/lecons.md` jusqu'à ce qu'elle en ait une. Cette règle s'applique à tous les outils existants, qui sont audités
+  contre elle (voir `conventions/agents-ia.md`, « Définition des outils »).
 - **Jira et le code, seules sources de suivi.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
   `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E19 y sont des
   epics et chaque tâche porte son préfixe (`E12.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit
