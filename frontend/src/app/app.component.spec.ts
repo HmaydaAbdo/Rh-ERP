@@ -69,7 +69,7 @@ describe('AppComponent', () => {
       }).compileComponents();
     });
 
-    it("offre un lien d'évitement qui met le focus sur le contenu principal", () => {
+    it("offre un lien d'évitement qui met le focus sur le contenu principal", async () => {
       const fixture = TestBed.createComponent(AppComponent);
       const host = fixture.nativeElement as HTMLElement;
       const contenuConcurrent = document.createElement('p');
@@ -78,6 +78,10 @@ describe('AppComponent', () => {
       document.body.append(host);
       let focus: MockInstance<HTMLElement['focus']> | undefined;
       try {
+        fixture.detectChanges();
+        // Le composant peut se re-rendre une fois l'état d'authentification résolu : on attend, puis on relit le lien
+        // juste avant le clic (un lien détaché ne retrouverait plus son <main>).
+        await fixture.whenStable();
         fixture.detectChanges();
         const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
         expect(host.querySelector('main#contenu')).not.toBeNull();
