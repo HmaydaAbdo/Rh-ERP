@@ -6,6 +6,7 @@ fondement des chiffres, fuites, écritures, noms techniques, efficacité. Foncti
 
 import json
 import re
+import unicodedata
 from collections.abc import Iterable, Sequence
 from decimal import Decimal
 from typing import Any, cast
@@ -81,6 +82,14 @@ def chiffres_non_fondes(
 def noms_techniques(reponse: str, noms_outils: Iterable[str]) -> list[str]:
     """Les noms d'outils techniques cités dans la réponse (le message système demande de ne pas les nommer)."""
     return [nom for nom in noms_outils if re.search(rf"\b{re.escape(nom)}\b", reponse)]
+
+
+def sans_accents(texte: str) -> str:
+    """Minuscules, sans accents et avec des traits d'union ordinaires : la forme sous laquelle on compare des textes."""
+    normalise = "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
+    return normalise.translate(
+        str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-"})
+    )
 
 
 def fuite_systeme(reponse_sans_accents: str) -> list[str]:

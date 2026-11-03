@@ -44,6 +44,10 @@ seule fois, ici. Format : constat, cause, règle.
 | Un mois de paie non importé a été présenté comme une masse de 0 MAD. | Un outil dont l'absence de donnée se confond avec zéro l'écrit dans sa description et indique l'outil de vérification (ici `paie_periodes`). |
 | Un cas homonyme a été résolu en prenant le premier résultat. | Plusieurs correspondances : l'agent demande une précision, il ne choisit pas au hasard (règle de prompt, cas du jeu). |
 | Les défauts d'un domaine ne sont apparus qu'avec 60 cas × 3 essais et la lecture des traces. | Tout nouveau domaine suit la procédure de `conventions/agents-ia.md`, section « Intégrer un nouveau domaine à l'agent » : cas ajoutés au jeu avant la livraison, traces lues, descriptions d'outils corrigées à partir des traces. |
+| Un juge LLM et un rejoueur d'évaluation ont été écrits à la main alors que `openevals`, déclaré en dépendance, les fournit. | Avant d'écrire, chercher la ligne du cas d'usage dans le registre de [`ingenierie-agentique.md`](ingenierie-agentique.md) ; une dépendance déclarée et jamais utilisée est utilisée ou retirée. |
+| Une même normalisation d'accents a été écrite dans deux modules. | Une règle ne vit que dans une couche : chercher l'existant avant de coder ; un seul exemplaire, testé une fois. |
+| Une ligne trop longue et un test frontend instable n'ont été vus qu'en CI (trois exécutions perdues, publication des images sautée). | Contrôles locaux avant la PR ; un test instable est corrigé à sa cause ou mis en quarantaine par ticket, jamais relancé jusqu'à ce qu'il passe. |
+| A2UI a été envisagé comme remplaçant d'AG-UI. | Ce sont deux couches : A2UI décrit l'interface, AG-UI connecte agent et application (événements, état, outils côté client, interruptions) et traduit les messages A2UI. Aucun ne remplace l'autre. |
 
 ## Documentation
 

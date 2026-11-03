@@ -11,6 +11,7 @@ import asyncio
 import base64
 import json
 import os
+import sys
 import uuid
 
 import pytest
@@ -24,10 +25,10 @@ from erp_rh_ia.memoire import espace_conversation, ouvrir_memoire, sujet
 URL = os.environ.get("IA_TEST_DATABASE_URL")
 
 
-@pytest.fixture
-def anyio_backend() -> tuple[str, dict[str, object]]:
+@pytest.fixture(scope="module")
+def event_loop_policy() -> asyncio.AbstractEventLoopPolicy:
     # psycopg asynchrone refuse la boucle Proactor de Windows (le service tourne sous Linux, en conteneur).
-    return "asyncio", {"loop_factory": asyncio.SelectorEventLoop}
+    return asyncio.WindowsSelectorEventLoopPolicy() if sys.platform == "win32" else asyncio.DefaultEventLoopPolicy()
 
 
 def _jeton(sub: str) -> str:
@@ -47,7 +48,6 @@ def test_un_jeton_illisible_donne_un_espace_propre_a_ce_jeton() -> None:
     assert sujet("pas-un-jwt").startswith("anonyme-")
 
 
-@pytest.mark.anyio
 @pytest.mark.skipif(URL is None, reason="IA_TEST_DATABASE_URL absent")
 async def test_une_conversation_reprend_apres_un_redemarrage_et_reste_privee() -> None:
     fil = uuid.uuid4().hex

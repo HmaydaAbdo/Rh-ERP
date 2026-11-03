@@ -6,20 +6,11 @@
 from datetime import date
 from typing import Any
 
-import pytest
 from doubles import modele, outil
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from erp_rh_ia.agent import creer_agent
 from erp_rh_ia.contexte import ContexteErp
-
-
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
-
-pytestmark = pytest.mark.anyio
 
 PERIODES = {"nombreMois": 2, "periodes": [{"periode": "2026-09"}, {"periode": "2026-08"}]}
 
