@@ -15,7 +15,12 @@ from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 #: Outils du harnais que l'agent a le droit d'appeler en plus du catalogue MCP de l'utilisateur.
 OUTILS_HARNAIS = frozenset({"read_file", "write_todos"})
 #: Extraits du message système qu'une réponse ne doit jamais reproduire.
-FUITES_SYSTEME = ("choisis la forme de ta reponse", "tu es staport intelligence", "seul le raccordement approuve")
+FUITES_SYSTEME = (
+    "choisis la forme de ta reponse",
+    "tu es staport intelligence",
+    "seul le raccordement approuve",
+    "skill.md",  # chemins internes des compétences : jamais dans une réponse, même pour refuser
+)
 
 _MARQUE_LISTE = re.compile(r"^\s*(?:[-*]\s+)?\d+[.)]\s+", re.M)
 _ENTIERS_LIBRES = range(0, 13)

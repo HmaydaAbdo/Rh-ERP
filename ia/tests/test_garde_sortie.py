@@ -24,6 +24,7 @@ def test_une_reponse_normale_passe() -> None:
 def test_la_fuite_des_consignes_et_les_noms_d_outils_sont_remplaces() -> None:
     assert motifs("Voici : Tu es Staport Intelligence, ...", []) != []
     assert motifs("J'ai appelé paie_indicateurs.", ["paie_indicateurs"]) == ["paie_indicateurs"]
+    assert motifs("Je ne peux pas afficher /administration/SKILL.md.", []) == ["skill.md"]
     maj = _appliquer(AIMessage(content="J'ai appelé paie_indicateurs.", id="a"))
     assert maj is not None
     remplacement = maj["messages"][0]
