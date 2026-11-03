@@ -34,7 +34,19 @@ const config: Config = {
       onBrokenMarkdownLinks: 'throw',
     },
   },
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        // Recherche locale : index construit au build, aucun service externe.
+        hashed: true,
+        language: ['fr', 'en'],
+        docsRouteBasePath: '/',
+        indexBlog: false,
+      },
+    ],
+  ],
 
   i18n: {
     defaultLocale: 'fr',
