@@ -25,6 +25,8 @@ public interface HeuresSuppRepository extends JpaRepository<HeureSupp, Long>, Jp
 
     List<HeureSupp> findByPeriodeOrderByEmployee_NomPrenomAsc(YearMonth periode);
 
+    /** Requête explicite : le nom dérivé `findDistinctPeriodeBy…` renverrait des entités, pas des mois (500 sur `/periodes`). */
+    @Query("select distinct h.periode from HeureSupp h order by h.periode desc")
     List<YearMonth> findDistinctPeriodeByOrderByPeriodeDesc();
 
     @Query("""

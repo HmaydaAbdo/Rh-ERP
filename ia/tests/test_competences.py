@@ -31,11 +31,6 @@ OUTILS_HARNAIS = {"read_file", "write_todos"}
 OUTILS_INTERDITS = {"write_file", "edit_file", "delete", "ls", "glob", "grep", "execute", "task"}
 
 
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
-
 def _catalogue() -> list[dict[str, str]]:
     return json.loads((EVALUATION / "catalogue_mcp.json").read_text(encoding="utf-8"))
 
@@ -66,7 +61,6 @@ def _agent(faux: Any, *noms: str, appels: list[str] | None = None) -> Any:
     return creer_agent(faux, outils)
 
 
-@pytest.mark.anyio
 async def test_un_outil_metier_non_epingle_echoue_sans_s_executer() -> None:
     appels: list[str] = []
     faux = modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Je ne peux pas."))
@@ -81,7 +75,6 @@ async def test_un_outil_metier_non_epingle_echoue_sans_s_executer() -> None:
     assert "paie_indicateurs" not in {n for lies in faux.outils_lies for n in lies}
 
 
-@pytest.mark.anyio
 async def test_une_competence_epinglee_expose_ses_outils_et_le_harnais_reste_minimal() -> None:
     faux = modele(AIMessage(content="Bonjour."))
 
@@ -96,7 +89,6 @@ async def test_une_competence_epinglee_expose_ses_outils_et_le_harnais_reste_min
     assert not lies & OUTILS_INTERDITS
 
 
-@pytest.mark.anyio
 async def test_deux_domaines_epingles_exposent_les_outils_des_deux() -> None:
     faux = modele(AIMessage(content="Bonjour."))
 
@@ -108,7 +100,6 @@ async def test_deux_domaines_epingles_exposent_les_outils_des_deux() -> None:
     assert "audit_historique" not in faux.outils_lies[0]
 
 
-@pytest.mark.anyio
 async def test_le_repli_par_lecture_du_skill_expose_le_domaine_manque() -> None:
     appels: list[str] = []
     faux = modele(
@@ -127,7 +118,6 @@ async def test_le_repli_par_lecture_du_skill_expose_le_domaine_manque() -> None:
     assert etat["messages"][-1].content == "Masse : 1 250 000,50 MAD."
 
 
-@pytest.mark.anyio
 async def test_un_domaine_epingle_sans_outil_autorise_n_expose_rien() -> None:
     """Le catalogue MCP est déjà limité aux droits de l'utilisateur : épingler un domaine interdit n'ajoute rien."""
     appels: list[str] = []
@@ -142,7 +132,6 @@ async def test_un_domaine_epingle_sans_outil_autorise_n_expose_rien() -> None:
     assert any("not a valid tool" in m.text for m in etat["messages"] if isinstance(m, ToolMessage))
 
 
-@pytest.mark.anyio
 async def test_l_outil_d_interface_et_l_identite_restent_exposes_a_chaque_tour() -> None:
     faux = modele(AIMessage(content="Bonjour."))
 
@@ -240,7 +229,6 @@ def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.
     assert captures[0]["permissions"] == PERMISSIONS_FICHIERS
 
 
-@pytest.mark.anyio
 async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() -> None:
     """Avec ``write_file`` lié par erreur, les permissions refusent et le fichier reste intact."""
     with tempfile.TemporaryDirectory() as dossier:

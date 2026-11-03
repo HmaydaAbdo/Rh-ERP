@@ -22,6 +22,8 @@ export interface HeuresSupp {
 
 export interface HeuresSuppSearchCriteria {
   periode?: string;
+  /** Plusieurs mois (export) : prime sur `periode` côté serveur quand elle est fournie. */
+  periodes?: string[];
   chantierIds?: number[];
   equipeIds?: number[];
   fonctionIds?: number[];

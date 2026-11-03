@@ -67,7 +67,7 @@ services locaux), jamais depuis l'extérieur.
 ## Site de documentation
 
 Le conteneur `docs` (site Docusaurus du dossier `site/`, image `erp-rh-docs`) sert un site statique sur le port 8080 interne,
-publié sur `127.0.0.1:${DOCS_PORT}` (5003 par défaut). Il n'a aucune dépendance (ni base, ni backend) et démarre avec le reste de
+publié sur `127.0.0.1:${DOCS_PORT}` (5005 par défaut ; 5003 est le port du service IA). Il n'a aucune dépendance (ni base, ni backend) et démarre avec le reste de
 la pile (`docker compose pull` puis `docker compose up -d`). Il n'est **jamais public** : Docusaurus ne fournit pas d'authentification,
 elle est posée par nginx outer. Le site est construit avec `baseUrl: '/'` : il doit être servi à la racine d'un nom d'hôte dédié,
 pas sous un sous-chemin.

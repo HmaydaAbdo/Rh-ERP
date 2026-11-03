@@ -18,6 +18,8 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
 1. Lire [`docs/developpement-local.md`](../docs/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
    commises et règle qui les évite), puis les conventions applicables et `docs/README.md`.
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
+   Lire [`ingenierie-agentique.md`](ingenierie-agentique.md) et chercher dans son registre la ligne du cas d'usage de la
+   tâche. Sans ligne, proposer l'abstraction officielle (framework, point d'extension, source) avant d'écrire du code.
 3. Vérifier les fichiers modifiés, la branche, les derniers commits et, lorsqu'une livraison est en
    cours, la PR et les contrôles associés. Préserver le travail existant et les chantiers séparés.
 4. Reprendre les décisions déjà approuvées dans la session. Une consigne plus récente du propriétaire
@@ -34,6 +36,11 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   ajout au socle et au catalogue avant de la coder dans un domaine ; ne pas contourner cette étape par
   une copie locale. Consulter l'inventaire [composants partagés](../docs/frontend/audit-composants-partages.md)
   pour les écarts connus et le mettre à jour lorsque le constat change.
+* Appliquer les principes de [`ingenierie-agentique.md`](ingenierie-agentique.md) : abstraction à sa place (second usage
+  ou frontière nommé), bon framework (besoin en une phrase, couverture native vérifiée), bon outillage (contrôles locaux
+  avant la PR), transfert technologique écrit (source, périmètre, limite, preuve). Pour une page de l'application,
+  répondre aux cinq questions agentiques du § 5 de cette convention avant le code. Tout code maison nouveau est ajouté au
+  registre avec son ticket de résorption (E10).
 * Pour une règle métier inconnue, un choix d'architecture important ou une modification de convention
   encore non approuvée : présenter le problème, les options et une recommandation, puis attendre
   l'accord. Préparer une proposition concrète à lire avant de demander cet accord.
@@ -95,6 +102,8 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |
 | Reprise opérationnelle, état et sujets ouverts | Jira (projet `KAN`) : statut, preuve et commentaire de reprise de la tâche ; jamais un fichier markdown |
+| Fin d'épopée | Site de documentation (`site/docs`, Docusaurus) : pages créées ou mises à jour, `npm run build` sans lien cassé, image `erp-rh-docs` publiée par la CI de `main`, lien de la page en commentaire du ticket d'épopée. Une épopée ne passe pas à « Terminé(e) » sans cela |
+| Code maison ajouté, remplacé ou supprimé | Registre des abstractions de [`ingenierie-agentique.md`](ingenierie-agentique.md) et épopée E10 (KAN-23) |
 | Erreur ou surprise coûteuse rencontrée | Une ligne dans [`lecons.md`](lecons.md), dans le commit qui la corrige |
 
 Centraliser les explications du domaine dans son dossier ; ailleurs, conserver les index, liens et
@@ -121,12 +130,16 @@ de travail et ouvrir une PR. Respecter les contrôles de protection.
    attendre leurs résultats. Une ancienne CI verte ne valide pas un nouveau commit. Diagnostiquer
    les échecs et préparer les corrections sans affaiblir les contrôles ; toute relance attend la
    demande du propriétaire.
-4. Présenter le résultat local pour revue avec le statut exact des contrôles. Lorsque la CI n'a pas
+4. **Avant toute fusion vers `main`, annoncer ce qui change en production** : la production n'est pilotée que par
+   `docker-compose.yml` et le `.env` du serveur. Comparer la PR à ces deux fichiers et à `.env.example`, puis lister les
+   variables à ajouter, modifier ou retirer, les ports, volumes, réseaux, images et tags modifiés et les étapes de migration,
+   ou écrire « aucun changement de compose ni de `.env` ».
+5. Présenter le résultat local pour revue avec le statut exact des contrôles. Lorsque la CI n'a pas
    été demandée, indiquer qu'elle reste à exécuter. La livraison validée par CI exige les contrôles
    requis verts sur le dernier commit. Appliquer l'autorisation
    de fusion donnée par le propriétaire ; lorsqu'il demande à revoir d'abord, attendre son retour.
-5. Après une fusion autorisée, vérifier `main`, les branches locales et distantes et l'état du dépôt.
+6. Après une fusion autorisée, vérifier `main`, les branches locales et distantes et l'état du dépôt.
    Appliquer le nettoyage de branches demandé uniquement aux branches concernées ; préserver les
    chantiers séparés expressément conservés. Le déploiement suit son autorisation et sa procédure.
-6. Donner un bilan autonome : résultat, vérifications locales, CI, observations navigateur, statut
+7. Donner un bilan autonome : résultat, vérifications locales, CI, observations navigateur, statut
    de livraison et limites restantes. Distinguer toujours preuve locale, CI, revue métier et production.

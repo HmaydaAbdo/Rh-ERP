@@ -23,6 +23,13 @@ Publier les changements destinés à `main` sur la branche head de la PR existan
 ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine définie dans
 [`conventions/workflow.md`](conventions/workflow.md).
 
+Principes d'ingénierie (décision du 2026-11-03), à appliquer dès l'ouverture d'une tâche : abstraction à sa place (c'est à
+Claude de proposer l'abstraction officielle de chaque cas d'usage, registre dans
+[`conventions/ingenierie-agentique.md`](conventions/ingenierie-agentique.md)), bon framework, bon outillage, transfert
+technologique voulu (A2UI pour l'interface agentique, à pleine capacité, au-dessus d'AG-UI), objectif permanent de 0 % de code
+fait maison suivi dans l'épopée E10 (KAN-23), application agentique au niveau de la page (l'agent ne navigue pas), et site de
+documentation à jour à la fin de chaque épopée.
+
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 

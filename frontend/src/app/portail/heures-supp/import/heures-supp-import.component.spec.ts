@@ -1,4 +1,4 @@
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { Component, input, model, WritableSignal } from '@angular/core';
 import { of, throwError } from 'rxjs';
@@ -8,6 +8,7 @@ import { EmployeeReferenceService } from '../../../shared/reference-data/employe
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
 import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
+import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppImportAnalyse, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppImportComponent } from './heures-supp-import.component';
@@ -25,7 +26,9 @@ class LazySelectStub {
 
 interface ImportApi {
   etape: WritableSignal<number>;
-  mois: WritableSignal<Date | null>;
+  periode: WritableSignal<string>;
+  modeleOuvert: WritableSignal<boolean>;
+  fermer(): void;
   chantierId: WritableSignal<number | null>;
   chantierLibelle: WritableSignal<string>;
   fichier: WritableSignal<File | null>;
@@ -91,6 +94,7 @@ describe('HeuresSuppImportComponent', () => {
       providers: [
         provideRouter([]),
         { provide: HeuresSuppService, useValue: service },
+        { provide: PaieService, useValue: { listerPeriodes: () => of([{ periode: '2026-09' }, { periode: '2026-10' }]) } },
         { provide: ConfirmDialogService, useValue: confirmation },
         { provide: ChantierReferenceService, useValue: chantierReference },
         { provide: EmployeeReferenceService, useValue: employeeReference },
@@ -106,17 +110,27 @@ describe('HeuresSuppImportComponent', () => {
     fixture.detectChanges();
   });
 
-  it('commence à l’étape de choix du mois et du chantier', () => {
+  it('commence au chantier, avec le mois de la dernière paie figé et affiché', () => {
     expect(api.etape()).toBe(1);
-    expect(document.body.textContent).toContain('Choisir le mois et le chantier');
+    expect(api.periode()).toBe('2026-10');
+    expect(document.body.textContent).toContain('Mois de la paie');
+    expect(document.body.textContent).toContain('Suivant');
+    expect(document.body.textContent).not.toContain('Retour aux heures supplémentaires');
+    expect(document.body.querySelector('stp-month-input')).toBeNull();
+  });
+
+  it('revient à la liste quand le dialogue se ferme', () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    api.fermer();
+    expect(navigate).toHaveBeenCalledWith(['/heures-supp']);
   });
 
   it('parcourt les quatre étapes par les boutons affichés', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.choisirChantier(4);
     service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
     fixture.detectChanges();
-    const boutonContexte = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Vérifier la paie')) as HTMLButtonElement;
+    const boutonContexte = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Suivant')) as HTMLButtonElement;
     boutonContexte.click();
     fixture.detectChanges();
     expect(api.etape()).toBe(2);
@@ -201,7 +215,7 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('bloque l’étape suivante si la paie mensuelle manque', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.choisirChantier(4);
     service['verifierPrerequis'].mockReturnValue(of({ pret: false, message: 'Importez d’abord la paie.' }));
 
@@ -212,7 +226,7 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('ignore les actions incomplètes et affiche les erreurs de contrôle du contexte', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.verifierContexte();
     api.analyser();
     api.corriger();
@@ -226,7 +240,7 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('ouvre l’étape fichier uniquement après le contrôle de paie', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.choisirChantier(4);
     service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
 
@@ -237,14 +251,19 @@ describe('HeuresSuppImportComponent', () => {
     expect(chantierReference.fetchById).toHaveBeenCalledWith(4);
   });
 
-  it('ne mentionne pas le modèle Excel dans les étapes du wizard', () => {
+  it('propose de voir le modèle Excel sans le décrire dans l’étape du pointage', () => {
     api.etape.set(2);
     fixture.detectChanges();
-    expect(document.body.textContent).not.toContain('Télécharger le modèle Excel');
+    expect(document.body.textContent).toContain('Pointage heures supp');
+    expect(document.body.textContent).toContain('Voir le modèle Excel');
+    expect(document.body.textContent).not.toContain('Excel attendu');
+    api.modeleOuvert.set(true);
+    fixture.detectChanges();
+    expect(document.body.textContent).toContain('Nom et prénom');
   });
 
   it('valide le format des forfaits puis analyse avec le montant décimal', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
     api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 12.5 }]);
@@ -284,7 +303,7 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('envoie les créations et les alignements après validation des champs', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
     api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 12.5 }]);
@@ -342,7 +361,7 @@ describe('HeuresSuppImportComponent', () => {
   });
 
   it('confirme un remplacement audité, peut basculer les alignements et relaie les erreurs serveur', () => {
-    api.mois.set(new Date(2026, 9, 1));
+    api.periode.set('2026-10');
     api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
     api.choisirChantier(4);
     api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 500 }]);
