@@ -65,6 +65,13 @@ Le SDK active par défaut la protection contre le DNS rebinding et n'accepte que
 * Le schéma d'entrée est déduit des annotations. Paramètres décrits avec `Annotated[..., Field(description=..., ge=..., le=...)]` et énumérations `Literal` ;
   le SDK valide avant l'appel de la fonction (une borne dépassée renvoie une erreur d'outil). Retours typés (modèle Pydantic ou `dict` typé) pour un schéma de sortie.
 * Le nom est préfixé par le domaine (`paie_rechercher_bulletins`) ; la description dit quand l'utiliser et quand préférer l'outil voisin (règle de `mcp.md`).
+* **Chaque réglage de la définition cite sa source officielle** (règle « Aucun choix arbitraire » d'`AGENTS.md`). Ce que le SDK 2.x documente : le nom vient de la fonction et la
+  description de la docstring (`name=` et `description=` sont acceptés pour les surcharger) ; les annotations de types **sont** le schéma d'entrée ; `title=` donne le nom lisible
+  des interfaces ; `annotations=` porte `read_only_hint`, `open_world_hint`, et `destructive_hint` / `idempotent_hint` pour un outil qui écrit. Ces annotations sont des
+  **indications, pas de la sécurité** : aucun contrôle ne repose sur elles. Les autres règles de forme (3 à 4 phrases au moins, limites d'usage, `input_examples`, réponse à fort
+  signal, erreurs correctives) sont celles du tableau « Définition des outils » de `conventions/agents-ia.md`, avec leur source.
+* En v2, un outil qui renvoie un `dict` n'est plus enveloppé automatiquement comme en v1 : le schéma de sortie et le contenu structuré se déduisent du type de retour annoté
+  (modèle Pydantic ou `dict` typé), ou se construisent explicitement par `CallToolResult(content=..., structured_content=...)`.
 * **Une fonction d'outil appelle la façade `api.py` du domaine** et rien d'autre : pas de `select()`, pas de calcul, pas d'arrondi dans l'adaptateur.
 * Le paramètre `ctx: Context` est exclu du schéma ; il donne l'identifiant de requête pour la corrélation des journaux et le contexte de durée de vie. Le contexte
   typé (`Context[AppContext]`) donne accès aux ressources du `lifespan` du serveur MCP ; l'accès aux données reste celui du domaine (dépendances de session de `main.py`),
