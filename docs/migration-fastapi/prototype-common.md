@@ -56,3 +56,21 @@ Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/s
   `PGAUDIT_ENABLED=true` en production, comme aujourd'hui.
 - **Tests** (3, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et des
   données de référence, droits du compte applicatif sur l'audit, estampillage d'une base existante.
+
+### Vérification sur une vraie base Flyway (2026-11-03)
+
+Sauvegarde chiffrée de production du 2026-11-03 02:00 (`backups/`, déchiffrée avec l'identité du propriétaire, sommes de contrôle
+valides), restaurée dans un PostgreSQL jetable (pgvector 0.8.7-pg18, supprimé ensuite, copies en clair supprimées).
+
+- La production est à **V41** (41 migrations réussies). Les scripts V42, V43 et V44 ont été appliqués sur la copie avant
+  comparaison : ils passent sur les données réelles.
+- `pg_dump --schema-only` de la copie et d'une base neuve construite par Alembic, comparés avec
+  `scripts/migration/comparer-schemas.py` : **identiques** (798 lignes de définition, dans le même ordre ; hors historiques de
+  migration et pgaudit, extension de production absente de l'image d'essai).
+- Les contraintes CHECK sont comparées par colonnes et valeurs, car PostgreSQL 17 (production) et 18 n'écrivent pas de la même
+  façon la même expression.
+- Données de référence : les 37 permissions, les 3 rôles et les 6 clés de paramètres sont identiques. Écart de données, pas de
+  schéma : le rôle `PAIE_MANAGER` a 58 droits en production contre 64 sur une base neuve ; les 6 droits absents sont
+  `CHANTIER_DELETE`, `EMPLOYEE_DELETE`, `EQUIPE_DELETE`, `FUNCTION_DELETE`, `PAIE_DELETE` et `PAIE_PURGE`, que V4 et V15 accordent
+  et que l'écran des rôles a pu retirer (les rôles sont modifiables). Cause non vérifiée ; à confirmer par le propriétaire. Une base
+  existante est estampillée, jamais reconstruite : ces droits retirés sont donc conservés.
