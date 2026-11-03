@@ -47,6 +47,7 @@ from langgraph.store.memory import InMemoryStore
 
 from erp_rh_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
 from erp_rh_ia.contexte import ContexteErp
+from erp_rh_ia.garde_sortie import garde_sortie
 from erp_rh_ia.surfaces import SurfacesResultats
 
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
@@ -294,7 +295,7 @@ def creer_agent(
         model=modele,
         tools=[outil for outil in outils if outil.name in OUTILS_PERMANENTS],
         system_prompt=SYSTEME,
-        middleware=[*intergiciels, _capacites_dynamiques(outils)],
+        middleware=[*intergiciels, _capacites_dynamiques(outils), garde_sortie(o.name for o in outils)],
         backend=backend,
         permissions=PERMISSIONS_FICHIERS,
         checkpointer=checkpointer,
