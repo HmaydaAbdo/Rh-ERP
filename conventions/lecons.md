@@ -49,6 +49,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Une ligne trop longue et un test frontend instable n'ont été vus qu'en CI (trois exécutions perdues, publication des images sautée). | Contrôles locaux avant la PR ; un test instable est corrigé à sa cause ou mis en quarantaine par ticket, jamais relancé jusqu'à ce qu'il passe. |
 | A2UI a été envisagé comme remplaçant d'AG-UI. | Ce sont deux couches : A2UI décrit l'interface, AG-UI connecte agent et application (événements, état, outils côté client, interruptions) et traduit les messages A2UI. Aucun ne remplace l'autre. |
 | Une liste de mois (`findDistinctPeriodeBy…`) répondait 500 en production : Spring Data lisait le nom comme une requête d'entités ; les tests de service moquaient le dépôt et ne le voyaient pas. | Une méthode de dépôt qui renvoie autre chose que l'entité s'écrit avec `@Query` explicite et se teste une fois sur une vraie base (`AuditIntegrationTestBase`). |
+| Un test d'intégration a laissé des lignes dans la base partagée et fait échouer en CI un autre test qui vide `paie`. | Tout test sur la base partagée supprime en `@AfterEach` ce qu'il a créé (hors des tables d'audit) ; vérifier en lançant le test avec ses voisins, pas seul. |
 
 ## Documentation
 

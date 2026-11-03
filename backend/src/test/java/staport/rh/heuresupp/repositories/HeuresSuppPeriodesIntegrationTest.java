@@ -1,5 +1,6 @@
 package staport.rh.heuresupp.repositories;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import staport.rh.audit.support.AuditIntegrationTestBase;
@@ -24,9 +25,20 @@ class HeuresSuppPeriodesIntegrationTest extends AuditIntegrationTestBase {
     @Autowired
     private HeuresSuppRepository repository;
 
+    private Referentiel creee;
+
+    /** La base est partagée : d'autres tests vident `paie`, les lignes d'heures supplémentaires ne doivent pas y survivre. */
+    @AfterEach
+    void nettoyer() {
+        if (creee != null) {
+            jdbc.update("DELETE FROM heures_supp WHERE chantier_id = ?", creee.chantierId());
+        }
+    }
+
     @Test
     void liste_les_mois_distincts_du_plus_recent_au_plus_ancien() {
         Referentiel ref = donnees.creerReferentiel();
+        creee = ref;
         YearMonth recent = YearMonth.of(2098, 12);
         YearMonth ancien = YearMonth.of(2098, 11);
         for (YearMonth mois : List.of(ancien, recent)) {
