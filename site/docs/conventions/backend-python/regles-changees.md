@@ -35,8 +35,10 @@ audit, tests par couches, mesures avant optimisation, accord du propriétaire po
 | Logback, rotation 30 jours | Changée → `logging` standard, JSON, rotation 30 jours conservée | Même exigence, bibliothèque standard |
 | Micrometer | Changée → OpenTelemetry Python, noms de métriques conservés | Tableaux de bord inchangés |
 | Threads virtuels / pools Java | Changée → `async def` pour les accès base, `def` ou `run_in_threadpool` pour le bloquant | Modèle de concurrence de FastAPI |
-| JasperReports / Apache POI (exports) | **Candidats** WeasyPrint et openpyxl, **non vérifiés** | Choix confirmé à KAN-47 ; parité des exports exigée |
-| Spring AI / MCP Java | **Non traitée** : la convention MCP Python n'est pas écrite | SDK MCP Python pas encore lu ; `mcp.md` s'applique jusqu'à KAN-47/48 |
+| jsoup + openhtmltopdf (PDF) | Changée → WeasyPrint, `URLFetcher` restreint, rendu dans un thread | Même approche HTML → PDF ; risque documenté d'inclusion de fichiers avec du HTML non fiable |
+| Apache POI (Excel) | Changée → openpyxl (`write_only`/`read_only`) + `defusedxml` pour les fichiers importés | Équivalent Python ; openpyxl ne protège pas par défaut des bombes XML |
+| Spring AI (serveur MCP, outils par annotations) | Changée → SDK Python MCP 2.x (`MCPServer`, `@mcp.tool()`), montée dans FastAPI | Voir [serveur MCP](./mcp.md) ; règles de `conventions/mcp.md` conservées |
+| Mode « sans état » du transport MCP | Conservée → `streamable_http_app(stateless_http=True)` | Aucun outil ne dépend d'un aller-retour serveur→client |
 | Conventions Java (`conventions/*.md` en profil Java) | Supprimées **une fois Spring retiré** | Preuve de fin de migration : aucune convention Java ne subsiste (KAN-44) |
 
 ## Règles ajoutées
@@ -48,4 +50,4 @@ audit, tests par couches, mesures avant optimisation, accord du propriétaire po
 
 ## Suivi
 
-Cette liste est reprise dans l'[ADR 0016](../../decisions/index.md) et mise à jour à chaque lecture de documentation de KAN-47 et KAN-48 (points « à confirmer »).
+Cette liste est reprise dans l'[ADR 0016](../../decisions/index.md) et mise à jour à chaque changement de convention du profil Python.

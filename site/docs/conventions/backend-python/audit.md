@@ -39,5 +39,10 @@ résultat et identifiant de corrélation. Une action sans permission valide est 
 * **Test de couverture** : tout modèle persistant est soit audité, soit présent dans une liste blanche motivée (journaux, instantanés immuables).
 * Une migration qui modifie des données auditées est testée sur PostgreSQL réel, lignes d'audit comprises.
 
-À confirmer à la relecture de KAN-47 : comportement exact de `before_flush` avec les objets en cascade et les valeurs générées par la base (identifiants), et choix entre
-`before_flush` et `after_flush` pour les clés générées (SQLAlchemy documente les deux événements ; l'ADR a retenu `before_flush`).
+## Choix des événements de session (documentation SQLAlchemy)
+
+* `before_flush` : la session peut être manipulée en sécurité (ajouter, supprimer, modifier) et ces changements entrent dans le flush. Il sert à parcourir `session.new`,
+  `session.dirty` et `session.deleted`, à lire l'état **avant** modification (historique d'attributs) et à ajouter les lignes d'audit des objets modifiés ou supprimés.
+* Un objet nouveau n'a pas encore son identifiant généré par la base dans `before_flush`. Pour ses lignes d'audit, `after_flush` (SQL émis, collections `new/dirty/deleted`
+  encore inspectables) écrit les lignes par insertion sur la connexion de la session. Les deux écouteurs sont enregistrés ensemble par un module unique de `platform/audit`.
+* Le test « création → ligne d'audit avec la bonne clé » est obligatoire : il prouve ce choix sur PostgreSQL réel.
