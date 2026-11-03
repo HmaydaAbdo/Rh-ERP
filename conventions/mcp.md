@@ -55,6 +55,10 @@ restent applicables : elles ne doivent pas servir à masquer une partie des donn
 * Une erreur dit au modèle quoi corriger (« periode attend aaaa-MM », « identifiant introuvable : chercher d'abord avec
   `chantier_rechercher` ») sans recopier la valeur saisie ni exposer d'interne.
 * Les descriptions sont évaluées comme du code : le jeu de référence mesure le bon choix d'outil et d'arguments.
+* Chaque règle de forme d'un outil (nom, titre, description, schémas, annotations, erreurs, réponses) cite sa source officielle ;
+  le tableau « Définition des outils » de [`agents-ia.md`](agents-ia.md) en est la référence unique et s'applique à tous les outils.
+* La sélection d'outils par le service IA ne remplace jamais le contrôle serveur : un outil non exposé au modèle reste appelable
+  s'il est enregistré (vérifié le 2026-11-03), donc chaque appel est refusé côté serveur et côté agent s'il n'est pas autorisé.
 
 Pour un catalogue important, l'agent peut rechercher les outils pertinents à la demande (Tool
 Search) et ne charger ensuite que leurs descriptions et schémas. La recherche doit rester bornée au

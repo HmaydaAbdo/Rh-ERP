@@ -14,15 +14,10 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 
 ## Fonctionnement
 
-- Six groupes de capacité : `ai-gateway-simple`, `ai-gateway-tool-selection`, `ai-gateway-medium`,
-  `ai-gateway-complex`, `ai-gateway-code`, `ai-gateway-ocr`. `tool-selection` ne contient que des fournisseurs
-  vérifiés avec le JSON Schema strict de `LLMToolSelectorMiddleware`; il est dédié à la sélection d'outils.
+- Cinq groupes de capacité : `ai-gateway-simple`, `ai-gateway-medium`, `ai-gateway-complex`, `ai-gateway-code`,
+  `ai-gateway-ocr`. Le groupe `ai-gateway-tool-selection` a été retiré le 2026-11-03 : le service IA choisit ses outils hors
+  modèle (compétences de Deep Agents épinglées par similarité, `docs/ia.md` T32) et n'appelle plus de modèle pour cela.
   Le client sélectionne le groupe avec le champ OpenAI `model`.
-- Le groupe `tool-selection` utilise provisoirement Groq gpt-oss-120b pour la requalification locale après
-  correction du prompt `always_include`. Son smoke test enum strict réduit passe ; les erreurs antérieures sur
-  l'enum complet doivent être requalifiées avec ce prompt corrigé avant de clôturer V1c. Gemma 4 26B a réussi
-  plusieurs cas auparavant, mais a renvoyé des 500 et des timeouts du fournisseur lors du rejeu courant ; NVIDIA
-  Nemotron 3.5 a expiré après 90 s dans le vrai middleware. Ils restent hors du groupe local courant.
   Les tags restent des métadonnées d'observation ; `enable_tag_filtering` est désactivé.
 - `simple-shuffle` et `enable_weighted_failover` utilisent les composants officiels LiteLLM pour les groupes ordinaires ;
   le groupe `ai-gateway-complex` utilise le routage officiel par latence (`latency-based-routing`, TTL 1 h), car les

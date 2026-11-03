@@ -13,7 +13,7 @@ Ne restent ici que deux protections qu'aucun framework ne fournit :
 """
 
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any, Protocol, cast
 
 import httpx
@@ -36,7 +36,12 @@ TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
-FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any] | None], CompiledStateGraph[Any, Any, Any, Any]]
+FabriqueAgent = Callable[
+    [Sequence[BaseTool], BaseCheckpointSaver[Any] | None, str], CompiledStateGraph[Any, Any, Any, Any]
+]
+
+# Routage hors modèle : les compétences de domaine à épingler pour la question (``routage.py``, sans appel de modèle).
+Routage = Callable[[str, Sequence[BaseTool]], Awaitable[list[str]]]
 
 
 class _SansDetail(logging.Filter):
@@ -63,6 +68,16 @@ class AccesErp(Protocol):
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
 
 
+def texte_question(entree: RunAgentInput) -> str:
+    """Le texte de la dernière question de l'utilisateur (la réponse à ``poser_question`` n'est pas une question)."""
+    for message in reversed(entree.messages):
+        if isinstance(message, UserMessage):
+            if isinstance(message.content, str):
+                return message.content
+            return " ".join(str(getattr(p, "text", "")) for p in message.content if getattr(p, "type", "") == "text")
+    return ""
+
+
 def verifier_question(entree: RunAgentInput) -> None:
     """422 si le dernier message n'est ni une question de l'utilisateur ni sa réponse à l'agent (résultat de l'outil
     ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long."""
@@ -85,6 +100,7 @@ async def evenements(
     outils: Sequence[BaseTool],
     memoire: BaseCheckpointSaver[Any] | None = None,
     thread_id: str | None = None,
+    utilisateur: str = "anonyme",
 ) -> AsyncGenerator[BaseEvent]:
     """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail.
 
@@ -94,7 +110,9 @@ async def evenements(
     try:
         officiel = LangGraphAGUIAgent(
             name="staport-intelligence",
-            graph=fabrique(outils, memoire or InMemorySaver()),  # mémoire durable (memoire.py) ou celle du run
+            graph=fabrique(
+                outils, memoire or InMemorySaver(), utilisateur
+            ),  # mémoire durable (memoire.py) ou celle du run
             # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
             # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
             config={"recursion_limit": 200},
@@ -135,6 +153,7 @@ def routeur_agui(
     acces: Callable[[], AccesErp],
     actif: Callable[[], bool],
     memoire: Callable[[], BaseCheckpointSaver[Any]] | None = None,
+    routage: Callable[[], Routage] | None = None,
 ) -> APIRouter:
     routeur = APIRouter()
 
@@ -154,7 +173,9 @@ def routeur_agui(
         # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
         # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
         fil = espace_conversation(sujet(jeton), entree.thread_id)
-        entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+        # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
+        epinglees = await routage()(texte_question(entree), outils) if routage else []
+        entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
@@ -165,6 +186,7 @@ def routeur_agui(
                 outils,
                 memoire() if memoire and not suggestion_sans_etat else None,
                 entree.thread_id,
+                sujet(jeton),
             ):
                 yield encodeur.encode(evenement)
 

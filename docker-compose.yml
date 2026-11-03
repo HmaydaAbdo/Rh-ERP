@@ -225,6 +225,22 @@ services:
       start_period: 5s
       retries: 3
 
+  # Documentation (site statique Docusaurus, voir site/). Aucune dépendance : ni base ni backend.
+  docs:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-docs:${DOCS_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - web-net
+    ports:
+      # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (docs/deployment.md).
+      - "127.0.0.1:${DOCS_PORT:-5003}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
   # --- IA (voir docs/ia.md) ---------------------------------------------------------------------
   # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
   # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.

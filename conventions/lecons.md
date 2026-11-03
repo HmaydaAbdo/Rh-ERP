@@ -37,6 +37,13 @@ seule fois, ici. Format : constat, cause, règle.
 | Le comportement d'un framework a été affirmé de mémoire. | Lire la page officielle ou le code source en entier avant d'affirmer ; sinon écrire « non vérifié » (règle d'`AGENTS.md`). |
 | Un tableau a été livré avec un tri qui ne changeait que la page affichée, des vues sans recherche et sans export. | Tri, recherche et export PDF (mêmes filtres et tri que l'écran) sont exigés dans tout tableau et tout domaine, y compris pendant une migration : voir `conventions/frontend.md`, section « Tri, recherche et export ». |
 | Des tests unitaires ont été réécrits pour passer au lieu de corriger la cause. | Corriger la cause ; ne pas affaiblir une assertion métier. |
+| Une borne de contexte (7 outils par compétence) a été présentée comme une limite de capacité, ce qui a fait craindre des scénarios sans outil. | Écrire dans la règle ce que le nombre borne (schémas par domaine) et ce qu'il ne borne pas (le total d'un tour, les domaines atteignables par le repli) ; un test de couverture prouve que chaque scénario garde ses outils. |
+| Un test d'API lançait le vrai modèle d'embeddings de routage. | Injecter le routage dans `creer_app` pour les tests d'API ; un seul test charge le vrai modèle (MiniLM, préchargé dans l'image Docker, jamais téléchargé au démarrage). |
+| Le prompt seul n'a pas suffi contre l'injection : deux cas (consigne dans le prompt système, consigne dans le texte cité) échouaient encore une fois sur trois. | Une règle de prompt demande au modèle de se retenir, elle ne l'y oblige pas. Toute protection contre une fuite (prompt, noms d'outils, valeur interdite) est doublée d'un contrôle déterministe de la réponse avant envoi ; le prompt ne sert qu'à réduire la fréquence. |
+| L'agent a inventé le libellé d'une fonction que l'outil ne renvoyait pas. | La description de chaque outil dit ce que la réponse contient et ce qu'elle ne contient pas, et que l'agent s'abstient quand un champ manque. Le critère `fondement` du banc vérifie les libellés comme les chiffres. |
+| Un mois de paie non importé a été présenté comme une masse de 0 MAD. | Un outil dont l'absence de donnée se confond avec zéro l'écrit dans sa description et indique l'outil de vérification (ici `paie_periodes`). |
+| Un cas homonyme a été résolu en prenant le premier résultat. | Plusieurs correspondances : l'agent demande une précision, il ne choisit pas au hasard (règle de prompt, cas du jeu). |
+| Les défauts d'un domaine ne sont apparus qu'avec 60 cas × 3 essais et la lecture des traces. | Tout nouveau domaine suit la procédure de `conventions/agents-ia.md`, section « Intégrer un nouveau domaine à l'agent » : cas ajoutés au jeu avant la livraison, traces lues, descriptions d'outils corrigées à partir des traces. |
 
 ## Documentation
 
@@ -44,3 +51,6 @@ seule fois, ici. Format : constat, cause, règle.
 |---|---|
 | Des nombres écrits en dur dans la documentation (versions, nombre d'outils MCP, seuils) devenaient faux. | Les faits vérifiables sont dans `scripts/ia/verrous.txt` ; `scripts/ia/check-docs-code.mjs` les compare au code en CI. Un nouveau fait de ce type y est ajouté. |
 | Des fichiers supprimés ont perdu des informations utiles. | Avant de supprimer un document, vérifier que chacune de ses informations durables figure ailleurs ; indiquer le commit qui le conserve (`git show <commit>:<chemin>`). |
+| Le banc d'évaluation réel contournait le routage (aucune compétence épinglée) : il mesurait le seul repli, +1 tour de modèle presque partout. | Tout banc doit construire l'état d'entrée comme le service (`pinned_skills` calculé par `Routeur`) ; vérifier qu'un changement de chemin d'exécution est bien celui que mesure le banc. |
+| Un critère « l'outil exact attendu doit être appelé » faisait échouer des réponses justes par un autre chemin et bridait l'agent. | Le jeu juge le résultat (valeurs, fondement, sécurité, juge) ; la trajectoire est rapportée seulement. Un banc d'un seul passage de 24 cas cachait l'instabilité et les failles (injection, noms d'outils, premier homonyme pris au hasard) : 60 cas jouées 3 fois les ont révélées. |
+

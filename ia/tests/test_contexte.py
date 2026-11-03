@@ -40,8 +40,8 @@ async def test_le_contexte_donne_le_dernier_mois_et_le_catalogue_autorise() -> N
     systeme = await _systeme(["PAIE_READ", "EMPLOYEE_READ", "IA_UTILISER"])
 
     assert "Dernier mois de paie importé : 2026-09" in systeme
-    assert "Outil de test paie_periodes" in systeme
-    assert "Outil de test systeme_identite" not in systeme
+    assert "- paie : Paie" in systeme  # une ligne par domaine accessible, pas une ligne par outil
+    assert "Outil de test" not in systeme
     assert "PAIE_READ" not in systeme
     assert "IA_UTILISER" not in systeme
     assert f"Date du jour : {date.today().isoformat()}" in systeme
@@ -51,7 +51,7 @@ async def test_sans_droit_de_paie_le_mois_n_est_pas_demande() -> None:
     systeme = await _systeme(["EMPLOYEE_READ"])
 
     assert "Dernier mois de paie" not in systeme
-    assert "Outil de test paie_periodes" not in systeme
+    assert "- paie : Paie" not in systeme
 
 
 async def test_un_outil_absent_ou_en_panne_laisse_un_contexte_plus_court() -> None:

@@ -7,11 +7,17 @@ import json
 from collections.abc import AsyncIterator, Callable, Sequence
 from typing import Any, cast
 
+from deepagents import register_harness_profile
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import Field
+
+from erp_rh_ia.agent import PROFIL_HARNAIS
+
+# Le profil d'harnais de l'ERP (agent.py) s'applique au fournisseur du faux modèle comme à celui de ChatLiteLLM.
+register_harness_profile("modelescripte", PROFIL_HARNAIS)
 
 INDICATEURS = {
     "periode": "2026-09",
@@ -21,7 +27,7 @@ INDICATEURS = {
 
 
 class ModeleScripte(FakeMessagesListChatModel):
-    """Rejoue des réponses dans l'ordre ; ``bind_tools`` (exigé par ``create_agent``) garde la trace des outils liés."""
+    """Rejoue des réponses dans l'ordre ; ``bind_tools`` (exigé par Deep Agents) garde la trace des outils liés."""
 
     vus: list[list[BaseMessage]] = Field(default_factory=lambda: list[list[BaseMessage]]())
     outils_lies: list[list[str]] = Field(default_factory=lambda: list[list[str]]())

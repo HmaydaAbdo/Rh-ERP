@@ -33,7 +33,8 @@ public class OutilsAccueil {
                     Rend les indicateurs affichés sur l'écran d'accueil de l'utilisateur pour qui tu agis (dans leur ordre) et ceux \
                     qu'il peut y ajouter, avec libellé et explication. À appeler quand l'utilisateur demande ce que contient son \
                     accueil ou quels indicateurs il peut y mettre. Les valeurs des indicateurs se lisent avec les outils paie_* et \
-                    employes_*.""",
+                    employes_*. \
+                    Ne rend pas les valeurs des indicateurs : pour leurs valeurs, `paie_indicateurs` ou `employes_compter`. Sans paramètre ; la liste est rendue en entier, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('ACCUEIL_READ')")

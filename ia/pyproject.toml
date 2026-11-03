@@ -26,6 +26,8 @@ dependencies = [
     "openinference-instrumentation-langchain==0.1.81",
     "langgraph-checkpoint-postgres>=3.2.0",
     "psycopg[binary,pool]>=3.3.6",
+    "deepagents>=0.7.32",
+    "fastembed>=0.9.1",
 ]
 
 [dependency-groups]

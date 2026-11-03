@@ -86,13 +86,16 @@ public class OutilsEmploye {
                     DATE_NAISSANCE, SALAIRE si la paie est \
                     visible ; `sens` ASC ou DESC) et paginable (`page`) : « les cinq derniers embauchés » se demande avec \
                     tri DATE_EMBAUCHE, sens DESC, limite 5. Pour seulement compter ou répartir des employés, préférer \
-                    `employes_compter` ou `employes_regrouper`.""",
+                    `employes_compter` ou `employes_regrouper`. Citer les libellés (fonction, chantier, équipe) tels que \
+                    rendus, jamais de mémoire : un champ absent du résultat reste inconnu.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     @AuditableAction(action = "MCP_EMPLOYES_RECHERCHER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
     public Map<String, Object> employesRechercher(
-            @McpToolParam(required = false, description = "Nom et/ou prénom, partiel (2 caractères au moins).")
+            @McpToolParam(required = false, description = "Nom et/ou prénom (2 caractères au moins), recherche partielle. "
+                    + "Passer le nom en entier, tel que l'utilisateur l'a écrit : un fragment commun renvoie plusieurs "
+                    + "employés ; si le total rendu dépasse 1, plusieurs employés correspondent.")
             @Size(min = 2, max = 150) String nom,
             @McpToolParam(required = false, description = "CIN (carte d'identité nationale), partiel (2 caractères au moins).")
             @Size(min = 2, max = 30) String cin,
@@ -152,7 +155,8 @@ public class OutilsEmploye {
                     Lit la fiche complète d'un employé à partir de son identifiant : CIN, dates de naissance et d'embauche, \
                     fonction, chantier, équipe, statut, et la liste de ses départs enregistrés (période et motif) ; le salaire \
                     seulement avec le droit de voir la paie. Identifiant inconnu : le chercher d'abord avec \
-                    `employes_rechercher`. Pour l'historique mois par mois, utiliser `employe_parcours`.""",
+                    `employes_rechercher`. Pour l'historique mois par mois, utiliser `employe_parcours`. \
+                    Rend un seul employé, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -179,7 +183,8 @@ public class OutilsEmploye {
                     sortis, âge moyen et ancienneté moyenne en années, embauches des 12 derniers mois et répartition par \
                     tranches d'âge et d'ancienneté. Mêmes chiffres que la vue Analytique des employés ; aucun salaire. État \
                     courant des fiches (issu du dernier mois de paie importé), pas un historique : pour l'évolution d'un mois à \
-                    l'autre, utiliser `paie_mouvements`. Pour les chiffres d'un seul groupe, filtrer par identifiants.""",
+                    l'autre, utiliser `paie_mouvements`. Pour les chiffres d'un seul groupe, filtrer par identifiants. \
+                    Rend un seul résultat agrégé, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -265,7 +270,8 @@ public class OutilsEmploye {
                     Liste les départs de l'entreprise constatés par la paie d'un mois (soldes de tout compte et absences \
                     confirmées) : nombre total, nombre par motif et la liste complète des employés concernés. Un départ \
                     ancien sans motif est compté « NON_PRECISE ». À ne pas confondre avec les « plus payés » de \
-                    `paie_mouvements`, qui comptent aussi les absences non confirmées.""",
+                    `paie_mouvements`, qui comptent aussi les absences non confirmées. \
+                    Un mois par appel (`periode`, absent = dernier mois de paie importé) ; la liste est rendue en entier.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
@@ -292,7 +298,8 @@ public class OutilsEmploye {
                     dirhams, jours travaillés, premier et dernier mois), tous ses mois (chantier, équipe, fonction, \
                     jours, salaires, observation) et ses événements (entrée, mutation, changement de salaire, départ, retour). \
                     Réservé aux utilisateurs qui voient la paie. Identifiant inconnu : le chercher d'abord avec \
-                    `employes_rechercher`.""",
+                    `employes_rechercher`. \
+                    Un seul employé par appel ; tous ses mois et événements sont rendus, sans pagination.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")

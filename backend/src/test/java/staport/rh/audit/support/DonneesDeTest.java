@@ -92,6 +92,12 @@ public class DonneesDeTest {
      * Donne à l'employé le salaire de ses bulletins (3 000 MAD, mensuel), comme le ferait l'import de paie : l'employé
      * porte l'état de son dernier mois (ADR 0010), que {@link #creerBulletin} n'applique pas.
      */
+    /** Donne à l'employé un nom réaliste (les évaluations de l'agent posent des questions en langage naturel). */
+    public void renommerEmploye(Referentiel ref, String nomPrenom) {
+        transaction.executeWithoutResult(statut -> entityManager.find(Employee.class, ref.employeId())
+                .setNomPrenom(nomPrenom));
+    }
+
     public void renseignerSalaire(Referentiel ref) {
         transaction.executeWithoutResult(statut -> {
             Employee employe = entityManager.find(Employee.class, ref.employeId());

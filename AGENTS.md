@@ -30,8 +30,8 @@ Une tâche n'est terminée que lorsque le code, la documentation et les conventi
 
 Deux règles imposées par le propriétaire, sans exception :
 
-- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, LangChain,
-  LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
+- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, **Deep Agents**,
+  LangChain, LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
   réécrire ce qu'un framework fournit déjà, même partiellement, ni copier le comportement d'un de ses composants.
   Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
   branché sur un point d'extension officiel. Si un besoin semble exiger du code maison, présenter d'abord au
@@ -46,6 +46,23 @@ Deux règles imposées par le propriétaire, sans exception :
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
+- **Deep Agents est le point d'entrée de tout agent (décision du 2026-11-03).** Tout agent se construit avec `create_deep_agent` et ses paramètres
+  documentés (`tools`, `middleware`, `subagents`, `backend`, profils d'harnais) ; `create_agent` de LangChain n'est plus utilisé directement
+  pour un nouvel agent, et le service existant migre (tâche T33 de `docs/ia.md`). Les composants LangChain et LangGraph servent à travers lui.
+- **Catalogue d'outils : sélection juste-à-temps bornée, jamais de chargement global.** Aucun agent (Deep Agents, sous-agent,
+  sous-graphe LangGraph) ne reçoit le catalogue MCP entier : 5 à 7 schémas métier hydratés par tour, choisis hors modèle après
+  le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base. Mécanisme officiel Deep Agents : outils de compétence
+  protégés (`SkillsMiddleware`, `metadata.include_tools`, résolveur lié à l'identité) et épinglage (`pinned_skills`) ; repli par lecture du
+  `SKILL.md` par le modèle. Aucun outil métier n'est passé directement à `tools=`. **Aucun plafond de domaines épinglés par tour, aucun
+  ordre ni étape imposés** : le routage ne fait que rendre des outils visibles, l'agent choisit seul ses appels et leur enchaînement.
+  L'espace de fichiers d'un agent est propre à l'identité de l'utilisateur (`backend_par_identite`), l'écriture ne s'ouvre que par l'épopée d'écriture.
+  **Toute fonctionnalité et toute capacité de Deep Agents, LangGraph et LangChain s'utilise, strictement** (registre des capacités
+  dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
+  [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,
+  de catalogue, de graphe, de prompt ou de modèle déroule son protocole d'évaluation en quatre dimensions (contexte, latence,
+  sûreté des schémas, visibilité du plan) avant le code. **L'évaluation juge le résultat, jamais le chemin** : aucun cas ne
+  impose un outil, un ordre ou un nombre d'appels (la trajectoire n'est que rapportée) ; critères bloquants, répétitions
+  (`pass^3`) et juge LLM dans [`conventions/agents-ia.md`](conventions/agents-ia.md), « Critères d'évaluation de l'agent ».
 - **Documentation officielle lue, jamais supposée.** Aucune affirmation sur le comportement, la version, la
   compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
@@ -56,6 +73,15 @@ Deux règles imposées par le propriétaire, sans exception :
   jour, avant d'écrire ou d'affirmer quoi que ce soit, même pour une bibliothèque connue. Les serveurs de documentation
   dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `docs/ia/decisions.md`) complètent Context7 ; ils ne
   le remplacent pas pour le reste.
+- **Aucun choix arbitraire : tout style, format, nom, structure ou réglage se justifie par la source officielle (décision du
+  2026-11-03).** Style de code, format d'un fichier, forme d'une définition d'outil (nom, titre, description, schémas
+  d'entrée et de sortie, annotations, messages d'erreur, forme des réponses), seuil, paramètre ou bibliothèque : chacun cite la
+  page officielle du framework ou le guide de l'éditeur qui le recommande (style de code : le guide du langage ou de
+  l'outil de formatage officiel ; outils d'agents : spécification MCP, documentation LangChain / Deep Agents, guides
+  Anthropic). Sans source, le choix n'est pas fait : on le propose au propriétaire avec l'option officielle ou l'absence
+  d'option. Une règle de convention porte sa source ; une règle sans source est une dette inscrite dans
+  `conventions/lecons.md` jusqu'à ce qu'elle en ait une. Cette règle s'applique à tous les outils existants, qui sont audités
+  contre elle (voir `conventions/agents-ia.md`, « Définition des outils »).
 - **Jira et le code, seules sources de suivi.** Le suivi des tâches (statut, preuve, historique) vit dans le projet Jira
   `KAN` (site `staport.atlassian.net`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`). Les épopées E0 à E19 y sont des
   epics et chaque tâche porte son préfixe (`E12.4 — …`) et sa « preuve de terminé ». **Aucun fichier markdown ne suit
