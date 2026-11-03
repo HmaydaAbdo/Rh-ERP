@@ -101,7 +101,7 @@ public class HeuresSuppExportPdfService {
     private Document construire(HeuresSuppExportRequestDto requete, List<HeureSuppResponseDto> lignes) {
         Document doc = Document.createShell("");
         doc.head().appendElement("style").appendChild(new DataNode(css));
-        String titre = "Heures supplémentaires" + (requete.periode() == null ? "" : " — " + moisEnToutesLettres(requete.periode()));
+        String titre = "Heures supplémentaires" + (requete.moisDemandes().isEmpty() ? "" : " — " + requete.moisDemandes().stream().map(HeuresSuppExportPdfService::moisEnToutesLettres).collect(java.util.stream.Collectors.joining(", ")));
         String contexte = contexte(requete, lignes);
         List<String[]> filtres = filtres(requete, lignes);
 
