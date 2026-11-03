@@ -930,7 +930,10 @@ Un domaine n'est livré à l'agent qu'après ces étapes, qui reprennent les dé
    instables ou refusés sont lus dans leurs traces ; la correction vise l'outil, la description ou le
    contrôle déterministe avant le prompt.
 4. **Protections déterministes.** Fuite de prompt, noms d'outils et valeurs interdites sont contrôlés
-   hors du modèle ; une règle de prompt ne suffit jamais seule.
+   hors du modèle ; une règle de prompt ne suffit jamais seule. `ia/src/erp_rh_ia/garde_sortie.py` est le
+   `after_agent` officiel de LangChain qui remplace une réponse finale reproduisant le message système ou nommant
+   un outil ; le texte est déjà diffusé en flux à ce moment, la garde protège l'historique conservé et les sorties
+   non diffusées. Un nouveau domaine n'a rien à ajouter : la garde lit le catalogue d'outils de l'utilisateur.
 5. **Seuils.** Le changement passe `SEUILS` (taux de réussite, pass^k, aucun cas en échec aux trois essais,
    sécurité complète) avant la PR ; le catalogue `catalogue_mcp.json` est régénéré.
 

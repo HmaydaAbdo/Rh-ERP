@@ -86,7 +86,8 @@ public class OutilsEmploye {
                     DATE_NAISSANCE, SALAIRE si la paie est \
                     visible ; `sens` ASC ou DESC) et paginable (`page`) : « les cinq derniers embauchés » se demande avec \
                     tri DATE_EMBAUCHE, sens DESC, limite 5. Pour seulement compter ou répartir des employés, préférer \
-                    `employes_compter` ou `employes_regrouper`.""",
+                    `employes_compter` ou `employes_regrouper`. Citer les libellés (fonction, chantier, équipe) tels que \
+                    rendus, jamais de mémoire : un champ absent du résultat reste inconnu.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
