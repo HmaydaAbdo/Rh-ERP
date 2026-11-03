@@ -5,8 +5,10 @@
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
 le vrai agent (``create_deep_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
-répond sans s'abstenir et cite chaque valeur attendue — ou s'abstient (ou signale le refus) quand le cas l'exige. La
-trajectoire d'outils est comparée par ``agentevals`` (l'outil attendu doit figurer parmi les appels) et rapportée.
+répond sans s'abstenir et cite chaque valeur attendue, après avoir consulté au moins un outil — ou s'abstient (ou
+signale le refus) quand le cas l'exige. Le chemin est libre : la trajectoire n'est jamais un critère de réussite
+(la documentation LangChain note qu'il existe souvent plusieurs chemins corrects) ; la comparaison ``agentevals`` à
+l'outil de référence est seulement rapportée (``trajectoire_attendue``) pour l'analyse.
 
 Variables : ``EVAL_API_URL`` (racine de l'API ERP-RH), ``EVAL_JETON_COMPLET`` et ``EVAL_JETON_RESTREINT`` (jetons de
 connexion REST, échangés contre un jeton agent à chaque question), ``EVAL_DONNEES`` (JSON des marqueurs),
@@ -75,6 +77,8 @@ class ResultatCas:
     outils: list[str] = field(default_factory=lambda: [])
     abstention: bool = False
     reponse: str = ""
+    #: Information seulement : l'agent a-t-il appelé l'outil de référence ? Jamais un critère de réussite.
+    trajectoire_attendue: bool = False
 
 
 @dataclass(frozen=True)
@@ -256,7 +260,15 @@ async def evaluer_cas(
     latence = time.monotonic() - debut
     succes, raison = juger(type_cas, outils_attendus, attendus, reponse)
     return ResultatCas(
-        cas["id"], type_cas, succes, raison, round(latence, 2), reponse.outils, reponse.abstention, reponse.texte
+        cas["id"],
+        type_cas,
+        succes,
+        raison,
+        round(latence, 2),
+        reponse.outils,
+        reponse.abstention,
+        reponse.texte,
+        reponse.outil_attendu_appele,
     )
 
 
@@ -271,14 +283,13 @@ def juger(type_cas: str, outils_attendus: Any, attendus: list[tuple[str, Any]], 
         return False, "vérité absente des données synthétiques"
     manquants = [str(valeur) for type_attendu, valeur in attendus if not cite(type_attendu, valeur, reponse.texte)]
     appeles = ", ".join(reponse.outils) or "aucun"
-    if outils_attendus and not reponse.outil_attendu_appele:
-        noms = ", ".join([outils_attendus] if isinstance(outils_attendus, str) else outils_attendus)
-        return False, f"outil métier attendu non appelé ({noms}; outils : {appeles})"
+    if attendus and not reponse.outils:
+        return False, "réponse sans avoir consulté aucun outil"
     if manquants:
         motif = "abstention" if reponse.abstention else "valeur(s) absente(s)"
         return False, f"{motif} : {', '.join(manquants)} (outils : {appeles})"
-    # Les valeurs citées sont celles de l'outil attendu : la réponse est juste, même trouvée par un autre chemin.
-    return True, "conforme" if reponse.outil_attendu_appele else f"conforme (outils : {appeles})"
+    # Les valeurs citées sont celles de l'outil de référence : la réponse est juste, quel que soit le chemin suivi.
+    return True, "conforme"
 
 
 def cause(panne: BaseException) -> str:
