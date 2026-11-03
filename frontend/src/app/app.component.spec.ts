@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import type { MockInstance } from 'vitest';
 import { ConfirmDialogService, NotificationService } from '@shared/ui/feedback/feedback.service';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
@@ -75,19 +76,22 @@ describe('AppComponent', () => {
       contenuConcurrent.id = 'contenu';
       document.body.append(contenuConcurrent);
       document.body.append(host);
+      let focus: MockInstance<HTMLElement['focus']> | undefined;
       try {
         fixture.detectChanges();
         const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
-        const contenu = host.querySelector<HTMLElement>('main#contenu');
-        expect(contenu).not.toBeNull();
-        // Le focus réel dépend de l'état de la fenêtre du navigateur pendant la suite complète : on vérifie
-        // que le lien le demande au <main> du composant (et non au <p id="contenu"> concurrent).
-        const focus = vi.spyOn(contenu as HTMLElement, 'focus');
+        expect(host.querySelector('main#contenu')).not.toBeNull();
+        // Le focus réel dépend de l'état de la fenêtre du navigateur pendant la suite complète : on vérifie que le
+        // lien le demande au <main> du composant (et non au <p id="contenu"> concurrent). L'espion est sur le
+        // prototype : il ne dépend pas de l'instance du <main>, que le composant peut recréer avant le clic.
+        focus = vi.spyOn(HTMLElement.prototype, 'focus');
         lien?.click();
 
         expect(lien?.textContent).toContain('Aller au contenu');
         expect(focus).toHaveBeenCalledTimes(1);
+        expect(focus.mock.contexts[0]).toBe(host.querySelector('main#contenu'));
       } finally {
+        focus?.mockRestore();
         fixture.destroy();
         contenuConcurrent.remove();
         host.remove();
