@@ -99,7 +99,7 @@
   "file": "OutilsPaie.java",
   "name": "paie_indicateurs",
   "title": "Indicateurs de paie d'un mois",
-  "description": "Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale en dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de tout compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et tous les chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`."
+  "description": "Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale en dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de tout compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et tous les chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`. Un mois non importé rend des valeurs à zéro qui signifient « aucune donnée », pas une masse nulle : vérifier les mois importés avec `paie_periodes`."
  },
  {
   "file": "OutilsPaie.java",

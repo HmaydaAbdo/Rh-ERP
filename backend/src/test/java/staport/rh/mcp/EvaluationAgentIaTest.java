@@ -46,7 +46,7 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
     private IEmployeeService employes;
 
     @Test
-    @Timeout(value = 40, unit = TimeUnit.MINUTES)
+    @Timeout(value = 160, unit = TimeUnit.MINUTES)
     void l_agent_est_evalue_sur_le_jeu_de_reference() throws Exception {
         assumeTrue(Boolean.getBoolean("ia.evaluation"), "Lancer avec -Dia.evaluation=true (passerelle LiteLLM requise)");
         assumeTrue(System.getenv("IA_LITELLM_BASE_URL") != null && System.getenv("IA_LITELLM_API_KEY") != null,
@@ -63,6 +63,10 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
             donnees.creerBulletin(ref, moisB);
         }
         donnees.renseignerSalaire(a);
+        // Noms réalistes : l'agent est évalué sur des questions en langage naturel, pas sur des étiquettes de test.
+        donnees.renommerEmploye(a, "Karim Bennani");
+        donnees.renommerEmploye(b, "Salma El Idrissi");
+        donnees.renommerEmploye(c, "Youssef Tazi");
         employes.enregistrerSortie(c.employeId(), moisB, "STC");
 
         Map<String, Object> marqueurs = new LinkedHashMap<>();
@@ -73,8 +77,15 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         marqueurs.put("equipe_a_id", a.equipeId());
         marqueurs.put("equipe_a_code", "E" + a.suffixe());
         marqueurs.put("employe_a_id", a.employeId());
-        marqueurs.put("employe_a_nom", "Nom " + a.suffixe());
+        marqueurs.put("employe_a_nom", "Karim Bennani");
         marqueurs.put("employe_a_cin", "CIN" + a.suffixe());
+        marqueurs.put("chantier_b_id", b.chantierId());
+        marqueurs.put("chantier_b_code", "C-" + b.suffixe());
+        marqueurs.put("equipe_b_id", b.equipeId());
+        marqueurs.put("equipe_b_code", "E" + b.suffixe());
+        marqueurs.put("employe_b_id", b.employeId());
+        marqueurs.put("employe_b_nom", "Salma El Idrissi");
+        marqueurs.put("employe_b_cin", "CIN" + b.suffixe());
 
         Path serviceIa = Path.of("..", "ia").toAbsolutePath().normalize();
         Path rapport = Path.of("target", "evaluation-ia.json").toAbsolutePath();
@@ -83,6 +94,9 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         List<String> commande = new ArrayList<>(List.of(System.getProperty("uv.executable", "uv"), "run", "--locked",
                 "python", "-m", "erp_rh_ia.evaluation", "--rapport", rapport.toString()));
         // -Dia.evaluation.cas=id1,id2 rejoue seulement ces cas (diagnostic).
+        // -Dia.evaluation.repetitions=3 joue chaque cas 3 fois (stabilité, pass^k) ; -Dia.evaluation.concurrence=2.
+        commande.addAll(List.of("--repetitions", System.getProperty("ia.evaluation.repetitions", "1"),
+                "--concurrence", System.getProperty("ia.evaluation.concurrence", "2")));
         String cas = System.getProperty("ia.evaluation.cas");
         if (cas != null && !cas.isBlank()) {
             commande.addAll(List.of("--cas", cas));
@@ -99,7 +113,7 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         processus.environment().put("EVAL_DONNEES", JsonMapper.builder().build().writeValueAsString(marqueurs));
         Process evaluation = processus.start();
         try {
-            assertThat(evaluation.waitFor(35, TimeUnit.MINUTES)).as("évaluation terminée ; journal : %s", journal).isTrue();
+            assertThat(evaluation.waitFor(150, TimeUnit.MINUTES)).as("évaluation terminée ; journal : %s", journal).isTrue();
             assertThat(evaluation.exitValue()).as("Journal :\n%s", Files.readString(journal)).isZero();
             assertThat(rapport).exists();
         } finally {
@@ -107,10 +121,10 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         }
     }
 
-    /** Jeton d'une heure : l'évaluation dure plus que les 15 minutes d'un jeton ordinaire. Mêmes clé et émetteur. */
+    /** Jeton de quatre heures : l'évaluation dure plus que les 15 minutes d'un jeton ordinaire. Mêmes clé et émetteur. */
     private String connexion(Utilisateur utilisateur, Set<String> permissions) {
         JwtService pourEvaluation = new JwtService(secretJwt, emetteur,
-                ParametresDeTest.avecDureeJetonAcces(Duration.ofHours(1)));
+                ParametresDeTest.avecDureeJetonAcces(Duration.ofHours(4)));
         return pourEvaluation.genererAccessToken(utilisateur, permissions, Set.of());
     }
 }

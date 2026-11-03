@@ -92,7 +92,9 @@ public class OutilsEmploye {
     @PreAuthorize("hasAuthority('EMPLOYEE_READ')")
     @AuditableAction(action = "MCP_EMPLOYES_RECHERCHER", categorie = CategorieAudit.ACCES, perimetre = PerimetreLectureMcp.class)
     public Map<String, Object> employesRechercher(
-            @McpToolParam(required = false, description = "Nom et/ou prénom, partiel (2 caractères au moins).")
+            @McpToolParam(required = false, description = "Nom et/ou prénom (2 caractères au moins), recherche partielle. "
+                    + "Passer le nom en entier, tel que l'utilisateur l'a écrit : un fragment commun renvoie plusieurs "
+                    + "employés ; si le total rendu dépasse 1, plusieurs employés correspondent.")
             @Size(min = 2, max = 150) String nom,
             @McpToolParam(required = false, description = "CIN (carte d'identité nationale), partiel (2 caractères au moins).")
             @Size(min = 2, max = 30) String cin,

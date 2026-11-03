@@ -60,7 +60,9 @@ Deux règles imposées par le propriétaire, sans exception :
   dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
   [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,
   de catalogue, de graphe, de prompt ou de modèle déroule son protocole d'évaluation en quatre dimensions (contexte, latence,
-  sûreté des schémas, visibilité du plan) avant le code.
+  sûreté des schémas, visibilité du plan) avant le code. **L'évaluation juge le résultat, jamais le chemin** : aucun cas ne
+  impose un outil, un ordre ou un nombre d'appels (la trajectoire n'est que rapportée) ; critères bloquants, répétitions
+  (`pass^3`) et juge LLM dans [`conventions/agents-ia.md`](conventions/agents-ia.md), « Critères d'évaluation de l'agent ».
 - **Documentation officielle lue, jamais supposée.** Aucune affirmation sur le comportement, la version, la
   compatibilité ou la gratuité d'un framework ou d'une bibliothèque sans lecture, en entier, de sa page officielle ou de
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
