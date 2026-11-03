@@ -100,7 +100,9 @@ public class OutilsPaie {
                     compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent et tous les \
                     chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / combien d'employés payés ». \
                     Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les arrivées et départs, \
-                    `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`.""",
+                    `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, `paie_repartition`. Un mois non importé \
+                    rend des valeurs à zéro qui signifient « aucune donnée », pas une masse nulle : vérifier les mois \
+                    importés avec `paie_periodes`.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true,
                     openWorldHint = false))
     @PreAuthorize("hasAuthority('PAIE_READ')")
