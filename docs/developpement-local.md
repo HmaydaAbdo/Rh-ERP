@@ -29,6 +29,14 @@ code. L'avancement des tâches n'y figure pas : il vit dans Jira (projet `KAN`, 
   suit le gabarit de [`conventions/database.md`](../conventions/database.md) ; `EndpointSecurityTest` tient la table de
   référence des permissions de chaque route (la compléter pour toute nouvelle route).
 
+## API Python (`api/`)
+
+- Tests : `cd api && uv run pytest` ; ils démarrent un PostgreSQL réel (testcontainers, image des tests Java) et sont ignorés,
+  avec la cause, si Docker est absent. Contrôles : `uv run ruff check . && uv run ruff format --check . && uv run pyright`.
+- Sous Windows, psycopg asynchrone refuse la boucle d'événements Proactor par défaut : les tests imposent la boucle à
+  sélecteur (celle de Linux) ; pour lancer le serveur à la main, préférer le conteneur (Linux) à `uvicorn` natif.
+- Migrations : `uv run alembic upgrade head` (compte propriétaire) ; contrôle de dérive modèles/base dans `tests/test_migrations.py`.
+
 ## Décisions durables du propriétaire
 
 - **Carte** : **gratuité absolue**, sans rien payer ni maintenant ni plus tard, même en pic ; le monde entier ; lancement

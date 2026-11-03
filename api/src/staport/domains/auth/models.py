@@ -25,7 +25,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from staport.platform.base_de_donnees import Base
 
 # Table du domaine employee, déclarée ici pour la seule clé étrangère ; son modèle complet arrive avec KAN-49.
-employe = Table("employe", Base.metadata, Column("id", BigInteger, primary_key=True))
+employe = Table(
+    "employe",
+    Base.metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("nom_prenom", String(150), nullable=False),
+    Column("cin", String(30), nullable=False),
+)
 
 
 def maintenant() -> datetime:
@@ -57,20 +63,20 @@ utilisateur_permission_refusee = Table(
 
 class Permission(Base):
     __tablename__ = "permission"
-    __mapper_args__ = {"version_id_col": "version"}  # noqa: RUF012
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
 class Role(Base):
     __tablename__ = "role"
-    __mapper_args__ = {"version_id_col": "version"}  # noqa: RUF012
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     nom: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str | None] = mapped_column(String(255))
     permissions: Mapped[set[Permission]] = relationship(secondary=role_permission, lazy="raise")
@@ -80,7 +86,6 @@ class Utilisateur(Base):
     """Compte de connexion, indépendant de `employe` avec un lien optionnel."""
 
     __tablename__ = "utilisateur"
-    __mapper_args__ = {"version_id_col": "version"}  # noqa: RUF012
     __table_args__ = (
         CheckConstraint("nombre_echecs_connexion >= 0", name="ck_utilisateur_nombre_echecs_connexion"),
         Index("idx_utilisateur_employee", "employee_id"),
@@ -88,6 +93,7 @@ class Utilisateur(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     mot_de_passe_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -104,7 +110,6 @@ class RefreshToken(Base):
     """Jeton de session opaque à usage unique ; seul son empreinte est stockée."""
 
     __tablename__ = "refresh_token"
-    __mapper_args__ = {"version_id_col": "version"}  # noqa: RUF012
     __table_args__ = (
         Index("idx_refresh_token_utilisateur", "utilisateur_id"),
         Index("idx_refresh_token_famille", "famille"),
@@ -112,6 +117,7 @@ class RefreshToken(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     utilisateur_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("utilisateur.id", ondelete="CASCADE"))
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expire_le: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -125,11 +131,11 @@ class ResetPasswordToken(Base):
     """Lien « mot de passe oublié » à usage unique et durée de vie courte."""
 
     __tablename__ = "reset_password_token"
-    __mapper_args__ = {"version_id_col": "version"}  # noqa: RUF012
     __table_args__ = (Index("idx_reset_password_token_utilisateur", "utilisateur_id"),)
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
     utilisateur_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("utilisateur.id", ondelete="CASCADE"))
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expire_le: Mapped[datetime] = mapped_column(DateTime, nullable=False)

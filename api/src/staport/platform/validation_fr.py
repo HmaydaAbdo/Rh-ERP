@@ -47,6 +47,8 @@ _MODELES: Mapping[str, str] = {
     "enum": "Valeur non autorisée ; valeurs possibles : {expected}.",
     "extra_forbidden": "Ce champ n'est pas autorisé.",
     "json_invalid": "Corps de la requête illisible.",
+    "non_vide": "Ce champ ne doit pas être vide.",
+    "courriel_invalide": "Doit être une adresse électronique valide.",
 }
 
 
