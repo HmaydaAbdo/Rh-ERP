@@ -132,7 +132,7 @@ async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) ->
     def fabrique_factice(settings: Settings) -> Any:
         assert settings is config
 
-        def construire(outils: object, checkpointer: object) -> AgentFactice:
+        def construire(outils: object, checkpointer: object, utilisateur: object) -> AgentFactice:
             construit.append((settings, outils, checkpointer))
             return AgentFactice()
 

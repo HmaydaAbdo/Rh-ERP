@@ -24,10 +24,6 @@ from erp_rh_ia.competences import OUTILS_PERMANENTS, competence_de
 MODELE_EMBEDDINGS = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 #: Outils les mieux classés dont on épingle le domaine ; c'est un seuil de classement, pas une limite d'accès.
 MEILLEURS_OUTILS = 7
-#: Domaines épinglés au plus par tour : une question à cheval sur plusieurs domaines en obtient plusieurs.
-DOMAINES_MAX = 3
-#: Domaine d'identifiants (chantier, équipe, fonction) que les autres domaines appellent en amont : hors plafond.
-DOMAINE_SUPPORT = "referentiels"
 
 
 class Routeur:
@@ -65,8 +61,7 @@ class Routeur:
             domaine = competence_de(nom)
             if domaine and domaine not in retenus:
                 retenus.append(domaine)
-        principaux = [d for d in retenus if d != DOMAINE_SUPPORT][:DOMAINES_MAX]
-        return [d for d in retenus if d in principaux or d == DOMAINE_SUPPORT]
+        return retenus
 
     async def adomaines(self, question: str, outils: Sequence[BaseTool]) -> list[str]:
         """Version asynchrone : le calcul d'embeddings ne bloque pas la boucle d'événements."""

@@ -53,7 +53,9 @@ Deux règles imposées par le propriétaire, sans exception :
   sous-graphe LangGraph) ne reçoit le catalogue MCP entier : 5 à 7 schémas métier hydratés par tour, choisis hors modèle après
   le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base. Mécanisme officiel Deep Agents : outils de compétence
   protégés (`SkillsMiddleware`, `metadata.include_tools`, résolveur lié à l'identité) et épinglage (`pinned_skills`) ; repli par lecture du
-  `SKILL.md` par le modèle. Aucun outil métier n'est passé directement à `tools=`.
+  `SKILL.md` par le modèle. Aucun outil métier n'est passé directement à `tools=`. **Aucun plafond de domaines épinglés par tour, aucun
+  ordre ni étape imposés** : le routage ne fait que rendre des outils visibles, l'agent choisit seul ses appels et leur enchaînement.
+  L'espace de fichiers d'un agent est propre à l'identité de l'utilisateur (`backend_par_identite`), l'écriture ne s'ouvre que par l'épopée d'écriture.
   **Toute fonctionnalité et toute capacité de Deep Agents, LangGraph et LangChain s'utilise, strictement** (registre des capacités
   dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
   [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,

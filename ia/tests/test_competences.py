@@ -14,11 +14,12 @@ from deepagents.middleware import FilesystemMiddleware
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
+from langgraph.store.memory import InMemoryStore
 
 from erp_rh_ia import agent as module_agent
-from erp_rh_ia.agent import PERMISSIONS_FICHIERS, creer_agent
+from erp_rh_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
 from erp_rh_ia.competences import OUTILS_MAX_PAR_COMPETENCE, OUTILS_PERMANENTS, charger, competence_de
-from erp_rh_ia.routage import DOMAINES_MAX, Routeur
+from erp_rh_ia.routage import Routeur
 
 EVALUATION = Path(__file__).resolve().parents[1] / "evaluation"
 #: Seuil décidé le 2026-11-03 (decisions.md, Q25) : part des demandes dont toutes les compétences nécessaires sont
@@ -187,16 +188,36 @@ def test_le_routage_couvre_les_demandes_du_jeu_d_evaluation() -> None:
     assert all(c["type"] == "multi-domaine" for c in cas if any(q == c["question"] for q, _, _ in manques))
 
 
-def test_le_routage_n_epingle_pas_plus_de_trois_domaines_et_ignore_une_question_vide() -> None:
+def test_le_routage_n_a_aucun_plafond_de_domaines_et_ignore_une_question_vide() -> None:
     outils = _outils_du_catalogue()
     routeur = Routeur()
 
-    assert (
-        len(routeur.domaines("masse salariale par chantier et heures supplémentaires des employés", outils))
-        <= DOMAINES_MAX
-    )
+    question = "masse salariale par chantier et heures supplémentaires des employés"
+
+    domaines = routeur.domaines(question, outils)
+
+    # Aucun plafond de domaines : tous ceux des meilleurs outils sont épinglés, sans doublon.
+    attendus = list(dict.fromkeys(competence_de(nom) for nom in routeur.classer(question, outils)[:7]))
+    assert domaines == attendus
     assert routeur.domaines("   ", outils) == []
     assert routeur.domaines("Bonjour", []) == []
+
+
+def test_l_espace_de_fichiers_est_propre_a_l_identite() -> None:
+    """Le même chemin chez deux utilisateurs désigne deux fichiers distincts ; les compétences restent communes."""
+    store = InMemoryStore()
+    alice = backend_par_identite("alice", store)
+    bob = backend_par_identite("bob", store)
+    chemin = f"{ESPACE}note.md"
+
+    alice.write(chemin, "à Alice")
+    bob.write(chemin, "à Bob")
+
+    assert "à Alice" in str(alice.read(chemin).file_data)
+    assert "à Bob" in str(bob.read(chemin).file_data)
+    assert "à Bob" not in str(alice.read(chemin).file_data)
+    assert alice.read("/paie/SKILL.md").error is None
+    assert bob.read("/paie/SKILL.md").error is None
 
 
 def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.MonkeyPatch) -> None:

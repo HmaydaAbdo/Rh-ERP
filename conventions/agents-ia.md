@@ -588,6 +588,8 @@ contournement trouvé devient un cas de régression avant sa correction.
 
 ## Modèles auto-hébergés
 
+**IA interne et sélection d'outils (Q26, KAN-204).** Le mécanisme de sélection (compétences protégées et épinglage) tourne dans notre service : il ne demande au modèle que de savoir appeler des outils et fonctionne avec un modèle hébergé chez nous (vLLM, Ollama). La recherche d'outils exécutée par le fournisseur (`ProviderToolSearchMiddleware`) n'existerait pas sur un modèle interne ; passer à une IA interne ne pose donc aucun problème de ce côté.
+
 Un modèle open source servi dans l'entreprise garde les données chez elle. Il est choisi comme les autres, sur le jeu de référence de l'application, en comparant
 plusieurs familles, tailles et quantifications ; une quantification n'est retenue que si l'exactitude,
 l'usage des outils et le JSON restent au niveau attendu.
@@ -675,17 +677,27 @@ transferts multi-agents, sous-agents et compétences de Deep Agents (dont les ou
 2. **Filtre d'accès d'abord, dans le résolveur.** Le résolveur de `SkillsMiddleware` lit l'identité dans `runtime.context` et ne renvoie que les outils que cette identité peut appeler.
    Un outil non autorisé n'est jamais exposé, même si sa compétence est épinglée ou lue. Le contrôle du serveur à chaque appel reste l'autorité (règle de [`mcp.md`](mcp.md)).
 3. **Routage hors modèle.** L'application choisit les compétences à épingler avant l'invocation, en quelques millisecondes (5,9 ms au p50 mesuré), par similarité entre la question et la
-   description de chaque outil du catalogue de l'utilisateur (embeddings MiniLM locaux, `ia/src/erp_rh_ia/routage.py`) : les domaines des 7 meilleurs outils sont épinglés, 3 au plus. **Aucun appel de modèle de langage.**
+   description de chaque outil du catalogue de l'utilisateur (embeddings MiniLM locaux, `ia/src/erp_rh_ia/routage.py`) : les domaines des 7 meilleurs outils sont épinglés, **sans plafond de domaines** (décision du propriétaire, 2026-11-03 ; 7 est le seuil de classement des outils, non une limite de capacité). **Aucun appel de modèle de langage.**
 4. **Repli.** Si le routage se trompe, le modèle lit lui-même le `SKILL.md` du bon domaine (divulgation progressive officielle). Il n'y a donc pas d'outil `request_broader_tools`
    maison : le mécanisme documenté le remplace. Coût : un tour, seulement dans ce cas.
 5. **Élagage.** L'épinglage est recalculé à chaque invocation : un domaine qui ne sert plus n'est pas réépinglé. Le comportement des compétences lues lors de tours précédents n'est pas
    documenté en détail : non vérifié, à mesurer avec le banc de T32.
 
 **Ces nombres ne limitent jamais ce que l'agent sait faire.** Le plafond de 7 outils par compétence structure les domaines ; il n'y a aucun plafond sur le total d'un tour : une demande à plusieurs domaines épingle
-jusqu'à 3 compétences, et le repli (lecture d'un `SKILL.md`) ajoute n'importe quel domaine supplémentaire. Le jeu d'évaluation vérifie que chaque scénario, y compris à plusieurs domaines, garde tous ses outils atteignables.
+tous les domaines de ses meilleurs outils, et le repli (lecture d'un `SKILL.md`) ajoute n'importe quel domaine supplémentaire. Le jeu d'évaluation vérifie que chaque scénario, y compris à plusieurs domaines, garde tous ses outils atteignables.
 Le nombre limite les **schémas en contexte**, jamais les données accessibles : un outil de lecture reste paginé sans plafond (règle de complétude de [`mcp.md`](mcp.md)).
 Les outils du harnais (`ls`, `read_file`, `write_file`, `edit_file`, `delete`, `glob`, `grep`, `task`, et `execute` avec un backend bac à sable) ne sont jamais touchés par ce mécanisme ;
 leur restriction se fait par les moyens documentés (profil d'harnais `excluded_tools`, liste blanche `FilesystemMiddleware(tools=...)`, permissions).
+
+### Aucun ordre ni étape imposés
+
+Le routage ne détermine **ni l'ordre des outils ni les étapes** : il choisit seulement quels schémas sont visibles au premier tour (équivalent du premier niveau de la divulgation progressive). L'agent décide seul de ses appels, de leur enchaînement et
+de ses relectures ; le repli lui laisse atteindre n'importe quel domaine. Aucune chaîne fixe d'appels, aucun graphe d'étapes câblé pour les questions de données : un graphe sur mesure n'est justifié que par un besoin documenté (voir ci-dessous).
+
+### Espace de fichiers propre à l'identité
+
+Le backend de l'agent est un `CompositeBackend` (`backend_par_identite`) : les compétences en lecture seule, et sous `/espace/` un `StoreBackend` dont la fabrique d'espace de noms est `(identité, "espace")`, l'identité étant celle du jeton agent validé par Spring, jamais une valeur
+du navigateur ou du modèle (le même chemin chez deux utilisateurs désigne deux fichiers distincts, testé). L'écriture reste refusée par les permissions tant que l'épopée d'écriture ne l'ouvre pas, domaine par domaine. Le magasin est en mémoire du processus aujourd'hui ; il passe à PostgreSQL avec cette épopée.
 
 ### Domaines, sous-agents et sous-graphes
 

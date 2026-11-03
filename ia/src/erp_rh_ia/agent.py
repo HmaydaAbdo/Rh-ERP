@@ -24,7 +24,7 @@ import httpx
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
-from deepagents.backends import FilesystemBackend
+from deepagents.backends import CompositeBackend, FilesystemBackend, StoreBackend
 from deepagents.middleware import FilesystemMiddleware, FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -42,6 +42,8 @@ from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.errors import GraphBubbleUp
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.store.base import BaseStore
+from langgraph.store.memory import InMemoryStore
 
 from erp_rh_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
 from erp_rh_ia.contexte import ContexteErp
@@ -54,11 +56,26 @@ PROFIL_HARNAIS = HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentP
 #: Le fournisseur des modèles de l'ERP (``ChatLiteLLM``) ; les tests enregistrent celui de leur faux modèle.
 register_harness_profile("litellm", PROFIL_HARNAIS)
 
-#: Permissions documentées du système de fichiers de Deep Agents : le seul contenu visible est celui des compétences,
-#: en lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
-#: d'écriture était lié un jour par erreur. Pas d'espace de noms par identité tant que rien n'est écrit : les
-#: conversations sont déjà par utilisateur (``memoire.py``) ; il sera exigé avec la première fonction qui écrit.
+#: Permissions documentées du système de fichiers de Deep Agents : aujourd'hui rien ne s'écrit, les compétences sont en
+#: lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
+#: d'écriture était lié par erreur. L'épopée d'écriture (docs/ia.md) l'ouvrira domaine par domaine, uniquement sous
+#: ``/espace/``, qui est propre à l'identité de l'utilisateur (``backend_par_identite``).
 PERMISSIONS_FICHIERS = [FilesystemPermission(operations=["write"], paths=["/**"], mode="deny")]
+
+ESPACE = "/espace/"
+
+
+def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend:
+    """Les compétences (lecture seule) et, sous ``/espace/``, l'espace de fichiers propre à cet utilisateur.
+
+    L'identité est celle du jeton agent validé par Spring (``memoire.sujet``), jamais une valeur du navigateur ou du
+    modèle : le même chemin chez deux utilisateurs désigne deux fichiers distincts (``StoreBackend`` avec fabrique
+    d'espace de noms, documenté par Deep Agents)."""
+    return CompositeBackend(
+        default=FilesystemBackend(root_dir=dossier_competences(), virtual_mode=True),
+        routes={ESPACE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "espace"))},
+    )
+
 
 SYSTEME = """Tu es Staport Intelligence, l'assistant numérique de Staport. Tu réponds en français.
 Tu aides l'utilisateur à travers les capacités métier disponibles pour son compte dans les applications de Staport.
@@ -233,13 +250,16 @@ def creer_agent(
     *,
     resumeur: BaseChatModel | None = None,
     checkpointer: BaseCheckpointSaver[Any] | None = None,
+    utilisateur: str = "anonyme",
+    store: BaseStore | None = None,
     appels_modele: int = 8,
     appels_outils: int = 8,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
     conversation devenue longue (``SummarizationMiddleware``)."""
-    backend = FilesystemBackend(root_dir=dossier_competences(), virtual_mode=True)
+    store = store or InMemoryStore()
+    backend = backend_par_identite(utilisateur, store)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
         SurfacesResultats(),
@@ -270,5 +290,6 @@ def creer_agent(
         backend=backend,
         permissions=PERMISSIONS_FICHIERS,
         checkpointer=checkpointer,
+        store=store,
         name="staport-intelligence",
     )

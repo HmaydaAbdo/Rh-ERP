@@ -213,7 +213,7 @@ async def repondre(
     config: Settings, outils: list[BaseTool], question: str, outils_attendus: list[str] | None
 ) -> Reponse:
     # Même agent que le service : modèle principal, résumeur officiel et compétences épinglées par le routage.
-    agent = fabrique_reelle(config)(outils, None)
+    agent = fabrique_reelle(config)(outils, None, "evaluation")
     epinglees = await _ROUTEUR.adomaines(question, outils)
     etat = await agent.ainvoke(
         {"messages": [HumanMessage(content=question)], "pinned_skills": epinglees}, {"recursion_limit": 200}

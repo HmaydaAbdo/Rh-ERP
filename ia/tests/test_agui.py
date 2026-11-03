@@ -49,8 +49,8 @@ async def _routage_paie(_question: str, _outils: Sequence[BaseTool]) -> list[str
 
 
 def _fabrique(faux: ModeleScripte) -> FabriqueAgent:
-    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None) -> Any:
-        return creer_agent(faux, outils, checkpointer=checkpointer)
+    def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str) -> Any:
+        return creer_agent(faux, outils, checkpointer=checkpointer, utilisateur=utilisateur)
 
     return fabriquer
 

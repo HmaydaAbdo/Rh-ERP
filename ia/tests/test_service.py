@@ -73,7 +73,7 @@ def test_la_fabrique_n_utilise_plus_de_modele_de_selection_d_outils(monkeypatch:
     monkeypatch.setattr("erp_rh_ia.app.creer_agent", creer_agent_factice)
     fabrique = fabrique_reelle(_settings())
 
-    fabrique([], None)  # type: ignore[arg-type]
+    fabrique([], None, "u1")  # type: ignore[arg-type]
 
     assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SIMPLE]
     assert "selecteur" not in agents[0]

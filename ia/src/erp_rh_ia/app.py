@@ -12,6 +12,7 @@ from fastapi import FastAPI, Response, status
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel
 
 from erp_rh_ia.agent import creer_agent
@@ -36,10 +37,15 @@ def fabrique_reelle(config: Settings) -> FabriqueAgent:
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
 
+    # Espace de fichiers par identité : en mémoire du processus tant que rien n'écrit (épopée d'écriture : PostgreSQL).
+    espaces = InMemoryStore()
+
     def fabriquer(
-        outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None
+        outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str
     ) -> CompiledStateGraph[Any, Any, Any, Any]:
-        return creer_agent(principal, outils, resumeur=resumeur, checkpointer=checkpointer)
+        return creer_agent(
+            principal, outils, resumeur=resumeur, checkpointer=checkpointer, utilisateur=utilisateur, store=espaces
+        )
 
     return fabriquer
 
