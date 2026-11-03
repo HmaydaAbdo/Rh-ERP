@@ -36,7 +36,9 @@ TAILLE_QUESTION = 2_000
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
-FabriqueAgent = Callable[[Sequence[BaseTool], BaseCheckpointSaver[Any] | None], CompiledStateGraph[Any, Any, Any, Any]]
+FabriqueAgent = Callable[
+    [Sequence[BaseTool], BaseCheckpointSaver[Any] | None, str], CompiledStateGraph[Any, Any, Any, Any]
+]
 
 # Routage hors modèle : les compétences de domaine à épingler pour la question (``routage.py``, sans appel de modèle).
 Routage = Callable[[str, Sequence[BaseTool]], Awaitable[list[str]]]
@@ -98,6 +100,7 @@ async def evenements(
     outils: Sequence[BaseTool],
     memoire: BaseCheckpointSaver[Any] | None = None,
     thread_id: str | None = None,
+    utilisateur: str = "anonyme",
 ) -> AsyncGenerator[BaseEvent]:
     """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail.
 
@@ -107,7 +110,9 @@ async def evenements(
     try:
         officiel = LangGraphAGUIAgent(
             name="staport-intelligence",
-            graph=fabrique(outils, memoire or InMemorySaver()),  # mémoire durable (memoire.py) ou celle du run
+            graph=fabrique(
+                outils, memoire or InMemorySaver(), utilisateur
+            ),  # mémoire durable (memoire.py) ou celle du run
             # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
             # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
             config={"recursion_limit": 200},
@@ -181,6 +186,7 @@ def routeur_agui(
                 outils,
                 memoire() if memoire and not suggestion_sans_etat else None,
                 entree.thread_id,
+                sujet(jeton),
             ):
                 yield encodeur.encode(evenement)
 
