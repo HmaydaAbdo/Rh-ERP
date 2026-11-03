@@ -14,3 +14,11 @@ flowchart LR
   B -- non --> D[Rapport d'erreurs]
   C --> E[Validation RH]
 ```
+
+## Essai BPMN 2.0
+
+Même processus, au format `.bpmn` (fichier versionné dans `static/bpmn/`), affiché par bpmn-js. Le filigrane bpmn.io en bas à droite est exigé par la licence.
+
+import BpmnViewer from "@site/src/components/BpmnViewer";
+
+<BpmnViewer src="bpmn/essai-import-hs.bpmn" />

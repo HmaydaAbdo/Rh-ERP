@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://staport.local/bpmn">
+  <bpmn:process id="import_hs" isExecutable="false">
+    <bpmn:startEvent id="debut" name="Fichier reçu"><bpmn:outgoing>f1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:task id="verifier" name="Vérifier le fichier"><bpmn:incoming>f1</bpmn:incoming><bpmn:outgoing>f2</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="valide" name="Valide ?"><bpmn:incoming>f2</bpmn:incoming><bpmn:outgoing>f3</bpmn:outgoing><bpmn:outgoing>f4</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="calculer" name="Calculer les heures supplémentaires"><bpmn:incoming>f3</bpmn:incoming><bpmn:outgoing>f5</bpmn:outgoing></bpmn:task>
+    <bpmn:endEvent id="rapport" name="Rapport d'erreurs"><bpmn:incoming>f4</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="fin" name="Validation RH"><bpmn:incoming>f5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="f1" sourceRef="debut" targetRef="verifier"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="verifier" targetRef="valide"/>
+    <bpmn:sequenceFlow id="f3" name="oui" sourceRef="valide" targetRef="calculer"/>
+    <bpmn:sequenceFlow id="f4" name="non" sourceRef="valide" targetRef="rapport"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="calculer" targetRef="fin"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="import_hs">
+      <bpmndi:BPMNShape id="s_debut" bpmnElement="debut"><dc:Bounds x="152" y="102" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="138" y="145" width="64" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_verifier" bpmnElement="verifier"><dc:Bounds x="240" y="80" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_valide" bpmnElement="valide" isMarkerVisible="true"><dc:Bounds x="395" y="95" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="405" y="65" width="40" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_calculer" bpmnElement="calculer"><dc:Bounds x="500" y="80" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_fin" bpmnElement="fin"><dc:Bounds x="682" y="102" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="666" y="145" width="68" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_rapport" bpmnElement="rapport"><dc:Bounds x="402" y="222" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="380" y="265" width="80" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="e1" bpmnElement="f1"><di:waypoint x="188" y="120"/><di:waypoint x="240" y="120"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e2" bpmnElement="f2"><di:waypoint x="340" y="120"/><di:waypoint x="395" y="120"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e3" bpmnElement="f3"><di:waypoint x="445" y="120"/><di:waypoint x="500" y="120"/><bpmndi:BPMNLabel><dc:Bounds x="465" y="102" width="16" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e4" bpmnElement="f4"><di:waypoint x="420" y="145"/><di:waypoint x="420" y="222"/><bpmndi:BPMNLabel><dc:Bounds x="426" y="180" width="20" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e5" bpmnElement="f5"><di:waypoint x="620" y="120"/><di:waypoint x="682" y="120"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
