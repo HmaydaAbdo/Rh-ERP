@@ -1,3 +1,8 @@
+---
+title: Inventaire de sortie
+sidebar_position: 1
+---
+
 # Inventaire du backend Spring (KAN-45)
 
 > Document **généré** par `scripts/migration/inventaire-backend.py` : ne pas l'éditer à la main, relancer le script.
@@ -6,7 +11,7 @@
 
 ## Totaux
 
-- 429 fichiers Java, 25150 lignes ; 108 fichiers de test, 583 tests.
+- 429 fichiers Java, 25176 lignes ; 109 fichiers de test, 584 tests.
 - 101 routes HTTP, 31 outils MCP, 73 actions d'audit distinctes, 1 tâches planifiées.
 - 44 migrations Flyway (`V1__enable_extensions.sql` à `V44__heures_supp_montants_entiers.sql`), 7 fichiers de modèles de rapport, 35 clés de configuration lues dans `application.yml`.
 
@@ -24,7 +29,7 @@
 | employee | 37 | 1970 | 9 | 0 | 5 | 2 | 46 |
 | equipe | 19 | 806 | 7 | 0 | 4 | 1 | 13 |
 | function | 19 | 726 | 7 | 0 | 4 | 1 | 10 |
-| heuresupp | 38 | 2321 | 14 | 0 | 8 | 1 | 55 |
+| heuresupp | 38 | 2347 | 14 | 0 | 8 | 1 | 56 |
 | mcp | 15 | 1988 | 0 | 31 | 30 | 0 | 29 |
 | paie | 114 | 8299 | 23 | 0 | 9 | 1 | 136 |
 | parametre | 13 | 546 | 2 | 0 | 1 | 1 | 10 |

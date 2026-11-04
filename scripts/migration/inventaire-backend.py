@@ -1,6 +1,6 @@
 """Inventaire exhaustif du backend Spring par domaine (KAN-45, ADR 0016 § 7).
 
-Lit le code Java et ses ressources, écrit `docs/migration-fastapi/inventaire.md` : la liste de contrôle de sortie de la
+Lit le code Java et ses ressources, écrit `site/docs/migration/inventaire.md` : la liste de contrôle de sortie de la
 migration (chaque ligne porte sa preuve de parité). Relancer le script régénère le document ; ne pas l'éditer à la main.
 
     python scripts/migration/inventaire-backend.py
@@ -14,7 +14,7 @@ RACINE = Path(__file__).resolve().parents[2]
 SOURCES = RACINE / "backend" / "src" / "main" / "java" / "staport" / "rh"
 TESTS = RACINE / "backend" / "src" / "test" / "java" / "staport" / "rh"
 RESSOURCES = RACINE / "backend" / "src" / "main" / "resources"
-SORTIE = RACINE / "docs" / "migration-fastapi" / "inventaire.md"
+SORTIE = RACINE / "site" / "docs" / "migration" / "inventaire.md"
 
 ROUTES_AUTHENTIFIEES = {"/auth/me", "/auth/logout"}
 VERBES = {"Get": "GET", "Post": "POST", "Put": "PUT", "Patch": "PATCH", "Delete": "DELETE"}
@@ -128,6 +128,11 @@ def principal() -> None:
 
     total = lambda cle: sum(e[cle] for e in par_domaine.values())  # type: ignore[misc]  # noqa: E731
     sortie = [
+        "---",
+        "title: Inventaire de sortie",
+        "sidebar_position: 1",
+        "---",
+        "",
         "# Inventaire du backend Spring (KAN-45)",
         "",
         "> Document **généré** par `scripts/migration/inventaire-backend.py` : ne pas l'éditer à la main, relancer le script.",
