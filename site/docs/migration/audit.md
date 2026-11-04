@@ -1,3 +1,8 @@
+---
+title: Domaine audit
+sidebar_position: 5
+---
+
 # Domaine `audit` en Python (KAN-214)
 
 Code : `api/src/staport/domains/audit/`. Tests : `api/tests/test_audit.py`, `api/tests/test_audit_consultation.py`

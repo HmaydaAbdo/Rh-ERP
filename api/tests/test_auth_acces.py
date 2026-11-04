@@ -305,7 +305,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
     return {
         (methode.upper(), chemin)
         for chemin, operations in p.app.openapi()["paths"].items()
-        if not chemin.startswith("/logs")  # routes du domaine audit, testées dans test_audit_consultation.py
+        if not chemin.startswith(("/logs", "/parametres"))  # autres domaines : test_audit_consultation, test_parametre
         for methode in operations
     }
 
