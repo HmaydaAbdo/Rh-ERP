@@ -50,6 +50,7 @@ seule fois, ici. Format : constat, cause, règle.
 | A2UI a été envisagé comme remplaçant d'AG-UI. | Ce sont deux couches : A2UI décrit l'interface, AG-UI connecte agent et application (événements, état, outils côté client, interruptions) et traduit les messages A2UI. Aucun ne remplace l'autre. |
 | Une liste de mois (`findDistinctPeriodeBy…`) répondait 500 en production : Spring Data lisait le nom comme une requête d'entités ; les tests de service moquaient le dépôt et ne le voyaient pas. | Une méthode de dépôt qui renvoie autre chose que l'entité s'écrit avec `@Query` explicite et se teste une fois sur une vraie base (`AuditIntegrationTestBase`). |
 | Un test d'intégration a laissé des lignes dans la base partagée et fait échouer en CI un autre test qui vide `paie`. | Tout test sur la base partagée supprime en `@AfterEach` ce qu'il a créé (hors des tables d'audit) ; vérifier en lançant le test avec ses voisins, pas seul. |
+| Monter une sous-application ASGI (serveur MCP) à la racine de FastAPI a transformé les 405 des routes REST en 404 : le montage capte tous les chemins. | Ajouter une sous-application comme une `Route` sur son seul chemin, pas par `mount("/")` ; la suite de tests des routes existantes le détecte, la lancer en entier après tout montage. |
 
 ## Documentation
 
