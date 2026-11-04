@@ -1,6 +1,11 @@
+---
+title: Prototype du domaine common
+sidebar_position: 3
+---
+
 # Prototype du domaine `common` (KAN-47)
 
-Code : [`api/`](../../api) (projet uv `staport-api`, package `staport`). Il applique l'arborescence de
+Code : `api/` (projet uv `staport-api`, package `staport`). Il applique l'arborescence de
 `conventions/backend-python` (`domains/<domaine>/api.py`, `platform/`).
 
 ## Ce qui est prouvé (9 tests, ruff et pyright strict verts)

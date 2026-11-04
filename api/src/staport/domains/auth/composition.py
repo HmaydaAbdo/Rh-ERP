@@ -5,13 +5,15 @@ from dataclasses import dataclass
 from staport.domains.audit.api import Audit
 from staport.domains.auth import audit as _historique_auth  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.auth.courriel import ServiceCourriel
-from staport.domains.auth.parametres import ParametresSecurite, ParametresSecuriteSql
+from staport.domains.auth.parametres import ParametresSecurite
 from staport.domains.auth.securite import EmetteurJetons, Hacheur, JeuDeCles
 from staport.domains.auth.service_agent import ServiceAgent
 from staport.domains.auth.service_auth import ServiceAuth
 from staport.domains.auth.service_role import ServiceRole
 from staport.domains.auth.service_utilisateur import ServiceUtilisateur
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.parametre import audit as _historique_parametre  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.parametre.service import ServiceParametre
 from staport.platform.configuration import Configuration
 
 
@@ -21,6 +23,7 @@ class ContexteAuth:
     utilisateurs: ServiceUtilisateur
     roles: ServiceRole
     agent: ServiceAgent
+    parametres: ServiceParametre
     emetteur: EmetteurJetons
     courriel: ServiceCourriel
     audit: Auditeur
@@ -55,8 +58,9 @@ def creer_contexte(
     )
     hacheur = Hacheur()
     emetteur = EmetteurJetons(cles)
-    params = parametres or ParametresSecuriteSql()
     publication = audit or Audit()
+    service_parametre = ServiceParametre(publication)
+    params = parametres or service_parametre
     courriel = ServiceCourriel(configuration)
     service_auth = ServiceAuth(hacheur, emetteur, params, publication, courriel)
     return ContexteAuth(
@@ -64,6 +68,7 @@ def creer_contexte(
         utilisateurs=ServiceUtilisateur(hacheur, params, publication, service_auth),
         roles=ServiceRole(publication),
         agent=ServiceAgent(cles if configuration.mcp_enabled else None, publication),
+        parametres=service_parametre,
         emetteur=emetteur,
         courriel=courriel,
         audit=publication,
