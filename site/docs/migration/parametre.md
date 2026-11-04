@@ -52,10 +52,31 @@ ré-enregistré tel quel depuis l'écran. La valeur de départ (`0 0 23 * * *`) 
 Ajouts propres à Python : la valeur modifiée est bien celle que lit l'authentification (`/auth/password-policy`), et une clé
 absente de la base lève l'erreur d'installation incomplète.
 
+## Comparaison des lignes d'audit Spring / FastAPI (exécutée le 2026-11-04)
+
+Même scénario rejoué des deux côtés sur un PostgreSQL réel construit par le même schéma (Flyway V1 à V44 côté Spring,
+Alembic `0001_base_v44` côté Python) : une modification réussie (`securite.jeton-session.heures` de 12 à 8, saisie ` 8 `)
+puis une modification refusée (`securite.mot-de-passe.longueur-minimale` à 3). Côté Spring, un test d'intégration temporaire
+appelle `ParametreService` (Hibernate Envers et aspect d'audit réels) ; côté Python, l'API HTTP. Onze lignes lues de chaque
+côté (journal, révision, entités de la révision, `parametre_aud`, table `parametre`), comparées champ par champ hors
+valeurs propres à l'exécution (identifiants, horodatages, chaîne de hachage, identifiant de requête, adresse, acteur).
+
+| Table | Résultat |
+|---|---|
+| `audit_journal` (succès) | Identique : `OPERATION`, `PARAMETRE_MODIFICATION`, `UPDATE`, `SUCCES`, entité `Parametre` et son identifiant, origine `API`, lien vers sa révision |
+| `audit_revision` | Identique (origine `API`) |
+| `audit_revision_entite` | Identique : `staport.rh.parametre.entities.Parametre` |
+| `parametre_aud` | Identique : même `id`, même `revtype` 1, mêmes `cle` et `valeur` (`8`, espaces retirés) |
+| `audit_journal` (refus) | Identique sauf le motif, ci-dessous : `ECHEC`, aucune révision, aucune ligne `parametre_aud` |
+| `parametre` | Identique : valeurs et versions (1 pour la clé modifiée, 0 pour les autres) |
+
+**Seule différence : le motif d'un échec.** Il reprend le nom de la classe d'exception : `ParametreInvalideException` côté
+Spring, `ParametreInvalide` côté Python. Les exceptions Python portent des noms français propres au domaine, donc ce motif
+diffère pour toute opération rejetée, dans tous les domaines. Les entrées déjà écrites par Spring ne sont pas modifiées ; la
+liste des motifs d'échec à rapprocher se décide à la bascule (KAN-50) si un écran ou un rapport filtre sur ce champ.
+
 ## Ce qui n'est pas encore prouvé
 
-- **Comparaison de la ligne `parametre_aud` écrite par Spring et par FastAPI pour une même modification** : non exécutée,
-  Spring n'est pas lancé dans cette session. À faire à la fin d'E2, dans le test de bascule (stratégie, § données réelles).
 - **Planification effective du cron** : ce domaine ne fait que le valider et le stocker. Son exécution arrive avec le
   domaine `chantier` (KAN-49).
 - **Écran Paramètres du frontend** : inchangé, il parle à l'API avec les mêmes chemins et champs ; vérifié à la bascule.
