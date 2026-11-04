@@ -1,28 +1,22 @@
-"""Montage du serveur MCP dans l'application FastAPI (SDK MCP officiel, transport Streamable HTTP sans état).
+"""Serveur MCP d'ERP-RH sur FastMCP 4 (transport Streamable HTTP sans état), monté dans l'application FastAPI.
 
-`streamable_http_app()` rend une application Starlette dont le gestionnaire de sessions doit être démarré par
-l'application hôte : le cycle de vie de `creer_app` entre dans `session_manager.run()` (la documentation du SDK précise
-que le cycle de vie d'une sous-application montée ne s'exécute jamais). `/mcp` est ajoutée comme une route : les
-autres chemins gardent les 404 et 405 de FastAPI.
+`FastMCP.http_app()` rend une application ASGI dont le cycle de vie démarre le gestionnaire de sessions : l'application
+hôte doit l'entrer (`combine_lifespans` dans `creer_app`), sans quoi les requêtes échouent. `/mcp` est ajoutée comme une
+route de l'application hôte : les autres chemins gardent les 404 et 405 de FastAPI.
 """
 
 from collections.abc import Callable
 
-from pydantic import AnyHttpUrl
+from fastmcp import FastMCP
+from fastmcp.server.http import StarletteWithLifespan
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from starlette.applications import Starlette
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from mcp.server import MCPServer
-from mcp.server.auth.settings import AuthSettings
-from mcp.server.transport_security import TransportSecuritySettings
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.mcp import outils
-from staport.domains.mcp.acces import SCOPES_EXIGES, VerificateurJetonAgent
+from staport.domains.mcp.acces import VerificateurJetonAgent
 
 CHEMIN = "/mcp"
-# L'émetteur est nominal : le serveur ne délivre aucun jeton OAuth, il vérifie seulement celui de l'application.
-EMETTEUR_NOMINAL = AnyHttpUrl("http://erp-rh.invalid")
 
 
 class RefuserOrigine:
@@ -49,28 +43,11 @@ class RefuserOrigine:
 
 def creer_serveur(
     contexte: Callable[[], ContexteAuth], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
-) -> tuple[MCPServer, Starlette]:
-    """Le serveur MCP, ses outils et son application ASGI authentifiée (à monter, avec son gestionnaire de sessions
-    démarré par le cycle de vie de l'application hôte). Contexte et fabrique de sessions n'existent qu'au démarrage de
-    l'application : ils sont demandés à chaque appel."""
-    serveur = MCPServer(
-        "erp-rh",
-        token_verifier=VerificateurJetonAgent(lambda: contexte().agent, fabrique),
-        auth=AuthSettings(
-            issuer_url=EMETTEUR_NOMINAL,
-            resource_server_url=None,
-            required_scopes=SCOPES_EXIGES,
-            validate_token_resource=False,
-        ),
-    )
+) -> StarletteWithLifespan:
+    """L'application ASGI du serveur MCP, outils et authentification compris. Contexte et fabrique de sessions
+    n'existent qu'au démarrage de l'application hôte : ils sont demandés à chaque appel."""
+    serveur = FastMCP("erp-rh", auth=VerificateurJetonAgent(lambda: contexte().agent, fabrique))
     outils.enregistrer(serveur, contexte, fabrique)
-    application = serveur.streamable_http_app(
-        streamable_http_path=CHEMIN,
-        stateless_http=True,
-        json_response=True,
-        # La protection contre le DNS rebinding vise un serveur lié à localhost ; ici le service n'est joint que par le
-        # réseau interne, sous le nom de son conteneur, et `RefuserOrigine` écarte déjà tout appel de navigateur.
-        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
-    )
+    application = serveur.http_app(path=CHEMIN, stateless_http=True, json_response=True)
     application.add_middleware(RefuserOrigine)
-    return serveur, application
+    return application
