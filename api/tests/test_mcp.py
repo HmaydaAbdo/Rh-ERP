@@ -336,3 +336,14 @@ def test_le_span_d_un_appel_refuse_porte_le_statut_refuse(
     assert _appel(plateforme, jeton, "parametres_lire")["isError"] is True
     attributs = dict(_span(spans, "parametres_lire").attributes or {})
     assert attributs["mcp.statut"] == "REFUSE"
+
+
+# --- Sonde de santé --------------------------------------------------------------------------------
+
+
+def test_la_sonde_de_sante_est_publique_hors_schema_et_n_ecrit_rien(plateforme: Plateforme) -> None:
+    avant = _nombre_d_entrees(plateforme)
+    reponse = plateforme.client.get("/health")
+    assert reponse.status_code == 200 and reponse.json() == {"status": "UP"}
+    assert "/health" not in plateforme.app.openapi()["paths"]
+    assert _nombre_d_entrees(plateforme) == avant

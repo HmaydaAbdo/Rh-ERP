@@ -26,6 +26,7 @@ from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_mote
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
 from staport.platform.requete import EN_TETE_REQUEST_ID, enregistrer_identifiant_requete
+from staport.platform.sante import sante
 
 
 async def _amorcer_admin(
@@ -90,6 +91,7 @@ def creer_app(
     app = FastAPI(title="Staport Intelligence", lifespan=vie)
     enregistrer_gestionnaires(app)
     enregistrer_identifiant_requete(app)
+    app.include_router(sante)
     if configuration_ is not None:
         origines = sorted(o.strip() for o in configuration_.cors_allowed_origins.split(","))
         app.add_middleware(

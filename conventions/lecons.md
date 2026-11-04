@@ -15,6 +15,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Un ticket de mesure (KAN-9, démarrage du service `ia`) a été clos après la seule mesure de l'import, sans mesurer le démarrage complet du conteneur. | Avant de clore, comparer ce qui a été mesuré à ce que le titre promet ; ce qui ne l'est pas est mesuré ou écrit « non vérifié », et le ticket reste ouvert tant qu'il manque. |
 | Plusieurs tâches avançaient en parallèle pendant l'attente de la CI. | Une tâche va jusqu'à « Terminé(e) » (fusion, branche supprimée, preuve) avant d'ouvrir la suivante ; pendant l'attente, lecture et mesures sans branche seulement. |
 | Une tâche était annoncée « faite » sans preuve. | Une tâche passe à « Terminé(e) » en Jira seulement avec sa preuve en commentaire (test, trace, capture, lien de PR). Ce qui n'a pas été vérifié est écrit « non vérifié ». |
+| Le serveur MCP a été écrit sur le SDK `mcp` alors que FastMCP 4, la couche au-dessus, existait : seule la version du paquet en main avait été vérifiée. | Avant tout choix de dépendance, chercher la dernière stable du paquet **et** de sa couche supérieure ou de ses alternatives officielles (PyPI, dépôt, documentation) ; règle « Toujours la dernière version stable » d'`AGENTS.md`. |
 
 ## Outils et scripts
 

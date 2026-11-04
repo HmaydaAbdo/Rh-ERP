@@ -30,6 +30,11 @@ technologique voulu (A2UI pour l'interface agentique, à pleine capacité, au-de
 fait maison suivi dans l'épopée E10 (KAN-23), application agentique au niveau de la page (l'agent ne navigue pas), et site de
 documentation à jour à la fin de chaque épopée.
 
+**Règle stricte, à appliquer avant tout choix de dépendance** : technologie native et meilleur choix argumenté, toujours la 
+dernière version stable de chaque couche (le paquet et ce qui l'enveloppe, par exemple FastMCP 4 et non le SDK MCP seul), et 
+veille continue de tous les choix adoptés (règle « Technologie native, meilleur choix, dernière version, veille continue » 
+d'`AGENTS.md`, erreur déjà commise dans `conventions/lecons.md`).
+
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 
