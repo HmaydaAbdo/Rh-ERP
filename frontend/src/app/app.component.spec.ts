@@ -1,7 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { MockInstance } from 'vitest';
 import { ConfirmDialogService, NotificationService } from '@shared/ui/feedback/feedback.service';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/services/auth.service';
@@ -76,30 +75,27 @@ describe('AppComponent', () => {
       contenuConcurrent.id = 'contenu';
       document.body.append(contenuConcurrent);
       document.body.append(host);
-      let focus: MockInstance<HTMLElement['focus']> | undefined;
       try {
         fixture.detectChanges();
-        // Le composant peut se re-rendre une fois l'état d'authentification résolu : on attend, puis on relit le lien
-        // juste avant le clic (un lien détaché ne retrouverait plus son <main>).
         await fixture.whenStable();
         fixture.detectChanges();
-        expect(host.querySelector('.app-skip')?.textContent).toContain('Aller au contenu');
-        // Le focus réel dépend de l'état de la fenêtre du navigateur pendant la suite complète : on vérifie que le
-        // lien le demande au <main> du composant (et non au <p id="contenu"> concurrent). Sur une CI lente, la
-        // navigation initiale peut re-rendre le shell après le premier clic : on relit donc le lien vivant à chaque
-        // tentative, jusqu'à ce que son gestionnaire réponde.
-        const espion = vi.spyOn(HTMLElement.prototype, 'focus');
-        focus = espion;
-        await vi.waitFor(() => {
-          host.querySelector<HTMLAnchorElement>('.app-skip')?.click();
-          expect(espion).toHaveBeenCalled();
-        });
+        const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
+        expect(lien?.textContent).toContain('Aller au contenu');
 
-        const principal = host.querySelector('main#contenu');
-        expect(principal).not.toBeNull();
-        expect(espion.mock.contexts.every((contexte) => contexte === principal)).toBe(true);
+        lien?.click();
+
+        // On vérifie l'effet réel (l'élément qui a le focus) plutôt qu'un espion global sur `focus`. Le <main> du
+        // composant, et non le <p id="contenu"> concurrent, doit le recevoir. Le diagnostic sert si le test échoue sur
+        // une CI où l'échec n'est pas reproductible en local.
+        const diagnostic = JSON.stringify({
+          actif: document.activeElement?.outerHTML.slice(0, 120),
+          lienDansLeDocument: lien?.isConnected,
+          shell: lien?.closest('.app-shell')?.className,
+          mainDuShell: Boolean(lien?.closest('.app-shell')?.querySelector('main#contenu')),
+          document: document.hasFocus()
+        });
+        expect(document.activeElement, diagnostic).toBe(host.querySelector('main#contenu'));
       } finally {
-        focus?.mockRestore();
         fixture.destroy();
         contenuConcurrent.remove();
         host.remove();
