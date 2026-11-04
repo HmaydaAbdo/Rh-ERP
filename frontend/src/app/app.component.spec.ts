@@ -82,7 +82,8 @@ describe('AppComponent', () => {
         const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
         expect(lien?.textContent).toContain('Aller au contenu');
 
-        lien?.click();
+        const clic = new MouseEvent('click', { bubbles: true, cancelable: true });
+        const nonAnnule = lien?.dispatchEvent(clic);
 
         // On vérifie l'effet réel (l'élément qui a le focus) plutôt qu'un espion global sur `focus`. Le <main> du
         // composant, et non le <p id="contenu"> concurrent, doit le recevoir. Le diagnostic sert si le test échoue sur
@@ -92,7 +93,10 @@ describe('AppComponent', () => {
           lienDansLeDocument: lien?.isConnected,
           shell: lien?.closest('.app-shell')?.className,
           mainDuShell: Boolean(lien?.closest('.app-shell')?.querySelector('main#contenu')),
-          document: document.hasFocus()
+          document: document.hasFocus(),
+          gestionnaireExecute: nonAnnule === false,
+          mainAffiche: getComputedStyle(host.querySelector('main#contenu') as Element).display,
+          mainTabindex: host.querySelector('main#contenu')?.getAttribute('tabindex')
         });
         expect(document.activeElement, diagnostic).toBe(host.querySelector('main#contenu'));
       } finally {
