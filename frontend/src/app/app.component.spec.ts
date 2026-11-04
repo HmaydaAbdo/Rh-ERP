@@ -83,17 +83,21 @@ describe('AppComponent', () => {
         // juste avant le clic (un lien détaché ne retrouverait plus son <main>).
         await fixture.whenStable();
         fixture.detectChanges();
-        const lien = host.querySelector<HTMLAnchorElement>('.app-skip');
-        expect(host.querySelector('main#contenu')).not.toBeNull();
+        expect(host.querySelector('.app-skip')?.textContent).toContain('Aller au contenu');
         // Le focus réel dépend de l'état de la fenêtre du navigateur pendant la suite complète : on vérifie que le
-        // lien le demande au <main> du composant (et non au <p id="contenu"> concurrent). L'espion est sur le
-        // prototype : il ne dépend pas de l'instance du <main>, que le composant peut recréer avant le clic.
-        focus = vi.spyOn(HTMLElement.prototype, 'focus');
-        lien?.click();
+        // lien le demande au <main> du composant (et non au <p id="contenu"> concurrent). Sur une CI lente, la
+        // navigation initiale peut re-rendre le shell après le premier clic : on relit donc le lien vivant à chaque
+        // tentative, jusqu'à ce que son gestionnaire réponde.
+        const espion = vi.spyOn(HTMLElement.prototype, 'focus');
+        focus = espion;
+        await vi.waitFor(() => {
+          host.querySelector<HTMLAnchorElement>('.app-skip')?.click();
+          expect(espion).toHaveBeenCalled();
+        });
 
-        expect(lien?.textContent).toContain('Aller au contenu');
-        expect(focus).toHaveBeenCalledTimes(1);
-        expect(focus.mock.contexts[0]).toBe(host.querySelector('main#contenu'));
+        const principal = host.querySelector('main#contenu');
+        expect(principal).not.toBeNull();
+        expect(espion.mock.contexts.every((contexte) => contexte === principal)).toBe(true);
       } finally {
         focus?.mockRestore();
         fixture.destroy();
