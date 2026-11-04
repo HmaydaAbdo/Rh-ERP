@@ -10,12 +10,12 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, cast
 
+from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
+from fastmcp.server.dependencies import get_access_token
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mcp.server import MCPServer
-from mcp.server.auth.middleware.auth_context import get_access_token
-from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from staport.domains.audit import consultation
 from staport.domains.audit.exceptions import EntiteAuditeeInconnue
@@ -70,7 +70,7 @@ def _nombre_de_total(resultat: dict[str, Any]) -> int | None:
 
 
 def enregistrer(
-    serveur: MCPServer, contexte: Callable[[], ContexteAuth], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
+    serveur: FastMCP, contexte: Callable[[], ContexteAuth], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
 ) -> None:
     """Déclare les outils sur `serveur` ; contexte et fabrique de sessions sont demandés à chaque appel."""
     entites = sorted(e.nom for e in registre.toutes())

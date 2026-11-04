@@ -9,23 +9,24 @@ permission de son écran. Un jeton REST (autre audience) est refusé ici, et un 
 
 from collections.abc import Callable
 
+from fastmcp.exceptions import ToolError
+from fastmcp.server.auth import AccessToken, TokenVerifier
+from fastmcp.server.dependencies import get_access_token
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mcp.server.auth.middleware.auth_context import get_access_token
-from mcp.server.auth.provider import AccessToken
-from mcp.server.mcpserver.exceptions import ToolError
 from staport.domains.auth.securite import PERMISSION_IA, SCOPE_LECTURE
 from staport.domains.auth.service_agent import ServiceAgent
 
 SCOPES_EXIGES = [SCOPE_LECTURE, PERMISSION_IA]
 
 
-class VerificateurJetonAgent:
+class VerificateurJetonAgent(TokenVerifier):
     """`TokenVerifier` du SDK : un jeton valide dont le compte est actif donne l'`AccessToken` de cet appel."""
 
     def __init__(
         self, agent: Callable[[], ServiceAgent], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
     ) -> None:
+        super().__init__(required_scopes=SCOPES_EXIGES)
         self._agent = agent
         self._fabrique = fabrique
 
