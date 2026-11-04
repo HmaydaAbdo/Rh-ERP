@@ -398,6 +398,13 @@ le service démarre sans archive datant de moins de 24 heures, il en crée une i
 Le service place `rh-erp-<horodatage-UTC>.tar.gz.age` dans `./backups/`, à côté de
 `docker-compose.yml`. Le dump PostgreSQL au format custom, les rôles sans leurs mots de passe et les
 sommes SHA-256 sont regroupés dans une archive tar.gz, puis chiffrés avec `age` avant leur publication.
+La même archive contient `phoenix.dump`, la base `phoenix` où Phoenix conserve ses traces sans limite de durée
+(décision du 2026-11-04) : les traces sont des données de l'ERP et suivent les mêmes garanties de chiffrement et de
+restauration. Le service `phoenix-db-init` crée le compte et la base `phoenix` au démarrage, de façon idempotente ;
+`PHOENIX_DB_PASSWORD` est obligatoire dans le `.env` (voir `.env.example`). Aucune purge automatique : seul le
+propriétaire supprime des traces, depuis l'interface de Phoenix (`127.0.0.1:PHOENIX_PORT`). Les archives créées avant
+cette date ne contiennent pas `phoenix.dump`, et les traces écrites auparavant dans le volume SQLite `phoenix_data`
+ne sont pas migrées.
 Le dump est validé avec `pg_restore --list` ; l'archive tar est relue et ses sommes vérifiées avant
 chiffrement. Le plaintext temporaire est placé dans `/tmp`, monté en tmpfs par Compose, puis supprimé.
 Les permissions sont restreintes au compte `postgres` du conteneur (UID/GID 70) ; sur un hôte Linux,
@@ -440,7 +447,7 @@ age --decrypt --identity "$env:USERPROFILE\erp-rh-backup-identity.txt" `
 ```
 
 Extraire ensuite le `.tar.gz`, vérifier `SHA256SUMS` avec `sha256sum -c SHA256SUMS` dans WSL/Linux,
-et contrôler le dump avec `pg_restore --list database.dump` avant de suivre la procédure de
+et contrôler les dumps avec `pg_restore --list database.dump` (et `phoenix.dump` s'il est présent) avant de suivre la procédure de
 restauration isolée ci-dessous. Ne jamais transmettre la clé privée avec l'archive.
 
 ### Vérifier et restaurer
@@ -459,7 +466,8 @@ pg_restore --list database.dump
 
 Pour une restauration, utiliser une instance PostgreSQL isolée et vide, créée avec un compte
 administrateur temporaire distinct des rôles sauvegardés. Restaurer `globals.sql`, créer la base
-`POSTGRES_DB` puis restaurer `database.dump` avec `pg_restore`. Les mots de passe des rôles ne sont
+`POSTGRES_DB` puis restaurer `database.dump` avec `pg_restore` ; pour les traces, créer le rôle et la base `phoenix`
+puis restaurer `phoenix.dump` de la même façon. Les mots de passe des rôles ne sont
 pas inclus : les rétablir depuis la configuration de secrets avant de connecter l'application.
 Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
 avant tout retour au service. Ne jamais tester sur le seul volume de production.
