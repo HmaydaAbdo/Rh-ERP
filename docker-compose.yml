@@ -48,6 +48,7 @@ services:
       - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
+      - phoenix-db-net
     ports:
       # Lié à 127.0.0.1 uniquement : accessible pour l'administration/le backup depuis le serveur
       # lui-même, jamais depuis l'extérieur (conventions/security.md — Postgres n'est jamais
@@ -76,6 +77,8 @@ services:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT est obligatoire}
       BACKUP_DIR: /backups
+      # Base des traces Phoenix : sauvegardée dans la même archive chiffrée que la base de l'ERP.
+      PHOENIX_DB: phoenix
     volumes:
       - type: bind
         source: ./backups
@@ -366,9 +369,12 @@ services:
       OTEL_SERVICE_NAME: erp-rh-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
-      # OpenInference conserve les spans et métadonnées, mais retire les contenus de conversation et les arguments/résultats d'outils.
-      OPENINFERENCE_HIDE_INPUTS: "true"
-      OPENINFERENCE_HIDE_OUTPUTS: "true"
+      # Contenus conservés en clair dans Phoenix (décision du propriétaire, 2026-11-04) : conversations, arguments et résultats
+      # d'outils servent à analyser ce qui s'est passé et à améliorer l'agent. Phoenix reste privé (127.0.0.1, connexion obligatoire).
+      OPENINFERENCE_HIDE_INPUTS: "false"
+      OPENINFERENCE_HIDE_OUTPUTS: "false"
+      # Les sondes de santé (Docker, /health/ready) ne sont pas tracées.
+      OTEL_PYTHON_FASTAPI_EXCLUDED_URLS: "health"
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -423,12 +429,48 @@ services:
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
 
-  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, base
-  # SQLite dans le volume, conservation 30 jours ; interface sur 127.0.0.1 seulement, connexion obligatoire.
+  # Crée une fois, de façon idempotente, le compte et la base `phoenix` dans le PostgreSQL de l'ERP (installation neuve ou
+  # existante), puis s'arrête. Phoenix y écrit ses traces : la sauvegarde chiffrée quotidienne les couvre avec la base.
+  phoenix-db-init:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PHOENIX_DB_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        psql -v ON_ERROR_STOP=1 -v mdp="$$PHOENIX_DB_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE phoenix LOGIN PASSWORD %L', :'mdp')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'phoenix') \gexec
+        SELECT format('ALTER ROLE phoenix PASSWORD %L', :'mdp') \gexec
+        SELECT 'CREATE DATABASE phoenix OWNER phoenix'
+        WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'phoenix') \gexec
+        SQL
+    networks:
+      - db-net
+
+  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, traces
+  # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}
     restart: unless-stopped
+    depends_on:
+      phoenix-db-init:
+        condition: service_completed_successfully
     environment:
+      PHOENIX_POSTGRES_HOST: postgres
+      PHOENIX_POSTGRES_PORT: "5432"
+      PHOENIX_POSTGRES_USER: phoenix
+      PHOENIX_POSTGRES_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
+      PHOENIX_POSTGRES_DB: phoenix
       PHOENIX_SECRET: ${PHOENIX_SECRET:?PHOENIX_SECRET est obligatoire (voir .env.example)}
       PHOENIX_ADMIN_SECRET: ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
       PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${PHOENIX_ADMIN_PASSWORD:?PHOENIX_ADMIN_PASSWORD est obligatoire (voir .env.example)}
@@ -442,6 +484,7 @@ services:
       - /tmp
     networks:
       - trace-net
+      - phoenix-db-net
     ports:
       - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
 
@@ -472,3 +515,5 @@ networks:
   runtime-auth-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
   trace-net:
+  # Phoenix et le PostgreSQL de l'ERP (base `phoenix`) seulement.
+  phoenix-db-net:

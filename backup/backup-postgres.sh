@@ -28,8 +28,15 @@ echo "Creating PostgreSQL backup ${timestamp}"
 pg_dumpall --globals-only --no-role-passwords > "$workdir/globals.sql"
 pg_dump --format=custom --file="$workdir/database.dump" "$PGDATABASE"
 pg_restore --list "$workdir/database.dump" >/dev/null
-(cd "$workdir" && sha256sum globals.sql database.dump > SHA256SUMS)
-tar -czf "$plaintext_archive" -C "$workdir" globals.sql database.dump SHA256SUMS
+archived_files="globals.sql database.dump"
+# Traces Phoenix : base séparée du même PostgreSQL, conservée avec les mêmes garanties (chiffrement, vérification).
+if [ -n "${PHOENIX_DB:-}" ]; then
+  pg_dump --format=custom --file="$workdir/phoenix.dump" "$PHOENIX_DB"
+  pg_restore --list "$workdir/phoenix.dump" >/dev/null
+  archived_files="$archived_files phoenix.dump"
+fi
+(cd "$workdir" && sha256sum $archived_files > SHA256SUMS)
+tar -czf "$plaintext_archive" -C "$workdir" $archived_files SHA256SUMS
 test -s "$plaintext_archive"
 tar -tzf "$plaintext_archive" >/dev/null
 verification_dir=$(mktemp -d "$workdir/verify.XXXXXX")
