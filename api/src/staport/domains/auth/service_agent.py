@@ -13,7 +13,14 @@ from staport.domains.auth import repository
 from staport.domains.auth.exceptions import IaDesactivee, JetonAgentRefuse
 from staport.domains.auth.mappage import noms_des_roles, permissions_effectives
 from staport.domains.auth.schemas import JetonAgentReponse
-from staport.domains.auth.securite import DUREE_JETON_AGENT, PERMISSION_IA, JeuDeCles, emettre_jeton_agent
+from staport.domains.auth.securite import (
+    DUREE_JETON_AGENT,
+    PERMISSION_IA,
+    JetonInvalide,
+    JeuDeCles,
+    emettre_jeton_agent,
+    verifier_jeton_agent,
+)
 from staport.domains.common.audit_contexte import Auditeur
 from staport.domains.common.securite import ActionSecurite, EvenementSecurite
 
@@ -58,6 +65,19 @@ class ServiceAgent:
         if self._cles is None:
             raise IaDesactivee
         return self._cles.jwks()
+
+    async def authentifier(self, session: AsyncSession, jeton: str) -> tuple[IdentiteAgent, str] | None:
+        """Identité courante et scope d'un jeton agent valide dont le compte est actif ; `None` sinon (route `/mcp`)."""
+        if self._cles is None:
+            return None
+        try:
+            utilisateur_id, username, scope = verifier_jeton_agent(self._cles, jeton)
+        except JetonInvalide:
+            return None
+        identite = await self.identite_active(session, utilisateur_id)
+        if identite is None or identite.username != username:
+            return None
+        return identite, scope
 
     async def identite_active(self, session: AsyncSession, utilisateur_id: int | None) -> IdentiteAgent | None:
         """Identité et droits courants d'un compte actif, `None` sinon (appelée dans une transaction ouverte)."""

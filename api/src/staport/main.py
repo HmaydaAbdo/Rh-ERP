@@ -6,17 +6,21 @@ Démarrage : `uvicorn staport.main:application --factory`.
 """
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mcp.server import MCPServer
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.routing import Route
 
 from staport.domains.audit import router as routes_audit
 from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.common.audit_contexte import Origine, contexte_batch
+from staport.domains.mcp.serveur import CHEMIN as CHEMIN_MCP
+from staport.domains.mcp.serveur import creer_serveur
 from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
@@ -68,7 +72,10 @@ def creer_app(
         if verification is not None:
             await verification.demarrer()
         try:
-            yield
+            # Le gestionnaire de sessions MCP appartient à l'application hôte (documentation du SDK MCP).
+            serveur_mcp: MCPServer | None = getattr(app.state, "serveur_mcp", None)
+            async with serveur_mcp.session_manager.run() if serveur_mcp else nullcontext():
+                yield
         finally:
             if verification is not None:
                 await verification.arreter()
@@ -98,6 +105,11 @@ def creer_app(
             routes_parametre.parametres,
         ):
             app.include_router(routeur)
+        if configuration_.mcp_enabled:
+            serveur_mcp, application_mcp = creer_serveur(lambda: app.state.auth, lambda: app.state.fabrique_sessions)
+            app.state.serveur_mcp = serveur_mcp
+            # Une route (et non un montage à la racine) : les autres chemins gardent leurs 404 et 405 de FastAPI.
+            app.router.routes.append(Route(CHEMIN_MCP, endpoint=application_mcp))
     return app
 
 
