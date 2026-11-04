@@ -30,7 +30,7 @@ hors du domaine audit dépendent de l'interface.
 > **Backend Python (FastAPI)** : sur décision du propriétaire (2026-11-03), l'audit ne trace que les opérations qui
 > changent l'état et les événements de sécurité. Les catégories `ACCES` et `LECTURE_METIER` (lectures, exports, appels MCP
 > de lecture) ne sont plus écrites ; l'historique déjà produit par Spring reste lisible. Voir
-> [migration-fastapi/audit.md](../migration-fastapi/audit.md).
+> site de documentation, page Migration › Domaine audit (`site/docs/migration/audit.md`).
 
 ### Ce qui est audité
 

@@ -1,3 +1,8 @@
+---
+title: Domaine auth
+sidebar_position: 4
+---
+
 # Domaine `auth` en Python (KAN-213)
 
 Code : `api/src/staport/domains/auth/`. Tests : `api/tests/test_auth_*.py` (PostgreSQL réel, schéma construit par Alembic).

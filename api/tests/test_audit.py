@@ -440,6 +440,7 @@ AUDITEES = {
     ("POST", "/users"): "UTILISATEUR_CREATION",
     ("PUT", "/users/{identifiant}"): "UTILISATEUR_MODIFICATION",
     ("PUT", "/users/{identifiant}/permissions-refusees"): "UTILISATEUR_PERMISSIONS_REFUSEES",
+    ("PUT", "/parametres/{identifiant}"): "PARAMETRE_MODIFICATION",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 

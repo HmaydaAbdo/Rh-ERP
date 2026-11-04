@@ -17,6 +17,7 @@ from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.common.audit_contexte import Origine, contexte_batch
+from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
@@ -94,6 +95,7 @@ def creer_app(
             routes_auth.utilisateurs,
             routes_auth.roles,
             routes_audit.logs,
+            routes_parametre.parametres,
         ):
             app.include_router(routeur)
     return app
