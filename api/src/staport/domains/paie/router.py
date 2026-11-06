@@ -17,6 +17,7 @@ from .schemas import (
     PaieEquipeOption,
     PaieExportRequete,
     PaieImportAnalyse,
+    PaieImportCorrection,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -107,6 +108,14 @@ async def importer(
 ) -> dict[str, int]:
     nombre = await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero)
     return {"periode": periode, "crees": nombre}
+
+
+@paies.post("/import/corrections", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+async def corriger_import(
+    corrections: list[PaieImportCorrection], session: Session, contexte: Contexte
+) -> dict[str, int]:
+    nombre = await contexte.import_paie.corriger(session, corrections)
+    return {"corrigees": nombre}
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
-from staport.domains.employee.models import Employee
+from staport.domains.employee.models import Employee, TypeSalaire
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from .models import Paie
-from .schemas import PaieImportAnalyse, PaieImportErreur
+from .schemas import PaieImportAnalyse, PaieImportCorrection, PaieImportErreur
 
 
 class ServiceImportPaie:
@@ -193,3 +193,27 @@ class ServiceImportPaie:
                 )
             await session.flush()
         return max(0, len(lignes) - 3)
+
+    async def corriger(self, session: AsyncSession, corrections: list[PaieImportCorrection]) -> int:
+        action = self._auditeur.auditer(session, "PAIE_IMPORT_CORRECTION", TypeOperation.UPDATE, "Employee")
+        async with session.begin(), action:
+            total = 0
+            for correction in corrections:
+                employe = await session.get(Employee, correction.employee_id)
+                if employe is None:
+                    raise ValueError(f"Employé introuvable : {correction.employee_id}")
+                if correction.nom_prenom is not None:
+                    employe.nom_prenom = correction.nom_prenom.strip()
+                if correction.fonction_id is not None:
+                    employe.fonction_id = correction.fonction_id
+                if correction.chantier_id is not None:
+                    employe.chantier_id = correction.chantier_id
+                if correction.equipe_id is not None:
+                    employe.equipe_id = correction.equipe_id
+                if correction.salaire is not None:
+                    employe.salaire = correction.salaire
+                if correction.type_salaire is not None:
+                    employe.type_salaire = TypeSalaire(correction.type_salaire)
+                total += 1
+            await session.flush()
+        return total

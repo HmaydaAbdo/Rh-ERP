@@ -163,3 +163,13 @@ class PaieImportAnalyse(ModeleApi):
     erreurs: list[PaieImportErreur]
     avertissements: list[PaieImportErreur]
     pret: bool
+
+
+class PaieImportCorrection(ModeleApi):
+    employee_id: int
+    nom_prenom: str | None = Field(default=None, max_length=150)
+    fonction_id: int | None = None
+    chantier_id: int | None = None
+    equipe_id: int | None = None
+    salaire: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    type_salaire: str | None = Field(default=None, max_length=20)
