@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 
@@ -236,6 +236,10 @@ class ServiceEmployee:
                 )
                 cle = str(cin or "").strip().upper()
                 raison = None
+                if isinstance(naissance, datetime):
+                    naissance = naissance.date()
+                if isinstance(embauche, datetime):
+                    embauche = embauche.date()
                 if not nom or not cle or not fonction or not chantier or not naissance or not embauche:
                     raison = "Champs obligatoires manquants"
                 elif not isinstance(naissance, date) or naissance >= date.today():

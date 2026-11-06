@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, Index, Numeric, SmallInteger, String, Table
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Index, Numeric, SmallInteger, String, Table
 
 from staport.domains.audit.api import ChampAudite, EntiteAuditee, registre
 from staport.platform.base_de_donnees import Base
@@ -14,13 +14,13 @@ chantier_aud = Table(
     Column("code", String(100)),
     Column("designation", String(500)),
     Column("nom", String(255)),
-    Column("source_erp", String),
-    Column("actif", String),
+    Column("source_erp", Boolean),
+    Column("actif", Boolean),
     Column("nature", String(30)),
     Column("localisation", String(2048)),
     Column("latitude", Numeric(11, 8)),
     Column("longitude", Numeric(11, 8)),
-    Column("afficher_sur_carte", String),
+    Column("afficher_sur_carte", Boolean),
 )
 Index("idx_chantier_aud_rev", chantier_aud.c.rev)
 
