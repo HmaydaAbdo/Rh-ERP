@@ -85,6 +85,22 @@ bulletin sur ce périmètre.
 
 ## Assistant d’import
 
+### Règle de synchronisation
+
+La création d'un bulletin et la mise à jour de la fiche Employé sont deux opérations distinctes.
+Pour un employé reconnu par son CIN, la ligne importée alimente le snapshot historique du bulletin
+(fonction, chantier, équipe et valeurs de la période). Si aucun bulletin n'existe pour le couple
+`employé + période`, le bulletin est créé sans écraser un autre bulletin.
+
+Le salaire n'est soumis au wizard que lorsqu'il diffère du salaire courant de la fiche Employé,
+lequel correspond normalement au salaire de la dernière paie. S'il est identique, l'import passe
+automatiquement. S'il diffère, le wizard propose la valeur et déduit le type : `salaire <= 500` →
+`JOURNALIER`, `salaire > 500` → `MENSUEL`; la fiche n'est alignée qu'après confirmation.
+
+Un bulletin déjà présent pour le même employé et la même période n'est jamais écrasé automatiquement.
+Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
+Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
+
 Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serveur relit le fichier à
 chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.

@@ -13,3 +13,9 @@ de groupe, les outils MCP et la parité des tests Spring documentés dans `docs/
 Le calcul automatique n'est pas introduit : `salaire_total` reste une valeur fournie par le contrat
 du bulletin, conformément au domaine existant. Les snapshots historiques et l'unicité employé ×
 période restent des invariants de la table.
+
+Règle métier validée pour l'import : la création d'un bulletin est distincte de la mise à jour de la
+fiche Employé. Un salaire identique à celui de la fiche (dernier salaire connu) passe automatiquement;
+un salaire différent passe par le wizard, avec type proposé (`≤ 500` journalier, `> 500` mensuel).
+Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
+d'affectation ne sont pas déduits automatiquement.
