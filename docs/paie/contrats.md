@@ -83,6 +83,16 @@ Sans bulletin sur le mois choisi : KPI à zéro, coût moyen absent et répartit
 `evolution` du périmètre reste disponible. Le mois précédent est `null` s'il ne contient aucun
 bulletin sur ce périmètre.
 
+## Export Excel et regroupement d'équipes
+
+L'export Python doit reproduire le classeur Spring à options identiques : feuille globale, feuilles
+par chantier, feuilles par équipe, totaux, mois précédent et tableaux matériel. Le regroupement est
+une option de présentation de l'export, jamais une modification de la base. Une configuration peut
+déclarer un libellé de groupe et plusieurs codes d'équipes sources, par exemple `CH+OP = [CH, OP]`.
+Toutes les lignes des équipes sources sont alors agrégées sous ce seul libellé dans chaque feuille,
+et tous les calculs (effectif, masse, totaux et comparaisons) utilisent le groupe agrégé. Sans option
+de regroupement, le résultat reste strictement celui du Spring.
+
 ## Assistant d’import
 
 ### Règle de synchronisation
