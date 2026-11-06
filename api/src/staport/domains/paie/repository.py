@@ -1,6 +1,6 @@
 from typing import cast
 
-from sqlalchemy import ColumnElement, func, or_, select
+from sqlalchemy import ColumnElement, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -69,13 +69,16 @@ async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[
     return list(rows), total
 
 
-async def periodes(s: AsyncSession) -> list[tuple[int, int, int, object]]:
+async def periodes(s: AsyncSession) -> list[tuple[int, int, int, object, int, object]]:
+    sortie = func.lower(func.btrim(Paie.observation)).in_(("stc", "sortie"))
     q = (
         select(
             Paie.periode,
             func.count(Paie.id),
             func.count(func.distinct(Paie.chantier_id)),
             func.coalesce(func.sum(Paie.salaire_total), 0),
+            func.sum(case((sortie, 1), else_=0)),
+            func.coalesce(func.sum(case((sortie, Paie.salaire_total), else_=0)), 0),
         )
         .group_by(Paie.periode)
         .order_by(Paie.periode.desc())
