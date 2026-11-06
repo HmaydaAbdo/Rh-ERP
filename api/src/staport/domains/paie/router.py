@@ -18,6 +18,7 @@ from .schemas import (
     PaieExportRequete,
     PaieImportAnalyse,
     PaieImportCorrection,
+    PaieImportCreation,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -116,6 +117,12 @@ async def corriger_import(
 ) -> dict[str, int]:
     nombre = await contexte.import_paie.corriger(session, corrections)
     return {"corrigees": nombre}
+
+
+@paies.post("/import/creations", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+async def creer_import(creations: list[PaieImportCreation], session: Session, contexte: Contexte) -> dict[str, int]:
+    nombre = await contexte.import_paie.creer_employes(session, creations)
+    return {"crees": nombre}
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
