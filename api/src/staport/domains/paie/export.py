@@ -25,19 +25,35 @@ class ServiceExportPaie:
             .where(Paie.periode == requete.periode)
             .order_by(Chantier.code, Employee.nom_prenom)
         )
+        precedent = (
+            select(Paie, Employee, Chantier, Equipe)
+            .join(Employee, Employee.id == Paie.employee_id)
+            .join(Chantier, Chantier.id == Paie.chantier_id)
+            .outerjoin(Equipe, Equipe.id == Paie.equipe_id)
+            .where(Paie.periode == _mois_precedent(requete.periode))
+        )
         async with session.begin():
             lignes = cast(list[tuple[Paie, Employee, Chantier, Equipe | None]], list((await session.execute(q)).all()))
+            lignes_precedentes = cast(
+                list[tuple[Paie, Employee, Chantier, Equipe | None]], list((await session.execute(precedent)).all())
+            )
         groupes = _groupes(requete.regroupements_equipes)
         workbook = Workbook()
         actif = workbook.active
         if actif is not None:
             workbook.remove(actif)
         global_sheet = workbook.create_sheet("GLB")
-        _ecrire(global_sheet, lignes, groupes, requete.materiel)
+        _ecrire(global_sheet, lignes, groupes, requete.materiel, lignes_precedentes)
         for code in sorted({chantier.code for _, _, chantier, _ in lignes}):
             feuille = workbook.create_sheet(code[:31])
             chantier_lignes = [x for x in lignes if x[2].code == code]
-            _ecrire(feuille, chantier_lignes, groupes, requete.materiel)
+            _ecrire(
+                feuille,
+                chantier_lignes,
+                groupes,
+                requete.materiel,
+                [x for x in lignes_precedentes if x[2].code == code],
+            )
             equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None]]] = {}
             for ligne in chantier_lignes:
                 equipe = ligne[3].code if ligne[3] else "SANS_EQUIPE"
@@ -45,7 +61,7 @@ class ServiceExportPaie:
             for equipe, equipe_lignes in sorted(equipes.items()):
                 nom = f"{code}_{equipe}"[:31]
                 feuille_equipe = workbook.create_sheet(nom)
-                _ecrire(feuille_equipe, equipe_lignes, groupes, requete.materiel)
+                _ecrire(feuille_equipe, equipe_lignes, groupes, requete.materiel, lignes_precedentes)
         sortie = BytesIO()
         workbook.save(sortie)
         sortie.seek(0)
@@ -60,11 +76,17 @@ def _groupes(configuration: dict[str, list[str]]) -> dict[str, str]:
     return resultat
 
 
+def _mois_precedent(periode: int) -> int:
+    annee, mois = divmod(periode, 100)
+    return (annee - 1) * 100 + 12 if mois == 1 else annee * 100 + mois - 1
+
+
 def _ecrire(
     feuille: Worksheet,
     lignes: list[tuple[Paie, Employee, Chantier, Equipe | None]],
     groupes: dict[str, str],
     materiel: dict[str, int],
+    lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None]],
 ) -> None:
     feuille.append(["PAIE"])
     feuille.append(["PÉRIODE", str(lignes[0][0].periode) if lignes else ""])
@@ -88,6 +110,21 @@ def _ecrire(
         )
     feuille.append([])
     feuille.append(["TOTAL GENERAL", "", "", "", "", "", "", sum((x[0].salaire_total for x in lignes), Decimal(0))])
+    precedent = sum((x[0].salaire_total for x in lignes_precedentes), Decimal(0))
+    feuille.append(
+        ["TOTAL GENERAL MOIS PRECEDENT", "", "", "", "", "", "", precedent if lignes_precedentes else "INTROUVABLE"]
+    )
+    feuille.append([])
+    feuille.append(["FONCTION", "BULLETINS DE PAIE", "STC"])
+    fonctions: dict[int, tuple[int, int]] = {}
+    for paie, *_ in lignes:
+        compte, stc = fonctions.get(paie.fonction_id, (0, 0))
+        fonctions[paie.fonction_id] = (
+            compte + 1,
+            stc + int((paie.observation or "").strip().lower() in {"stc", "sortie"}),
+        )
+    for fonction, (compte, stc) in sorted(fonctions.items()):
+        feuille.append([str(fonction), compte, stc])
     if materiel:
         feuille.append([])
         feuille.append(["MATÉRIEL", "QUANTITÉ"])
