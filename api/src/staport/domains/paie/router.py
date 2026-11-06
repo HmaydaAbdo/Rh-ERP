@@ -5,12 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
 from staport.domains.common.pagination import Pagination, pagination
+from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
 from .schemas import (
     PaieAnalytiqueReponse,
+    PaieChantierOption,
     PaieCreationRequete,
+    PaieEquipeOption,
     PaieModificationRequete,
+    PaieOptionsChantierRequete,
+    PaieOptionsEquipeRequete,
     PaiePeriodeResume,
     PaieRecherche,
     PaieReponse,
@@ -41,6 +46,20 @@ async def periodes(session: Session, contexte: Contexte) -> list[PaiePeriodeResu
 @paies.post("/analytique", dependencies=[Depends(exiger("PAIE_READ"))])
 async def analytique(periode: int, session: Session, contexte: Contexte) -> PaieAnalytiqueReponse:
     return await contexte.paies.analytique(session, periode)
+
+
+@paies.post("/options/chantiers", dependencies=[Depends(exiger("PAIE_READ"))])
+async def options_chantiers(
+    corps: PaieOptionsChantierRequete, page: PagePaie, session: Session, contexte: Contexte
+) -> Page[PaieChantierOption]:
+    return await contexte.paies.options_chantiers(session, corps, page)
+
+
+@paies.post("/options/equipes", dependencies=[Depends(exiger("PAIE_READ"))])
+async def options_equipes(
+    corps: PaieOptionsEquipeRequete, page: PagePaie, session: Session, contexte: Contexte
+) -> Page[PaieEquipeOption]:
+    return await contexte.paies.options_equipes(session, corps, page)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

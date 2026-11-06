@@ -13,8 +13,12 @@ from .exceptions import PaieDejaExistante, PaieIntrouvable
 from .models import Paie
 from .schemas import (
     PaieAnalytiqueReponse,
+    PaieChantierOption,
     PaieCreationRequete,
+    PaieEquipeOption,
     PaieModificationRequete,
+    PaieOptionsChantierRequete,
+    PaieOptionsEquipeRequete,
     PaiePeriodeResume,
     PaieRecherche,
     PaieReponse,
@@ -89,6 +93,20 @@ class ServicePaie:
             salaire_moyen=Decimal(str(moyenne)) if moyenne is not None else None,
             nombre_employes=employes,
         )
+
+    async def options_chantiers(
+        self, s: AsyncSession, r: PaieOptionsChantierRequete, p: Pagination
+    ) -> Page[PaieChantierOption]:
+        async with s.begin():
+            rows, total = await repository.options_chantiers(s, r.periode, r.recherche, p)
+        return creer_page([PaieChantierOption.model_validate(x) for x in rows], p.taille, p.page, total)
+
+    async def options_equipes(
+        self, s: AsyncSession, r: PaieOptionsEquipeRequete, p: Pagination
+    ) -> Page[PaieEquipeOption]:
+        async with s.begin():
+            rows, total = await repository.options_equipes(s, r.periode, r.chantier_ids, r.recherche, p)
+        return creer_page([PaieEquipeOption.model_validate(x) for x in rows], p.taille, p.page, total)
 
     @staticmethod
     async def _obtenir(s: AsyncSession, i: int) -> Paie:

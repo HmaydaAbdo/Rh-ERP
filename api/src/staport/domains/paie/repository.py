@@ -1,7 +1,9 @@
 from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.chantier.models import Chantier
 from staport.domains.common.pagination import Pagination
+from staport.domains.equipe.models import Equipe
 
 from .models import Paie
 from .schemas import PaieRecherche
@@ -61,3 +63,28 @@ async def analytique(s: AsyncSession, periode: int) -> tuple[int, object, object
     ).where(Paie.periode == periode)
     row = (await s.execute(q)).one()
     return row[0], row[1], row[2], row[3]
+
+
+async def options_chantiers(s: AsyncSession, periode: int, recherche: str | None, p: Pagination):
+    q = select(Chantier).join(Paie, Paie.chantier_id == Chantier.id).where(Paie.periode == periode).distinct()
+    if recherche and recherche.strip():
+        motif = f"%{recherche.strip().lower()}%"
+        q = q.where(func.lower(Chantier.code).like(motif) | func.lower(func.coalesce(Chantier.nom, "")).like(motif))
+    total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
+    q = q.order_by(Chantier.code.asc()).limit(p.taille).offset(p.decalage)
+    return list((await s.execute(q)).scalars().all()), total
+
+
+async def options_equipes(s: AsyncSession, periode: int, chantier_ids: list[int], recherche: str | None, p: Pagination):
+    q = (
+        select(Equipe)
+        .join(Paie, Paie.equipe_id == Equipe.id)
+        .where(Paie.periode == periode, Paie.chantier_id.in_(chantier_ids), Paie.equipe_id.is_not(None))
+        .distinct()
+    )
+    if recherche and recherche.strip():
+        motif = f"%{recherche.strip().lower()}%"
+        q = q.where(func.lower(Equipe.code).like(motif) | func.lower(Equipe.libelle).like(motif))
+    total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
+    q = q.order_by(Equipe.code.asc()).limit(p.taille).offset(p.decalage)
+    return list((await s.execute(q)).scalars().all()), total
