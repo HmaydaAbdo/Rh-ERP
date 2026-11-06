@@ -48,6 +48,12 @@ Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/s
 
 - **Configuration** : mêmes variables d'environnement que Spring ; une variable absente fait échouer le démarrage ; secrets masqués.
 - **Base de données** : SQLAlchemy asynchrone, psycopg 3, `expire_on_commit=False` (documentation officielle lue).
+- **Traces SQL (KAN-220)** : l'[instrumentation OpenTelemetry SQLAlchemy 0.66b2](https://raw.githubusercontent.com/open-telemetry/opentelemetry-python-contrib/v0.66b2/instrumentation/opentelemetry-instrumentation-sqlalchemy/src/opentelemetry/instrumentation/sqlalchemy/package.py)
+  refuse SQLAlchemy 2.1 (borne `< 2.1.0`). L'[instrumentation officielle Psycopg](https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/psycopg/psycopg.html)
+  0.66b2 couvre psycopg 3 et est chargée par l'auto-instrumentation OpenTelemetry de l'image API. Une requête réelle
+  SQLAlchemy asynchrone `SELECT 1` a produit un span client `SELECT` reçu par Phoenix avec `db.statement=SELECT 1`,
+  dans la même trace que le span parent. L'instrumentation SQLAlchemy pourra être réexaminée à sa prochaine version
+  publiée compatible 2.1 ; aucune borne de compatibilité n'est contournée.
 - **Migrations** : Alembic, révision `0001_base_v44` qui rejoue les 44 scripts Flyway (copiés dans `migrations/flyway_v44/`) dans
   l'ordre numérique, **une transaction par script** comme Flyway (V9, V28, V32 créent des tables temporaires `ON COMMIT DROP`
   de même nom ; deux scripts dans une même transaction échouent). Schéma et données de référence sont donc identiques par

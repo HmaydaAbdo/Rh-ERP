@@ -457,7 +457,7 @@ jobs:
           set -euo pipefail
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-postgres:$GITHUB_SHA" database
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backend:$GITHUB_SHA" backend
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-api:$GITHUB_SHA" api
+          docker build --file api/Dockerfile --tag "$DOCKERHUB_USERNAME/erp-rh-api:$GITHUB_SHA" .
           docker build --file api/Flyway.Dockerfile --tag "$DOCKERHUB_USERNAME/erp-rh-flyway-validate:$GITHUB_SHA" api
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup

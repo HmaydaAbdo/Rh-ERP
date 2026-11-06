@@ -1,6 +1,6 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-30.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+**Mis à jour : 2026-11-06.** Seule référence du chantier IA : décisions, architecture, plan, suivi
 et reprise. Les règles réutilisables sont dans les conventions
 ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
@@ -13,6 +13,12 @@ reste connecté à Spring jusqu'à la bascule de l'authentification : les jetons
 acceptés par l'API Python RS256. La réception d'un span MCP par Phoenix est vérifiée dans un projet Compose isolé,
 avec des données synthétiques. Voir la
 [migration MCP](../site/docs/migration/mcp.md).
+Pour les requêtes PostgreSQL de l'API Python, l'auto-instrumentation OpenTelemetry utilise le pilote officiel
+`opentelemetry-instrumentation-psycopg` 0.66b2 : l'instrumentation SQLAlchemy publiée à cette version exclut SQLAlchemy
+2.1. Une requête SQLAlchemy asynchrone `SELECT 1` a produit un span client SQL reçu dans Phoenix dans la même trace que
+son parent (KAN-220). Le propriétaire a validé explicitement l'usage de la série OpenTelemetry 0.66b2 **bêta**, faute
+de version stable de cette instrumentation ; la veille suit sa première stable. L'essai est local et isolé ; il ne
+démontre pas encore une trace de question IA de bout en bout.
 Le banc sur une copie isolée de la base ERP couvre les cinq outils Python portés : 15 réponses conformes sur 15 au
 dernier passage, trois répétitions par cas avec juge. Le premier passage (13/15) a révélé une réponse de rôles erronée et
 une erreur du critère d'horodatage, corrigée avant le nouveau passage. Les autres domaines et la bascule restent à faire.

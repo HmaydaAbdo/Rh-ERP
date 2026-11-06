@@ -13,8 +13,10 @@ production : la bascule se fait à la fin d'E2 (KAN-50), conformément à la [st
 ## Périmètre de ce ticket
 
 Le socle et les outils des domaines déjà en Python : **5 des 31 outils** de lecture. Les autres arrivent avec leur
-domaine (KAN-49, un domaine = ses routes, son audit, ses outils). L'absorption du service IA (`ia/`) dans le même
-conteneur reste à réaliser pour satisfaire les critères de KAN-216.
+domaine (KAN-49, un domaine = ses routes, son audit, ses outils), selon la décision du propriétaire du 2026-11-06.
+Le paquet `ia/` est installé dans l'image API ; ses routes (`/agui`, `/health/ia`, `/health/ready`) et son cycle de vie
+sont inclus dans la même application FastAPI quand `IA_ENABLED` est configuré. La bascule de Compose et de
+l'authentification attend KAN-50 : le jeton de connexion Spring HS256 ne peut pas être utilisé sur l'API Python RS256.
 
 | Outil | Permission | Spring | Python |
 |---|---|---|---|
@@ -75,14 +77,15 @@ désactivé après l'émission (401), droit `IA_UTILISER` retiré après l'émis
 outils au catalogue avec leurs annotations et un schéma de sortie, la permission de chaque outil, les filtres, pages et
 bornes (limite, page, nom trop long, date réelle, identifiant positif, énumérations), une modification retrouvée par le
 journal et l'historique, **aucune ligne ajoutée au journal par un appel d'outil**, et le span (statut, utilisateur,
-nombre de résultats, ni argument ni résultat). La suite complète de l'API passe (249 tests), `ruff` et `pyright` strict
+nombre de résultats, ni argument ni résultat). La suite complète de l'API passait (252 tests avant l'intégration IA), `ruff` et `pyright` strict
 sans erreur.
 
 ## Ce qui n'est pas encore prouvé
 
-- **Le service IA n'utilise pas encore ce serveur** : l'image et le service `api` sont préparés sur la branche de migration. Le
-  service `ia/` (une seule URL, `IA_ERP_API_URL`, pour le jeton agent et `/mcp`) sera branché sur l'API Python seule, sans
-  repli sur Spring ; les outils s'ajoutent domaine par domaine (KAN-49).
+- **Le service IA déployé n'utilise pas encore ce serveur** : son paquet et ses routes sont présents dans l'image API,
+  mais le service `ia/` de Compose appelle encore Spring. `IA_ERP_API_URL` devra viser l'API Python pour l'échange du
+  jeton agent et `/mcp`, une fois la connexion utilisateur basculée sur RS256 (KAN-50). Les outils s'ajoutent domaine par
+  domaine (KAN-49).
 
 - **Le client IA actuel contre ce serveur** : le service `ia/` de la pile appelle encore Spring. Sur une copie isolée
   du volume ERP existant, le banc réel a exécuté cinq cas couvrant les cinq outils portés, trois fois chacun avec le
