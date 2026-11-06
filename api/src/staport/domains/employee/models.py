@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import BigInteger, Date, ForeignKey, Identity, Numeric, String
+from sqlalchemy import BigInteger, Date, ForeignKey, Identity, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from staport.platform.base_de_donnees import Base
@@ -34,3 +34,12 @@ class Employee(Base):
     salaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     type_salaire: Mapped[TypeSalaire | None] = mapped_column(String(20))
     statut: Mapped[EmployeeStatut] = mapped_column(String(20), nullable=False, default=EmployeeStatut.ACTIF)
+
+
+class EmployeeSortie(Base):
+    __tablename__ = "employe_sortie"
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    employee_id: Mapped[int] = mapped_column(ForeignKey("employe.id"), nullable=False)
+    periode: Mapped[int] = mapped_column(Integer, nullable=False)
+    motif: Mapped[str] = mapped_column(String(255), nullable=False)
