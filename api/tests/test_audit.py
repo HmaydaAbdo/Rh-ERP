@@ -441,6 +441,9 @@ AUDITEES = {
     ("PUT", "/users/{identifiant}"): "UTILISATEUR_MODIFICATION",
     ("PUT", "/users/{identifiant}/permissions-refusees"): "UTILISATEUR_PERMISSIONS_REFUSEES",
     ("PUT", "/parametres/{identifiant}"): "PARAMETRE_MODIFICATION",
+    ("POST", "/functions"): "FONCTION_CREATION",
+    ("PUT", "/functions/{identifiant}"): "FONCTION_MODIFICATION",
+    ("DELETE", "/functions/{identifiant}"): "FONCTION_SUPPRESSION",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
@@ -455,7 +458,12 @@ EVENEMENTS_SECURITE = {
 }
 """Routes d'écriture tracées par un événement de sécurité (session ou secret, jamais historisés)."""
 
-LECTURES_PAR_POST = {("POST", "/users/search"), ("POST", "/roles/search"), ("POST", "/logs/search")}
+LECTURES_PAR_POST = {
+    ("POST", "/users/search"),
+    ("POST", "/roles/search"),
+    ("POST", "/logs/search"),
+    ("POST", "/functions/search"),
+}
 """Recherches par POST : elles ne changent rien et ne sont pas auditées."""
 
 

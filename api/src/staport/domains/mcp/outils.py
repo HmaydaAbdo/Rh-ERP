@@ -25,6 +25,7 @@ from staport.domains.auth.composition import ContexteAuth
 from staport.domains.auth.schemas import RoleRecherche
 from staport.domains.auth.securite import SCOPE_LECTURE
 from staport.domains.common.pagination import Pagination
+from staport.domains.function import repository as repository_fonction
 from staport.domains.mcp.telemetrie import outil
 
 LIGNES = 20
@@ -167,6 +168,56 @@ def enregistrer(
                 for r in resultats.content
             ],
             "vue": {"module": "admin/roles", "vue": "tabulaire", "parametres": {}},
+        }
+
+    @serveur.tool(
+        name="fonction_rechercher",
+        title="Rechercher des fonctions",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Trouve des fonctions par libellé partiel, sans tenir compte de la casse. Rend les résultats paginés "
+            "avec le nombre total ; parcourir les pages jusqu'au total. Réservé aux utilisateurs qui voient le "
+            "référentiel des fonctions. Lecture seule : ne modifie rien."
+        ),
+    )
+    @outil("fonction_rechercher", "FUNCTION_READ", _nombre_de_total)
+    async def fonction_rechercher(
+        recherche: Annotated[str | None, Field(max_length=100, description="Libellé partiel de la fonction.")] = None,
+        limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre de fonctions par page.")] = LIGNES,
+        page: Page = 0,
+    ) -> dict[str, Any]:
+        async with fabrique()() as session:
+            resultats = await repository_fonction.rechercher(
+                session, _texte(recherche), Pagination(page, limite, (("libelle", True),))
+            )
+        lignes, total = resultats
+        return {
+            "total": total,
+            "page": page,
+            "fonctions": [{"id": f.id, "libelle": f.libelle} for f in lignes],
+            "vue": {"module": "function", "vue": "tabulaire", "parametres": {}},
+        }
+
+    @serveur.tool(
+        name="fonction_fiche",
+        title="Fiche d'une fonction",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Lit le libellé d'une fonction à partir de son identifiant. L'identifiant doit venir de "
+            "fonction_rechercher ; identifiant inconnu : erreur. Réservé aux utilisateurs qui voient le référentiel."
+        ),
+    )
+    @outil("fonction_fiche", "FUNCTION_READ", lambda _: 1)
+    async def fonction_fiche(
+        id: Annotated[int, Field(gt=0, description="Identifiant obtenu avec fonction_rechercher.")],
+    ) -> dict[str, Any]:
+        async with fabrique()() as session, session.begin():
+            fonction = await repository_fonction.par_id(session, id)
+        if fonction is None:
+            raise ToolError(f"Fonction introuvable avec l'id : {id}")
+        return {
+            "fonction": {"id": fonction.id, "libelle": fonction.libelle},
+            "vue": {"module": "function", "vue": "detail", "parametres": {"id": id}},
         }
 
     @serveur.tool(
