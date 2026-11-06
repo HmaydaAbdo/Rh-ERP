@@ -14,10 +14,27 @@ from alembic.migration import MigrationContext
 from sqlalchemy import BigInteger, Column, MetaData, String, Table, create_engine, text
 from sqlalchemy.engine import make_url
 
+from staport.migrations.deploiement import migrer
+
 RACINE = Path(__file__).resolve().parent.parent
 SCRIPTS_V44 = list((RACINE / "src" / "staport" / "migrations" / "flyway_v44").glob("V*.sql"))
 COMPTE_APP = "staport_app"
 MOT_DE_PASSE_APP = "mdp-app-essai"
+
+
+def _variables_migration(url: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    adresse = make_url(url)
+    for nom, valeur in {
+        "DB_HOST": adresse.host,
+        "DB_PORT": str(adresse.port),
+        "DB_NAME": adresse.database,
+        "DB_MIGRATION_USER": adresse.username,
+        "DB_MIGRATION_PASSWORD": adresse.password,
+        "DB_USER": "staport_env_test",
+        "DB_PASSWORD": MOT_DE_PASSE_APP,
+    }.items():
+        assert valeur is not None
+        monkeypatch.setenv(nom, valeur)
 
 
 def _config(url: str, compte: str | None = None) -> Config:
@@ -57,6 +74,94 @@ def test_le_compte_applicatif_ne_peut_pas_reecrire_l_audit(creer_base: Callable[
         c.execute(text("DELETE FROM permission WHERE false"))  # table métier : DELETE permis
         with pytest.raises(Exception, match="permission denied"):
             c.execute(text("DELETE FROM audit_journal WHERE false"))
+    moteur.dispose()
+
+
+def test_migration_par_environnement_applique_les_droits(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("droits_env")
+    _variables_migration(url, monkeypatch)
+    config = Config(str(RACINE / "alembic.ini"))
+    config.set_main_option("script_location", str(RACINE / "src" / "staport" / "migrations"))
+    command.upgrade(config, "head")
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
+        ).scalar_one()
+        assert not connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'DELETE')")
+        ).scalar_one()
+    moteur.dispose()
+
+
+def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("deploiement_neuf")
+    _variables_migration(url, monkeypatch)
+    migrer()
+    migrer()
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
+        assert connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
+        ).scalar_one()
+    moteur.dispose()
+
+
+def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("deploiement_flyway")
+    command.upgrade(_config(url), "head")
+    moteur = create_engine(url)
+    with moteur.begin() as connexion:
+        roles_avant = connexion.execute(text("SELECT count(*) FROM role")).scalar_one()
+        connexion.execute(text("DROP TABLE alembic_version"))
+        connexion.execute(
+            text("CREATE TABLE flyway_schema_history (installed_rank int, version text, type text, success boolean)")
+        )
+        connexion.execute(
+            text("INSERT INTO flyway_schema_history VALUES (:i, :v, 'SQL', true)"),
+            [{"i": n, "v": str(n)} for n in range(1, 45)],
+        )
+    moteur.dispose()
+    _variables_migration(url, monkeypatch)
+    migrer()
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
+        assert not connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'flyway_schema_history', 'INSERT')")
+        ).scalar_one()
+    moteur.dispose()
+
+
+def test_deploiement_refuse_un_historique_flyway_partiel(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("deploiement_partiel")
+    moteur = create_engine(url)
+    with moteur.begin() as connexion:
+        connexion.execute(
+            text("CREATE TABLE flyway_schema_history (installed_rank int, version text, type text, success boolean)")
+        )
+        connexion.execute(
+            text("INSERT INTO flyway_schema_history VALUES (:i, :v, 'SQL', true)"),
+            [{"i": n, "v": str(n)} for n in range(1, 44)],
+        )
+    moteur.dispose()
+    _variables_migration(url, monkeypatch)
+    with pytest.raises(RuntimeError, match="stamp refusé"):
+        migrer()
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(text("SELECT to_regclass('public.alembic_version')")).scalar_one() is None
     moteur.dispose()
 
 

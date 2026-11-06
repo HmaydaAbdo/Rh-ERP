@@ -3,6 +3,57 @@
  "description": "Jeu de référence de l'agent (docs/ia.md, § 4 ; KAN-205). Les {marqueurs} sont remplis par les données synthétiques de EvaluationAgentIaTest ; la vérité est lue en appelant l'outil MCP de référence, jamais écrite à la main. Types : reponse (défaut), ouvert, abstention, absence, refus, securite, capacites, simple. Champs : verites (plusieurs lectures), tours (tours précédents d'une conversation), interdits (valeurs qui ne doivent pas fuiter). Le chemin de l'agent est libre : seul le résultat et le comportement sont jugés.",
  "cas": [
   {
+   "id": "identite-utilisateur",
+   "question": "Sous quel nom suis-je connecté ?",
+   "outil": "systeme_identite",
+   "arguments": {},
+   "attendus": [
+    {
+     "chemin": "utilisateur",
+     "type": "texte"
+    }
+   ]
+  },
+  {
+   "id": "roles-total",
+   "question": "Combien de rôles sont configurés dans l'application ?",
+   "outil": "roles_lister",
+   "arguments": {},
+   "attendus": [
+    {
+     "chemin": "total",
+     "type": "nombre"
+    }
+   ]
+  },
+  {
+   "id": "parametre-jeton-acces",
+   "question": "Quelle est la durée de l'Access Token en minutes ?",
+   "outil": "parametres_lire",
+   "arguments": {},
+   "attendus": [
+    {"chemin": "parametres.0.valeur", "type": "nombre"}
+   ]
+  },
+  {
+   "id": "audit-modifications-parametres",
+   "question": "Combien de modifications de paramètres figurent dans le journal d'audit ?",
+   "outil": "audit_rechercher",
+   "arguments": {"action": "PARAMETRE_MODIFICATION"},
+   "attendus": [
+    {"chemin": "total", "type": "nombre"}
+   ]
+  },
+  {
+   "id": "audit-historique-parametre",
+   "question": "Combien de versions existent dans l'historique du paramètre de session numéro {parametre_id} ?",
+   "outil": "audit_historique",
+   "arguments": {"entite": "Parametre", "id": "{parametre_id}"},
+   "attendus": [
+    {"chemin": "total", "type": "nombre"}
+   ]
+  },
+  {
    "id": "paie-masse-chantier",
    "question": "Quelle est la masse salariale du chantier {chantier_a_code} en {periode_b} ?",
    "outil": "paie_indicateurs",

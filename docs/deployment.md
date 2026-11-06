@@ -192,6 +192,16 @@ Le backend se connecte avec un **compte applicatif** (`POSTGRES_APP_USER`) qui n
 d'audit ; le **propriétaire** (`POSTGRES_USER`) ne sert qu'à Flyway. Au démarrage, Flyway crée le compte applicatif s'il
 n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manuelle**.
 
+**Préparation de la bascule E2 (non déployée)** : deux services ponctuels du Compose précèdent l'API Python.
+`flyway-validate` emploie l'image officielle Flyway OSS avec les scripts V1–V44 pour contrôler l'historique et les
+checksums ; `api-migrate` applique Alembic avec le propriétaire du schéma, vérifie V44 avant un éventuel estampillage et
+recalcule les droits. `api` attend leur sortie 0 et ne reçoit pas le mot de passe du propriétaire. Une base neuve passe
+directement par Alembic ; une base Flyway partielle ou inconnue bloque la bascule. Sur la branche E2, l'image API et
+l'image de validation utilisent respectivement `API_IMAGE_TAG` et `FLYWAY_IMAGE_TAG` ; elles seront publiées ensemble par
+la CI autorisée. Avant KAN-50, ne pas déployer ce Compose intermédiaire qui contient encore Spring. Pour la répétition,
+restaurer la [sauvegarde chiffrée](#sauvegarde-postgresql) sur une copie isolée ; en cas d'échec après migration, appliquer
+la [procédure de retour arrière](#retour-arrière-dune-mise-à-jour-applicative) avec la sauvegarde vérifiée.
+
 - **Bascule** : ajouter `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` dans `.env` (voir `.env.example`), puis
   `docker compose pull && docker compose up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
   applicatif ne peut pas modifier les tables d'audit ». À essayer d'abord sur une copie de la base.
@@ -398,6 +408,13 @@ le service démarre sans archive datant de moins de 24 heures, il en crée une i
 Le service place `rh-erp-<horodatage-UTC>.tar.gz.age` dans `./backups/`, à côté de
 `docker-compose.yml`. Le dump PostgreSQL au format custom, les rôles sans leurs mots de passe et les
 sommes SHA-256 sont regroupés dans une archive tar.gz, puis chiffrés avec `age` avant leur publication.
+La même archive contient `phoenix.dump`, la base `phoenix` où Phoenix conserve ses traces sans limite de durée
+(décision du 2026-11-04) : les traces sont des données de l'ERP et suivent les mêmes garanties de chiffrement et de
+restauration. Le service `phoenix-db-init` crée le compte et la base `phoenix` au démarrage, de façon idempotente ;
+`PHOENIX_DB_PASSWORD` est obligatoire dans le `.env` (voir `.env.example`). Aucune purge automatique : seul le
+propriétaire supprime des traces, depuis l'interface de Phoenix (`127.0.0.1:PHOENIX_PORT`). Les archives créées avant
+cette date ne contiennent pas `phoenix.dump`, et les traces écrites auparavant dans le volume SQLite `phoenix_data`
+ne sont pas migrées.
 Le dump est validé avec `pg_restore --list` ; l'archive tar est relue et ses sommes vérifiées avant
 chiffrement. Le plaintext temporaire est placé dans `/tmp`, monté en tmpfs par Compose, puis supprimé.
 Les permissions sont restreintes au compte `postgres` du conteneur (UID/GID 70) ; sur un hôte Linux,
@@ -440,7 +457,7 @@ age --decrypt --identity "$env:USERPROFILE\erp-rh-backup-identity.txt" `
 ```
 
 Extraire ensuite le `.tar.gz`, vérifier `SHA256SUMS` avec `sha256sum -c SHA256SUMS` dans WSL/Linux,
-et contrôler le dump avec `pg_restore --list database.dump` avant de suivre la procédure de
+et contrôler les dumps avec `pg_restore --list database.dump` (et `phoenix.dump` s'il est présent) avant de suivre la procédure de
 restauration isolée ci-dessous. Ne jamais transmettre la clé privée avec l'archive.
 
 ### Vérifier et restaurer
@@ -459,7 +476,8 @@ pg_restore --list database.dump
 
 Pour une restauration, utiliser une instance PostgreSQL isolée et vide, créée avec un compte
 administrateur temporaire distinct des rôles sauvegardés. Restaurer `globals.sql`, créer la base
-`POSTGRES_DB` puis restaurer `database.dump` avec `pg_restore`. Les mots de passe des rôles ne sont
+`POSTGRES_DB` puis restaurer `database.dump` avec `pg_restore` ; pour les traces, créer le rôle et la base `phoenix`
+puis restaurer `phoenix.dump` de la même façon. Les mots de passe des rôles ne sont
 pas inclus : les rétablir depuis la configuration de secrets avant de connecter l'application.
 Contrôler extensions, migrations Flyway, volumes de données, permissions et démarrage applicatif
 avant tout retour au service. Ne jamais tester sur le seul volume de production.

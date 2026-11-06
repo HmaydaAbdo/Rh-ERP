@@ -11,7 +11,7 @@ COPY --chmod=0444 filtrer_config.py /usr/local/bin/erp-rh-filtrer-config
 COPY --chmod=0444 enregistrer_cles.py /usr/local/bin/erp-rh-enregistrer-cles
 
 EXPOSE 4000
-HEALTHCHECK --interval=15s --timeout=8s --start-period=90s --retries=8 \
+HEALTHCHECK --interval=15s --timeout=8s --start-period=5m --retries=8 \
   CMD ["python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/readiness', timeout=5)"]
 ENTRYPOINT ["/usr/local/bin/erp-rh-litellm-entrypoint"]
 # Un seul worker : l'état du routeur (cooldowns, limites) reste cohérent en mémoire, sans Redis.

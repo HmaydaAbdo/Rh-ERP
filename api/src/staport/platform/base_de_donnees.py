@@ -8,6 +8,7 @@ avec `session.begin()` ; la dépendance FastAPI fournit seulement la session et 
 from collections.abc import AsyncIterator
 
 from fastapi import Request
+from sqlalchemy import URL
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -16,7 +17,7 @@ class Base(DeclarativeBase):
     """Base déclarative des modèles de persistance de tous les domaines."""
 
 
-def creer_moteur(url: str) -> AsyncEngine:
+def creer_moteur(url: str | URL) -> AsyncEngine:
     return create_async_engine(url, pool_pre_ping=True)
 
 

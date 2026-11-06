@@ -6,8 +6,7 @@ plan, état partagé et outils déclarés par le navigateur.
 
 Ne restent ici que deux protections qu'aucun framework ne fournit :
 
-- l'identité : le jeton de connexion est échangé auprès de Spring contre le jeton agent de l'utilisateur, avec un refus
-  HTTP avant tout flux ;
+- l'identité : l'API ERP échange le jeton de connexion contre celui de l'agent, avec un refus HTTP avant tout flux ;
 - la sortie : aucun événement ``RAW`` ni copie ``rawEvent`` (ils porteraient l'état interne) et un ``RUN_ERROR``
   générique (l'intégration y recopie le texte de l'exception).
 """
@@ -61,7 +60,7 @@ logging.getLogger("ag_ui_langgraph").addFilter(_SansDetail())
 
 
 class AccesErp(Protocol):
-    """Identité de l'utilisateur auprès de Spring : échange de jeton, puis outils MCP à son nom."""
+    """Identité de l'utilisateur auprès de l'API ERP : échange de jeton, puis outils MCP à son nom."""
 
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
@@ -134,8 +133,8 @@ async def evenements(
         yield RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE")
 
 
-class AccesSpring:
-    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` du backend."""
+class AccesHttp:
+    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` de l'API ERP."""
 
     def __init__(self, client: httpx.AsyncClient, api: str) -> None:
         self._client = client
@@ -201,7 +200,7 @@ def routeur_agui(
 
 
 async def _jeton(erp: AccesErp, jeton_connexion: str) -> str:
-    """Les refus de Spring gardent leur sens HTTP ; le reste est une indisponibilité, sans détail."""
+    """Les refus de l'API gardent leur sens HTTP ; le reste est une indisponibilité, sans détail."""
     try:
         return await erp.jeton_agent(jeton_connexion)
     except httpx.HTTPStatusError as refus:
@@ -218,6 +217,6 @@ async def _jeton(erp: AccesErp, jeton_connexion: str) -> str:
 async def _outils(erp: AccesErp, jeton: str) -> Sequence[BaseTool]:
     try:
         return await erp.outils(jeton)
-    except Exception as panne:  # Spring injoignable ou catalogue refusé : indisponibilité, sans détail
+    except Exception as panne:  # API injoignable ou catalogue refusé : indisponibilité, sans détail
         journal.warning("Catalogue MCP indisponible : %s", type(panne).__name__)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None

@@ -5,23 +5,35 @@ des tests de `common`. Avec une configuration, elle monte aussi les domaines mig
 Démarrage : `uvicorn staport.main:application --factory`.
 """
 
+from __future__ import annotations
+
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.routing import Route
 
 from staport.domains.audit import router as routes_audit
 from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.common.audit_contexte import Origine, contexte_batch
+from staport.domains.mcp.serveur import CHEMIN as CHEMIN_MCP
+from staport.domains.mcp.serveur import creer_serveur
 from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
 from staport.platform.requete import EN_TETE_REQUEST_ID, enregistrer_identifiant_requete
+from staport.platform.sante import sante
+
+if TYPE_CHECKING:
+    from erp_rh_ia.config import Settings as SettingsIA
 
 
 async def _amorcer_admin(
@@ -46,6 +58,7 @@ def creer_app(
     moteur: AsyncEngine | None = None,
     contexte: ContexteAuth | None = None,
     amorcer_admin: bool = True,
+    configuration_ia: SettingsIA | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def cycle_de_vie(app: FastAPI) -> AsyncGenerator[None]:
@@ -76,9 +89,27 @@ def creer_app(
             if moteur is None:
                 await moteur_.dispose()
 
-    app = FastAPI(title="Staport Intelligence", lifespan=cycle_de_vie)
+    application_mcp = (
+        creer_serveur(lambda: app.state.auth, lambda: app.state.fabrique_sessions)
+        if configuration_ is not None and configuration_.mcp_enabled
+        else None
+    )
+    # Le cycle de vie de l'application MCP (gestionnaire de sessions) appartient à l'application hôte.
+    vie = cycle_de_vie
+    if application_mcp is not None:
+        vie = combine_lifespans(vie, application_mcp.lifespan)
+    if configuration_ia is not None:
+        from erp_rh_ia.app import cycle_ia
+
+        vie = combine_lifespans(vie, cycle_ia(configuration_ia))
+    app = FastAPI(title="Staport Intelligence", lifespan=vie)
     enregistrer_gestionnaires(app)
     enregistrer_identifiant_requete(app)
+    app.include_router(sante)
+    if configuration_ia is not None:
+        from erp_rh_ia.app import routeur_ia
+
+        app.include_router(routeur_ia(app, configuration_ia))
     if configuration_ is not None:
         origines = sorted(o.strip() for o in configuration_.cors_allowed_origins.split(","))
         app.add_middleware(
@@ -98,8 +129,15 @@ def creer_app(
             routes_parametre.parametres,
         ):
             app.include_router(routeur)
+        if application_mcp is not None:
+            # Une route (et non un montage à la racine) : les autres chemins gardent leurs 404 et 405 de FastAPI.
+            app.router.routes.append(Route(CHEMIN_MCP, endpoint=application_mcp))
     return app
 
 
 def application() -> FastAPI:
-    return creer_app(configuration())
+    if "IA_ENABLED" not in os.environ:
+        return creer_app(configuration())
+    from erp_rh_ia.config import get_settings
+
+    return creer_app(configuration(), configuration_ia=get_settings())

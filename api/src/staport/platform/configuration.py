@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 class Configuration(BaseSettings):
@@ -20,8 +21,6 @@ class Configuration(BaseSettings):
     db_name: str
     db_user: str
     db_password: SecretStr
-    db_migration_user: str
-    db_migration_password: SecretStr
 
     # Authentification et CORS
     frontend_url: str
@@ -64,15 +63,38 @@ class Configuration(BaseSettings):
     # Journaux : text (défaut) ou json (production)
     logging_format: str = "text"
 
-    def url_application(self) -> str:
+    def url_application(self) -> URL:
         """URL SQLAlchemy asynchrone du compte applicatif (pilote psycopg 3, documenté pour l'asynchrone)."""
-        return f"postgresql+psycopg://{self.db_user}:{self.db_password.get_secret_value()}@{self.db_host}:{self.db_port}/{self.db_name}"
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.db_user,
+            password=self.db_password.get_secret_value(),
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
+        )
 
-    def url_migration(self) -> str:
+
+class ConfigurationMigration(BaseSettings):
+    """Paramètres du processus Alembic, distincts de ceux de l'API."""
+
+    db_host: str
+    db_port: int
+    db_name: str
+    db_migration_user: str
+    db_migration_password: SecretStr
+    db_user: str
+    db_password: SecretStr
+
+    def url_migration(self) -> URL:
         """URL du compte propriétaire du schéma, utilisée seulement par l'étape de migration du déploiement."""
-        return (
-            f"postgresql+psycopg://{self.db_migration_user}:{self.db_migration_password.get_secret_value()}"
-            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.db_migration_user,
+            password=self.db_migration_password.get_secret_value(),
+            host=self.db_host,
+            port=self.db_port,
+            database=self.db_name,
         )
 
 

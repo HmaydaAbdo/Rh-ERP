@@ -48,13 +48,15 @@ services:
       - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
+      - phoenix-db-net
     ports:
       # Lié à 127.0.0.1 uniquement : accessible pour l'administration/le backup depuis le serveur
       # lui-même, jamais depuis l'extérieur (conventions/security.md — Postgres n'est jamais
       # exposé à Internet).
       - "127.0.0.1:${POSTGRES_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # TCP uniquement : le socket d'initdb devient prêt avant le serveur final, puis s'arrête.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -76,6 +78,8 @@ services:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT est obligatoire}
       BACKUP_DIR: /backups
+      # Base des traces Phoenix : sauvegardée dans la même archive chiffrée que la base de l'ERP.
+      PHOENIX_DB: phoenix
     volumes:
       - type: bind
         source: ./backups
@@ -118,6 +122,110 @@ services:
       interval: 1m
       timeout: 5s
       retries: 3
+
+  # Validation officielle de l'historique Flyway. Les migrations non appliquées sont permises ici pour une base neuve ;
+  # le garde Alembic refuse ensuite tout historique existant qui n'atteint pas exactement V44.
+  flyway-validate:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-flyway-validate:${FLYWAY_IMAGE_TAG:-latest}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_IGNORE_MIGRATION_PATTERNS: versioned:pending
+      FLYWAY_VALIDATE_MIGRATION_NAMING: "true"
+    command: ["validate"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+
+  # Une seule exécution, avec le propriétaire du schéma ; le serveur API ne reçoit pas ses identifiants.
+  api-migrate:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    restart: "no"
+    depends_on:
+      flyway-validate:
+        condition: service_completed_successfully
+    entrypoint: ["python", "-m", "staport.migrations.deploiement"]
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_MIGRATION_USER: ${POSTGRES_USER}
+      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
+      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
+      PGAUDIT_ENABLED: "true"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+
+  # Préparation de la bascule E2 : ne pas déployer cette branche avant le retrait de Spring (KAN-50).
+  api:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
+      phoenix:
+        condition: service_healthy
+        required: false
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
+      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
+      FRONTEND_URL: ${FRONTEND_URL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:?MCP_JWT_PRIVATE_KEY est obligatoire}
+      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:?MCP_JWT_KEY_ID est obligatoire}
+      MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
+      MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_AUTH: ${SMTP_AUTH}
+      SMTP_STARTTLS: ${SMTP_STARTTLS}
+      MAIL_FROM: ${MAIL_FROM}
+      CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
+      LOGGING_FORMAT: json
+      OTEL_SDK_DISABLED: "false"
+      OTEL_SERVICE_NAME: erp-rh-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
+      OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire}
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+      - ia-net
+      - trace-net
 
   backend:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG est obligatoire}
@@ -258,7 +366,7 @@ services:
     networks:
       - ia-db-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U litellm -d litellm"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -277,7 +385,7 @@ services:
     networks:
       - memoire-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ia -d ia"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ia -d ia"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -366,9 +474,12 @@ services:
       OTEL_SERVICE_NAME: erp-rh-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
-      # OpenInference conserve les spans et métadonnées, mais retire les contenus de conversation et les arguments/résultats d'outils.
-      OPENINFERENCE_HIDE_INPUTS: "true"
-      OPENINFERENCE_HIDE_OUTPUTS: "true"
+      # Contenus conservés en clair dans Phoenix (décision du propriétaire, 2026-11-04) : conversations, arguments et résultats
+      # d'outils servent à analyser ce qui s'est passé et à améliorer l'agent. Phoenix reste privé (127.0.0.1, connexion obligatoire).
+      OPENINFERENCE_HIDE_INPUTS: "false"
+      OPENINFERENCE_HIDE_OUTPUTS: "false"
+      # Les sondes de santé (Docker, /health/ready) ne sont pas tracées.
+      OTEL_PYTHON_FASTAPI_EXCLUDED_URLS: "health"
     read_only: true
     cap_drop: ["ALL"]
     security_opt:
@@ -423,12 +534,48 @@ services:
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
 
-  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, base
-  # SQLite dans le volume, conservation 30 jours ; interface sur 127.0.0.1 seulement, connexion obligatoire.
+  # Crée une fois, de façon idempotente, le compte et la base `phoenix` dans le PostgreSQL de l'ERP (installation neuve ou
+  # existante), puis s'arrête. Phoenix y écrit ses traces : la sauvegarde chiffrée quotidienne les couvre avec la base.
+  phoenix-db-init:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PHOENIX_DB_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        psql -v ON_ERROR_STOP=1 -v mdp="$$PHOENIX_DB_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE phoenix LOGIN PASSWORD %L', :'mdp')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'phoenix') \gexec
+        SELECT format('ALTER ROLE phoenix PASSWORD %L', :'mdp') \gexec
+        SELECT 'CREATE DATABASE phoenix OWNER phoenix'
+        WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'phoenix') \gexec
+        SQL
+    networks:
+      - db-net
+
+  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, traces
+  # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}
     restart: unless-stopped
+    depends_on:
+      phoenix-db-init:
+        condition: service_completed_successfully
     environment:
+      PHOENIX_POSTGRES_HOST: postgres
+      PHOENIX_POSTGRES_PORT: "5432"
+      PHOENIX_POSTGRES_USER: phoenix
+      PHOENIX_POSTGRES_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
+      PHOENIX_POSTGRES_DB: phoenix
       PHOENIX_SECRET: ${PHOENIX_SECRET:?PHOENIX_SECRET est obligatoire (voir .env.example)}
       PHOENIX_ADMIN_SECRET: ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
       PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${PHOENIX_ADMIN_PASSWORD:?PHOENIX_ADMIN_PASSWORD est obligatoire (voir .env.example)}
@@ -442,6 +589,7 @@ services:
       - /tmp
     networks:
       - trace-net
+      - phoenix-db-net
     ports:
       - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
 
@@ -472,3 +620,5 @@ networks:
   runtime-auth-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
   trace-net:
+  # Phoenix et le PostgreSQL de l'ERP (base `phoenix`) seulement.
+  phoenix-db-net:

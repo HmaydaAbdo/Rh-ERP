@@ -908,7 +908,7 @@ L'évaluation se fait à trois niveaux :
    formulations en français, arabe et darija lorsque ces langues sont attendues.
 2. **Avant un changement de modèle ou de prompt.** Le même jeu est joué contre les vrais modèles ;
    les seuils validés (exactitude, abstention, refus, latence, coût) décident.
-3. **En exploitation.** Un échantillon de traces masquées est relu périodiquement par une personne
+3. **En exploitation.** Un échantillon de traces est relu périodiquement par une personne
    habilitée ; les retours des utilisateurs (utile, faux, incomplet, avec motif) sont suivis. Un
    retour n'entre dans le jeu de référence qu'après revue humaine et anonymisation : le jeu ne peut
    pas être modifié directement par les utilisateurs.

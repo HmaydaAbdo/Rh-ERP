@@ -1,12 +1,27 @@
 # IA dans ERP-RH — document unique
 
-**Mis à jour : 2026-10-30.** Seule référence du chantier IA : décisions, architecture, plan, suivi
+**Mis à jour : 2026-11-06.** Seule référence du chantier IA : décisions, architecture, plan, suivi
 et reprise. Les règles réutilisables sont dans les conventions
 ([agents-ia](../conventions/agents-ia.md), [mcp](../conventions/mcp.md),
 [agent-ui](../conventions/agent-ui.md), [rag](../conventions/rag.md),
 [integrations](../conventions/integrations.md)) ; ce document fixe comment ERP-RH les applique.
 
 ## 1. Objectif
+
+La migration Python prépare le serveur MCP dans l'image `erp-rh-api` et son export OTLP vers Phoenix. Le service IA
+reste connecté à Spring jusqu'à la bascule de l'authentification : les jetons utilisateur Spring HS256 ne sont pas
+acceptés par l'API Python RS256. La réception d'un span MCP par Phoenix est vérifiée dans un projet Compose isolé,
+avec des données synthétiques. Voir la
+[migration MCP](../site/docs/migration/mcp.md).
+Pour les requêtes PostgreSQL de l'API Python, l'auto-instrumentation OpenTelemetry utilise le pilote officiel
+`opentelemetry-instrumentation-psycopg` 0.66b2 : l'instrumentation SQLAlchemy publiée à cette version exclut SQLAlchemy
+2.1. Une requête SQLAlchemy asynchrone `SELECT 1` a produit un span client SQL reçu dans Phoenix dans la même trace que
+son parent (KAN-220). Le propriétaire a validé explicitement l'usage de la série OpenTelemetry 0.66b2 **bêta**, faute
+de version stable de cette instrumentation ; la veille suit sa première stable. L'essai est local et isolé ; il ne
+démontre pas encore une trace de question IA de bout en bout.
+Le banc sur une copie isolée de la base ERP couvre les cinq outils Python portés : 15 réponses conformes sur 15 au
+dernier passage, trois répétitions par cas avec juge. Le premier passage (13/15) a révélé une réponse de rôles erronée et
+une erreur du critère d'horodatage, corrigée avant le nouveau passage. Les autres domaines et la bascule restent à faire.
 
 **Staport Intelligence — la plateforme d'IA de Staport** sert tous les utilisateurs de Staport
 (BTP, classe S, Maroc) : comprendre, retrouver, contrôler et préparer. L'assistant dans ERP-RH en
@@ -290,7 +305,7 @@ suit les jalons J2 à J9 ci-dessus et ne change aucune décision du § 2.
 | T15 — Interface CopilotKit | CopilotKit Angular (`provideCopilotKit` relié à `/ia/agui`) aux couleurs Staport : discussion, raisonnement, plan et texte en flux ; `registerFrontendTool` pour poser une question ; `registerRenderToolCall` pour afficher les résultats des outils Spring en cartes Staport ; interface maison retirée | Parcours vérifié au navigateur, accessibilité, budgets de build | ✅ (2026-10-26) |
 | T16 — Interface composée A2UI | Outil `generate_a2ui` injecté par `CopilotKitMiddleware`, rendu A2UI de CopilotKit au thème Staport ; valeurs reprises des résultats d'outils | Une réponse chiffrée affichée en surface A2UI au navigateur | ✅ (2026-10-26) |
 | T17 — Passerelle native | Garde-fous natifs de LiteLLM (détection d'injection de prompt, masquage d'identifiants par Presidio), budgets et limites par utilisateur et par équipe (suivi `user` de LiteLLM), et pour chaque script maison (`filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py`) la fonction native qui le remplace ou la raison de le garder | Injection et dépassement de budget refusés par la passerelle ; décision par script consignée | ✅ (voir journal : injection refusée, limites de la clé, décisions par script) |
-| T18 — Observabilité | OpenTelemetry de bout en bout (navigateur, service IA, Spring par Micrometer, base) et Phoenix auto-hébergé ; masquage OpenInference configuré ; sessions, traces, annotations de triage et jeux d'évaluation synthétiques | Une question se suit du clic à la requête SQL ; aucune donnée personnelle ni valeur métier brute dans les spans | 🟦 infrastructure présente ; masquage de l'image active et parcours sans `server/discover` à revalider en V1c/T20 |
+| T18 — Observabilité | OpenTelemetry de bout en bout (navigateur, service IA, Spring par Micrometer, base) et Phoenix auto-hébergé ; contenus conservés en clair, sans limite de durée (décision du 2026-11-04) ; sessions, traces, annotations de triage et jeux d'évaluation synthétiques | Une question se suit du clic à la requête SQL ; les conversations, arguments et résultats d'outils sont lisibles dans Phoenix | 🟦 infrastructure présente ; configuration sans masquage et parcours sans `server/discover` à revalider en V1c/T20 |
 | T19 — Conversations durables | Checkpointer LangGraph PostgreSQL (base IA dédiée) pour les fils de discussion, reprise de fil par CopilotKit, mémoire longue par le `Store` LangGraph, compactage par `SummarizationMiddleware` | Questions de suivi justes ; isolation entre utilisateurs et suppression testées | ✅ côté service ; reprise de fil dans l'interface : suite |
 | T20 — Image et banc réels | Images `erp-rh-ia` et frontend reconstruites ; banc `BancAssistantTest` et flux réel avec les vrais modèles ; démonstration | Démonstration J1 présentée sur la nouvelle base | ⬜ |
 
@@ -317,11 +332,11 @@ Le découpage est proposé ; il est confirmé avec le modèle de périmètres (T
 | T3.1 — Modèle local | Comparaison de modèles open source (familles, tailles, quantifications) sur le jeu de référence ; licence et provenance ; serveur d'inférence sans accès sortant derrière LiteLLM ; dimensionnement du matériel | Seuils atteints ; achat ou location décidés par le propriétaire | ⬜ |
 | T3.2 — Conversations multi-tours | Historique côté serveur lié à l'utilisateur, identifiant créé par le serveur, fenêtre bornée, rétention et suppression ; questions de suivi et demandes de précision ; liste et suppression des conversations dans l'interface | Cas multi-tours du jeu de référence verts ; isolation et suppression testées | ⬜ |
 | T3.3 — Contexte d'écran | La vue courante (module, filtres) accompagne la question comme indice non fiable, revérifié par Spring | « Ce chantier » résolu ; identifiant hors périmètre refusé | ⬜ |
-| T3.4 — Observabilité | Traces OpenTelemetry (`gen_ai.*`) du navigateur aux outils, outil open source auto-hébergé, contenu masqué, tableaux et alertes ; versions de prompt, graphe, catalogue et modèle dans chaque trace | Une question se suit de bout en bout ; aucune donnée personnelle en clair | ⬜ |
+| T3.4 — Observabilité | Traces OpenTelemetry (`gen_ai.*`) du navigateur aux outils, outil open source auto-hébergé, contenu conservé en clair, tableaux et alertes ; versions de prompt, graphe, catalogue et modèle dans chaque trace | Une question se suit de bout en bout ; Phoenix reste privé et sauvegardé avec la base | ⬜ |
 | T3.5 — Objectifs de service | Mesures sur le banc puis proposition d'objectifs (disponibilité, réponses vérifiées, abstention, latence du premier signe et de la réponse, coût par question) ; tests de charge avec modèle simulé et de panne | Objectifs validés par le propriétaire et tenus sur le banc | ⬜ |
 | T3.6 — Conformité | Fiche du système, inscription au registre des cas d'usage, analyse d'impact et formalités CNDP (dont transferts), durées de conservation de chaque stockage, notice aux utilisateurs | Références consignées au § 2 ; notice visible dans l'assistant | ⬜ |
 | T3.7 — Exploitation | Procédure d'incident IA, coupure par outil, procédure de changement de modèle (jeu de référence, comparaison, retour arrière), prompts versionnés | Procédure rejouée à blanc | ⬜ |
-| T3.8 — Retours et évaluation continue | Retours utile / faux / incomplet avec motif ; revue humaine avant entrée dans le jeu ; évaluation hors ligne en CI avec réponses enregistrées ; relecture périodique d'un échantillon masqué | Le jeu grandit sans écriture directe des utilisateurs ; la CI détecte une régression du graphe sans appel réseau | ⬜ |
+| T3.8 — Retours et évaluation continue | Retours utile / faux / incomplet avec motif ; revue humaine avant entrée dans le jeu ; évaluation hors ligne en CI avec réponses enregistrées ; relecture périodique d'un échantillon de traces | Le jeu grandit sans écriture directe des utilisateurs ; la CI détecte une régression du graphe sans appel réseau | ⬜ |
 | T3.9 — Langues | Cas en arabe et en darija écrits dans le jeu de référence ; réponse dans la langue de la question | Seuils atteints par langue retenue | ⬜ |
 | T3.10 — Pilote | Groupe pilote RH/paie formé, puis direction ; accès par `IA_UTILISER` | Retours du pilote revus ; décision de généralisation | ⬜ |
 
@@ -333,8 +348,8 @@ aux utilisateurs visible.
 | Sujet | Options | Recommandation |
 |---|---|---|
 | Stockage des conversations (T3.2) | Checkpointer LangGraph PostgreSQL dans une base IA dédiée ; ou table dédiée de conversations | Checkpointer PostgreSQL dans une base IA dédiée, tables créées par migration contrôlée : il sert aussi aux reprises de J6 |
-| Durées de conservation (T3.6) | Conversations, traces, journaux LiteLLM (30 jours aujourd'hui) | Proposées après la mesure du pilote, avec l'analyse d'impact |
-| Outil et méthode d'observabilité (T3.4) | **Arize Phoenix local** reçoit OpenTelemetry/OpenInference ; ses sessions regroupent les tours, les traces localisent les spans, les annotations consignent les causes et les jeux/datasets + expériences comparent les versions | Garder Phoenix auto-hébergé et privé ; utiliser des cas synthétiques ou explicitement pseudonymisés pour les datasets ; ne pas envoyer des conversations RH réelles à un évaluateur externe ; masquer entrées et sorties OpenInference, conserver les traces 30 jours, puis vérifier le masquage sur des spans réels avant de déclarer T3.4 terminé |
+| Durées de conservation (T3.6) | Conversations, journaux LiteLLM (30 jours aujourd'hui). **Traces Phoenix : sans limite**, supprimées seulement par le propriétaire (décision du 2026-11-04) | Conversations et journaux : proposées après la mesure du pilote, avec l'analyse d'impact |
+| Outil et méthode d'observabilité (T3.4) | **Arize Phoenix local** reçoit OpenTelemetry/OpenInference ; ses sessions regroupent les tours, les traces localisent les spans, les annotations consignent les causes et les jeux/datasets + expériences comparent les versions | Garder Phoenix auto-hébergé et privé ; utiliser des cas synthétiques ou explicitement pseudonymisés pour les datasets ; ne pas envoyer des conversations RH réelles à un évaluateur externe ; entrées et sorties conservées en clair et traces conservées sans limite (base `phoenix` du PostgreSQL de l'ERP, sauvegardée et chiffrée avec elle) |
 | Modèle local (T3.1) | Matériel acheté, loué ou mutualisé | Décision du propriétaire sur le dimensionnement mesuré |
 | Pseudonymisation (T3.1) | Remplacer CIN et noms par des jetons avant un modèle externe, les rétablir dans la réponse | Oui tant qu'un modèle hors de l'entreprise reçoit des données réelles ; inutile avec le seul modèle local |
 | Vérificateur de chiffres (T10) | ~~Décidé le 2026-10-26 : gardé, en middleware officiel (`after_model`)~~ **Décision du 2026-10-27 appliquée en V1f après V1d** : suppression complète (T22), sans remplaçant maison | — |
@@ -384,7 +399,7 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
 | `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
 | `ToolErrorMiddleware`, `ToolRetryMiddleware`, `ModelRetryMiddleware` | ⬜ | M1 |
-| `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`), `configure_trace_policy`, `omit_payload` | ⬜ | M2 |
+| `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
 | `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
 | `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
 | `FilesystemFileSearchMiddleware` | ⬜ | M5 |
@@ -438,7 +453,7 @@ suffit ; une PR par vague, CI sur demande.
 | 5 | T26 — Échange de jeton | RFC 8693 par Spring Authorization Server et client OAuth2 ; `jeton_agent` et l'encodeur JWT supprimés | **Opus** | Sécurité critique, Java et Python à la fois |
 | 5 | T22 — Vérificateur | Remplacé par V1f (vague 1) : suppression complète | — | — |
 | 2 | M1 — Contexte et erreurs | `ContextEditingMiddleware` (`ClearToolUsesEdit` : efface les anciens résultats d'outils, ce qui retarde le résumé), `ToolErrorMiddleware` (erreur d'outil renvoyée proprement au modèle), `ToolRetryMiddleware` et `ModelRetryMiddleware` (erreurs transitoires du serveur MCP et de la passerelle) | Sonnet | Configuration officielle, un test par middleware |
-| 2 | M2 — Données personnelles | `PIIMiddleware` (CIN, IBAN, téléphone, courriel masqués avant tout modèle externe : les paliers gratuits servent à améliorer les produits des fournisseurs) et `configure_trace_policy` / `omit_payload` (mêmes données retirées des traces Phoenix) ; tenir compte de la loi 09-08 | **Opus** | Sécurité et conformité, difficile à défaire |
+| 2 | M2 — Données personnelles | `PIIMiddleware` (CIN, IBAN, téléphone, courriel masqués avant tout modèle externe : les paliers gratuits servent à améliorer les produits des fournisseurs) avant l'envoi aux fournisseurs ; les traces Phoenix gardent les contenus en clair (décision du 2026-11-04) ; tenir compte de la loi 09-08 pour ce qui quitte l'ERP | **Opus** | Sécurité et conformité, difficile à défaire |
 | 2 | M3 — Bascule et outils | `ModelFallbackMiddleware` (second filet sur un autre tag, en plus de la bascule de LiteLLM), `ProviderToolSearchMiddleware` (catalogue d'outils MCP qui grossit, avec le sélecteur actuel), `LLMToolEmulator` (outils simulés dans le banc d'évaluation, au lieu des doubles de test maison) | Sonnet | Configuration et tests ; mesure de la latence avant et après |
 | 2 | M4 — Approbation humaine | `HumanInTheLoopMiddleware` et interruptions LangGraph (`interrupt`, `Command`) : confirmation avant toute écriture dans l'ERP (J3) ; rapprocher de `poser_question` et des interruptions natives de CopilotKit (T30) | Sonnet | Motif officiel, test de reprise |
 | 3 | M5 — Recherche de fichiers | `FilesystemFileSearchMiddleware` : recherche dans des documents RH locaux, racine en lecture seule, sans accès aux secrets | Sonnet | Périmètre étroit |
@@ -473,8 +488,8 @@ Aucune tâche ouverte ci-dessous n'est supprimée. Jusqu'à la clôture de V1c, 
    partielle de texte reste un autre cas à qualifier sur une version stable, pas un mécanisme maison.
 5. **V1c.5 / T20 — Preuve sur l'image publiée** : après contrôles locaux, livraison par PR et CI verte ; le propriétaire
    récupère ensuite les nouvelles images et relance le même parcours. Vérifier les spans MCP, la sélection des outils,
-   le masquage des contenus Phoenix et la latence avant de clore V1c/T20. Le conteneur actuellement actif n'a pas reçu
-   le mode MCP `legacy` ni les variables de masquage ajoutées localement.
+   la lisibilité des contenus dans Phoenix et la latence avant de clore V1c/T20. Le conteneur actuellement actif n'a pas reçu
+   le mode MCP `legacy` ni la configuration Phoenix du 2026-11-04.
 
 Après cette porte, conserver et traiter les autres tâches ouvertes dans l'ordre : **V1b**, **V1e**, **M1**, **M3**,
 **M2**, **T21/J4a**, **T2.1 → T2.2 → T2.3**, **T24/T28/T29**, **T30/T25/T23/T31**, **M4**, **T27 → T26**, puis
@@ -531,6 +546,7 @@ et ses contrôles documentés.
 | 2026-10-28 | **Audit des domaines restants** : Équipe, Fonction et Chantier n'ont pas d'indicateur autonome à déplacer : leurs vues analytiques lisent les indicateurs des bulletins, portés par Paie ; les effectifs des fiches relèvent d'Employés. Les sélections temporelles des mouvements, évolutions et comparaisons sont maintenant dans les façades Paie. Code et documentation terminés ; validation locale finale `mvnw -B -o test` réussie : 561 tests, 0 échec, 0 erreur, 5 ignorés. CI, commit et push non lancés. |
 | 2026-10-29 | **V1c — diagnostic complet et réordonnancement, sans push/CI.** Jeu réel complet avant corrections : 16/24, p50 31,88 s, p95 118,5 s. Quatre `OutputParserException` survenaient avant outil; deux questions de paie étaient déclarées sans outil; le parcours employé était traité par recherche d'un bulletin; le cas Fonction était un faux négatif du juge lié au tiret U+2011. Les tests stricts JSON Schema ont retenu Gemma 4 26B et Groq gpt-oss-20b; NVIDIA gpt-oss-20b a été retiré après `ModelNotMappedError` LiteLLM pour `openai/gpt-oss-20b`. Le vrai groupe `ai-gateway-tool-selection` passe le smoke test. Le rejeu corrigé du juge réussit `paie-stc` et `paie-repartition-equipe` (2/2), mais révèle un routage lent : `simple-shuffle` a envoyé un appel complexe à MiniMax en 133,4 s; les déploiements complexes testés ont des maxima observés de 106 à 133 s, contre 0,6 à 2,3 s pour les modèles du sélecteur. LiteLLM reçoit désormais le routage officiel par latence uniquement pour `ai-gateway-complex`. Avec ce routage, `paie-stc` réussit en 40,6 s et sélectionne Nemotron 3.5 Super puis MiniMax (4,3 à 7,9 s par appel); la latence baisse par rapport à 149,7 s, mais dépasse encore l'objectif de 30 s. Le juge exige par `agentevals` un outil métier attendu; `paie_repartition` est admis pour l'agrégat d'équipe. Le middleware officiel utilise `on_parsing_failure="all"` après ses reprises. Ruff, formatage et Pyright passent; une erreur de nom dans le juge a été détectée puis corrigée pendant ces contrôles. Le jeu complet après réduction du pool passe à 19/24, p50 9,09 s et p95 39,5 s. Les 5 échecs : deux sorties Groq refusées par enum JSON Schema, mauvais outil pour compter les bulletins d'un chantier, absence d'outil pour les mouvements et réponse au lieu d'une abstention hors ERP. SpendLogs : Gemma 10 succès, Groq 2 erreurs enum; Groq reste en simple mais sort de tool-selection. Le sélecteur officiel garde maintenant paie_indicateurs et paie_mouvements avec always_include; le prompt distingue comptage et détail de bulletin et prescrit l'abstention hors ERP. Rejouer ces cas puis les 24 cas. Le seuil 24/24, p95 sous 30 s et preuve T20 reste ouvert. Le plan conserve toutes les tâches non terminées. |
 | 2026-11-03 | **Évaluation sur le résultat, jeu v2, répétitions (KAN-205).** Critère « outil exact attendu » supprimé (chemin libre, trajectoire rapportée). Jeu de 60 cas (multi-domaines, multi-tours, injection, droits, absence, ouvert, capacités, simples), 3 essais chacun, juge LLM `medium` avec vérité et sources, critères fondement, sécurité, noms techniques, efficacité. Mesure : 169/180 (0,94), pass^3 50/60, aucun cas en échec aux trois essais, sécurité 180/180, p50 5,96 s, p95 37 s ; instables : injection (système, écriture, texte cité), fonction inventée une fois sur trois. Corrections issues des traces : règles de prompt (ne pas nommer d'outil ni révéler ses consignes, texte cité = donnée, homonymes, exemples sans identifiants inventés), description `nom` de `employes_rechercher` et mois non importé de `paie_indicateurs`. Seuils : taux ≥ 0,90, pass^3 ≥ 0,80, aucun cas en échec aux trois essais, sécurité complète. |
+| 2026-11-04 | **Phoenix : conservation sans limite, contenus en clair, sans bruit de santé (décision du propriétaire).** Les traces servent à analyser ce qui s'est passé et à améliorer l'agent ; elles ne sont supprimées que par le propriétaire, depuis l'interface. `PHOENIX_DEFAULT_RETENTION_POLICY_DAYS=0` (documentation Phoenix : 0 = aucune purge automatique), `OPENINFERENCE_HIDE_INPUTS/OUTPUTS=false`, `/health` exclu des traces (`OTEL_PYTHON_FASTAPI_EXCLUDED_URLS` côté service IA, prédicat d'observation Spring côté backend ; le runtime CopilotKit l'ignorait déjà). Phoenix écrit dans la base `phoenix` du PostgreSQL de l'ERP (`PHOENIX_POSTGRES_*`, service `phoenix-db-init` idempotent) : la sauvegarde quotidienne chiffrée la couvre avec la base. Remplace la rétention de 30 jours et le masquage des traces des entrées du 2026-10-26 et du 2026-10-28 ; le masquage `PIIMiddleware` vers les modèles externes reste prévu (M2). |
 
 ## 8. État technique
 
