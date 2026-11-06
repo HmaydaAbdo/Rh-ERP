@@ -36,3 +36,28 @@ async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[
         q = q.order_by(getattr(Paie, champ).asc() if asc else getattr(Paie, champ).desc())
     rows = (await s.execute(q.order_by(Paie.id.asc()).limit(p.taille).offset(p.decalage))).scalars().all()
     return list(rows), total
+
+
+async def periodes(s: AsyncSession) -> list[tuple[int, int, int, object]]:
+    q = (
+        select(
+            Paie.periode,
+            func.count(Paie.id),
+            func.count(func.distinct(Paie.chantier_id)),
+            func.coalesce(func.sum(Paie.salaire_total), 0),
+        )
+        .group_by(Paie.periode)
+        .order_by(Paie.periode.desc())
+    )
+    return list((await s.execute(q)).all())
+
+
+async def analytique(s: AsyncSession, periode: int) -> tuple[int, object, object, int]:
+    q = select(
+        func.count(Paie.id),
+        func.coalesce(func.sum(Paie.salaire_total), 0),
+        func.avg(Paie.salaire_total),
+        func.count(func.distinct(Paie.employee_id)),
+    ).where(Paie.periode == periode)
+    row = (await s.execute(q)).one()
+    return row[0], row[1], row[2], row[3]
