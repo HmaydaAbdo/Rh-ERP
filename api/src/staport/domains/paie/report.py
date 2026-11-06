@@ -104,19 +104,24 @@ class ServiceRapportPaie:
                 corps.append(f'<div class="titre-section">{escape(titre)}</div>')
                 corps.append(
                     '<table class="employes"><thead><tr><th>Nom et prénom</th><th>Fonction</th><th>CIN</th>'
-                    "<th>Chantier</th><th>Équipe</th><th>Salaire</th><th>Total</th><th>Obs</th></tr></thead><tbody>"
+                    "<th>Jours P</th><th>J.R.O</th><th>J.R.D</th><th>Salaire</th><th>RO</th><th>RD</th>"
+                    "<th>Total</th><th>Obs</th><th>Équipe</th></tr></thead><tbody>"
                 )
                 for detail in section:
-                    paie, employe, chantier_ligne, equipe, fonction = detail.valeurs
+                    paie, employe, _chantier_ligne, equipe, fonction = detail.valeurs
                     valeurs = [
                         employe.nom_prenom,
                         fonction.libelle,
                         employe.cin,
-                        chantier_ligne.code,
-                        equipe.libelle if equipe else "",
+                        str(paie.nombre_jours_travailles),
+                        str(paie.jours_recuperation_ouvrable) if paie.jours_recuperation_ouvrable is not None else "",
+                        str(paie.jours_recuperation_dimanche) if paie.jours_recuperation_dimanche is not None else "",
                         f"{paie.salaire_mensuel:,.2f}",
+                        str(paie.prime_roulage_ordinaire) if paie.prime_roulage_ordinaire is not None else "",
+                        str(paie.prime_roulage_dimanche) if paie.prime_roulage_dimanche is not None else "",
                         f"{paie.salaire_total:,.2f}",
                         paie.observation or "",
+                        equipe.libelle if equipe and libelle is None else "",
                     ]
                     corps.append("<tr>" + "".join(f"<td>{escape(str(v))}</td>" for v in valeurs) + "</tr>")
                 corps.append("</tbody></table>")
