@@ -92,6 +92,8 @@ déclarer un libellé de groupe et plusieurs codes d'équipes sources, par exemp
 Toutes les lignes des équipes sources sont alors agrégées sous ce seul libellé dans chaque feuille,
 et tous les calculs (effectif, masse, totaux et comparaisons) utilisent le groupe agrégé. Sans option
 de regroupement, le résultat reste strictement celui du Spring.
+La requête accepte aussi `materiel: {libelle: quantité}` pour reproduire les lignes matériel du
+classeur; une quantité absente reste vide et n'est jamais inventée.
 
 ## Assistant d’import
 
