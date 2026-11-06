@@ -33,11 +33,11 @@ class ServiceExportPaie:
         if actif is not None:
             workbook.remove(actif)
         global_sheet = workbook.create_sheet("GLB")
-        _ecrire(global_sheet, lignes, groupes)
+        _ecrire(global_sheet, lignes, groupes, requete.materiel)
         for code in sorted({chantier.code for _, _, chantier, _ in lignes}):
             feuille = workbook.create_sheet(code[:31])
             chantier_lignes = [x for x in lignes if x[2].code == code]
-            _ecrire(feuille, chantier_lignes, groupes)
+            _ecrire(feuille, chantier_lignes, groupes, requete.materiel)
             equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None]]] = {}
             for ligne in chantier_lignes:
                 equipe = ligne[3].code if ligne[3] else "SANS_EQUIPE"
@@ -45,7 +45,7 @@ class ServiceExportPaie:
             for equipe, equipe_lignes in sorted(equipes.items()):
                 nom = f"{code}_{equipe}"[:31]
                 feuille_equipe = workbook.create_sheet(nom)
-                _ecrire(feuille_equipe, equipe_lignes, groupes)
+                _ecrire(feuille_equipe, equipe_lignes, groupes, requete.materiel)
         sortie = BytesIO()
         workbook.save(sortie)
         sortie.seek(0)
@@ -61,7 +61,10 @@ def _groupes(configuration: dict[str, list[str]]) -> dict[str, str]:
 
 
 def _ecrire(
-    feuille: Worksheet, lignes: list[tuple[Paie, Employee, Chantier, Equipe | None]], groupes: dict[str, str]
+    feuille: Worksheet,
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None]],
+    groupes: dict[str, str],
+    materiel: dict[str, int],
 ) -> None:
     feuille.append(["Employé", "CIN", "Chantier", "Équipe", "Fonction", "Période", "Salaire", "Total"])
     for paie, employe, chantier, equipe in lignes:
@@ -80,3 +83,8 @@ def _ecrire(
         )
     feuille.append([])
     feuille.append(["TOTAL", "", "", "", "", "", "", sum((x[0].salaire_total for x in lignes), Decimal(0))])
+    if materiel:
+        feuille.append([])
+        feuille.append(["MATÉRIEL", "QUANTITÉ"])
+        for libelle, quantite in sorted(materiel.items()):
+            feuille.append([libelle, quantite])

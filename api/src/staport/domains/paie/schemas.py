@@ -144,3 +144,4 @@ class PaieParcoursReponse(ModeleApi):
 class PaieExportRequete(ModeleApi):
     periode: int = Field(ge=190001, le=299912)
     regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)
+    materiel: dict[str, int] = Field(default_factory=dict)
