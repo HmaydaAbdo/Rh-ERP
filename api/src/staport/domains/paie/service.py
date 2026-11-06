@@ -16,11 +16,14 @@ from staport.domains.parametre.service import ServiceParametre
 
 from . import repository
 from .analytique import construire_analytique
+from .cartes import chantiers as construire_chantiers
+from .cartes import periodes as construire_periodes
 from .exceptions import PaieDejaExistante, PaieIntrouvable
 from .models import Paie
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
+    PaieChantierPeriode,
     PaieChantierResume,
     PaieCreationRequete,
     PaieEffectifMois,
@@ -124,6 +127,18 @@ class ServicePaie:
             )
             for p, n, c, m, stc, stc_montant in rows
         ]
+
+    async def periodes_recherche(self, s: AsyncSession, criteres: PaieRecherche) -> list[PaiePeriodeResume]:
+        async with s.begin():
+            lignes = await repository.lignes_analytiques(s, criteres)
+        return construire_periodes(lignes)
+
+    async def chantiers_periode(self, s: AsyncSession, criteres: PaieRecherche) -> list[PaieChantierPeriode]:
+        if criteres.periode is None:
+            raise ValueError("La période est obligatoire pour les chantiers de paie")
+        async with s.begin():
+            lignes = await repository.lignes_analytiques(s, criteres)
+        return construire_chantiers(criteres.periode, lignes)
 
     async def analytique(
         self, s: AsyncSession, criteres: PaieRecherche, parametres: ServiceParametre
