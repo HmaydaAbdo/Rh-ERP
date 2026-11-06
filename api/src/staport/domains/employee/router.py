@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Authentifie, Contexte, exiger
@@ -12,6 +12,7 @@ from .schemas import (
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
+    EmployeeImportReponse,
     EmployeeModificationRequete,
     EmployeeRecherche,
     EmployeeRegroupementReponse,
@@ -74,6 +75,11 @@ async def regroupements(
 @employees.post("/sorties-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def sorties_mois(periode: int, session: Session, contexte: Contexte) -> EmployeeSortiesMoisReponse:
     return await contexte.employees.sorties_mois(session, periode)
+
+
+@employees.post("/import", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])
+async def importer(session: Session, contexte: Contexte, file: UploadFile = File(...)) -> EmployeeImportReponse:  # noqa: B008
+    return await contexte.employees.importer(session, await file.read())
 
 
 @employees.delete(

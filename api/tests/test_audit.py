@@ -455,6 +455,7 @@ AUDITEES = {
     ("POST", "/employees"): "EMPLOYE_CREATION",
     ("PUT", "/employees/{identifiant}"): "EMPLOYE_MODIFICATION",
     ("DELETE", "/employees/{identifiant}"): "EMPLOYE_SUPPRESSION",
+    ("POST", "/employees/import"): "EMPLOYE_IMPORT",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
