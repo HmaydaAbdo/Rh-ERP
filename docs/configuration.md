@@ -47,8 +47,9 @@ strictement positifs. Les valeurs par défaut sûres sont respectivement `5s` et
 Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,
 `DB_MIGRATION_USER`/`DB_MIGRATION_PASSWORD` de `POSTGRES_USER`/`POSTGRES_PASSWORD` et `DB_USER`/`DB_PASSWORD` de
 `POSTGRES_APP_USER`/`POSTGRES_APP_PASSWORD`. Ces deux variables applicatives sont obligatoires : Compose refuse une
-configuration qui les omet et le compte propriétaire ne peut pas servir de repli. Le compte applicatif est créé tout
-seul par Flyway s'il n'existe pas.
+configuration qui les omet et le compte propriétaire ne peut pas servir de repli. Le compte applicatif est créé par le
+rappel Flyway tant que Spring est actif ; à la bascule E2, l'étape Alembic le crée ou recalcule ses droits avant le
+démarrage de l'API Python.
 
 ## Variables du Compose de production (`.env` racine)
 
@@ -56,6 +57,7 @@ seul par Flyway s'il n'existe pas.
 |---|---|
 | `DOCKERHUB_USERNAME` | Compte Docker Hub qui publie les images |
 | `POSTGRES_IMAGE_TAG`, `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG`, `BACKUP_IMAGE_TAG` | SHA du même commit publié par la CI ; obligatoire, aucune valeur `latest` par défaut |
+| `API_IMAGE_TAG`, `FLYWAY_IMAGE_TAG` | Images de l'API Python et de la validation Flyway préparées pour la bascule E2 ; même SHA publié par la CI |
 | `BACKUP_AGE_RECIPIENT` | Clé publique age obligatoire pour chiffrer les archives PostgreSQL ; la clé privée reste hors du serveur |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL et son compte **propriétaire** (migrations) |
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |

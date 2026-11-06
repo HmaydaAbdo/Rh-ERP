@@ -122,6 +122,57 @@ services:
       timeout: 5s
       retries: 3
 
+  # Validation officielle de l'historique Flyway. Les migrations non appliquées sont permises ici pour une base neuve ;
+  # le garde Alembic refuse ensuite tout historique existant qui n'atteint pas exactement V44.
+  flyway-validate:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-flyway-validate:${FLYWAY_IMAGE_TAG:-latest}
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_IGNORE_MIGRATION_PATTERNS: versioned:pending
+      FLYWAY_VALIDATE_MIGRATION_NAMING: "true"
+    command: ["validate"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+
+  # Une seule exécution, avec le propriétaire du schéma ; le serveur API ne reçoit pas ses identifiants.
+  api-migrate:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    restart: "no"
+    depends_on:
+      flyway-validate:
+        condition: service_completed_successfully
+    entrypoint: ["python", "-m", "staport.migrations.deploiement"]
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_MIGRATION_USER: ${POSTGRES_USER}
+      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
+      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
+      PGAUDIT_ENABLED: "true"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+
   # Préparation de la bascule E2 : ne pas déployer cette branche avant le retrait de Spring (KAN-50).
   api:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
@@ -129,6 +180,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
       phoenix:
         condition: service_healthy
         required: false

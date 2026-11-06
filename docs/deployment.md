@@ -192,6 +192,16 @@ Le backend se connecte avec un **compte applicatif** (`POSTGRES_APP_USER`) qui n
 d'audit ; le **propriétaire** (`POSTGRES_USER`) ne sert qu'à Flyway. Au démarrage, Flyway crée le compte applicatif s'il
 n'existe pas et recalcule ses droits (`afterMigrate.sql`) : **aucune étape manuelle**.
 
+**Préparation de la bascule E2 (non déployée)** : deux services ponctuels du Compose précèdent l'API Python.
+`flyway-validate` emploie l'image officielle Flyway OSS avec les scripts V1–V44 pour contrôler l'historique et les
+checksums ; `api-migrate` applique Alembic avec le propriétaire du schéma, vérifie V44 avant un éventuel estampillage et
+recalcule les droits. `api` attend leur sortie 0 et ne reçoit pas le mot de passe du propriétaire. Une base neuve passe
+directement par Alembic ; une base Flyway partielle ou inconnue bloque la bascule. Sur la branche E2, l'image API et
+l'image de validation utilisent respectivement `API_IMAGE_TAG` et `FLYWAY_IMAGE_TAG` ; elles seront publiées ensemble par
+la CI autorisée. Avant KAN-50, ne pas déployer ce Compose intermédiaire qui contient encore Spring. Pour la répétition,
+restaurer la [sauvegarde chiffrée](#sauvegarde-postgresql) sur une copie isolée ; en cas d'échec après migration, appliquer
+la [procédure de retour arrière](#retour-arrière-dune-mise-à-jour-applicative) avec la sauvegarde vérifiée.
+
 - **Bascule** : ajouter `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` dans `.env` (voir `.env.example`), puis
   `docker compose pull && docker compose up -d`. Vérifier dans les logs du backend : « Intégrité de l'audit : le compte
   applicatif ne peut pas modifier les tables d'audit ». À essayer d'abord sur une copie de la base.
