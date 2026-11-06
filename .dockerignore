@@ -1,0 +1,11 @@
+**
+!api/
+!api/pyproject.toml
+!api/uv.lock
+!api/alembic.ini
+!api/src/
+!api/src/**
+!ia/
+!ia/pyproject.toml
+!ia/src/
+!ia/src/**

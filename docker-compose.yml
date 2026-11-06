@@ -55,7 +55,8 @@ services:
       # exposé à Internet).
       - "127.0.0.1:${POSTGRES_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # TCP uniquement : le socket d'initdb devient prêt avant le serveur final, puis s'arrête.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -365,7 +366,7 @@ services:
     networks:
       - ia-db-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U litellm -d litellm"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -384,7 +385,7 @@ services:
     networks:
       - memoire-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ia -d ia"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ia -d ia"]
       interval: 5s
       timeout: 5s
       retries: 10

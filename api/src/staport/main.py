@@ -5,8 +5,12 @@ des tests de `common`. Avec une configuration, elle monte aussi les domaines mig
 Démarrage : `uvicorn staport.main:application --factory`.
 """
 
+from __future__ import annotations
+
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +31,9 @@ from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
 from staport.platform.requete import EN_TETE_REQUEST_ID, enregistrer_identifiant_requete
 from staport.platform.sante import sante
+
+if TYPE_CHECKING:
+    from erp_rh_ia.config import Settings as SettingsIA
 
 
 async def _amorcer_admin(
@@ -51,6 +58,7 @@ def creer_app(
     moteur: AsyncEngine | None = None,
     contexte: ContexteAuth | None = None,
     amorcer_admin: bool = True,
+    configuration_ia: SettingsIA | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def cycle_de_vie(app: FastAPI) -> AsyncGenerator[None]:
@@ -87,11 +95,21 @@ def creer_app(
         else None
     )
     # Le cycle de vie de l'application MCP (gestionnaire de sessions) appartient à l'application hôte.
-    vie = combine_lifespans(cycle_de_vie, application_mcp.lifespan) if application_mcp else cycle_de_vie
+    vie = cycle_de_vie
+    if application_mcp is not None:
+        vie = combine_lifespans(vie, application_mcp.lifespan)
+    if configuration_ia is not None:
+        from erp_rh_ia.app import cycle_ia
+
+        vie = combine_lifespans(vie, cycle_ia(configuration_ia))
     app = FastAPI(title="Staport Intelligence", lifespan=vie)
     enregistrer_gestionnaires(app)
     enregistrer_identifiant_requete(app)
     app.include_router(sante)
+    if configuration_ia is not None:
+        from erp_rh_ia.app import routeur_ia
+
+        app.include_router(routeur_ia(app, configuration_ia))
     if configuration_ is not None:
         origines = sorted(o.strip() for o in configuration_.cors_allowed_origins.split(","))
         app.add_middleware(
@@ -118,4 +136,8 @@ def creer_app(
 
 
 def application() -> FastAPI:
-    return creer_app(configuration())
+    if "IA_ENABLED" not in os.environ:
+        return creer_app(configuration())
+    from erp_rh_ia.config import get_settings
+
+    return creer_app(configuration(), configuration_ia=get_settings())
