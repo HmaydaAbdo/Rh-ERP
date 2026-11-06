@@ -63,7 +63,10 @@ d'essai à part, jamais en arrêtant la sienne. **Non relevées à ce jour.**
 ## Bascule finale et retour arrière
 
 Voir l'ADR § 7 : sauvegarde vérifiée, répétition générale sur une copie de la production, PR unique, annonce au propriétaire de ce qui
-change dans `docker-compose.yml` et le `.env` de production, déploiement, estampillage Alembic (`alembic stamp` sur la révision V44).
+change dans `docker-compose.yml` et le `.env` de production. Le Compose préparé lance `flyway-validate` (noms, types et
+checksums des scripts appliqués) puis `api-migrate` avant `api` : base neuve construite par Alembic, ou historique Flyway
+V1–V44 complet estampillé automatiquement en `0001_base_v44`, sans rejouer les données. Une base Flyway incomplète ou un
+schéma non reconnu bloque le démarrage ; la sauvegarde est restaurée avant une nouvelle tentative.
 Retour arrière : redéployer l'étiquette Spring précédente ; la base reste compatible tant que les révisions de la bascule sont
 rétro-compatibles (exigé en revue), sinon restaurer la sauvegarde.
 

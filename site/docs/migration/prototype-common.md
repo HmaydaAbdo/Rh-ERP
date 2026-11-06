@@ -55,12 +55,15 @@ Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/s
   du propriétaire (étape de la répétition générale, `strategie.md`).
 - **Droits** : `droits.py` reprend `afterMigrate.sql` (compte applicatif SELECT/INSERT seul sur `audit_*` et `*_aud`), avec
   `psycopg.sql` pour échapper identifiants et mot de passe (Flyway insérait le mot de passe par substitution de texte).
-- **Déploiement** : étape dédiée avant le démarrage, jamais dans le `lifespan`.
-  Base neuve : `alembic -c api/alembic.ini upgrade head` (compte propriétaire, `compte_applicatif` et `mot_de_passe_applicatif`
-  passés en options). Base existante gérée par Flyway : `alembic stamp 0001_base_v44` puis `upgrade head`.
-  `PGAUDIT_ENABLED=true` en production, comme aujourd'hui.
-- **Tests** (3, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et des
-  données de référence, droits du compte applicatif sur l'audit, estampillage d'une base existante.
+- **Déploiement préparé (KAN-219)** : `flyway-validate` exécute la commande officielle Flyway 13.12.1 sur les scripts
+  V1–V44, puis `api-migrate` exécute Alembic avec le compte propriétaire ; `api` attend le succès des deux services.
+  Sur une base neuve, Alembic construit le schéma. Sur une base Flyway, le garde exige exactement 44 migrations SQL
+  réussies avant `stamp 0001_base_v44`, puis `upgrade head` recalcule les droits applicatifs. Un schéma non vide sans
+  historique ou un historique Flyway partiel est refusé. Le serveur ne reçoit pas les identifiants du propriétaire.
+  `PGAUDIT_ENABLED=true` en production, comme aujourd'hui. Cette branche intermédiaire ne doit pas être déployée avant
+  KAN-50 : Spring est encore présent dans le Compose.
+- **Tests** (8, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et
+  des données de référence, droits du compte applicatif sur l'audit, estampillage, relance et refus d'un historique partiel.
 
 ### Vérification sur une vraie base Flyway (2026-11-03)
 
