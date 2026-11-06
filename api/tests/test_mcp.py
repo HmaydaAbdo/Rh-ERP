@@ -129,6 +129,8 @@ def test_le_catalogue_expose_les_outils_en_lecture_seule(plateforme: Plateforme,
         "audit_historique",
         "fonction_rechercher",
         "fonction_fiche",
+        "equipe_rechercher",
+        "equipe_fiche",
     }
     for outil in outils.values():
         assert outil["annotations"]["readOnlyHint"] is True and outil["annotations"]["destructiveHint"] is False
