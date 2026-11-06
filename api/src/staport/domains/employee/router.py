@@ -8,7 +8,15 @@ from staport.domains.auth.securite import JetonAcces
 from staport.domains.common.pagination import Pagination, pagination
 from staport.platform.base_de_donnees import session_requete
 
-from .schemas import EmployeeCreationRequete, EmployeeModificationRequete, EmployeeRecherche, EmployeeReponse
+from .schemas import (
+    DimensionEmployes,
+    EmployeeAnalytiqueReponse,
+    EmployeeCreationRequete,
+    EmployeeModificationRequete,
+    EmployeeRecherche,
+    EmployeeRegroupementReponse,
+    EmployeeReponse,
+)
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
 PageEmployees = Annotated[
@@ -46,6 +54,20 @@ async def lire(identifiant: int, session: Session, contexte: Contexte, acces: Au
 @employees.post("/search", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def rechercher(corps: EmployeeRecherche | None, page: PageEmployees, session: Session, contexte: Contexte):
     return await contexte.employees.rechercher(session, corps, page)
+
+
+@employees.post("/analytique", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
+async def analytique(
+    corps: EmployeeRecherche | None, session: Session, contexte: Contexte
+) -> EmployeeAnalytiqueReponse:
+    return await contexte.employees.analytique(session, corps)
+
+
+@employees.post("/regroupements", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
+async def regroupements(
+    dimension: DimensionEmployes, corps: EmployeeRecherche | None, session: Session, contexte: Contexte
+) -> list[EmployeeRegroupementReponse]:
+    return await contexte.employees.regrouper(session, corps, dimension)
 
 
 @employees.delete(

@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import Field, model_validator
@@ -70,3 +71,34 @@ class EmployeeReponse(ModeleApi):
 
 
 EmployeesPage = Page[EmployeeReponse]
+
+
+class DimensionEmployes(StrEnum):
+    CHANTIER = "CHANTIER"
+    EQUIPE = "EQUIPE"
+    FONCTION = "FONCTION"
+
+
+class TrancheReponse(ModeleApi):
+    min: int
+    max: int | None
+    effectif: int
+
+
+class EmployeeAnalytiqueReponse(ModeleApi):
+    effectif: int
+    actifs: int
+    inactifs: int
+    age_moyen: Decimal | None
+    anciennete_moyenne: Decimal | None
+    embauches_douze_mois: int
+    par_age: list[TrancheReponse]
+    par_anciennete: list[TrancheReponse]
+
+
+class EmployeeRegroupementReponse(ModeleApi):
+    id: int
+    code: str | None
+    libelle: str
+    effectif: int
+    actifs: int
