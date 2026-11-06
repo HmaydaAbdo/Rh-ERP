@@ -70,3 +70,28 @@ class PaieAnalytiqueReponse(ModeleApi):
     masse: Decimal
     salaire_moyen: Decimal | None
     nombre_employes: int
+
+
+class PaieOptionsChantierRequete(ModeleApi):
+    periode: int = Field(ge=190001, le=299912)
+    recherche: str | None = Field(default=None, max_length=100)
+
+
+class PaieOptionsEquipeRequete(ModeleApi):
+    periode: int = Field(ge=190001, le=299912)
+    chantier_ids: list[int] = Field(min_length=1, max_length=500)
+    recherche: str | None = Field(default=None, max_length=100)
+
+
+class PaieChantierOption(ModeleApi):
+    id: int
+    code: str
+    nom: str | None
+    designation: str | None
+    actif: bool
+
+
+class PaieEquipeOption(ModeleApi):
+    id: int
+    code: str
+    libelle: str
