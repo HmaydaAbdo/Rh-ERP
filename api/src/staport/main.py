@@ -23,6 +23,8 @@ from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.common.audit_contexte import Origine, contexte_batch
+from staport.domains.function import audit as _historique_function  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.function import router as routes_function
 from staport.domains.mcp.serveur import CHEMIN as CHEMIN_MCP
 from staport.domains.mcp.serveur import creer_serveur
 from staport.domains.parametre import router as routes_parametre
@@ -127,6 +129,7 @@ def creer_app(
             routes_auth.roles,
             routes_audit.logs,
             routes_parametre.parametres,
+            routes_function.fonctions,
         ):
             app.include_router(routeur)
         if application_mcp is not None:
