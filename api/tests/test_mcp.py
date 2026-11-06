@@ -119,9 +119,7 @@ def test_le_droit_ia_retire_apres_l_emission_donne_403(plateforme: Plateforme, a
 # --- Catalogue et identité -------------------------------------------------------------------------
 
 
-def test_le_catalogue_expose_les_cinq_outils_en_lecture_seule(
-    plateforme: Plateforme, admin: tuple[str, str, int]
-) -> None:
+def test_le_catalogue_expose_les_outils_en_lecture_seule(plateforme: Plateforme, admin: tuple[str, str, int]) -> None:
     outils = {o["name"]: o for o in _rpc(plateforme, admin[0], "tools/list").json()["result"]["tools"]}
     assert set(outils) == {
         "systeme_identite",
@@ -129,6 +127,8 @@ def test_le_catalogue_expose_les_cinq_outils_en_lecture_seule(
         "roles_lister",
         "audit_rechercher",
         "audit_historique",
+        "fonction_rechercher",
+        "fonction_fiche",
     }
     for outil in outils.values():
         assert outil["annotations"]["readOnlyHint"] is True and outil["annotations"]["destructiveHint"] is False

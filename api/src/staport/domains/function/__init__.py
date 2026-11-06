@@ -1,0 +1,1 @@
+"""Domaine référentiel des fonctions."""
