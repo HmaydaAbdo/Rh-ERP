@@ -72,8 +72,8 @@
                 <label class="app-controle__champ"><span>Date d’embauche</span>
                 <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
                 <label class="app-controle__champ"><span>Type de salaire</span>
-                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
-                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne) || store.occupe()" (click)="store.creer(inconnu.numeroLigne)">Créer l'employé</button>
+                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? store.typeSalairePropose(inconnu.salaire)" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
+                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne, inconnu.salaire) || store.occupe()" (click)="store.creer(inconnu.numeroLigne, inconnu.salaire)">Créer l'employé</button>
               </div>
             }
           </li>

@@ -126,6 +126,10 @@ Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serve
 chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.
 
+Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois lignes d'en-tête) :
+`Nom & prénom`, `Fonction`, `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`,
+`Total`, `Observation`, `Chantier`, `Équipe`.
+
 | Contrat | Champs et types | Description |
 |---|---|---|
 | `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu et écart. |

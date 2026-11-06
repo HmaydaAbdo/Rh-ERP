@@ -167,19 +167,25 @@ export class PaieImportStore {
     }));
   }
 
-  creationComplete(numeroLigne: number): boolean {
-    const saisie = this.creations()[numeroLigne];
-    return !!saisie?.dateNaissance && !!saisie.dateEmbauche && !!saisie.typeSalaire;
+  /** Préremplissage métier du type de salaire : 500 DH et moins = journalier, au-delà = mensuel. */
+  typeSalairePropose(salaire: number): TypeSalaire {
+    return salaire <= 500 ? 'JOURNALIER' : 'MENSUEL';
   }
 
-  creer(numeroLigne: number): void {
+  creationComplete(numeroLigne: number, salaire: number): boolean {
     const saisie = this.creations()[numeroLigne];
-    if (!saisie?.dateNaissance || !saisie.dateEmbauche || !saisie.typeSalaire) {
+    return !!saisie?.dateNaissance && !!saisie.dateEmbauche && !!(saisie.typeSalaire ?? this.typeSalairePropose(salaire));
+  }
+
+  creer(numeroLigne: number, salaire: number): void {
+    const saisie = this.creations()[numeroLigne];
+    const typeSalaire = saisie?.typeSalaire ?? this.typeSalairePropose(salaire);
+    if (!saisie?.dateNaissance || !saisie.dateEmbauche) {
       return;
     }
     this.corriger({
       aligner: [],
-      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire: saisie.typeSalaire }]
+      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire }]
     });
   }
 
