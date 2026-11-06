@@ -25,6 +25,8 @@ from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.chantier import audit as _historique_chantier  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.chantier import router as routes_chantier
 from staport.domains.common.audit_contexte import Origine, contexte_batch
+from staport.domains.employee import audit as _historique_employee  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.employee import router as routes_employee
 from staport.domains.equipe import audit as _historique_equipe  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.equipe import router as routes_equipe
 from staport.domains.function import audit as _historique_function  # noqa: F401  # pyright: ignore[reportUnusedImport]
@@ -136,6 +138,7 @@ def creer_app(
             routes_function.fonctions,
             routes_equipe.equipes,
             routes_chantier.chantiers,
+            routes_employee.employees,
         ):
             app.include_router(routeur)
         if application_mcp is not None:

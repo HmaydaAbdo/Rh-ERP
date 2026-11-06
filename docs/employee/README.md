@@ -23,6 +23,10 @@ sections suivantes.
 
 ### Couche application
 
+**Migration FastAPI (KAN-225 en cours).** Le modèle et le premier contrat REST sont portés dans
+`api/src/staport/domains/employee/`. Le salaire reste masqué sans `PAIE_READ`; l'import, l'analytique et la parité
+complète sont encore en cours.
+
 - **Backend** (`backend/src/main/java/staport/rh/employee/`) : `EmployeeController` (`/employees`), import Excel d'ajout
   (`/employees/import`), `EmployeeService` / `IEmployeeService` (façade lue par Paie, Chantier, Équipe et l'assistant),
   `ProjectionPaieEmployee` (masque salaire et type sans `PAIE_READ`, **partagée** par l'API REST et les outils MCP).
