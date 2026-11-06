@@ -38,30 +38,45 @@ class ServiceExportPaie:
                 list[tuple[Paie, Employee, Chantier, Equipe | None]], list((await session.execute(precedent)).all())
             )
         groupes = _groupes(requete.regroupements_equipes)
+        if requete.chantiers:
+            codes = {code.strip().upper() for code in requete.chantiers}
+            lignes = [x for x in lignes if x[2].code.strip().upper() in codes]
+            lignes_precedentes = [x for x in lignes_precedentes if x[2].code.strip().upper() in codes]
+        materiel = requete.materiel or {}
         workbook = Workbook()
         actif = workbook.active
         if actif is not None:
             workbook.remove(actif)
         global_sheet = workbook.create_sheet("GLB")
-        _ecrire(global_sheet, lignes, groupes, requete.materiel, lignes_precedentes)
+        _ecrire(global_sheet, lignes, groupes, materiel, lignes_precedentes)
         for code in sorted({chantier.code for _, _, chantier, _ in lignes}):
             feuille = workbook.create_sheet(code[:31])
             chantier_lignes = [x for x in lignes if x[2].code == code]
+            exclusions = {
+                code.strip().upper() for code in (requete.equipes_exclues_feuille_chantier or {}).get(code, [])
+            }
             _ecrire(
                 feuille,
-                chantier_lignes,
+                [x for x in chantier_lignes if not x[3] or x[3].code.strip().upper() not in exclusions],
                 groupes,
-                requete.materiel,
+                materiel,
                 [x for x in lignes_precedentes if x[2].code == code],
             )
             equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None]]] = {}
             for ligne in chantier_lignes:
                 equipe = ligne[3].code if ligne[3] else "SANS_EQUIPE"
                 equipes.setdefault(groupes.get(equipe, equipe), []).append(ligne)
+            if requete.feuilles_equipe_mode == "AUCUNE":
+                continue
+            selection = None
+            if requete.feuilles_equipe_mode == "PERSONNALISE":
+                selection = {code.strip().upper() for code in (requete.equipes_par_chantier or {}).get(code, [])}
             for equipe, equipe_lignes in sorted(equipes.items()):
+                if selection is not None and equipe.upper() not in selection:
+                    continue
                 nom = f"{code}_{equipe}"[:31]
                 feuille_equipe = workbook.create_sheet(nom)
-                _ecrire(feuille_equipe, equipe_lignes, groupes, requete.materiel, lignes_precedentes)
+                _ecrire(feuille_equipe, equipe_lignes, groupes, materiel, lignes_precedentes)
         sortie = BytesIO()
         workbook.save(sortie)
         sortie.seek(0)
