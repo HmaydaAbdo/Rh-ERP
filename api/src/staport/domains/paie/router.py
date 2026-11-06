@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from .schemas import (
     PaieEffectifMois,
     PaieEquipeOption,
     PaieExportRequete,
+    PaieImportAnalyse,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -84,6 +85,11 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="Paie_Export_{corps.periode}.xlsx"'},
     )
+
+
+@paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+async def analyser_import(periode: int, contexte: Contexte, file: UploadFile = File(...)) -> PaieImportAnalyse:  # noqa: B008
+    return await contexte.import_paie.analyser(await file.read(), periode)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
