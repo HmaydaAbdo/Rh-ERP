@@ -145,3 +145,21 @@ class PaieExportRequete(ModeleApi):
     periode: int = Field(ge=190001, le=299912)
     regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)
     materiel: dict[str, int] = Field(default_factory=dict)
+
+
+class PaieImportErreur(ModeleApi):
+    numero_ligne: int
+    cin: str | None
+    nom_prenom: str | None
+    champ: str | None
+    valeur: str | None
+    raison: str
+    avertissement: bool = False
+
+
+class PaieImportAnalyse(ModeleApi):
+    periode: int
+    total_lignes: int
+    erreurs: list[PaieImportErreur]
+    avertissements: list[PaieImportErreur]
+    pret: bool
