@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.pagination import Pagination
+from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 
 from .models import Paie
@@ -88,3 +89,20 @@ async def options_equipes(s: AsyncSession, periode: int, chantier_ids: list[int]
     total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
     q = q.order_by(Equipe.code.asc()).limit(p.taille).offset(p.decalage)
     return list((await s.execute(q)).scalars().all()), total
+
+
+async def effectifs(s: AsyncSession, c: PaieRecherche) -> list[tuple[int, int]]:
+    q = select(Paie.periode, func.count(func.distinct(Paie.employee_id))).join(
+        Employee, Employee.id == Paie.employee_id
+    )
+    if c.chantier_ids:
+        q = q.where(Paie.chantier_id.in_(c.chantier_ids))
+    if c.fonction_ids:
+        q = q.where(Paie.fonction_id.in_(c.fonction_ids))
+    if c.equipe_ids:
+        q = q.where(Paie.equipe_id.in_([x for x in c.equipe_ids if x]))
+    if c.nom_prenom:
+        q = q.where(func.lower(Employee.nom_prenom).like(f"%{c.nom_prenom.strip().lower()}%"))
+    if c.cin:
+        q = q.where(func.lower(Employee.cin).like(f"%{c.cin.strip().lower()}%"))
+    return list((await s.execute(q.group_by(Paie.periode).order_by(Paie.periode.asc()))).all())

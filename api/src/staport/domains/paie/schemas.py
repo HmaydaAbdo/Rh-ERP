@@ -29,6 +29,8 @@ class PaieModificationRequete(PaieCreationRequete):
 
 
 class PaieRecherche(ModeleApi):
+    cin: str | None = Field(default=None, max_length=30)
+    nom_prenom: str | None = Field(default=None, max_length=150)
     employee_id: int | None = None
     periode: int | None = Field(default=None, ge=190001, le=299912)
     fonction_ids: list[int] | None = None
@@ -95,3 +97,14 @@ class PaieEquipeOption(ModeleApi):
     id: int
     code: str
     libelle: str
+
+
+class PaieEffectifMois(ModeleApi):
+    periode: int
+    effectif: int
+    effectif_mois_precedent: int | None
+    variation: int | None
+    entrees: int
+    plus_payes: int | None
+    sorties: int
+    mutations: int | None

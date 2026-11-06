@@ -12,6 +12,7 @@ from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
     PaieCreationRequete,
+    PaieEffectifMois,
     PaieEquipeOption,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
@@ -60,6 +61,11 @@ async def options_equipes(
     corps: PaieOptionsEquipeRequete, page: PagePaie, session: Session, contexte: Contexte
 ) -> Page[PaieEquipeOption]:
     return await contexte.paies.options_equipes(session, corps, page)
+
+
+@paies.post("/effectifs", dependencies=[Depends(exiger("PAIE_READ"))])
+async def effectifs(corps: PaieRecherche | None, session: Session, contexte: Contexte) -> list[PaieEffectifMois]:
+    return await contexte.paies.effectifs(session, corps or PaieRecherche())
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

@@ -15,6 +15,7 @@ from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
     PaieCreationRequete,
+    PaieEffectifMois,
     PaieEquipeOption,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
@@ -107,6 +108,24 @@ class ServicePaie:
         async with s.begin():
             rows, total = await repository.options_equipes(s, r.periode, r.chantier_ids, r.recherche, p)
         return creer_page([PaieEquipeOption.model_validate(x) for x in rows], p.taille, p.page, total)
+
+    async def effectifs(self, s: AsyncSession, c: PaieRecherche) -> list[PaieEffectifMois]:
+        async with s.begin():
+            lignes = await repository.effectifs(s, c)
+        par_periode = {periode: effectif for periode, effectif in lignes}
+        return [
+            PaieEffectifMois(
+                periode=periode,
+                effectif=effectif,
+                effectif_mois_precedent=par_periode.get(periode - 1),
+                variation=(effectif - par_periode[periode - 1]) if periode - 1 in par_periode else None,
+                entrees=0,
+                plus_payes=None,
+                sorties=0,
+                mutations=None,
+            )
+            for periode, effectif in lignes
+        ]
 
     @staticmethod
     async def _obtenir(s: AsyncSession, i: int) -> Paie:
