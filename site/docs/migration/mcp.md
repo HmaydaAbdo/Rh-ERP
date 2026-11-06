@@ -14,7 +14,7 @@ production : la bascule se fait à la fin d'E2 (KAN-50), conformément à la [st
 
 Le socle et les outils des domaines déjà en Python : **5 des 31 outils** de lecture. Les autres arrivent avec leur
 domaine (KAN-49, un domaine = ses routes, son audit, ses outils). L'absorption du service IA (`ia/`) dans le même
-conteneur est un ticket distinct.
+conteneur reste à réaliser pour satisfaire les critères de KAN-216.
 
 | Outil | Permission | Spring | Python |
 |---|---|---|---|
@@ -75,18 +75,24 @@ désactivé après l'émission (401), droit `IA_UTILISER` retiré après l'émis
 outils au catalogue avec leurs annotations et un schéma de sortie, la permission de chaque outil, les filtres, pages et
 bornes (limite, page, nom trop long, date réelle, identifiant positif, énumérations), une modification retrouvée par le
 journal et l'historique, **aucune ligne ajoutée au journal par un appel d'outil**, et le span (statut, utilisateur,
-nombre de résultats, ni argument ni résultat). La suite complète de l'API passe (244 tests), `ruff` et `pyright` strict
+nombre de résultats, ni argument ni résultat). La suite complète de l'API passe (249 tests), `ruff` et `pyright` strict
 sans erreur.
 
 ## Ce qui n'est pas encore prouvé
 
-- **Le service IA n'utilise pas encore ce serveur** : l'API Python n'a pas encore d'image ni de service dans le compose. Le
+- **Le service IA n'utilise pas encore ce serveur** : l'image et le service `api` sont préparés sur la branche de migration. Le
   service `ia/` (une seule URL, `IA_ERP_API_URL`, pour le jeton agent et `/mcp`) sera branché sur l'API Python seule, sans
   repli sur Spring ; les outils s'ajoutent domaine par domaine (KAN-49).
 
-- **Le client IA actuel contre ce serveur** : le service `ia/` appelle encore le MCP de Spring ; la comparaison bout en
-  bout (mêmes appels, mêmes résultats) se fait à la bascule, avec l'absorption du service IA.
-- **L'export des spans vers Phoenix** : l'API n'a que `opentelemetry-api` (les spans sont sans effet tant qu'aucun
-  exporteur n'est configuré). La configuration de l'exporteur arrive avec l'absorption du service IA dans le conteneur
-  unique.
+- **Le client IA actuel contre ce serveur** : le service `ia/` de la pile appelle encore Spring. Sur une copie isolée
+  du volume ERP existant, le banc réel a exécuté cinq cas couvrant les cinq outils portés, trois fois chacun avec le
+  juge : 15 réussites sur 15, `pass^3` 5/5, juge 15/15, aucune erreur d'outil, p95 22,09 s. Le premier passage avait
+  obtenu 13/15 : une réponse donnait un total de rôles erroné et le critère de fondement confondait les secondes d'un
+  horodatage avec une décimale. Le critère a été corrigé et testé ; un passage interrompu par l'arrêt du poste est
+  inexploitable (jeton expiré). La réussite du nouveau passage n'efface pas cette instabilité observée. Cette preuve
+  porte sur les cinq outils Python, pas sur les autres domaines ni la bascule de l'IA ; la comparaison complète se fera
+  à la bascule, avec l'absorption du service IA.
+- **L'export des spans vers Phoenix** : un appel `systeme_identite` authentifié a produit un span reçu par Phoenix dans
+  un projet Compose isolé, avec données synthétiques. L'essai utilise l'image API et la configuration d'export du service
+  Compose ; il ne prouve pas le déploiement ni les données de production.
 - **Les 26 autres outils** : ils arrivent avec leur domaine (KAN-49).

@@ -24,7 +24,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | Variable | Rôle | Exemple (développement) |
 |---|---|---|
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Connexion PostgreSQL du compte **applicatif** (l'application, à l'exécution) | `localhost`, `5432`, `staport_rh`, `staport_app` |
-| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway seulement. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
+| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway et par l'étape Alembic de migration. L'API Python en fonctionnement ne reçoit pas ces variables. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
 | `CHANTIER_SYNC_BASE_URL` | URL de l'ERP qui liste les chantiers | `http://staport.dyndns.org/webServiceBS/getChantiers` |
 | `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum, taille vérifiée au démarrage** | `openssl rand -base64 32` |
 | `FRONTEND_URL` | URL **publique complète** de l'application ; sert à construire le lien du courriel « mot de passe oublié » | `http://localhost:4200`, `https://<domaine>/rh-erp` |

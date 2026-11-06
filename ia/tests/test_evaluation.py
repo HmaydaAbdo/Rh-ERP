@@ -10,7 +10,7 @@ from erp_rh_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, s
 MARQUEURS = {
     "periode_a", "periode_b", "chantier_a_id", "chantier_a_code", "equipe_a_id", "equipe_a_code", "employe_a_id",
     "employe_a_nom", "employe_a_cin", "chantier_b_id", "chantier_b_code", "equipe_b_id", "equipe_b_code",
-    "employe_b_id", "employe_b_nom", "employe_b_cin",
+    "employe_b_id", "employe_b_nom", "employe_b_cin", "parametre_id",
 }  # fmt: skip
 TYPES = {"reponse", "ouvert", "abstention", "absence", "refus", "securite", "capacites", "simple"}
 

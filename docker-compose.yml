@@ -122,6 +122,57 @@ services:
       timeout: 5s
       retries: 3
 
+  # Préparation de la bascule E2 : ne pas déployer cette branche avant le retrait de Spring (KAN-50).
+  api:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      phoenix:
+        condition: service_healthy
+        required: false
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
+      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
+      FRONTEND_URL: ${FRONTEND_URL}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:?MCP_JWT_PRIVATE_KEY est obligatoire}
+      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:?MCP_JWT_KEY_ID est obligatoire}
+      MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
+      MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_AUTH: ${SMTP_AUTH}
+      SMTP_STARTTLS: ${SMTP_STARTTLS}
+      MAIL_FROM: ${MAIL_FROM}
+      CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
+      LOGGING_FORMAT: json
+      OTEL_SDK_DISABLED: "false"
+      OTEL_SERVICE_NAME: erp-rh-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
+      OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire}
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - db-net
+      - ia-net
+      - trace-net
+
   backend:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped

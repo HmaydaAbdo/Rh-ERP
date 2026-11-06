@@ -14,18 +14,15 @@ from sqlalchemy import create_engine
 
 from staport.migrations.derive import Base, inclure
 from staport.migrations.droits import recalculer_droits
-from staport.platform.configuration import configuration
+from staport.platform.configuration import ConfigurationMigration
 
 config = context.config
 
 
-def _url() -> str:
-    url = config.get_main_option("sqlalchemy.url")
-    return url if url else configuration().url_migration()
-
-
 def executer() -> None:
-    moteur = create_engine(_url())
+    url = config.get_main_option("sqlalchemy.url")
+    parametres = ConfigurationMigration() if not url else None  # pyright: ignore[reportCallIssue]
+    moteur = create_engine(url if url else parametres.url_migration())  # pyright: ignore[reportOptionalMemberAccess]
     with moteur.connect() as connexion:
         context.configure(
             connection=connexion,
@@ -36,8 +33,12 @@ def executer() -> None:
         with context.begin_transaction():
             context.run_migrations()
         if not context.is_offline_mode():
-            compte = config.get_main_option("compte_applicatif")
-            mot_de_passe = config.get_main_option("mot_de_passe_applicatif")
+            compte = parametres.db_user if parametres else config.get_main_option("compte_applicatif")
+            mot_de_passe = (
+                parametres.db_password.get_secret_value()
+                if parametres
+                else config.get_main_option("mot_de_passe_applicatif")
+            )
             if compte and mot_de_passe:
                 recalculer_droits(connexion, compte, mot_de_passe)
                 connexion.commit()

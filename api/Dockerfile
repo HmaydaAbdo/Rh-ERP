@@ -19,9 +19,9 @@ COPY --from=build --chown=root:root /app/.venv /app/.venv
 COPY --chown=root:root alembic.ini /app/alembic.ini
 WORKDIR /app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-# Traces OpenTelemetry (docs/ia.md, T18) : auto-instrumentation officielle (FastAPI, SQLAlchemy) ; les spans d'outils MCP
-# s'y ajoutent. Coupées tant que Compose ne les active pas (OTEL_SDK_DISABLED=false et l'adresse de Phoenix). Les sondes
-# de santé ne sont pas tracées.
+# Traces OpenTelemetry (docs/ia.md, T18) : auto-instrumentation FastAPI et spans d'outils MCP.
+# L'instrumentation SQLAlchemy installée ne prend pas encore en charge SQLAlchemy 2.1 (KAN-220).
+# Coupées tant que Compose ne les active pas. Les sondes de santé ne sont pas tracées.
 ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none \
     OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf OTEL_PYTHON_FASTAPI_EXCLUDED_URLS=health
 USER 10001:10001

@@ -129,8 +129,6 @@ def construire_configuration(url: str, cle_b64: str, **remplacements: Any) -> Co
         "db_name": u.database,
         "db_user": u.username,
         "db_password": u.password,
-        "db_migration_user": u.username,
-        "db_migration_password": u.password,
         "frontend_url": ORIGINE,
         "cors_allowed_origins": ORIGINE,
         "cookie_secure": False,

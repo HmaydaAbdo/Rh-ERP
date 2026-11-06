@@ -8,6 +8,15 @@ et reprise. Les règles réutilisables sont dans les conventions
 
 ## 1. Objectif
 
+La migration Python prépare le serveur MCP dans l'image `erp-rh-api` et son export OTLP vers Phoenix. Le service IA
+reste connecté à Spring jusqu'à la bascule de l'authentification : les jetons utilisateur Spring HS256 ne sont pas
+acceptés par l'API Python RS256. La réception d'un span MCP par Phoenix est vérifiée dans un projet Compose isolé,
+avec des données synthétiques. Voir la
+[migration MCP](../site/docs/migration/mcp.md).
+Le banc sur une copie isolée de la base ERP couvre les cinq outils Python portés : 15 réponses conformes sur 15 au
+dernier passage, trois répétitions par cas avec juge. Le premier passage (13/15) a révélé une réponse de rôles erronée et
+une erreur du critère d'horodatage, corrigée avant le nouveau passage. Les autres domaines et la bascule restent à faire.
+
 **Staport Intelligence — la plateforme d'IA de Staport** sert tous les utilisateurs de Staport
 (BTP, classe S, Maroc) : comprendre, retrouver, contrôler et préparer. L'assistant dans ERP-RH en
 est la première interface métier ; les applications des autres départements pourront la rejoindre.

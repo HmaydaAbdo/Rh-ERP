@@ -63,7 +63,7 @@ def _collection_change(histoire: History) -> bool:
 
 
 def _identifiant(objet: object) -> int | None:
-    valeur = cast(Any, inspect(objet)).identity
+    valeur = inspect(objet).identity
     return int(valeur[0]) if valeur else cast(int | None, getattr(objet, "id", None))
 
 
@@ -91,7 +91,7 @@ def _cle(entite: EntiteAuditee, collection: CollectionAuditee) -> str:
 
 
 def _membres_charges(objet: object, collection: CollectionAuditee) -> list[int] | None:
-    charge = cast(Any, inspect(objet)).dict.get(collection.attribut)
+    charge = inspect(objet).dict.get(collection.attribut)
     return None if charge is None else [cast(int, e.id) for e in charge]
 
 
