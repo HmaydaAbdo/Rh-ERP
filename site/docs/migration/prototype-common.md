@@ -48,6 +48,12 @@ Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/s
 
 - **Configuration** : mêmes variables d'environnement que Spring ; une variable absente fait échouer le démarrage ; secrets masqués.
 - **Base de données** : SQLAlchemy asynchrone, psycopg 3, `expire_on_commit=False` (documentation officielle lue).
+- **Traces SQL (KAN-220)** : l'[instrumentation OpenTelemetry SQLAlchemy 0.66b2](https://raw.githubusercontent.com/open-telemetry/opentelemetry-python-contrib/v0.66b2/instrumentation/opentelemetry-instrumentation-sqlalchemy/src/opentelemetry/instrumentation/sqlalchemy/package.py)
+  refuse SQLAlchemy 2.1 (borne `< 2.1.0`). L'[instrumentation officielle Psycopg](https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/psycopg/psycopg.html)
+  0.66b2 couvre psycopg 3 et est chargée par l'auto-instrumentation OpenTelemetry de l'image API. Une requête réelle
+  SQLAlchemy asynchrone `SELECT 1` a produit un span client `SELECT` reçu par Phoenix avec `db.statement=SELECT 1`,
+  dans la même trace que le span parent. L'instrumentation SQLAlchemy pourra être réexaminée à sa prochaine version
+  publiée compatible 2.1 ; aucune borne de compatibilité n'est contournée.
 - **Migrations** : Alembic, révision `0001_base_v44` qui rejoue les 44 scripts Flyway (copiés dans `migrations/flyway_v44/`) dans
   l'ordre numérique, **une transaction par script** comme Flyway (V9, V28, V32 créent des tables temporaires `ON COMMIT DROP`
   de même nom ; deux scripts dans une même transaction échouent). Schéma et données de référence sont donc identiques par
@@ -55,12 +61,15 @@ Code : `api/src/staport/platform/configuration.py`, `base_de_donnees.py`, `api/s
   du propriétaire (étape de la répétition générale, `strategie.md`).
 - **Droits** : `droits.py` reprend `afterMigrate.sql` (compte applicatif SELECT/INSERT seul sur `audit_*` et `*_aud`), avec
   `psycopg.sql` pour échapper identifiants et mot de passe (Flyway insérait le mot de passe par substitution de texte).
-- **Déploiement** : étape dédiée avant le démarrage, jamais dans le `lifespan`.
-  Base neuve : `alembic -c api/alembic.ini upgrade head` (compte propriétaire, `compte_applicatif` et `mot_de_passe_applicatif`
-  passés en options). Base existante gérée par Flyway : `alembic stamp 0001_base_v44` puis `upgrade head`.
-  `PGAUDIT_ENABLED=true` en production, comme aujourd'hui.
-- **Tests** (3, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et des
-  données de référence, droits du compte applicatif sur l'audit, estampillage d'une base existante.
+- **Déploiement préparé (KAN-219)** : `flyway-validate` exécute la commande officielle Flyway 13.12.1 sur les scripts
+  V1–V44, puis `api-migrate` exécute Alembic avec le compte propriétaire ; `api` attend le succès des deux services.
+  Sur une base neuve, Alembic construit le schéma. Sur une base Flyway, le garde exige exactement 44 migrations SQL
+  réussies avant `stamp 0001_base_v44`, puis `upgrade head` recalcule les droits applicatifs. Un schéma non vide sans
+  historique ou un historique Flyway partiel est refusé. Le serveur ne reçoit pas les identifiants du propriétaire.
+  `PGAUDIT_ENABLED=true` en production, comme aujourd'hui. Cette branche intermédiaire ne doit pas être déployée avant
+  KAN-50 : Spring est encore présent dans le Compose.
+- **Tests** (8, image `pgvector/pgvector:0.8.7-pg18` comme les tests Java, ignorés sans Docker) : construction du schéma et
+  des données de référence, droits du compte applicatif sur l'audit, estampillage, relance et refus d'un historique partiel.
 
 ### Vérification sur une vraie base Flyway (2026-11-03)
 

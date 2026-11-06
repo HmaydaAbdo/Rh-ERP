@@ -19,10 +19,10 @@ dependencies = [
     # Préversion adoptée sur décision du propriétaire (2026-11-01) : seule à lever la borne openai<3 (plan IA, § 3).
     "litellm==1.109.0.dev2",
     "copilotkit>=0.1.96",
-    "opentelemetry-distro==0.66b1",
-    "opentelemetry-exporter-otlp-proto-http==1.45.1",
-    "opentelemetry-instrumentation-fastapi==0.66b1",
-    "opentelemetry-instrumentation-httpx==0.66b1",
+    "opentelemetry-distro==0.66b2",
+    "opentelemetry-exporter-otlp-proto-http==1.45.2",
+    "opentelemetry-instrumentation-fastapi==0.66b2",
+    "opentelemetry-instrumentation-httpx==0.66b2",
     "openinference-instrumentation-langchain==0.1.81",
     "langgraph-checkpoint-postgres>=3.2.0",
     "psycopg[binary,pool]>=3.3.6",
@@ -72,4 +72,5 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]

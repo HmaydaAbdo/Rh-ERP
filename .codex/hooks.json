@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:\\Users\\Hp\\.claude\\skills\\impeccable\\scripts\\impeccable.cmd\" hook"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:\\Users\\Hp\\.claude\\skills\\impeccable\\scripts\\impeccable.cmd\" hook"
+          }
+        ]
+      }
+    ]
+  }
+}

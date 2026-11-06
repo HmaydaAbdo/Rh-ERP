@@ -1,0 +1,14 @@
+[mcp_servers.angular-cli]
+command = "npx"
+args = [
+    "-y",
+    "@angular/cli@22",
+    "mcp",
+    "--read-only",
+]
+
+[mcp_servers.docs-langchain]
+url = "https://docs.langchain.com/mcp"
+
+[mcp_servers.reference-langchain]
+url = "https://reference.langchain.com/mcp"

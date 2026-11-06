@@ -24,7 +24,7 @@ Les fichiers `.env` ne sont **jamais** commités (`.gitignore`). Copier l'exempl
 | Variable | Rôle | Exemple (développement) |
 |---|---|---|
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Connexion PostgreSQL du compte **applicatif** (l'application, à l'exécution) | `localhost`, `5432`, `staport_rh`, `staport_app` |
-| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway seulement. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
+| `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` | Compte **propriétaire** du schéma, utilisé par Flyway et par l'étape Alembic de migration. L'API Python en fonctionnement ne reçoit pas ces variables. Distinct de `DB_USER` en production : le compte applicatif n'a que `SELECT` et `INSERT` sur les tables d'audit (voir [audit/README.md](audit/README.md)). Identiques en développement et en CI (l'application le signale au démarrage) | `staport` |
 | `CHANTIER_SYNC_BASE_URL` | URL de l'ERP qui liste les chantiers | `http://staport.dyndns.org/webServiceBS/getChantiers` |
 | `JWT_SECRET` | Secret HMAC (HS256) qui signe les jetons d'accès : **base64, 256 bits minimum, taille vérifiée au démarrage** | `openssl rand -base64 32` |
 | `FRONTEND_URL` | URL **publique complète** de l'application ; sert à construire le lien du courriel « mot de passe oublié » | `http://localhost:4200`, `https://<domaine>/rh-erp` |
@@ -47,8 +47,9 @@ strictement positifs. Les valeurs par défaut sûres sont respectivement `5s` et
 Dans le Compose de production, `DB_HOST` vaut `postgres`, `DB_PORT` `5432`, `DB_NAME` vient de `POSTGRES_DB`,
 `DB_MIGRATION_USER`/`DB_MIGRATION_PASSWORD` de `POSTGRES_USER`/`POSTGRES_PASSWORD` et `DB_USER`/`DB_PASSWORD` de
 `POSTGRES_APP_USER`/`POSTGRES_APP_PASSWORD`. Ces deux variables applicatives sont obligatoires : Compose refuse une
-configuration qui les omet et le compte propriétaire ne peut pas servir de repli. Le compte applicatif est créé tout
-seul par Flyway s'il n'existe pas.
+configuration qui les omet et le compte propriétaire ne peut pas servir de repli. Le compte applicatif est créé par le
+rappel Flyway tant que Spring est actif ; à la bascule E2, l'étape Alembic le crée ou recalcule ses droits avant le
+démarrage de l'API Python.
 
 ## Variables du Compose de production (`.env` racine)
 
@@ -56,6 +57,7 @@ seul par Flyway s'il n'existe pas.
 |---|---|
 | `DOCKERHUB_USERNAME` | Compte Docker Hub qui publie les images |
 | `POSTGRES_IMAGE_TAG`, `BACKEND_IMAGE_TAG`, `FRONTEND_IMAGE_TAG`, `BACKUP_IMAGE_TAG` | SHA du même commit publié par la CI ; obligatoire, aucune valeur `latest` par défaut |
+| `API_IMAGE_TAG`, `FLYWAY_IMAGE_TAG` | Images de l'API Python et de la validation Flyway préparées pour la bascule E2 ; même SHA publié par la CI |
 | `BACKUP_AGE_RECIPIENT` | Clé publique age obligatoire pour chiffrer les archives PostgreSQL ; la clé privée reste hors du serveur |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Base PostgreSQL et son compte **propriétaire** (migrations) |
 | `POSTGRES_APP_USER`, `POSTGRES_APP_PASSWORD` | Compte **applicatif** du backend (créé par le rappel Flyway `afterMigrate.sql`, mot de passe sans apostrophe) |

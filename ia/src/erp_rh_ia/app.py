@@ -3,12 +3,12 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 """Application HTTP du service IA : santé et point d'entrée AG-UI ``POST /agui`` (docs/ia.md, T11)."""
 
-from collections.abc import AsyncGenerator, Sequence
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, Callable, Sequence
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import Any, Literal
 
 import httpx
-from fastapi import FastAPI, Response, status
+from fastapi import APIRouter, FastAPI, Response, status
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
@@ -16,7 +16,7 @@ from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel
 
 from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.agui import AccesErp, AccesSpring, FabriqueAgent, Routage, routeur_agui
+from erp_rh_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
 from erp_rh_ia.config import Settings, get_settings
 from erp_rh_ia.memoire import ouvrir_memoire
 from erp_rh_ia.modeles import Tache, modele
@@ -50,16 +50,12 @@ def fabrique_reelle(config: Settings) -> FabriqueAgent:
     return fabriquer
 
 
-def creer_app(
-    settings: Settings | None = None,
+def cycle_ia(
+    config: Settings,
     fabrique: FabriqueAgent | None = None,
     acces: AccesErp | None = None,
     routage: Routage | None = None,
-) -> FastAPI:
-    """``fabrique``, ``acces`` et ``routage`` remplacent les modèles, Spring et les embeddings dans les tests ;
-    absents, les vrais sont créés."""
-    config = settings or get_settings()
-
+) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     @asynccontextmanager
     async def cycle(app: FastAPI) -> AsyncGenerator[None]:
         url = config.database_url.get_secret_value() if config.database_url else None
@@ -68,11 +64,16 @@ def creer_app(
             app.state.memoire = memoire
             app.state.fabrique = fabrique or fabrique_reelle(config)
             app.state.routage = routage or Routeur().adomaines
-            app.state.acces = acces or AccesSpring(client, str(config.erp_api_url))
+            app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
             yield
 
-    app = FastAPI(title="ERP-RH IA", docs_url=None, redoc_url=None, openapi_url=None, lifespan=cycle)
-    app.include_router(
+    return cycle
+
+
+def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
+    """Routes IA intégrables dans l'application API unique via ``include_router``."""
+    routeur = APIRouter()
+    routeur.include_router(
         routeur_agui(
             fabrique=lambda: app.state.fabrique,
             acces=lambda: app.state.acces,
@@ -82,14 +83,12 @@ def creer_app(
         )
     )
 
-    @app.get("/health")
+    @routeur.get("/health/ia")
     async def vivant() -> Sante:  # pyright: ignore[reportUnusedFunction]
-        """Le processus répond ; ne dépend d'aucun service externe."""
         return Sante(status="UP", ia="ACTIVE" if config.enabled else "DESACTIVEE", passerelle="NON_VERIFIEE")
 
-    @app.get("/health/ready")
+    @routeur.get("/health/ready")
     async def pret(response: Response) -> Sante:  # pyright: ignore[reportUnusedFunction]
-        """Prêt à servir : IA désactivée, ou passerelle LiteLLM joignable (sa sonde de disponibilité officielle)."""
         if not config.enabled:
             return Sante(status="UP", ia="DESACTIVEE", passerelle="NON_VERIFIEE")
         racine = str(config.litellm_base_url).rstrip("/").removesuffix("/v1")
@@ -101,5 +100,31 @@ def creer_app(
             return Sante(status="UP", ia="ACTIVE", passerelle="PRETE")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return Sante(status="DOWN", ia="ACTIVE", passerelle="INDISPONIBLE")
+
+    return routeur
+
+
+def creer_app(
+    settings: Settings | None = None,
+    fabrique: FabriqueAgent | None = None,
+    acces: AccesErp | None = None,
+    routage: Routage | None = None,
+) -> FastAPI:
+    """Application IA autonome conservée pour les tests et la transition vers le conteneur unique."""
+    config = settings or get_settings()
+
+    app = FastAPI(
+        title="ERP-RH IA",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=cycle_ia(config, fabrique, acces, routage),
+    )
+    app.include_router(routeur_ia(app, config))
+
+    @app.get("/health")
+    async def vivant() -> Sante:  # pyright: ignore[reportUnusedFunction]
+        """Le processus répond ; ne dépend d'aucun service externe."""
+        return Sante(status="UP", ia="ACTIVE" if config.enabled else "DESACTIVEE", passerelle="NON_VERIFIEE")
 
     return app

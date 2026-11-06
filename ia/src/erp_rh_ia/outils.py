@@ -1,7 +1,7 @@
 """Outils métier d'ERP-RH, uniquement par MCP et avec le jeton agent de l'utilisateur (docs/ia.md, § 5 et T10).
 
 Les outils viennent du support MCP intégré à LangChain (``langchain.mcp``, client FastMCP) : chaque outil MCP de
-Spring devient un outil LangChain pour ``create_deep_agent``. Seule la délégation d'identité reste à nous : Spring
+l'API ERP devient un outil LangChain pour ``create_deep_agent``. Seule la délégation d'identité reste à nous : l'API
 échange le jeton de connexion contre un jeton agent court, porté par chaque appel MCP.
 """
 
@@ -18,9 +18,9 @@ with warnings.catch_warnings():
 
 
 async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str) -> str:
-    """Échange le jeton de connexion de l'utilisateur contre son jeton agent (RS256, 5 minutes) auprès de Spring.
+    """Échange le jeton de connexion de l'utilisateur contre son jeton agent (RS256, 5 minutes) auprès de l'API.
 
-    Spring vérifie la connexion et le droit ``IA_UTILISER`` ; une erreur HTTP remonte telle quelle (401, 403, 404).
+    L'API vérifie la connexion et le droit ``IA_UTILISER`` ; une erreur HTTP remonte telle quelle (401, 403, 404).
     """
     reponse = await client.post(f"{api}/auth/jetons/agent", headers={"Authorization": f"Bearer {jeton_connexion}"})
     reponse.raise_for_status()
@@ -28,8 +28,7 @@ async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str)
 
 
 async def outils_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.0) -> list[BaseTool]:
-    """Le catalogue MCP de Spring en outils LangChain ; le jeton agent n'est jamais journalisé ni conservé."""
+    """Le catalogue MCP de l'API ERP en outils LangChain ; le jeton agent n'est jamais journalisé ni conservé."""
     transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
-    # Spring AI 2.0.2 supporte la révision 2025-11-25, pas server/discover (2026-07-28).
-    # Choisir explicitement le mode MCP commun évite le probe moderne connu pour échouer avant le fallback.
+    # Le mode MCP commun garde la compatibilité avec le backend Spring pendant la migration des domaines.
     return await MCPAdapter(Client(transport, timeout=delai_secondes, mode="legacy")).list_tools()
