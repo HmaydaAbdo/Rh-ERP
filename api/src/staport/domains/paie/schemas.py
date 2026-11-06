@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -144,8 +144,13 @@ class PaieParcoursReponse(ModeleApi):
 
 class PaieExportRequete(ModeleApi):
     periode: int = Field(ge=190001, le=299912)
+    feuilles_equipe_mode: Literal["AUCUNE", "TOUTES", "PERSONNALISE"] = "AUCUNE"
+    equipes_par_chantier: dict[str, list[str]] | None = None
+    equipes_exclues_feuille_chantier: dict[str, list[str]] | None = None
+    chantiers: list[str] | None = None
+    # Compatibilité du premier contrat Python ; les nouveaux clients utilisent equipes_par_chantier.
     regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)
-    materiel: dict[str, int] = Field(default_factory=dict)
+    materiel: dict[str, int] | None = None
 
 
 class PaieImportErreur(ModeleApi):
