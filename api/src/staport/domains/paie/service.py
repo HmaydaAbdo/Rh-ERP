@@ -4,10 +4,14 @@ from itertools import pairwise
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
+from staport.domains.employee.models import Employee
+from staport.domains.equipe.models import Equipe
+from staport.domains.function.models import Fonction
 
 from . import repository
 from .exceptions import PaieDejaExistante, PaieIntrouvable
@@ -15,9 +19,13 @@ from .models import Paie
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
+    PaieChantierResume,
     PaieCreationRequete,
     PaieEffectifMois,
+    PaieEmployeeResume,
     PaieEquipeOption,
+    PaieEquipeResume,
+    PaieFonctionResume,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -30,8 +38,25 @@ from .schemas import (
 )
 
 
-def rep(x: Paie) -> PaieReponse:
-    return PaieReponse.model_validate(x)
+def rep(ligne: tuple[Paie, Employee, Fonction, Chantier, Equipe | None]) -> PaieReponse:
+    paie, employe, fonction, chantier, equipe = ligne
+    return PaieReponse(
+        id=paie.id,
+        version=paie.version,
+        employee=PaieEmployeeResume.model_validate(employe),
+        periode=paie.periode,
+        fonction=PaieFonctionResume.model_validate(fonction),
+        chantier=PaieChantierResume.model_validate(chantier),
+        equipe=PaieEquipeResume.model_validate(equipe) if equipe is not None else None,
+        nombre_jours_travailles=paie.nombre_jours_travailles,
+        jours_recuperation_ouvrable=paie.jours_recuperation_ouvrable,
+        jours_recuperation_dimanche=paie.jours_recuperation_dimanche,
+        salaire_mensuel=paie.salaire_mensuel,
+        prime_roulage_ordinaire=paie.prime_roulage_ordinaire,
+        prime_roulage_dimanche=paie.prime_roulage_dimanche,
+        salaire_total=paie.salaire_total,
+        observation=paie.observation,
+    )
 
 
 class ServicePaie:
@@ -41,11 +66,14 @@ class ServicePaie:
     async def rechercher(self, s: AsyncSession, c: PaieRecherche | None, p: Pagination) -> Page[PaieReponse]:
         async with s.begin():
             rows, total = await repository.rechercher(s, c or PaieRecherche(), p)
-        return creer_page([rep(x) for x in rows], p.taille, p.page, total)
+            fiches = await repository.fiches(s, rows)
+        par_id = {ligne[0].id: rep(ligne) for ligne in fiches}
+        return creer_page([par_id[x.id] for x in rows], p.taille, p.page, total)
 
     async def lire(self, s: AsyncSession, i: int) -> PaieReponse:
         async with s.begin():
-            return rep(await self._obtenir(s, i))
+            paie = await self._obtenir(s, i)
+            return rep((await repository.fiches(s, [paie]))[0])
 
     async def creer(self, s: AsyncSession, r: PaieCreationRequete) -> PaieReponse:
         action = self._auditeur.auditer(s, "PAIE_CREATION", TypeOperation.CREATE, "Paie")
@@ -56,7 +84,7 @@ class ServicePaie:
             s.add(x)
             await s.flush()
             cible.identifiant = x.id
-            return rep(x)
+            return rep((await repository.fiches(s, [x]))[0])
 
     async def modifier(self, s: AsyncSession, i: int, r: PaieModificationRequete) -> PaieReponse:
         action = self._auditeur.auditer(s, "PAIE_MODIFICATION", TypeOperation.UPDATE, "Paie", i)
@@ -68,7 +96,7 @@ class ServicePaie:
             for k, v in r.model_dump(exclude={"version", "employee_id", "periode"}).items():
                 setattr(x, k, v)
             await s.flush()
-            return rep(x)
+            return rep((await repository.fiches(s, [x]))[0])
 
     async def supprimer(self, s: AsyncSession, i: int) -> None:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION", TypeOperation.DELETE, "Paie", i)

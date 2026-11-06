@@ -2,9 +2,12 @@
 
 KAN-226 ouvre la migration du domaine Paie dans l'application FastAPI unique.
 
-La première tranche porte le socle des bulletins : modèle SQLAlchemy aligné sur `paie`, création,
-modification avec verrou optimiste, lecture, recherche paginée et suppression unitaire. Les routes
-sont montées sous `/paie` et protégées par `PAIE_READ`, `PAIE_WRITE` ou `PAIE_DELETE`.
+Le modèle SQLAlchemy est aligné sur `paie`. La création, la modification avec verrou optimiste,
+la lecture, la recherche paginée et la suppression unitaire sont montées sous `/paie`. Le contrat
+HTTP des mois est `AAAA-MM`, tandis que la table conserve `AAAAMM`. Les réponses de bulletin
+contiennent les résumés `employee`, `fonction`, `chantier` et `equipe` attendus par l'interface.
+La modification conserve l'employé et le mois du bulletin : ces deux champs ne figurent pas dans
+son corps de requête.
 
 Le périmètre restant avant clôture comprend l'import Excel atomique, les options chantier/équipe,
 l'analytique et les effectifs, le parcours employé, les exports/rapport, la suppression-restauration
@@ -25,9 +28,10 @@ regrouper plusieurs équipes sous un libellé unique (par exemple `CH+OP` pour `
 regroupement ne modifie aucune donnée : il agrège uniquement les lignes, totaux et analyses de
 l'export, partout où l'équipe apparaît.
 
-Le pipeline PDF FastAPI utilise WeasyPrint 70.0 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). La route est disponible, mais la parité 100 % reste en validation jusqu'au
-rejeu sur un même jeu de données et au portage complet des pages, graphiques et sections du rapport.
+Un prototype PDF FastAPI utilise WeasyPrint 70.0 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). `POST /paie/report/pdf` répond temporairement `503` : le prototype ne couvre
+pas encore les pages, graphiques, comparaisons et sections du rapport Spring. La route ne sera
+ouverte qu'après portage complet et comparaison sur un même jeu de données.
 
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
