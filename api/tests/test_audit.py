@@ -488,6 +488,8 @@ LECTURES_PAR_POST = {
     ("POST", "/employees/regroupements"),
     ("POST", "/employees/sorties-mois"),
     ("POST", "/paie/search"),
+    ("POST", "/paie/periodes/search"),
+    ("POST", "/paie/chantiers/search"),
     ("POST", "/paie/analytique"),
     ("POST", "/paie/options/chantiers"),
     ("POST", "/paie/options/equipes"),

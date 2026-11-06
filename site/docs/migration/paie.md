@@ -13,6 +13,10 @@ par chantier, équipe et fonction, les tranches, l'évolution historique et les 
 Le calcul utilise le pas des tranches configuré dans le domaine Paramètre. Les tests vérifient
 le contrat HTTP sur PostgreSQL et le passage de décembre à janvier ; la performance sur une
 copie volumineuse et la comparaison exhaustive avec Spring restent à mesurer.
+Les routes de la vue Cartes (`/paie/periodes/search`, `/paie/chantiers/search`,
+`GET /paie/chantiers`) et le catalogue matériel de l'assistant d'export sont exposés avec
+`PAIE_READ`. Les cartes conservent les employés sans équipe dans les totaux et comparent
+uniquement au mois calendaire précédent.
 
 Le périmètre restant avant clôture comprend l'import Excel atomique, les options chantier/équipe,
 l'analytique et les effectifs, le parcours employé, les exports/rapport, la suppression-restauration

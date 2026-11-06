@@ -97,6 +97,45 @@ class PaiePeriodeResume(ModeleApi):
     stc_montant: Decimal
 
 
+class PaiePeriodeComparaison(ModeleApi):
+    periode: PeriodePaie
+    effectif: int
+    masse: Decimal
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieEquipePeriode(ModeleApi):
+    id: int
+    code: str
+    libelle: str
+    effectif: int
+    masse: Decimal
+    stc: int
+    stc_montant: Decimal
+    mois_precedent: PaiePeriodeComparaison | None
+
+
+class PaieChantierPeriode(ModeleApi):
+    id: int
+    code: str
+    libelle: str | None
+    effectif: int
+    masse: Decimal
+    stc: int
+    stc_montant: Decimal
+    mois_precedent: PaiePeriodeComparaison | None
+    sans_equipe_mois_precedent: PaiePeriodeComparaison | None
+    equipes: list[PaieEquipePeriode]
+
+
+class PaieMaterielTableau(ModeleApi):
+    chantier_code: str
+    equipe_code: str
+    titre: str
+    libelles: list[str]
+
+
 class PaieKpi(ModeleApi):
     masse: Decimal
     effectif: int

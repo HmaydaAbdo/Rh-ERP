@@ -9,10 +9,12 @@ from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
+from .materiel import tableaux_materiel
 from .periode import PeriodePaie, afficher_periode
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
+    PaieChantierPeriode,
     PaieCreationRequete,
     PaieEffectifMois,
     PaieEquipeOption,
@@ -20,6 +22,7 @@ from .schemas import (
     PaieImportAnalyse,
     PaieImportCorrection,
     PaieImportCreation,
+    PaieMaterielTableau,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -52,6 +55,28 @@ async def creer(corps: PaieCreationRequete, session: Session, contexte: Contexte
 @paies.get("/periodes", dependencies=[Depends(exiger("PAIE_READ"))])
 async def periodes(session: Session, contexte: Contexte) -> list[PaiePeriodeResume]:
     return await contexte.paies.periodes(session)
+
+
+@paies.post("/periodes/search", dependencies=[Depends(exiger("PAIE_READ"))])
+async def periodes_recherche(
+    corps: PaieRecherche | None, session: Session, contexte: Contexte
+) -> list[PaiePeriodeResume]:
+    return await contexte.paies.periodes_recherche(session, corps or PaieRecherche())
+
+
+@paies.post("/chantiers/search", dependencies=[Depends(exiger("PAIE_READ"))])
+async def chantiers_recherche(corps: PaieRecherche, session: Session, contexte: Contexte) -> list[PaieChantierPeriode]:
+    return await contexte.paies.chantiers_periode(session, corps)
+
+
+@paies.get("/chantiers", dependencies=[Depends(exiger("PAIE_READ"))])
+async def chantiers_periode(periode: PeriodePaie, session: Session, contexte: Contexte) -> list[PaieChantierPeriode]:
+    return await contexte.paies.chantiers_periode(session, PaieRecherche(periode=periode))
+
+
+@paies.get("/materiel", dependencies=[Depends(exiger("PAIE_READ"))])
+async def materiel() -> list[PaieMaterielTableau]:
+    return tableaux_materiel()
 
 
 @paies.post("/analytique", dependencies=[Depends(exiger("PAIE_READ"))])
