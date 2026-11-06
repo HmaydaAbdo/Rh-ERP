@@ -88,8 +88,13 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
 
 
 @paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT"))])
-async def analyser_import(periode: int, contexte: Contexte, file: UploadFile = File(...)) -> PaieImportAnalyse:  # noqa: B008
-    return await contexte.import_paie.analyser(await file.read(), periode)
+async def analyser_import(
+    periode: int,
+    session: Session,
+    contexte: Contexte,
+    file: UploadFile = File(...),  # noqa: B008
+) -> PaieImportAnalyse:
+    return await contexte.import_paie.analyser(session, await file.read(), periode)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
