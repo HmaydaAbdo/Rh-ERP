@@ -108,3 +108,34 @@ class PaieEffectifMois(ModeleApi):
     plus_payes: int | None
     sorties: int
     mutations: int | None
+
+
+class PaieParcoursMois(ModeleApi):
+    bulletin_id: int
+    periode: int
+    fonction_id: int
+    chantier_id: int
+    equipe_id: int | None
+    nombre_jours_travailles: Decimal
+    salaire_mensuel: Decimal
+    salaire_total: Decimal
+    observation: str | None
+
+
+class PaieParcoursEvenement(ModeleApi):
+    periode: int
+    type: str
+    avant: str | None
+    apres: str | None
+    motif: str | None
+
+
+class PaieParcoursReponse(ModeleApi):
+    employe_id: int
+    mois_payes: int
+    total_percu: Decimal
+    jours_travailles: Decimal
+    premier_mois: int | None
+    dernier_mois: int | None
+    mois: list[PaieParcoursMois]
+    evenements: list[PaieParcoursEvenement]

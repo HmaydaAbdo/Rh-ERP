@@ -101,7 +101,10 @@ Un bulletin déjà présent pour le même employé et la même période n'est ja
 Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
 Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
 
-Les montants nuls sont valides. Les champs `salaireMensuel`, `primeRoulageOrdinaire`,
+Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenche un avertissement
+bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
+0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
+`salaireMensuel`, `primeRoulageOrdinaire`,
 `primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, avec au plus deux décimales et une
 borne maximale de `99 999 999,99`. Toute erreur de cellule doit identifier la ligne Excel, le nom
 exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les

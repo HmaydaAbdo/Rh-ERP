@@ -106,3 +106,11 @@ async def effectifs(s: AsyncSession, c: PaieRecherche) -> list[tuple[int, int]]:
     if c.cin:
         q = q.where(func.lower(Employee.cin).like(f"%{c.cin.strip().lower()}%"))
     return list((await s.execute(q.group_by(Paie.periode).order_by(Paie.periode.asc()))).all())
+
+
+async def parcours(s: AsyncSession, employee_id: int) -> list[Paie]:
+    return list(
+        (await s.execute(select(Paie).where(Paie.employee_id == employee_id).order_by(Paie.periode.asc())))
+        .scalars()
+        .all()
+    )

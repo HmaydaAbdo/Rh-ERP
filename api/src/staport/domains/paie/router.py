@@ -17,6 +17,7 @@ from .schemas import (
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
+    PaieParcoursReponse,
     PaiePeriodeResume,
     PaieRecherche,
     PaieReponse,
@@ -66,6 +67,11 @@ async def options_equipes(
 @paies.post("/effectifs", dependencies=[Depends(exiger("PAIE_READ"))])
 async def effectifs(corps: PaieRecherche | None, session: Session, contexte: Contexte) -> list[PaieEffectifMois]:
     return await contexte.paies.effectifs(session, corps or PaieRecherche())
+
+
+@paies.get("/employes/{employee_id}/parcours", dependencies=[Depends(exiger("PAIE_READ"))])
+async def parcours(employee_id: int, session: Session, contexte: Contexte) -> PaieParcoursReponse:
+    return await contexte.paies.parcours(session, employee_id)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from itertools import pairwise
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,9 @@ from .schemas import (
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
+    PaieParcoursEvenement,
+    PaieParcoursMois,
+    PaieParcoursReponse,
     PaiePeriodeResume,
     PaieRecherche,
     PaieReponse,
@@ -126,6 +130,52 @@ class ServicePaie:
             )
             for periode, effectif in lignes
         ]
+
+    async def parcours(self, s: AsyncSession, employee_id: int) -> PaieParcoursReponse:
+        async with s.begin():
+            bulletins = await repository.parcours(s, employee_id)
+        mois = [
+            PaieParcoursMois(
+                bulletin_id=x.id,
+                periode=x.periode,
+                fonction_id=x.fonction_id,
+                chantier_id=x.chantier_id,
+                equipe_id=x.equipe_id,
+                nombre_jours_travailles=x.nombre_jours_travailles,
+                salaire_mensuel=x.salaire_mensuel,
+                salaire_total=x.salaire_total,
+                observation=x.observation,
+            )
+            for x in reversed(bulletins)
+        ]
+        evenements: list[PaieParcoursEvenement] = []
+        for precedent, courant in pairwise(bulletins):
+            for _champ, avant, apres, type_ in (
+                ("chantier_id", precedent.chantier_id, courant.chantier_id, "CHANGEMENT_CHANTIER"),
+                ("fonction_id", precedent.fonction_id, courant.fonction_id, "CHANGEMENT_FONCTION"),
+                ("equipe_id", precedent.equipe_id, courant.equipe_id, "CHANGEMENT_EQUIPE"),
+                ("salaire_mensuel", precedent.salaire_mensuel, courant.salaire_mensuel, "CHANGEMENT_SALAIRE"),
+            ):
+                if avant != apres:
+                    evenements.append(
+                        PaieParcoursEvenement(
+                            periode=courant.periode, type=type_, avant=str(avant), apres=str(apres), motif=None
+                        )
+                    )
+        if bulletins:
+            evenements.append(
+                PaieParcoursEvenement(periode=bulletins[0].periode, type="ENTREE", avant=None, apres=None, motif=None)
+            )
+        return PaieParcoursReponse(
+            employe_id=employee_id,
+            mois_payes=len(bulletins),
+            total_percu=sum((x.salaire_total for x in bulletins), Decimal(0)),
+            jours_travailles=sum((x.nombre_jours_travailles for x in bulletins), Decimal(0)),
+            premier_mois=bulletins[0].periode if bulletins else None,
+            dernier_mois=bulletins[-1].periode if bulletins else None,
+            mois=mois,
+            evenements=sorted(evenements, key=lambda x: (x.periode, x.type), reverse=True),
+        )
 
     @staticmethod
     async def _obtenir(s: AsyncSession, i: int) -> Paie:
