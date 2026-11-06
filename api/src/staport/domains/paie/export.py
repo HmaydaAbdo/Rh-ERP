@@ -1,3 +1,4 @@
+from decimal import Decimal
 from io import BytesIO
 from typing import cast
 
@@ -35,7 +36,16 @@ class ServiceExportPaie:
         _ecrire(global_sheet, lignes, groupes)
         for code in sorted({chantier.code for _, _, chantier, _ in lignes}):
             feuille = workbook.create_sheet(code[:31])
-            _ecrire(feuille, [x for x in lignes if x[2].code == code], groupes)
+            chantier_lignes = [x for x in lignes if x[2].code == code]
+            _ecrire(feuille, chantier_lignes, groupes)
+            equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None]]] = {}
+            for ligne in chantier_lignes:
+                equipe = ligne[3].code if ligne[3] else "SANS_EQUIPE"
+                equipes.setdefault(groupes.get(equipe, equipe), []).append(ligne)
+            for equipe, equipe_lignes in sorted(equipes.items()):
+                nom = f"{code}_{equipe}"[:31]
+                feuille_equipe = workbook.create_sheet(nom)
+                _ecrire(feuille_equipe, equipe_lignes, groupes)
         sortie = BytesIO()
         workbook.save(sortie)
         sortie.seek(0)
@@ -68,3 +78,5 @@ def _ecrire(
                 paie.salaire_total,
             ]
         )
+    feuille.append([])
+    feuille.append(["TOTAL", "", "", "", "", "", "", sum((x[0].salaire_total for x in lignes), Decimal(0))])
