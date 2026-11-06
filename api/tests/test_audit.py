@@ -461,6 +461,7 @@ AUDITEES = {
     ("DELETE", "/paie/{identifiant}"): "PAIE_SUPPRESSION",
     ("POST", "/paie/import"): "PAIE_IMPORT",
     ("POST", "/paie/import/corrections"): "PAIE_IMPORT_CORRECTION",
+    ("POST", "/paie/import/creations"): "PAIE_IMPORT_CREATION_EMPLOYE",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 

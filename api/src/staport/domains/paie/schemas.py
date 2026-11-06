@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
@@ -172,4 +173,16 @@ class PaieImportCorrection(ModeleApi):
     chantier_id: int | None = None
     equipe_id: int | None = None
     salaire: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    type_salaire: str | None = Field(default=None, max_length=20)
+
+
+class PaieImportCreation(ModeleApi):
+    nom_prenom: str = Field(min_length=1, max_length=150)
+    cin: str = Field(min_length=1, max_length=30)
+    date_naissance: date
+    date_embauche: date
+    fonction_id: int
+    chantier_id: int
+    equipe_id: int | None = None
+    salaire: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
     type_salaire: str | None = Field(default=None, max_length=20)

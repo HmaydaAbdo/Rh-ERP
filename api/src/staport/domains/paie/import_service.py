@@ -13,7 +13,7 @@ from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from .models import Paie
-from .schemas import PaieImportAnalyse, PaieImportCorrection, PaieImportErreur
+from .schemas import PaieImportAnalyse, PaieImportCorrection, PaieImportCreation, PaieImportErreur
 
 
 class ServiceImportPaie:
@@ -217,3 +217,29 @@ class ServiceImportPaie:
                 total += 1
             await session.flush()
         return total
+
+    async def creer_employes(self, session: AsyncSession, creations: list[PaieImportCreation]) -> int:
+        action = self._auditeur.auditer(session, "PAIE_IMPORT_CREATION_EMPLOYE", TypeOperation.CREATE, "Employee")
+        async with session.begin(), action:
+            for creation in creations:
+                existe = (
+                    await session.execute(select(Employee).where(Employee.cin == creation.cin.strip()))
+                ).scalar_one_or_none()
+                if existe is not None:
+                    raise ValueError(f"CIN déjà existant : {creation.cin}")
+                type_salaire = creation.type_salaire or ("JOURNALIER" if creation.salaire <= 500 else "MENSUEL")
+                session.add(
+                    Employee(
+                        nom_prenom=creation.nom_prenom.strip(),
+                        cin=creation.cin.strip(),
+                        date_naissance=creation.date_naissance,
+                        date_embauche=creation.date_embauche,
+                        fonction_id=creation.fonction_id,
+                        chantier_id=creation.chantier_id,
+                        equipe_id=creation.equipe_id,
+                        salaire=creation.salaire,
+                        type_salaire=TypeSalaire(type_salaire),
+                    )
+                )
+            await session.flush()
+        return len(creations)
