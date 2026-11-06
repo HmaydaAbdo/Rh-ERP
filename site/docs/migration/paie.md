@@ -29,3 +29,7 @@ Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
 champ exact (`salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche` ou `salaireTotal`),
 la valeur reçue et la contrainte violée; le message global « salaires et primes » est interdit.
+
+Le modèle Excel attendu conserve l'ordre Spring (trois lignes d'en-tête) : `Nom & prénom`, `Fonction`,
+`CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`, `Total`, `Observation`,
+`Chantier`, `Équipe`.

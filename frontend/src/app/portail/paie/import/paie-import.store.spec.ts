@@ -126,16 +126,19 @@ describe('PaieImportStore', () => {
     store.analyser(fichier);
 
     store.saisirCreation(7, { dateNaissance: new Date(1990, 0, 2), dateEmbauche: new Date(2026, 9, 1) });
-    expect(store.creationComplete(7)).toBe(false);
-    store.creer(7);
-    expect(service.corrigerImport).not.toHaveBeenCalled();
-
-    store.saisirCreation(7, { typeSalaire: 'MENSUEL' });
-    store.creer(7);
+    expect(store.creationComplete(7, 450)).toBe(true);
+    store.creer(7, 450);
     expect(service.corrigerImport).toHaveBeenCalledWith(fichier, '2026-10', {
       aligner: [],
-      creer: [{ numeroLigne: 7, dateNaissance: '1990-01-02', dateEmbauche: '2026-10-01', typeSalaire: 'MENSUEL' }]
+      creer: [{ numeroLigne: 7, dateNaissance: '1990-01-02', dateEmbauche: '2026-10-01', typeSalaire: 'JOURNALIER' }]
     });
+  });
+
+  it('préremplit le type de salaire selon le seuil de 500 DH', () => {
+    expect(store.typeSalairePropose(500)).toBe('JOURNALIER');
+    expect(store.typeSalairePropose(500.01)).toBe('MENSUEL');
+    store.saisirCreation(7, { dateNaissance: new Date(1990, 0, 2), dateEmbauche: new Date(2026, 9, 1) });
+    expect(store.creationComplete(7, 500)).toBe(true);
   });
 
   it('importe avec les seuls départs cochés, puis annonce la fin', () => {

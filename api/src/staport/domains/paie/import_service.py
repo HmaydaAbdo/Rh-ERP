@@ -31,11 +31,11 @@ class ServiceImportPaie:
             chantiers = {x.code.strip().upper() for x in (await session.execute(select(Chantier))).scalars()}
             equipes = {x.code.strip().upper() for x in (await session.execute(select(Equipe))).scalars()}
         for numero, ligne in enumerate(lignes[3:], start=4):
+            nom = str(ligne[0]).strip() if len(ligne) > 0 and ligne[0] is not None else None
+            fonction = str(ligne[1]).strip() if len(ligne) > 1 and ligne[1] is not None else None
             cin = str(ligne[2]).strip() if len(ligne) > 2 and ligne[2] is not None else None
-            nom = str(ligne[1]).strip() if len(ligne) > 1 and ligne[1] is not None else None
-            fonction = str(ligne[3]).strip() if len(ligne) > 3 and ligne[3] is not None else None
-            chantier = str(ligne[4]).strip() if len(ligne) > 4 and ligne[4] is not None else None
-            equipe = str(ligne[5]).strip() if len(ligne) > 5 and ligne[5] is not None else None
+            chantier = str(ligne[11]).strip() if len(ligne) > 11 and ligne[11] is not None else None
+            equipe = str(ligne[12]).strip() if len(ligne) > 12 and ligne[12] is not None else None
             if cin is None or cin.upper() not in employees:
                 erreurs.append(
                     PaieImportErreur(
@@ -76,10 +76,10 @@ class ServiceImportPaie:
                     )
                 )
             for index, champ in (
-                (9, "salaireMensuel"),
-                (10, "primeRoulageOrdinaire"),
-                (11, "primeRoulageDimanche"),
-                (12, "salaireTotal"),
+                (6, "salaireMensuel"),
+                (7, "primeRoulageOrdinaire"),
+                (8, "primeRoulageDimanche"),
+                (9, "salaireTotal"),
             ):
                 valeur = ligne[index] if len(ligne) > index else None
                 if valeur is None:
@@ -165,30 +165,30 @@ class ServiceImportPaie:
                 ).scalar_one_or_none()
                 if existe is not None:
                     raise ValueError(f"Bulletin déjà existant pour {cin} et {periode}")
-                equipe = equipes.get(str(ligne[5]).strip().upper()) if len(ligne) > 5 and ligne[5] else None
+                equipe = equipes.get(str(ligne[12]).strip().upper()) if len(ligne) > 12 and ligne[12] else None
                 session.add(
                     Paie(
                         employee_id=employe.id,
                         periode=periode,
-                        fonction_id=fonctions[str(ligne[3]).strip().upper()],
-                        chantier_id=chantiers[str(ligne[4]).strip().upper()],
+                        fonction_id=fonctions[str(ligne[1]).strip().upper()],
+                        chantier_id=chantiers[str(ligne[11]).strip().upper()],
                         equipe_id=equipe,
-                        nombre_jours_travailles=Decimal(str(ligne[6] or 0)),
-                        jours_recuperation_ouvrable=Decimal(str(ligne[7]))
+                        nombre_jours_travailles=Decimal(str(ligne[3] or 0)),
+                        jours_recuperation_ouvrable=Decimal(str(ligne[4]))
+                        if len(ligne) > 4 and ligne[4] is not None
+                        else None,
+                        jours_recuperation_dimanche=Decimal(str(ligne[5]))
+                        if len(ligne) > 5 and ligne[5] is not None
+                        else None,
+                        salaire_mensuel=Decimal(str(ligne[6] or 0)),
+                        prime_roulage_ordinaire=Decimal(str(ligne[7]))
                         if len(ligne) > 7 and ligne[7] is not None
                         else None,
-                        jours_recuperation_dimanche=Decimal(str(ligne[8]))
+                        prime_roulage_dimanche=Decimal(str(ligne[8]))
                         if len(ligne) > 8 and ligne[8] is not None
                         else None,
-                        salaire_mensuel=Decimal(str(ligne[9] or 0)),
-                        prime_roulage_ordinaire=Decimal(str(ligne[10]))
-                        if len(ligne) > 10 and ligne[10] is not None
-                        else None,
-                        prime_roulage_dimanche=Decimal(str(ligne[11]))
-                        if len(ligne) > 11 and ligne[11] is not None
-                        else None,
-                        salaire_total=Decimal(str(ligne[12] or 0)),
-                        observation=str(ligne[13]) if len(ligne) > 13 and ligne[13] is not None else None,
+                        salaire_total=Decimal(str(ligne[9] or 0)),
+                        observation=str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
                     )
                 )
             await session.flush()
