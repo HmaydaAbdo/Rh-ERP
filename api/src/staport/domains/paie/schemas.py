@@ -139,3 +139,8 @@ class PaieParcoursReponse(ModeleApi):
     dernier_mois: int | None
     mois: list[PaieParcoursMois]
     evenements: list[PaieParcoursEvenement]
+
+
+class PaieExportRequete(ModeleApi):
+    periode: int = Field(ge=190001, le=299912)
+    regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)

@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
@@ -14,6 +15,7 @@ from .schemas import (
     PaieCreationRequete,
     PaieEffectifMois,
     PaieEquipeOption,
+    PaieExportRequete,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -72,6 +74,16 @@ async def effectifs(corps: PaieRecherche | None, session: Session, contexte: Con
 @paies.get("/employes/{employee_id}/parcours", dependencies=[Depends(exiger("PAIE_READ"))])
 async def parcours(employee_id: int, session: Session, contexte: Contexte) -> PaieParcoursReponse:
     return await contexte.paies.parcours(session, employee_id)
+
+
+@paies.post("/export", dependencies=[Depends(exiger("PAIE_EXPORT"))])
+async def exporter(corps: PaieExportRequete, session: Session, contexte: Contexte) -> StreamingResponse:
+    contenu = await contexte.export_paie.exporter(session, corps)
+    return StreamingResponse(
+        contenu,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="Paie_Export_{corps.periode}.xlsx"'},
+    )
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
