@@ -25,6 +25,10 @@ regrouper plusieurs équipes sous un libellé unique (par exemple `CH+OP` pour `
 regroupement ne modifie aucune donnée : il agrège uniquement les lignes, totaux et analyses de
 l'export, partout où l'équipe apparaît.
 
+Le pipeline PDF FastAPI utilise WeasyPrint 70.0 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). La route est disponible, mais la parité 100 % reste en validation jusqu'au
+rejeu sur un même jeu de données et au portage complet des pages, graphiques et sections du rapport.
+
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
 champ exact (`salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche` ou `salaireTotal`),
