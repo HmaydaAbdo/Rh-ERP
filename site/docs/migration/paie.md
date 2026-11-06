@@ -20,6 +20,11 @@ un salaire différent passe par le wizard, avec type proposé (`≤ 500` journal
 Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
 d'affectation ne sont pas déduits automatiquement.
 
+Pour l'export, la parité Spring est le comportement par défaut. Une étape optionnelle permet de
+regrouper plusieurs équipes sous un libellé unique (par exemple `CH+OP` pour `CH` et `OP`). Ce
+regroupement ne modifie aucune donnée : il agrège uniquement les lignes, totaux et analyses de
+l'export, partout où l'équipe apparaît.
+
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
 champ exact (`salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche` ou `salaireTotal`),
