@@ -97,6 +97,18 @@ async def analyser_import(
     return await contexte.import_paie.analyser(session, await file.read(), periode)
 
 
+@paies.post("/import", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+async def importer(
+    periode: int,
+    session: Session,
+    contexte: Contexte,
+    ignorer_salaires_zero: bool = False,
+    file: UploadFile = File(...),  # noqa: B008
+) -> dict[str, int]:
+    nombre = await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero)
+    return {"periode": periode, "crees": nombre}
+
+
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
 async def modifier(
     identifiant: int, corps: PaieModificationRequete, session: Session, contexte: Contexte

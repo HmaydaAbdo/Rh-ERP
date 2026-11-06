@@ -1,18 +1,25 @@
+from decimal import Decimal
 from io import BytesIO
+from typing import Any, cast
 
 from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
+from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
+from .models import Paie
 from .schemas import PaieImportAnalyse, PaieImportErreur
 
 
 class ServiceImportPaie:
+    def __init__(self, auditeur: Auditeur) -> None:
+        self._auditeur = auditeur
+
     async def analyser(self, session: AsyncSession, contenu: bytes, periode: int) -> PaieImportAnalyse:
         feuille = load_workbook(BytesIO(contenu), read_only=True, data_only=True).active
         erreurs: list[PaieImportErreur] = []
@@ -135,3 +142,54 @@ class ServiceImportPaie:
             avertissements=avertissements,
             pret=not erreurs and not avertissements,
         )
+
+    async def importer(self, session: AsyncSession, contenu: bytes, periode: int, ignorer_salaires_zero: bool) -> int:
+        analyse = await self.analyser(session, contenu, periode)
+        if analyse.erreurs or (analyse.avertissements and not ignorer_salaires_zero):
+            raise ValueError("L'analyse n'est pas prête : corrigez les erreurs et confirmez les avertissements.")
+        feuille = load_workbook(BytesIO(contenu), read_only=True, data_only=True).active
+        lignes = cast(list[list[Any]], [list(x) for x in feuille.iter_rows(values_only=True)]) if feuille else []
+        action = self._auditeur.auditer(session, "PAIE_IMPORT", TypeOperation.CREATE, "Paie")
+        async with session.begin(), action:
+            employees = {x.cin.strip().upper(): x for x in (await session.execute(select(Employee))).scalars()}
+            fonctions = {x.libelle.strip().upper(): x.id for x in (await session.execute(select(Fonction))).scalars()}
+            chantiers = {x.code.strip().upper(): x.id for x in (await session.execute(select(Chantier))).scalars()}
+            equipes = {x.code.strip().upper(): x.id for x in (await session.execute(select(Equipe))).scalars()}
+            for ligne in lignes[3:]:
+                cin = str(ligne[2]).strip().upper()
+                employe = employees[cin]
+                existe = (
+                    await session.execute(
+                        select(Paie.id).where(Paie.employee_id == employe.id, Paie.periode == periode)
+                    )
+                ).scalar_one_or_none()
+                if existe is not None:
+                    raise ValueError(f"Bulletin déjà existant pour {cin} et {periode}")
+                equipe = equipes.get(str(ligne[5]).strip().upper()) if len(ligne) > 5 and ligne[5] else None
+                session.add(
+                    Paie(
+                        employee_id=employe.id,
+                        periode=periode,
+                        fonction_id=fonctions[str(ligne[3]).strip().upper()],
+                        chantier_id=chantiers[str(ligne[4]).strip().upper()],
+                        equipe_id=equipe,
+                        nombre_jours_travailles=Decimal(str(ligne[6] or 0)),
+                        jours_recuperation_ouvrable=Decimal(str(ligne[7]))
+                        if len(ligne) > 7 and ligne[7] is not None
+                        else None,
+                        jours_recuperation_dimanche=Decimal(str(ligne[8]))
+                        if len(ligne) > 8 and ligne[8] is not None
+                        else None,
+                        salaire_mensuel=Decimal(str(ligne[9] or 0)),
+                        prime_roulage_ordinaire=Decimal(str(ligne[10]))
+                        if len(ligne) > 10 and ligne[10] is not None
+                        else None,
+                        prime_roulage_dimanche=Decimal(str(ligne[11]))
+                        if len(ligne) > 11 and ligne[11] is not None
+                        else None,
+                        salaire_total=Decimal(str(ligne[12] or 0)),
+                        observation=str(ligne[13]) if len(ligne) > 13 and ligne[13] is not None else None,
+                    )
+                )
+            await session.flush()
+        return max(0, len(lignes) - 3)

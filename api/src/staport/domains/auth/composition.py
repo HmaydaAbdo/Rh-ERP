@@ -99,5 +99,5 @@ def creer_contexte(
         employees=service_employee,
         paies=service_paie,
         export_paie=ServiceExportPaie(),
-        import_paie=ServiceImportPaie(),
+        import_paie=ServiceImportPaie(publication),
     )
