@@ -18,6 +18,7 @@ from staport.domains.equipe.service import ServiceEquipe
 from staport.domains.function.service import ServiceFonction
 from staport.domains.paie.export import ServiceExportPaie
 from staport.domains.paie.import_service import ServiceImportPaie
+from staport.domains.paie.report import ServiceRapportPaie
 from staport.domains.paie.service import ServicePaie
 from staport.domains.parametre import audit as _historique_parametre  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.parametre.service import ServiceParametre
@@ -43,6 +44,7 @@ class ContexteAuth:
     paies: ServicePaie
     export_paie: ServiceExportPaie
     import_paie: ServiceImportPaie
+    rapport_paie: ServiceRapportPaie
 
 
 def origines(brutes: str) -> frozenset[str]:
@@ -100,4 +102,5 @@ def creer_contexte(
         paies=service_paie,
         export_paie=ServiceExportPaie(),
         import_paie=ServiceImportPaie(publication),
+        rapport_paie=ServiceRapportPaie(publication),
     )
