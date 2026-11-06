@@ -447,6 +447,11 @@ AUDITEES = {
     ("POST", "/equipes"): "EQUIPE_CREATION",
     ("PUT", "/equipes/{identifiant}"): "EQUIPE_MODIFICATION",
     ("DELETE", "/equipes/{identifiant}"): "EQUIPE_SUPPRESSION",
+    ("POST", "/chantiers"): "CHANTIER_CREATION",
+    ("PUT", "/chantiers/{identifiant}"): "CHANTIER_MODIFICATION",
+    ("PUT", "/chantiers/{identifiant}/statut"): "CHANTIER_MODIFICATION",
+    ("DELETE", "/chantiers/{identifiant}"): "CHANTIER_SUPPRESSION",
+    ("POST", "/chantiers/sync"): "CHANTIER_SYNCHRONISATION",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
@@ -467,6 +472,7 @@ LECTURES_PAR_POST = {
     ("POST", "/logs/search"),
     ("POST", "/functions/search"),
     ("POST", "/equipes/search"),
+    ("POST", "/chantiers/search"),
 }
 """Recherches par POST : elles ne changent rien et ne sont pas auditées."""
 
