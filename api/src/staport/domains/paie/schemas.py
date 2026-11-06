@@ -97,12 +97,73 @@ class PaiePeriodeResume(ModeleApi):
     stc_montant: Decimal
 
 
+class PaieKpi(ModeleApi):
+    masse: Decimal
+    effectif: int
+    cout_moyen: Decimal | None
+    nombre_chantiers: int
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieChantierMasse(ModeleApi):
+    id: int
+    code: str
+    libelle: str | None
+    masse: Decimal
+    effectif: int
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieEquipeMasse(ModeleApi):
+    id: int | None
+    code: str | None
+    libelle: str | None
+    masse: Decimal
+    effectif: int
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieFonctionMasse(ModeleApi):
+    id: int
+    libelle: str
+    masse: Decimal
+    effectif: int
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieTranche(ModeleApi):
+    min: Decimal
+    max: Decimal | None
+    effectif: int
+
+
+class PaieEvolution(ModeleApi):
+    periode: PeriodePaie
+    masse: Decimal
+    effectif: int
+    stc: int
+    stc_montant: Decimal
+
+
+class PaieQualite(ModeleApi):
+    sans_equipe: int
+    sans_observation: int
+
+
 class PaieAnalytiqueReponse(ModeleApi):
     periode: PeriodePaie
-    nombre_bulletins: int
-    masse: Decimal
-    salaire_moyen: Decimal | None
-    nombre_employes: int
+    kpis: PaieKpi
+    mois_precedent: PaieKpi | None
+    par_chantier: list[PaieChantierMasse]
+    par_equipe: list[PaieEquipeMasse]
+    par_fonction: list[PaieFonctionMasse]
+    tranches: list[PaieTranche]
+    evolution: list[PaieEvolution]
+    qualite: PaieQualite
 
 
 class PaieOptionsChantierRequete(ModeleApi):
