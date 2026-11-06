@@ -9,7 +9,8 @@
 
 | | |
 |---|---|
-| Backend | `backend/src/main/java/staport/rh/function/` |
+| Backend de référence (migration en cours) | `api/src/staport/domains/function/` |
+| Ancien backend | `backend/src/main/java/staport/rh/function/` (conservé jusqu'à la bascule finale) |
 | Frontend | `frontend/src/app/portail/function/` |
 | Table | `fonction` |
 | Endpoints | `/functions`, `/functions/search`, `/functions/import` |
@@ -55,7 +56,15 @@ décrite ici de bout en bout pour pouvoir être relue et commentée séparément
 
 ### Couche application
 
-**Backend** (`backend/src/main/java/staport/rh/function/`)
+**FastAPI** (`api/src/staport/domains/function/`)
+
+- **État de migration (KAN-222).** Les routes CRUD et la recherche sont servies par FastAPI, avec permissions
+  `FUNCTION_READ`, `FUNCTION_WRITE` et `FUNCTION_DELETE`, version optimiste et audit Envers-compatible. Le chemin Spring
+  reste présent jusqu'à la bascule finale et n'est pas exposé par le Compose de production.
+- **Contrat.** `POST /functions`, `PUT /functions/{id}`, `GET /functions/{id}`, `POST /functions/search` et
+  `DELETE /functions/{id}` conservent les DTO camelCase, la pagination `Page` et les erreurs françaises.
+
+**Ancien backend** (`backend/src/main/java/staport/rh/function/`)
 
 - **Contrôleurs.** `FunctionController` (`/functions`) et `FunctionImportController` (`/functions/import`). Chaque
   route porte `@PreAuthorize` sur sa permission (`FUNCTION_READ`, `FUNCTION_WRITE`, `FUNCTION_DELETE`,
