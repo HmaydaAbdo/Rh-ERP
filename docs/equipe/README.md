@@ -24,7 +24,14 @@ en bout pour pouvoir être relue et commentée séparément.
 
 ### Couche application
 
-**Backend** (`backend/src/main/java/staport/rh/equipe/`)
+**FastAPI (KAN-223)** (`api/src/staport/domains/equipe/`)
+
+- Les routes CRUD et recherche sont maintenant servies par FastAPI avec `EQUIPE_READ`, `EQUIPE_WRITE` et
+  `EQUIPE_DELETE`, normalisation du code, unicité, version optimiste et audit compatible Envers.
+- Les outils MCP `equipe_rechercher` et `equipe_fiche` sont en lecture seule et contrôlés par `EQUIPE_READ`.
+- Le backend Spring reste conservé jusqu'à la bascule finale.
+
+**Ancien backend** (`backend/src/main/java/staport/rh/equipe/`)
 
 - **Contrôleurs.** `EquipeController` (`/equipes`) et `EquipeImportController` (`/equipes/import`). Chaque route porte
   `@PreAuthorize` sur sa permission (voir [Permissions](#permissions)) ; l'interface n'est jamais la seule barrière.

@@ -444,6 +444,9 @@ AUDITEES = {
     ("POST", "/functions"): "FONCTION_CREATION",
     ("PUT", "/functions/{identifiant}"): "FONCTION_MODIFICATION",
     ("DELETE", "/functions/{identifiant}"): "FONCTION_SUPPRESSION",
+    ("POST", "/equipes"): "EQUIPE_CREATION",
+    ("PUT", "/equipes/{identifiant}"): "EQUIPE_MODIFICATION",
+    ("DELETE", "/equipes/{identifiant}"): "EQUIPE_SUPPRESSION",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
@@ -463,6 +466,7 @@ LECTURES_PAR_POST = {
     ("POST", "/roles/search"),
     ("POST", "/logs/search"),
     ("POST", "/functions/search"),
+    ("POST", "/equipes/search"),
 }
 """Recherches par POST : elles ne changent rien et ne sont pas auditées."""
 
