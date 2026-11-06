@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +12,7 @@ from staport.domains.common.schemas import Page, creer_page
 
 from . import repository
 from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise
-from .models import Employee
+from .models import Employee, EmployeeSortie
 from .schemas import (
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
@@ -20,6 +21,8 @@ from .schemas import (
     EmployeeRecherche,
     EmployeeRegroupementReponse,
     EmployeeReponse,
+    EmployeeSortieReponse,
+    EmployeeSortiesMoisReponse,
     TrancheReponse,
 )
 
@@ -170,6 +173,29 @@ class ServiceEmployee:
             )
             for i, v in sorted(groupes.items())
         ]
+
+    async def sorties_mois(self, s: AsyncSession, periode: int) -> EmployeeSortiesMoisReponse:
+        async with s.begin():
+            rows = (
+                (
+                    await s.execute(
+                        select(EmployeeSortie)
+                        .where(EmployeeSortie.periode == periode)
+                        .order_by(EmployeeSortie.employee_id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+        motifs: dict[str, int] = {}
+        sorties: list[EmployeeSortieReponse] = []
+        for row in rows:
+            motif = row.motif.strip() or "NON_PRECISE"
+            motifs[motif] = motifs.get(motif, 0) + 1
+            sorties.append(EmployeeSortieReponse(employe_id=row.employee_id, periode=row.periode, motif=motif))
+        return EmployeeSortiesMoisReponse(
+            periode=periode, nombre=len(sorties), par_motif=dict(sorted(motifs.items())), sorties=sorties
+        )
 
     async def _obtenir(self, s: AsyncSession, i: int) -> Employee:
         x = await repository.par_id(s, i)

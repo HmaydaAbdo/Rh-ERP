@@ -102,3 +102,16 @@ class EmployeeRegroupementReponse(ModeleApi):
     libelle: str
     effectif: int
     actifs: int
+
+
+class EmployeeSortieReponse(ModeleApi):
+    employe_id: int
+    periode: int
+    motif: str
+
+
+class EmployeeSortiesMoisReponse(ModeleApi):
+    periode: int
+    nombre: int
+    par_motif: dict[str, int]
+    sorties: list[EmployeeSortieReponse]

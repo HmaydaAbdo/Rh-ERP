@@ -16,6 +16,7 @@ from .schemas import (
     EmployeeRecherche,
     EmployeeRegroupementReponse,
     EmployeeReponse,
+    EmployeeSortiesMoisReponse,
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
@@ -68,6 +69,11 @@ async def regroupements(
     dimension: DimensionEmployes, corps: EmployeeRecherche | None, session: Session, contexte: Contexte
 ) -> list[EmployeeRegroupementReponse]:
     return await contexte.employees.regrouper(session, corps, dimension)
+
+
+@employees.post("/sorties-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
+async def sorties_mois(periode: int, session: Session, contexte: Contexte) -> EmployeeSortiesMoisReponse:
+    return await contexte.employees.sorties_mois(session, periode)
 
 
 @employees.delete(

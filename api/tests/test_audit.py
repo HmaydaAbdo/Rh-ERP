@@ -479,6 +479,7 @@ LECTURES_PAR_POST = {
     ("POST", "/employees/search"),
     ("POST", "/employees/analytique"),
     ("POST", "/employees/regroupements"),
+    ("POST", "/employees/sorties-mois"),
 }
 """Recherches par POST : elles ne changent rien et ne sont pas auditées."""
 
