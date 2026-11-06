@@ -101,6 +101,12 @@ Un bulletin déjà présent pour le même employé et la même période n'est ja
 Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
 Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
 
+Les montants nuls sont valides. Les champs `salaireMensuel`, `primeRoulageOrdinaire`,
+`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, avec au plus deux décimales et une
+borne maximale de `99 999 999,99`. Toute erreur de cellule doit identifier la ligne Excel, le nom
+exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
+salaires et primes n'est pas un contrat suffisant.
+
 Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serveur relit le fichier à
 chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.

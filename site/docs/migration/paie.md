@@ -19,3 +19,7 @@ fiche Employé. Un salaire identique à celui de la fiche (dernier salaire connu
 un salaire différent passe par le wizard, avec type proposé (`≤ 500` journalier, `> 500` mensuel).
 Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
 d'affectation ne sont pas déduits automatiquement.
+
+Les montants nuls sont acceptés. Une erreur de montant doit toujours nommer la ligne Excel, le
+champ exact (`salaireMensuel`, `primeRoulageOrdinaire`, `primeRoulageDimanche` ou `salaireTotal`),
+la valeur reçue et la contrainte violée; le message global « salaires et primes » est interdit.

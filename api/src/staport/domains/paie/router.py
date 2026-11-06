@@ -7,7 +7,15 @@ from staport.domains.auth.dependencies import Contexte, exiger
 from staport.domains.common.pagination import Pagination, pagination
 from staport.platform.base_de_donnees import session_requete
 
-from .schemas import PaieCreationRequete, PaieModificationRequete, PaieRecherche, PaieReponse, PaiesPage
+from .schemas import (
+    PaieAnalytiqueReponse,
+    PaieCreationRequete,
+    PaieModificationRequete,
+    PaiePeriodeResume,
+    PaieRecherche,
+    PaieReponse,
+    PaiesPage,
+)
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
 PagePaie = Annotated[
@@ -23,6 +31,16 @@ paies = APIRouter(prefix="/paie", tags=["Paie"])
 )
 async def creer(corps: PaieCreationRequete, session: Session, contexte: Contexte) -> PaieReponse:
     return await contexte.paies.creer(session, corps)
+
+
+@paies.get("/periodes", dependencies=[Depends(exiger("PAIE_READ"))])
+async def periodes(session: Session, contexte: Contexte) -> list[PaiePeriodeResume]:
+    return await contexte.paies.periodes(session)
+
+
+@paies.post("/analytique", dependencies=[Depends(exiger("PAIE_READ"))])
+async def analytique(periode: int, session: Session, contexte: Contexte) -> PaieAnalytiqueReponse:
+    return await contexte.paies.analytique(session, periode)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

@@ -55,3 +55,18 @@ class PaieReponse(ModeleApi):
 
 
 PaiesPage = Page[PaieReponse]
+
+
+class PaiePeriodeResume(ModeleApi):
+    periode: int
+    nombre_bulletins: int
+    nombre_chantiers: int
+    masse: Decimal
+
+
+class PaieAnalytiqueReponse(ModeleApi):
+    periode: int
+    nombre_bulletins: int
+    masse: Decimal
+    salaire_moyen: Decimal | None
+    nombre_employes: int

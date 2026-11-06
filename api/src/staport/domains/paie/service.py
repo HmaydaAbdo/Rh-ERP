@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +11,14 @@ from staport.domains.common.schemas import Page, creer_page
 from . import repository
 from .exceptions import PaieDejaExistante, PaieIntrouvable
 from .models import Paie
-from .schemas import PaieCreationRequete, PaieModificationRequete, PaieRecherche, PaieReponse
+from .schemas import (
+    PaieAnalytiqueReponse,
+    PaieCreationRequete,
+    PaieModificationRequete,
+    PaiePeriodeResume,
+    PaieRecherche,
+    PaieReponse,
+)
 
 
 def rep(x: Paie) -> PaieReponse:
@@ -61,6 +70,25 @@ class ServicePaie:
                 await s.flush()
             except IntegrityError as e:
                 raise PaieIntrouvable(i) from e
+
+    async def periodes(self, s: AsyncSession) -> list[PaiePeriodeResume]:
+        async with s.begin():
+            rows = await repository.periodes(s)
+        return [
+            PaiePeriodeResume(periode=p, nombre_bulletins=n, nombre_chantiers=c, masse=Decimal(str(m)))
+            for p, n, c, m in rows
+        ]
+
+    async def analytique(self, s: AsyncSession, periode: int) -> PaieAnalytiqueReponse:
+        async with s.begin():
+            n, masse, moyenne, employes = await repository.analytique(s, periode)
+        return PaieAnalytiqueReponse(
+            periode=periode,
+            nombre_bulletins=n,
+            masse=Decimal(str(masse)),
+            salaire_moyen=Decimal(str(moyenne)) if moyenne is not None else None,
+            nombre_employes=employes,
+        )
 
     @staticmethod
     async def _obtenir(s: AsyncSession, i: int) -> Paie:
