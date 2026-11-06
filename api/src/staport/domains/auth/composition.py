@@ -13,6 +13,7 @@ from staport.domains.auth.service_role import ServiceRole
 from staport.domains.auth.service_utilisateur import ServiceUtilisateur
 from staport.domains.chantier.service import ServiceChantier
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.employee.service import ServiceEmployee
 from staport.domains.equipe.service import ServiceEquipe
 from staport.domains.function.service import ServiceFonction
 from staport.domains.parametre import audit as _historique_parametre  # noqa: F401  # pyright: ignore[reportUnusedImport]
@@ -35,6 +36,7 @@ class ContexteAuth:
     fonctions: ServiceFonction
     equipes: ServiceEquipe
     chantiers: ServiceChantier
+    employees: ServiceEmployee
 
 
 def origines(brutes: str) -> frozenset[str]:
@@ -69,6 +71,7 @@ def creer_contexte(
     service_fonction = ServiceFonction(publication)
     service_equipe = ServiceEquipe(publication)
     service_chantier = ServiceChantier(publication)
+    service_employee = ServiceEmployee(publication)
     params = parametres or service_parametre
     courriel = ServiceCourriel(configuration)
     service_auth = ServiceAuth(hacheur, emetteur, params, publication, courriel)
@@ -86,4 +89,5 @@ def creer_contexte(
         fonctions=service_fonction,
         equipes=service_equipe,
         chantiers=service_chantier,
+        employees=service_employee,
     )

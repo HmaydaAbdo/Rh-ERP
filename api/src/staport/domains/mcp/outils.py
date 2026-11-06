@@ -27,6 +27,8 @@ from staport.domains.auth.securite import SCOPE_LECTURE
 from staport.domains.chantier import repository as repository_chantier
 from staport.domains.chantier.schemas import ChantierRecherche
 from staport.domains.common.pagination import Pagination
+from staport.domains.employee import repository as repository_employee
+from staport.domains.employee.schemas import EmployeeRecherche
 from staport.domains.equipe import repository as repository_equipe
 from staport.domains.equipe.schemas import EquipeRecherche
 from staport.domains.function import repository as repository_fonction
@@ -324,6 +326,58 @@ def enregistrer(
                 "longitude": chantier.longitude,
             },
             "vue": {"module": "chantier", "vue": "detail", "parametres": {"id": id}},
+        }
+
+    @serveur.tool(
+        name="employes_rechercher",
+        title="Rechercher des employés",
+        annotations=LECTURE_SEULE,
+        description="Recherche paginée d'employés par nom, CIN ou statut. Le salaire est omis sans PAIE_READ.",
+    )
+    @outil("employes_rechercher", "EMPLOYEE_READ", _nombre_de_total)
+    async def employes_rechercher(
+        recherche: Annotated[str | None, Field(max_length=150)] = None,
+        limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
+        page: Page = 0,
+    ) -> dict[str, Any]:
+        async with fabrique()() as session:
+            lignes, total = await repository_employee.rechercher(
+                session,
+                EmployeeRecherche(nom_prenom=_texte(recherche)),
+                Pagination(page, limite, (("nom_prenom", True),)),
+            )
+        return {
+            "total": total,
+            "page": page,
+            "employes": [{"id": x.id, "nomPrenom": x.nom_prenom, "cin": x.cin, "statut": x.statut} for x in lignes],
+            "vue": {"module": "employee", "vue": "tabulaire", "parametres": {}},
+        }
+
+    @serveur.tool(
+        name="employe_fiche",
+        title="Fiche d'un employé",
+        annotations=LECTURE_SEULE,
+        description="Lit la fiche d'un employé par identifiant. Lecture seule.",
+    )
+    @outil("employe_fiche", "EMPLOYEE_READ", lambda _: 1)
+    async def employe_fiche(id: Annotated[int, Field(gt=0)]) -> dict[str, Any]:
+        async with fabrique()() as session, session.begin():
+            employe = await repository_employee.par_id(session, id)
+        if employe is None:
+            raise ToolError(f"Employé introuvable avec l'id : {id}")
+        return {
+            "employe": {
+                "id": employe.id,
+                "nomPrenom": employe.nom_prenom,
+                "cin": employe.cin,
+                "dateNaissance": employe.date_naissance,
+                "dateEmbauche": employe.date_embauche,
+                "fonctionId": employe.fonction_id,
+                "chantierId": employe.chantier_id,
+                "equipeId": employe.equipe_id,
+                "statut": employe.statut,
+            },
+            "vue": {"module": "employee", "vue": "detail", "parametres": {"id": id}},
         }
 
     @serveur.tool(
