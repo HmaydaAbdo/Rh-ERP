@@ -8,6 +8,11 @@ HTTP des mois est `AAAA-MM`, tandis que la table conserve `AAAAMM`. Les réponse
 contiennent les résumés `employee`, `fonction`, `chantier` et `equipe` attendus par l'interface.
 La modification conserve l'employé et le mois du bulletin : ces deux champs ne figurent pas dans
 son corps de requête.
+La route analytique reçoit les filtres dans son corps JSON et restitue les KPI, les répartitions
+par chantier, équipe et fonction, les tranches, l'évolution historique et les indicateurs de qualité.
+Le calcul utilise le pas des tranches configuré dans le domaine Paramètre. Les tests vérifient
+le contrat HTTP sur PostgreSQL et le passage de décembre à janvier ; la performance sur une
+copie volumineuse et la comparaison exhaustive avec Spring restent à mesurer.
 
 Le périmètre restant avant clôture comprend l'import Excel atomique, les options chantier/équipe,
 l'analytique et les effectifs, le parcours employé, les exports/rapport, la suppression-restauration

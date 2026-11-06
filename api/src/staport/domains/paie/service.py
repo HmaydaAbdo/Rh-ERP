@@ -12,8 +12,10 @@ from staport.domains.common.schemas import Page, creer_page
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
+from staport.domains.parametre.service import ServiceParametre
 
 from . import repository
+from .analytique import construire_analytique
 from .exceptions import PaieDejaExistante, PaieIntrouvable
 from .models import Paie
 from .schemas import (
@@ -123,16 +125,15 @@ class ServicePaie:
             for p, n, c, m, stc, stc_montant in rows
         ]
 
-    async def analytique(self, s: AsyncSession, periode: int) -> PaieAnalytiqueReponse:
+    async def analytique(
+        self, s: AsyncSession, criteres: PaieRecherche, parametres: ServiceParametre
+    ) -> PaieAnalytiqueReponse:
+        if criteres.periode is None:
+            raise ValueError("La période est obligatoire pour l'analyse de la paie")
         async with s.begin():
-            n, masse, moyenne, employes = await repository.analytique(s, periode)
-        return PaieAnalytiqueReponse(
-            periode=periode,
-            nombre_bulletins=n,
-            masse=Decimal(str(masse)),
-            salaire_moyen=Decimal(str(moyenne)) if moyenne is not None else None,
-            nombre_employes=employes,
-        )
+            pas = await parametres.pas_tranche_analytique(s)
+            lignes = await repository.lignes_analytiques(s, criteres)
+        return construire_analytique(criteres.periode, lignes, pas)
 
     async def options_chantiers(
         self, s: AsyncSession, r: PaieOptionsChantierRequete, p: Pagination

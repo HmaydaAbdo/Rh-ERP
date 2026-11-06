@@ -31,6 +31,34 @@ async def fiches(s: AsyncSession, paies: list[Paie]) -> list[tuple[Paie, Employe
     return cast(list[tuple[Paie, Employee, Fonction, Chantier, Equipe | None]], list((await s.execute(q)).all()))
 
 
+async def lignes_analytiques(
+    s: AsyncSession, criteres: PaieRecherche
+) -> list[tuple[Paie, Employee, Fonction, Chantier, Equipe | None]]:
+    q = (
+        select(Paie, Employee, Fonction, Chantier, Equipe)
+        .join(Employee, Employee.id == Paie.employee_id)
+        .join(Fonction, Fonction.id == Paie.fonction_id)
+        .join(Chantier, Chantier.id == Paie.chantier_id)
+        .outerjoin(Equipe, Equipe.id == Paie.equipe_id)
+    )
+    if criteres.cin:
+        q = q.where(func.lower(Employee.cin).like(f"%{criteres.cin.strip().lower()}%"))
+    if criteres.nom_prenom:
+        q = q.where(func.lower(Employee.nom_prenom).like(f"%{criteres.nom_prenom.strip().lower()}%"))
+    if criteres.chantier_ids:
+        q = q.where(Paie.chantier_id.in_(criteres.chantier_ids))
+    if criteres.fonction_ids:
+        q = q.where(Paie.fonction_id.in_(criteres.fonction_ids))
+    if criteres.equipe_ids:
+        equipes = [identifiant for identifiant in criteres.equipe_ids if identifiant != 0]
+        q = q.where(
+            or_(Paie.equipe_id.in_(equipes), Paie.equipe_id.is_(None))
+            if 0 in criteres.equipe_ids
+            else Paie.equipe_id.in_(equipes)
+        )
+    return cast(list[tuple[Paie, Employee, Fonction, Chantier, Equipe | None]], list((await s.execute(q)).all()))
+
+
 async def existe(s: AsyncSession, employee_id: int, periode: int, sauf_id: int | None = None) -> bool:
     q = select(func.count()).select_from(Paie).where(Paie.employee_id == employee_id, Paie.periode == periode)
     if sauf_id is not None:

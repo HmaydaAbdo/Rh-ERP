@@ -55,8 +55,8 @@ async def periodes(session: Session, contexte: Contexte) -> list[PaiePeriodeResu
 
 
 @paies.post("/analytique", dependencies=[Depends(exiger("PAIE_READ"))])
-async def analytique(periode: int, session: Session, contexte: Contexte) -> PaieAnalytiqueReponse:
-    return await contexte.paies.analytique(session, periode)
+async def analytique(corps: PaieRecherche, session: Session, contexte: Contexte) -> PaieAnalytiqueReponse:
+    return await contexte.paies.analytique(session, corps, contexte.parametres)
 
 
 @paies.post("/options/chantiers", dependencies=[Depends(exiger("PAIE_READ"))])
