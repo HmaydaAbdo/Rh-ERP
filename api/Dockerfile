@@ -26,7 +26,7 @@ COPY --from=build --chown=root:root /app/api/.venv /app/api/.venv
 # Étape de migration du déploiement : `alembic upgrade head` avec le compte propriétaire (jamais dans le lifespan).
 COPY --chown=root:root api/alembic.ini /app/alembic.ini
 WORKDIR /app
-ENV PATH="/app/api/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ENV PATH="/app/api/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/tmp
 # Traces OpenTelemetry (docs/ia.md, T18) : auto-instrumentation FastAPI et spans d'outils MCP.
 # Les spans SQL utilisent l'instrumentation Psycopg 3 ; l'instrumentation SQLAlchemy 0.66b2 exclut SQLAlchemy 2.1.
 # Coupées tant que Compose ne les active pas. Les sondes de santé ne sont pas tracées.
