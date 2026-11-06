@@ -33,6 +33,7 @@ from staport.domains.function import audit as _historique_function  # noqa: F401
 from staport.domains.function import router as routes_function
 from staport.domains.mcp.serveur import CHEMIN as CHEMIN_MCP
 from staport.domains.mcp.serveur import creer_serveur
+from staport.domains.paie import router as routes_paie
 from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
@@ -139,6 +140,7 @@ def creer_app(
             routes_equipe.equipes,
             routes_chantier.chantiers,
             routes_employee.employees,
+            routes_paie.paies,
         ):
             app.include_router(routeur)
         if application_mcp is not None:
