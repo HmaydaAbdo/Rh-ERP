@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
@@ -6,7 +7,7 @@ from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 
 from . import repository
-from .exceptions import FonctionDejaExistante, FonctionIntrouvable
+from .exceptions import FonctionDejaExistante, FonctionIntrouvable, FonctionUtilisee
 from .models import Fonction
 from .schemas import FonctionCreationRequete, FonctionModificationRequete, FonctionRecherche, FonctionReponse
 
@@ -63,7 +64,10 @@ class ServiceFonction:
         async with session.begin(), action:
             ligne = await self._obtenir(session, identifiant)
             await session.delete(ligne)
-            await session.flush()
+            try:
+                await session.flush()
+            except IntegrityError as erreur:
+                raise FonctionUtilisee from erreur
 
     @staticmethod
     async def _obtenir(session: AsyncSession, identifiant: int) -> Fonction:
