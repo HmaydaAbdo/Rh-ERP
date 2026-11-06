@@ -25,6 +25,8 @@ from staport.domains.auth.composition import ContexteAuth
 from staport.domains.auth.schemas import RoleRecherche
 from staport.domains.auth.securite import SCOPE_LECTURE
 from staport.domains.common.pagination import Pagination
+from staport.domains.equipe import repository as repository_equipe
+from staport.domains.equipe.schemas import EquipeRecherche
 from staport.domains.function import repository as repository_fonction
 from staport.domains.mcp.telemetrie import outil
 
@@ -218,6 +220,55 @@ def enregistrer(
         return {
             "fonction": {"id": fonction.id, "libelle": fonction.libelle},
             "vue": {"module": "function", "vue": "detail", "parametres": {"id": id}},
+        }
+
+    @serveur.tool(
+        name="equipe_rechercher",
+        title="Rechercher des équipes",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Trouve des équipes par code ou libellé partiel, sans tenir compte de la casse. Rend les résultats "
+            "paginés avec le nombre total ; parcourir les pages jusqu'au total. Réservé aux utilisateurs qui voient "
+            "le référentiel des équipes. Lecture seule : ne modifie rien."
+        ),
+    )
+    @outil("equipe_rechercher", "EQUIPE_READ", _nombre_de_total)
+    async def equipe_rechercher(
+        recherche: Annotated[str | None, Field(max_length=100, description="Code ou libellé partiel.")] = None,
+        limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre d'équipes par page.")] = LIGNES,
+        page: Page = 0,
+    ) -> dict[str, Any]:
+        async with fabrique()() as session:
+            lignes, total = await repository_equipe.rechercher(
+                session, EquipeRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+            )
+        return {
+            "total": total,
+            "page": page,
+            "equipes": [{"id": e.id, "code": e.code, "libelle": e.libelle} for e in lignes],
+            "vue": {"module": "equipe", "vue": "tabulaire", "parametres": {}},
+        }
+
+    @serveur.tool(
+        name="equipe_fiche",
+        title="Fiche d'une équipe",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Lit le code et le libellé d'une équipe à partir de son identifiant. L'identifiant doit venir de "
+            "equipe_rechercher ; identifiant inconnu : erreur. Réservé aux utilisateurs qui voient le référentiel."
+        ),
+    )
+    @outil("equipe_fiche", "EQUIPE_READ", lambda _: 1)
+    async def equipe_fiche(
+        id: Annotated[int, Field(gt=0, description="Identifiant obtenu avec equipe_rechercher.")],
+    ) -> dict[str, Any]:
+        async with fabrique()() as session, session.begin():
+            equipe = await repository_equipe.par_id(session, id)
+        if equipe is None:
+            raise ToolError(f"Équipe introuvable avec l'id : {id}")
+        return {
+            "equipe": {"id": equipe.id, "code": equipe.code, "libelle": equipe.libelle},
+            "vue": {"module": "equipe", "vue": "detail", "parametres": {"id": id}},
         }
 
     @serveur.tool(
