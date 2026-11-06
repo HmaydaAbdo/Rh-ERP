@@ -153,6 +153,18 @@ class PaieExportRequete(ModeleApi):
     materiel: dict[str, int] | None = None
 
 
+class PaieRapportRequete(ModeleApi):
+    periode: int = Field(ge=190001, le=299912)
+    nom_prenom: str | None = Field(default=None, max_length=150)
+    cin: str | None = Field(default=None, max_length=30)
+    fonction_id: int | None = None
+    chantier_ids: list[int] | None = None
+    chantier_id: int | None = None
+    equipes_par_chantier: dict[str, list[str]] | None = None
+    materiel: dict[str, int] | None = None
+    sans_vue_ensemble: bool | None = None
+
+
 class PaieImportErreur(ModeleApi):
     numero_ligne: int
     cin: str | None

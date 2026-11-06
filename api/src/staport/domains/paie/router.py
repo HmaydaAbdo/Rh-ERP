@@ -24,6 +24,7 @@ from .schemas import (
     PaieOptionsEquipeRequete,
     PaieParcoursReponse,
     PaiePeriodeResume,
+    PaieRapportRequete,
     PaieRecherche,
     PaieReponse,
     PaiesPage,
@@ -86,6 +87,16 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
         contenu,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="Paie_Export_{corps.periode}.xlsx"'},
+    )
+
+
+@paies.post("/report/pdf", dependencies=[Depends(exiger("PAIE_EXPORT"))])
+async def rapport_pdf(corps: PaieRapportRequete, session: Session, contexte: Contexte) -> StreamingResponse:
+    contenu = await contexte.rapport_paie.generer(session, corps)
+    return StreamingResponse(
+        contenu,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="Paie_Rapport_{corps.periode}.pdf"'},
     )
 
 
