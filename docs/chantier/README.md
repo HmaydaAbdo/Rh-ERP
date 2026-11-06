@@ -11,7 +11,8 @@
 
 | | |
 |---|---|
-| Backend | `backend/src/main/java/staport/rh/chantier/` |
+| Backend historique | `backend/src/main/java/staport/rh/chantier/` |
+| API cible | `api/src/staport/domains/chantier/` (FastAPI, SQLAlchemy, RBAC, audit, MCP) |
 | Frontend | `frontend/src/app/portail/chantier/` |
 | Table | `chantier` |
 | Endpoints | `/chantiers`, `/chantiers/search`, `/chantiers/sync` |
@@ -59,6 +60,11 @@ commentées séparément.
 | **IA** | Laisser l'assistant retrouver un chantier et interroger la paie ou les effectifs par chantier, en lecture seule | [Couche IA](#couche-ia) |
 
 ### Couche application
+
+**Migration FastAPI (KAN-224).** Les routes CRUD, recherche, statut, carte et synchronisation sont désormais exposées par
+`api/src/staport/domains/chantier/` dans l'application unique. Elles conservent les permissions `CHANTIER_READ`,
+`CHANTIER_WRITE`, `CHANTIER_DELETE`, `CHANTIER_SYNC` et `CARTE_READ`; les écritures passent par l'audit Python. Les
+outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les champs rendus et ne modifient rien.
 
 **Backend** (`backend/src/main/java/staport/rh/chantier/`)
 
