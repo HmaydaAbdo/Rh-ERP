@@ -66,7 +66,12 @@ def _ecrire(
     groupes: dict[str, str],
     materiel: dict[str, int],
 ) -> None:
+    feuille.append(["PAIE"])
+    feuille.append(["PÉRIODE", str(lignes[0][0].periode) if lignes else ""])
+    feuille.append(["PÉRIMÈTRE", "Toutes les lignes sélectionnées"])
+    feuille.append([])
     feuille.append(["Employé", "CIN", "Chantier", "Équipe", "Fonction", "Période", "Salaire", "Total"])
+    lignes.sort(key=lambda x: (x[0].fonction_id, x[1].nom_prenom.casefold()))
     for paie, employe, chantier, equipe in lignes:
         equipe_code = equipe.code if equipe else ""
         feuille.append(
@@ -82,7 +87,7 @@ def _ecrire(
             ]
         )
     feuille.append([])
-    feuille.append(["TOTAL", "", "", "", "", "", "", sum((x[0].salaire_total for x in lignes), Decimal(0))])
+    feuille.append(["TOTAL GENERAL", "", "", "", "", "", "", sum((x[0].salaire_total for x in lignes), Decimal(0))])
     if materiel:
         feuille.append([])
         feuille.append(["MATÉRIEL", "QUANTITÉ"])
