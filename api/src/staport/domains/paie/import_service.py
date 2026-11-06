@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any, cast
 
@@ -85,8 +85,8 @@ class ServiceImportPaie:
                 if valeur is None:
                     continue
                 try:
-                    nombre = float(str(valeur))
-                except TypeError, ValueError:
+                    nombre = Decimal(str(valeur).strip())
+                except InvalidOperation, ValueError:
                     erreurs.append(
                         PaieImportErreur(
                             numero_ligne=numero,
@@ -98,7 +98,14 @@ class ServiceImportPaie:
                         )
                     )
                     continue
-                if nombre < 0 or nombre > 99_999_999.99 or round(nombre, 2) != nombre:
+                exposant = nombre.as_tuple().exponent
+                hors_limites = (
+                    not nombre.is_finite()
+                    or nombre < 0
+                    or nombre > Decimal("99999999.99")
+                    or (isinstance(exposant, int) and exposant < -2)
+                )
+                if hors_limites:
                     erreurs.append(
                         PaieImportErreur(
                             numero_ligne=numero,
@@ -106,7 +113,7 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="valeur hors limites ou plus de deux décimales",
+                            raison="montant attendu entre 0 et 99 999 999,99 avec deux décimales au plus",
                         )
                     )
                 elif champ == "salaireMensuel" and nombre == 0:

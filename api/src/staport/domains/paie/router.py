@@ -9,6 +9,7 @@ from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
+from .periode import PeriodePaie, afficher_periode
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
@@ -34,6 +35,8 @@ Session = Annotated[AsyncSession, Depends(session_requete)]
 PagePaie = Annotated[
     Pagination, Depends(pagination("periode", frozenset({"periode", "salaire_total", "id", "version"})))
 ]
+PageChantiers = Annotated[Pagination, Depends(pagination("code", frozenset({"code"})))]
+PageEquipes = Annotated[Pagination, Depends(pagination("libelle", frozenset({"libelle", "code"})))]
 paies = APIRouter(prefix="/paie", tags=["Paie"])
 
 
@@ -58,14 +61,14 @@ async def analytique(periode: int, session: Session, contexte: Contexte) -> Paie
 
 @paies.post("/options/chantiers", dependencies=[Depends(exiger("PAIE_READ"))])
 async def options_chantiers(
-    corps: PaieOptionsChantierRequete, page: PagePaie, session: Session, contexte: Contexte
+    corps: PaieOptionsChantierRequete, page: PageChantiers, session: Session, contexte: Contexte
 ) -> Page[PaieChantierOption]:
     return await contexte.paies.options_chantiers(session, corps, page)
 
 
 @paies.post("/options/equipes", dependencies=[Depends(exiger("PAIE_READ"))])
 async def options_equipes(
-    corps: PaieOptionsEquipeRequete, page: PagePaie, session: Session, contexte: Contexte
+    corps: PaieOptionsEquipeRequete, page: PageEquipes, session: Session, contexte: Contexte
 ) -> Page[PaieEquipeOption]:
     return await contexte.paies.options_equipes(session, corps, page)
 
@@ -100,7 +103,7 @@ async def rapport_pdf(corps: PaieRapportRequete, session: Session, contexte: Con
 
 @paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT"))])
 async def analyser_import(
-    periode: int,
+    periode: PeriodePaie,
     session: Session,
     contexte: Contexte,
     file: UploadFile = File(...),  # noqa: B008
@@ -110,14 +113,14 @@ async def analyser_import(
 
 @paies.post("/import", dependencies=[Depends(exiger("PAIE_IMPORT"))])
 async def importer(
-    periode: int,
+    periode: PeriodePaie,
     session: Session,
     contexte: Contexte,
     ignorer_salaires_zero: bool = False,
     file: UploadFile = File(...),  # noqa: B008
-) -> dict[str, int]:
+) -> dict[str, str | int]:
     nombre = await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero)
-    return {"periode": periode, "crees": nombre}
+    return {"periode": afficher_periode(periode), "crees": nombre}
 
 
 @paies.post("/import/corrections", dependencies=[Depends(exiger("PAIE_IMPORT"))])

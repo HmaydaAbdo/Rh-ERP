@@ -6,12 +6,12 @@ from pydantic import Field
 
 from staport.domains.common.schemas import ModeleApi, Page
 
+from .periode import PeriodePaie
+
 DeuxDecimales = Annotated[Decimal, Field(ge=0, max_digits=10, decimal_places=2)]
 
 
-class PaieCreationRequete(ModeleApi):
-    employee_id: int
-    periode: Annotated[int, Field(ge=190001, le=299912)]
+class PaieChampsBulletin(ModeleApi):
     fonction_id: int
     chantier_id: int
     equipe_id: int | None = None
@@ -25,7 +25,12 @@ class PaieCreationRequete(ModeleApi):
     observation: str | None = Field(default=None, max_length=255)
 
 
-class PaieModificationRequete(PaieCreationRequete):
+class PaieCreationRequete(PaieChampsBulletin):
+    employee_id: int
+    periode: PeriodePaie
+
+
+class PaieModificationRequete(PaieChampsBulletin):
     version: int
 
 
@@ -33,20 +38,43 @@ class PaieRecherche(ModeleApi):
     cin: str | None = Field(default=None, max_length=30)
     nom_prenom: str | None = Field(default=None, max_length=150)
     employee_id: int | None = None
-    periode: int | None = Field(default=None, ge=190001, le=299912)
+    periode: PeriodePaie | None = None
     fonction_ids: list[int] | None = None
     chantier_ids: list[int] | None = None
     equipe_ids: list[int] | None = None
 
 
+class PaieEmployeeResume(ModeleApi):
+    id: int
+    nom_prenom: str
+    cin: str
+
+
+class PaieFonctionResume(ModeleApi):
+    id: int
+    libelle: str
+
+
+class PaieChantierResume(ModeleApi):
+    id: int
+    code: str
+    designation: str | None
+
+
+class PaieEquipeResume(ModeleApi):
+    id: int
+    code: str
+    libelle: str
+
+
 class PaieReponse(ModeleApi):
     id: int
     version: int
-    employee_id: int
-    periode: int
-    fonction_id: int
-    chantier_id: int
-    equipe_id: int | None
+    employee: PaieEmployeeResume
+    periode: PeriodePaie
+    fonction: PaieFonctionResume
+    chantier: PaieChantierResume
+    equipe: PaieEquipeResume | None
     nombre_jours_travailles: Decimal
     jours_recuperation_ouvrable: Decimal | None
     jours_recuperation_dimanche: Decimal | None
@@ -61,14 +89,14 @@ PaiesPage = Page[PaieReponse]
 
 
 class PaiePeriodeResume(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     nombre_bulletins: int
     nombre_chantiers: int
     masse: Decimal
 
 
 class PaieAnalytiqueReponse(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     nombre_bulletins: int
     masse: Decimal
     salaire_moyen: Decimal | None
@@ -76,12 +104,12 @@ class PaieAnalytiqueReponse(ModeleApi):
 
 
 class PaieOptionsChantierRequete(ModeleApi):
-    periode: int = Field(ge=190001, le=299912)
+    periode: PeriodePaie
     recherche: str | None = Field(default=None, max_length=100)
 
 
 class PaieOptionsEquipeRequete(ModeleApi):
-    periode: int = Field(ge=190001, le=299912)
+    periode: PeriodePaie
     chantier_ids: list[int] = Field(min_length=1, max_length=500)
     recherche: str | None = Field(default=None, max_length=100)
 
@@ -101,7 +129,7 @@ class PaieEquipeOption(ModeleApi):
 
 
 class PaieEffectifMois(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     effectif: int
     effectif_mois_precedent: int | None
     variation: int | None
@@ -113,7 +141,7 @@ class PaieEffectifMois(ModeleApi):
 
 class PaieParcoursMois(ModeleApi):
     bulletin_id: int
-    periode: int
+    periode: PeriodePaie
     fonction_id: int
     chantier_id: int
     equipe_id: int | None
@@ -124,7 +152,7 @@ class PaieParcoursMois(ModeleApi):
 
 
 class PaieParcoursEvenement(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     type: str
     avant: str | None
     apres: str | None
@@ -136,14 +164,14 @@ class PaieParcoursReponse(ModeleApi):
     mois_payes: int
     total_percu: Decimal
     jours_travailles: Decimal
-    premier_mois: int | None
-    dernier_mois: int | None
+    premier_mois: PeriodePaie | None
+    dernier_mois: PeriodePaie | None
     mois: list[PaieParcoursMois]
     evenements: list[PaieParcoursEvenement]
 
 
 class PaieExportRequete(ModeleApi):
-    periode: int = Field(ge=190001, le=299912)
+    periode: PeriodePaie
     feuilles_equipe_mode: Literal["AUCUNE", "TOUTES", "PERSONNALISE"] = "AUCUNE"
     equipes_par_chantier: dict[str, list[str]] | None = None
     equipes_exclues_feuille_chantier: dict[str, list[str]] | None = None
@@ -176,7 +204,7 @@ class PaieImportErreur(ModeleApi):
 
 
 class PaieImportAnalyse(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     total_lignes: int
     erreurs: list[PaieImportErreur]
     avertissements: list[PaieImportErreur]

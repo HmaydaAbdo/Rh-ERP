@@ -1,10 +1,13 @@
-from sqlalchemy import ColumnElement, and_, func, select
+from typing import cast
+
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.pagination import Pagination
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
+from staport.domains.function.models import Fonction
 
 from .models import Paie
 from .schemas import PaieRecherche
@@ -12,6 +15,20 @@ from .schemas import PaieRecherche
 
 async def par_id(s: AsyncSession, identifiant: int) -> Paie | None:
     return (await s.execute(select(Paie).where(Paie.id == identifiant))).scalar_one_or_none()
+
+
+async def fiches(s: AsyncSession, paies: list[Paie]) -> list[tuple[Paie, Employee, Fonction, Chantier, Equipe | None]]:
+    if not paies:
+        return []
+    q = (
+        select(Paie, Employee, Fonction, Chantier, Equipe)
+        .join(Employee, Employee.id == Paie.employee_id)
+        .join(Fonction, Fonction.id == Paie.fonction_id)
+        .join(Chantier, Chantier.id == Paie.chantier_id)
+        .outerjoin(Equipe, Equipe.id == Paie.equipe_id)
+        .where(Paie.id.in_([paie.id for paie in paies]))
+    )
+    return cast(list[tuple[Paie, Employee, Fonction, Chantier, Equipe | None]], list((await s.execute(q)).all()))
 
 
 async def existe(s: AsyncSession, employee_id: int, periode: int, sauf_id: int | None = None) -> bool:
@@ -23,6 +40,13 @@ async def existe(s: AsyncSession, employee_id: int, periode: int, sauf_id: int |
 
 async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[list[Paie], int]:
     f: list[ColumnElement[bool]] = []
+    base = select(Paie)
+    if c.cin or c.nom_prenom:
+        base = base.join(Employee, Employee.id == Paie.employee_id)
+    if c.cin:
+        f.append(func.lower(Employee.cin).like(f"%{c.cin.strip().lower()}%"))
+    if c.nom_prenom:
+        f.append(func.lower(Employee.nom_prenom).like(f"%{c.nom_prenom.strip().lower()}%"))
     if c.employee_id is not None:
         f.append(Paie.employee_id == c.employee_id)
     if c.periode is not None:
@@ -32,9 +56,13 @@ async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[
     if c.chantier_ids:
         f.append(Paie.chantier_id.in_(c.chantier_ids))
     if c.equipe_ids:
-        f.append(Paie.equipe_id.in_([x for x in c.equipe_ids if x]))
-    total = (await s.execute(select(func.count()).select_from(Paie).where(and_(*f)))).scalar_one()
-    q = select(Paie).where(and_(*f))
+        equipes = [x for x in c.equipe_ids if x != 0]
+        if 0 in c.equipe_ids:
+            f.append(or_(Paie.equipe_id.in_(equipes), Paie.equipe_id.is_(None)))
+        else:
+            f.append(Paie.equipe_id.in_(equipes))
+    q = base.where(*f)
+    total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
     for champ, asc in p.tri:
         q = q.order_by(getattr(Paie, champ).asc() if asc else getattr(Paie, champ).desc())
     rows = (await s.execute(q.order_by(Paie.id.asc()).limit(p.taille).offset(p.decalage))).scalars().all()
@@ -72,7 +100,10 @@ async def options_chantiers(s: AsyncSession, periode: int, recherche: str | None
         motif = f"%{recherche.strip().lower()}%"
         q = q.where(func.lower(Chantier.code).like(motif) | func.lower(func.coalesce(Chantier.nom, "")).like(motif))
     total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    q = q.order_by(Chantier.code.asc()).limit(p.taille).offset(p.decalage)
+    for champ, asc in p.tri:
+        colonne = getattr(Chantier, champ)
+        q = q.order_by(colonne.asc() if asc else colonne.desc())
+    q = q.order_by(Chantier.id.asc()).limit(p.taille).offset(p.decalage)
     return list((await s.execute(q)).scalars().all()), total
 
 
@@ -87,7 +118,10 @@ async def options_equipes(s: AsyncSession, periode: int, chantier_ids: list[int]
         motif = f"%{recherche.strip().lower()}%"
         q = q.where(func.lower(Equipe.code).like(motif) | func.lower(Equipe.libelle).like(motif))
     total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    q = q.order_by(Equipe.code.asc()).limit(p.taille).offset(p.decalage)
+    for champ, asc in p.tri:
+        colonne = getattr(Equipe, champ)
+        q = q.order_by(colonne.asc() if asc else colonne.desc())
+    q = q.order_by(Equipe.id.asc()).limit(p.taille).offset(p.decalage)
     return list((await s.execute(q)).scalars().all()), total
 
 
@@ -100,7 +134,12 @@ async def effectifs(s: AsyncSession, c: PaieRecherche) -> list[tuple[int, int]]:
     if c.fonction_ids:
         q = q.where(Paie.fonction_id.in_(c.fonction_ids))
     if c.equipe_ids:
-        q = q.where(Paie.equipe_id.in_([x for x in c.equipe_ids if x]))
+        equipes = [x for x in c.equipe_ids if x != 0]
+        q = q.where(
+            or_(Paie.equipe_id.in_(equipes), Paie.equipe_id.is_(None))
+            if 0 in c.equipe_ids
+            else Paie.equipe_id.in_(equipes)
+        )
     if c.nom_prenom:
         q = q.where(func.lower(Employee.nom_prenom).like(f"%{c.nom_prenom.strip().lower()}%"))
     if c.cin:

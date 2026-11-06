@@ -18,7 +18,7 @@ décimaux; une période est une chaîne `aaaa-MM`.
 | `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
 | `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
 | `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
-| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, deux décimales au plus | Salaire de base ou tarif journalier selon la situation. L'import refuse zéro. |
+| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, deux décimales au plus | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
 | `primeRoulageOrdinaire` | `number|null`, mêmes bornes et précision que le salaire | Prime ordinaire. |
 | `primeRoulageDimanche` | `number|null`, mêmes bornes et précision que le salaire | Prime dimanche. |
 | `salaireTotal` | `number`, obligatoire, mêmes bornes et précision que le salaire | Total repris tel quel, jamais calculé par le backend. |

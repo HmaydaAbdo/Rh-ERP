@@ -15,6 +15,11 @@
 | Table | `paie` |
 | Endpoints | `/paie`, `/paie/search`, `/paie/periodes`, `/paie/chantiers`, `/paie/materiel`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
+La migration FastAPI est en cours sous `api/src/staport/domains/paie/`. Son contrat HTTP emploie
+`AAAA-MM` pour les mois et restitue les résumés des références dans les réponses de bulletin.
+La route PDF Python répond `503` jusqu'à preuve de parité avec le rapport Spring ; voir
+[Migration Paie](../../site/docs/migration/paie.md).
+
 La façade `IPaieService.findByEmployeeIdAndPeriode` fournit aux domaines consommateurs le bulletin exact d'un employé pour un
 mois. Heures supplémentaires l'utilise pour vérifier l'existence de la paie et lire l'observation STC/sortie ; le marqueur et
 les montants sont ensuite conservés dans son propre instantané.
