@@ -8,6 +8,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, cast
 
@@ -45,6 +46,26 @@ def _longueurs_de_listes(objet: Any) -> set[Decimal]:
     return longueurs
 
 
+def _secondes_horodatages(objet: Any) -> set[Decimal]:
+    """Secondes entières de dates ISO rendues par les outils.
+
+    `datetime.fromisoformat` : https://docs.python.org/3/library/datetime.html#datetime.datetime.fromisoformat
+    Une décimale métier seule n'est pas traitée comme un horodatage.
+    """
+    if isinstance(objet, str) and "T" in objet and ":" in objet:
+        try:
+            return {Decimal(datetime.fromisoformat(objet).second)}
+        except ValueError:
+            return set()
+    if isinstance(objet, list):
+        return {seconde for element in cast(list[Any], objet) for seconde in _secondes_horodatages(element)}
+    if isinstance(objet, dict):
+        return {
+            seconde for element in cast(dict[str, Any], objet).values() for seconde in _secondes_horodatages(element)
+        }
+    return set()
+
+
 def nombres_fondes(textes_outils: Iterable[str], textes_questions: Iterable[str], extraire: Any) -> set[Decimal]:
     """Les nombres qu'une réponse peut citer sans les inventer : lus dans un résultat d'outil, dans la conversation,
     décomptes de listes, petits entiers, et résultats simples (somme, écart, pourcentage) de deux valeurs lues."""
@@ -52,7 +73,9 @@ def nombres_fondes(textes_outils: Iterable[str], textes_questions: Iterable[str]
     for texte in textes_outils:
         lus |= _nombres(texte, extraire)
         try:
-            lus |= _longueurs_de_listes(json.loads(texte))
+            objet = json.loads(texte)
+            lus |= _longueurs_de_listes(objet)
+            lus |= _secondes_horodatages(objet)
         except ValueError:
             pass
     for texte in textes_questions:

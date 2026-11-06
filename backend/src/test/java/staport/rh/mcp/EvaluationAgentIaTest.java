@@ -8,6 +8,7 @@ import staport.rh.audit.support.DonneesDeTest;
 import staport.rh.auth.entities.Utilisateur;
 import staport.rh.auth.security.JwtService;
 import staport.rh.employee.services.interfaces.IEmployeeService;
+import staport.rh.parametre.services.interfaces.IParametreService;
 import staport.rh.support.McpIntegrationTestBase;
 import staport.rh.support.ParametresDeTest;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,6 +45,8 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
     private String emetteur;
     @Autowired
     private IEmployeeService employes;
+    @Autowired
+    private IParametreService parametres;
 
     @Test
     @Timeout(value = 160, unit = TimeUnit.MINUTES)
@@ -86,6 +89,9 @@ class EvaluationAgentIaTest extends McpIntegrationTestBase {
         marqueurs.put("employe_b_id", b.employeId());
         marqueurs.put("employe_b_nom", "Salma El Idrissi");
         marqueurs.put("employe_b_cin", "CIN" + b.suffixe());
+        marqueurs.put("parametre_id", parametres.findAll().stream()
+                .filter(p -> p.cle().equals("securite.jeton-session.heures"))
+                .findFirst().orElseThrow().id());
 
         Path serviceIa = Path.of("..", "ia").toAbsolutePath().normalize();
         Path rapport = Path.of("target", "evaluation-ia.json").toAbsolutePath();

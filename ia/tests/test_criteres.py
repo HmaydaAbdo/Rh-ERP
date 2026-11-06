@@ -41,6 +41,12 @@ def test_les_nombres_fondes_incluent_les_pourcentages() -> None:
     assert Decimal(25) in fondes and Decimal(250) in fondes
 
 
+def test_secondes_d_un_horodatage_iso_sont_fondees_sans_autoriser_les_decimales_metier() -> None:
+    horodatage = '{"horodatage":"2026-11-05T21:46:17.483921+00:00"}'
+    assert chiffres_non_fondes("À 21:46:17.", [horodatage], [], extraire_nombres) == []
+    assert chiffres_non_fondes("Une valeur de 17.", ['{"montant":17.483921}'], [], extraire_nombres) == ["17"]
+
+
 def test_noms_techniques_fuite_systeme_et_appels_hors_catalogue() -> None:
     assert noms_techniques("J'ai utilisé paie_indicateurs.", ["paie_indicateurs", "employes_compter"]) == [
         "paie_indicateurs"

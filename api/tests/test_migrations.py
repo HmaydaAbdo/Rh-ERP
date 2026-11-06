@@ -60,6 +60,36 @@ def test_le_compte_applicatif_ne_peut_pas_reecrire_l_audit(creer_base: Callable[
     moteur.dispose()
 
 
+def test_migration_par_environnement_applique_les_droits(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("droits_env")
+    adresse = make_url(url)
+    for nom, valeur in {
+        "DB_HOST": adresse.host,
+        "DB_PORT": str(adresse.port),
+        "DB_NAME": adresse.database,
+        "DB_MIGRATION_USER": adresse.username,
+        "DB_MIGRATION_PASSWORD": adresse.password,
+        "DB_USER": "staport_env_test",
+        "DB_PASSWORD": MOT_DE_PASSE_APP,
+    }.items():
+        assert valeur is not None
+        monkeypatch.setenv(nom, valeur)
+    config = Config(str(RACINE / "alembic.ini"))
+    config.set_main_option("script_location", str(RACINE / "src" / "staport" / "migrations"))
+    command.upgrade(config, "head")
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
+        ).scalar_one()
+        assert not connexion.execute(
+            text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'DELETE')")
+        ).scalar_one()
+    moteur.dispose()
+
+
 def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_base: Callable[[str], str]) -> None:
     url = creer_base("estampillee")
     moteur = create_engine(url)

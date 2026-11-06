@@ -457,6 +457,7 @@ jobs:
           set -euo pipefail
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-postgres:$GITHUB_SHA" database
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backend:$GITHUB_SHA" backend
+          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-api:$GITHUB_SHA" api
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
           docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
@@ -468,7 +469,7 @@ jobs:
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia copilot-runtime phoenix docs; do
+          for image in postgres backend api frontend backup litellm ia copilot-runtime phoenix docs; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -489,7 +490,7 @@ jobs:
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres backend frontend backup litellm ia copilot-runtime phoenix docs; do
+          for image in postgres backend api frontend backup litellm ia copilot-runtime phoenix docs; do
             repository="$DOCKERHUB_USERNAME/erp-rh-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
