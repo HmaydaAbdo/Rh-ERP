@@ -1,0 +1,28 @@
+from http import HTTPStatus
+
+from staport.platform.erreurs import ErreurMetier
+
+
+class ChantierIntrouvable(ErreurMetier):
+    statut = HTTPStatus.NOT_FOUND
+
+    def __init__(self, identifiant: int) -> None:
+        super().__init__(f"Chantier introuvable avec l'id : {identifiant}")
+
+
+class ChantierDejaExistant(ErreurMetier):
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self, code: str) -> None:
+        super().__init__(f"Un chantier avec le code existe déjà : {code}")
+
+
+class ChantierUtilise(ErreurMetier):
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self) -> None:
+        super().__init__("Ce chantier est encore référencé et ne peut pas être supprimé.")
+
+
+class ChantierLocalisationInvalide(ErreurMetier):
+    statut = HTTPStatus.UNPROCESSABLE_ENTITY
