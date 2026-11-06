@@ -1,14 +1,18 @@
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 
+from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
+from staport.domains.function.models import Fonction
 
 from . import repository
 from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise
@@ -17,6 +21,8 @@ from .schemas import (
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
+    EmployeeImportReponse,
+    EmployeeLigneIgnoree,
     EmployeeModificationRequete,
     EmployeeRecherche,
     EmployeeRegroupementReponse,
@@ -195,6 +201,76 @@ class ServiceEmployee:
             sorties.append(EmployeeSortieReponse(employe_id=row.employee_id, periode=row.periode, motif=motif))
         return EmployeeSortiesMoisReponse(
             periode=periode, nombre=len(sorties), par_motif=dict(sorted(motifs.items())), sorties=sorties
+        )
+
+    async def importer(self, s: AsyncSession, contenu: bytes) -> EmployeeImportReponse:
+        erreurs: list[EmployeeLigneIgnoree] = []
+        nouveaux: list[Employee] = []
+        try:
+            feuille = load_workbook(BytesIO(contenu), read_only=True, data_only=True).active
+            if feuille is None:
+                raise ValueError("Classeur sans feuille")
+            lignes = list(feuille.iter_rows(values_only=True))
+        except Exception as exc:
+            raise ValueError(f"Fichier Excel illisible : {exc}") from exc
+        if not lignes or len(lignes[0]) < 6:
+            raise ValueError(
+                "Six colonnes attendues : Date d'embauche, Nom & prénom, CIN, Fonction, Chantier, Date de naissance"
+            )
+        async with s.begin():
+            fonctions = {
+                libelle.strip().upper(): identifiant
+                for identifiant, libelle in (await s.execute(select(Fonction.id, Fonction.libelle))).all()
+            }
+            chantiers = {
+                code.strip().upper(): identifiant
+                for identifiant, code in (
+                    await s.execute(select(Chantier.id, Chantier.code).where(Chantier.actif.is_(True)))
+                ).all()
+            }
+            cins = {x.strip().upper() for x in (await s.execute(select(Employee.cin))).scalars()}
+            vus: set[str] = set()
+            for numero, valeurs in enumerate(lignes[1:], 2):
+                embauche, nom, cin, fonction, chantier, naissance = (
+                    valeurs[i] if i < len(valeurs) else None for i in range(6)
+                )
+                cle = str(cin or "").strip().upper()
+                raison = None
+                if not nom or not cle or not fonction or not chantier or not naissance or not embauche:
+                    raison = "Champs obligatoires manquants"
+                elif not isinstance(naissance, date) or naissance >= date.today():
+                    raison = "La date de naissance doit être passée"
+                elif cle in cins or cle in vus:
+                    raison = "CIN déjà présent ou en doublon"
+                elif str(fonction).strip().upper() not in fonctions:
+                    raison = f"Fonction introuvable : {fonction}"
+                elif str(chantier).strip().upper() not in chantiers:
+                    raison = f"Chantier introuvable ou clôturé : {chantier}"
+                if raison:
+                    erreurs.append(
+                        EmployeeLigneIgnoree(
+                            numero_ligne=numero, cin=cle or None, nom_prenom=str(nom) if nom else None, raison=raison
+                        )
+                    )
+                    continue
+                vus.add(cle)
+                nouveaux.append(
+                    Employee(
+                        nom_prenom=str(nom).strip(),
+                        cin=cle,
+                        date_naissance=naissance,
+                        date_embauche=embauche,
+                        fonction_id=fonctions[str(fonction).strip().upper()],
+                        chantier_id=chantiers[str(chantier).strip().upper()],
+                    )
+                )
+            if not erreurs:
+                s.add_all(nouveaux)
+        return EmployeeImportReponse(
+            total_lignes=len(lignes) - 1,
+            crees=len(nouveaux) if not erreurs else 0,
+            ignores=len(erreurs),
+            lignes_ignorees=erreurs,
         )
 
     async def _obtenir(self, s: AsyncSession, i: int) -> Employee:

@@ -115,3 +115,17 @@ class EmployeeSortiesMoisReponse(ModeleApi):
     nombre: int
     par_motif: dict[str, int]
     sorties: list[EmployeeSortieReponse]
+
+
+class EmployeeLigneIgnoree(ModeleApi):
+    numero_ligne: int
+    cin: str | None
+    nom_prenom: str | None
+    raison: str
+
+
+class EmployeeImportReponse(ModeleApi):
+    total_lignes: int
+    crees: int
+    ignores: int
+    lignes_ignorees: list[EmployeeLigneIgnoree]
