@@ -24,6 +24,8 @@ from staport.domains.audit.schemas import CategorieAudit, RechercheJournal, Resu
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.auth.schemas import RoleRecherche
 from staport.domains.auth.securite import SCOPE_LECTURE
+from staport.domains.chantier import repository as repository_chantier
+from staport.domains.chantier.schemas import ChantierRecherche
 from staport.domains.common.pagination import Pagination
 from staport.domains.equipe import repository as repository_equipe
 from staport.domains.equipe.schemas import EquipeRecherche
@@ -269,6 +271,59 @@ def enregistrer(
         return {
             "equipe": {"id": equipe.id, "code": equipe.code, "libelle": equipe.libelle},
             "vue": {"module": "equipe", "vue": "detail", "parametres": {"id": id}},
+        }
+
+    @serveur.tool(
+        name="chantier_rechercher",
+        title="Rechercher des chantiers",
+        annotations=LECTURE_SEULE,
+        description="Trouve des chantiers par code, nom ou désignation. Lecture seule, résultats paginés.",
+    )
+    @outil("chantier_rechercher", "CHANTIER_READ", _nombre_de_total)
+    async def chantier_rechercher(
+        recherche: Annotated[str | None, Field(max_length=500, description="Texte partiel.")] = None,
+        limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
+        page: Page = 0,
+    ) -> dict[str, Any]:
+        async with fabrique()() as session:
+            lignes, total = await repository_chantier.rechercher(
+                session, ChantierRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+            )
+        return {
+            "total": total,
+            "page": page,
+            "chantiers": [
+                {"id": x.id, "code": x.code, "designation": x.designation, "nom": x.nom, "actif": x.actif}
+                for x in lignes
+            ],
+            "vue": {"module": "chantier", "vue": "tabulaire", "parametres": {}},
+        }
+
+    @serveur.tool(
+        name="chantier_fiche",
+        title="Fiche d'un chantier",
+        annotations=LECTURE_SEULE,
+        description="Lit la fiche d'un chantier à partir de son identifiant.",
+    )
+    @outil("chantier_fiche", "CHANTIER_READ", lambda _: 1)
+    async def chantier_fiche(id: Annotated[int, Field(gt=0)]) -> dict[str, Any]:
+        async with fabrique()() as session, session.begin():
+            chantier = await repository_chantier.par_id(session, id)
+        if chantier is None:
+            raise ToolError(f"Chantier introuvable avec l'id : {id}")
+        return {
+            "chantier": {
+                "id": chantier.id,
+                "code": chantier.code,
+                "designation": chantier.designation,
+                "nom": chantier.nom,
+                "actif": chantier.actif,
+                "nature": chantier.nature,
+                "localisation": chantier.localisation,
+                "latitude": chantier.latitude,
+                "longitude": chantier.longitude,
+            },
+            "vue": {"module": "chantier", "vue": "detail", "parametres": {"id": id}},
         }
 
     @serveur.tool(
