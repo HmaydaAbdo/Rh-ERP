@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,11 +92,9 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
 
 @paies.post("/report/pdf", dependencies=[Depends(exiger("PAIE_EXPORT"))])
 async def rapport_pdf(corps: PaieRapportRequete, session: Session, contexte: Contexte) -> StreamingResponse:
-    contenu = await contexte.rapport_paie.generer(session, corps)
-    return StreamingResponse(
-        contenu,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="Paie_Rapport_{corps.periode}.pdf"'},
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Le rapport de paie est temporairement indisponible pendant sa migration.",
     )
 
 

@@ -8,6 +8,7 @@ seule fois, ici. Format : constat, cause, règle.
 
 | Constat | Règle |
 |---|---|
+| Le travail sur la migration Paie a été interrompu après des étapes partielles malgré la demande explicite de poursuivre. | Appliquer la boucle Ralph de `conventions/workflow.md` : enchaîner les étapes autorisées jusqu'au résultat prouvé ou à un blocage concret nécessitant une décision. |
 | Le suivi dans des fichiers markdown (plan de 600 lignes, handoff, tableaux d'état) divergeait du code et se contredisait d'une reprise à l'autre. | Le suivi d'une tâche vit dans Jira (projet `KAN`) et l'état technique dans le code et les tests. Aucun fichier markdown ne suit l'avancement ; une décision durable va dans la convention ou le document de conception concerné. |
 | Une branche partait de la mauvaise base, des commits restaient locaux, la PR n'était pas à jour. | Avant tout `git` ou `gh` : vérifier le dossier courant, la branche et `git status`. Une seule branche de travail et une PR à la fois ; après fusion, ne garder que `main`. |
 | Une CI verte sur un ancien commit a été prise pour une validation. | Les 4 contrôles requis (`backend`, `frontend`, `full-stack`, `ia`) doivent être verts sur le **dernier commit poussé**. |

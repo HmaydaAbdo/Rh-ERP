@@ -154,7 +154,7 @@ class PaieExportRequete(ModeleApi):
 
 
 class PaieRapportRequete(ModeleApi):
-    periode: int = Field(ge=190001, le=299912)
+    periode: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
     nom_prenom: str | None = Field(default=None, max_length=150)
     cin: str | None = Field(default=None, max_length=30)
     fonction_id: int | None = None
