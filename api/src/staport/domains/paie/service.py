@@ -112,8 +112,15 @@ class ServicePaie:
         async with s.begin():
             rows = await repository.periodes(s)
         return [
-            PaiePeriodeResume(periode=p, nombre_bulletins=n, nombre_chantiers=c, masse=Decimal(str(m)))
-            for p, n, c, m in rows
+            PaiePeriodeResume(
+                periode=p,
+                nombre_bulletins=n,
+                nombre_chantiers=c,
+                masse=Decimal(str(m)),
+                stc=stc,
+                stc_montant=Decimal(str(stc_montant)),
+            )
+            for p, n, c, m, stc, stc_montant in rows
         ]
 
     async def analytique(self, s: AsyncSession, periode: int) -> PaieAnalytiqueReponse:

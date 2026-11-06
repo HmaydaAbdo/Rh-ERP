@@ -93,6 +93,8 @@ class PaiePeriodeResume(ModeleApi):
     nombre_bulletins: int
     nombre_chantiers: int
     masse: Decimal
+    stc: int
+    stc_montant: Decimal
 
 
 class PaieAnalytiqueReponse(ModeleApi):
