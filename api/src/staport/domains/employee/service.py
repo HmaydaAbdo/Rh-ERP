@@ -1,3 +1,6 @@
+from datetime import date
+from decimal import Decimal
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +12,16 @@ from staport.domains.common.schemas import Page, creer_page
 from . import repository
 from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise
 from .models import Employee
-from .schemas import EmployeeCreationRequete, EmployeeModificationRequete, EmployeeRecherche, EmployeeReponse
+from .schemas import (
+    DimensionEmployes,
+    EmployeeAnalytiqueReponse,
+    EmployeeCreationRequete,
+    EmployeeModificationRequete,
+    EmployeeRecherche,
+    EmployeeRegroupementReponse,
+    EmployeeReponse,
+    TrancheReponse,
+)
 
 
 def rep(x: Employee) -> EmployeeReponse:
@@ -88,6 +100,76 @@ class ServiceEmployee:
                 await s.flush()
             except IntegrityError as e:
                 raise EmployeeUtilise from e
+
+    async def analytique(self, s: AsyncSession, c: EmployeeRecherche | None) -> EmployeeAnalytiqueReponse:
+        async with s.begin():
+            rows, _ = await repository.rechercher(s, c or EmployeeRecherche(), Pagination(0, 100000, (("id", True),)))
+        today = date.today()
+        ages = [
+            max(
+                0,
+                today.year
+                - x.date_naissance.year
+                - ((today.month, today.day) < (x.date_naissance.month, x.date_naissance.day)),
+            )
+            for x in rows
+        ]
+        anciennetes = [
+            max(
+                0,
+                today.year
+                - x.date_embauche.year
+                - ((today.month, today.day) < (x.date_embauche.month, x.date_embauche.day)),
+            )
+            for x in rows
+        ]
+
+        def tranches(valeurs: list[int], bornes: list[int]) -> list[TrancheReponse]:
+            return [
+                TrancheReponse(
+                    min=b,
+                    max=bornes[i + 1] if i + 1 < len(bornes) else None,
+                    effectif=sum(v >= b and (i + 1 == len(bornes) or v < bornes[i + 1]) for v in valeurs),
+                )
+                for i, b in enumerate(bornes)
+            ]
+
+        n = len(rows)
+        return EmployeeAnalytiqueReponse(
+            effectif=n,
+            actifs=sum(x.statut.value == "ACTIF" for x in rows),
+            inactifs=sum(x.statut.value == "INACTIF" for x in rows),
+            age_moyen=Decimal(str(round(sum(ages) / n, 1))) if n else None,
+            anciennete_moyenne=Decimal(str(round(sum(anciennetes) / n, 1))) if n else None,
+            embauches_douze_mois=sum(today.replace(year=today.year - 1) < x.date_embauche <= today for x in rows),
+            par_age=tranches(ages, [0, 25, 35, 45, 55]),
+            par_anciennete=tranches(anciennetes, [0, 1, 3, 5, 10]),
+        )
+
+    async def regrouper(
+        self, s: AsyncSession, c: EmployeeRecherche | None, dimension: DimensionEmployes
+    ) -> list[EmployeeRegroupementReponse]:
+        async with s.begin():
+            rows, _ = await repository.rechercher(s, c or EmployeeRecherche(), Pagination(0, 100000, (("id", True),)))
+        champ = {
+            DimensionEmployes.CHANTIER: "chantier_id",
+            DimensionEmployes.EQUIPE: "equipe_id",
+            DimensionEmployes.FONCTION: "fonction_id",
+        }[dimension]
+        groupes: dict[int, list[Employee]] = {}
+        for row in rows:
+            identifiant = getattr(row, champ) or 0
+            groupes.setdefault(identifiant, []).append(row)
+        return [
+            EmployeeRegroupementReponse(
+                id=i,
+                code=None,
+                libelle="Sans affectation" if i == 0 else str(i),
+                effectif=len(v),
+                actifs=sum(x.statut.value == "ACTIF" for x in v),
+            )
+            for i, v in sorted(groupes.items())
+        ]
 
     async def _obtenir(self, s: AsyncSession, i: int) -> Employee:
         x = await repository.par_id(s, i)
