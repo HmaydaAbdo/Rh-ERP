@@ -277,13 +277,17 @@ class PaieParcoursEvenement(ModeleApi):
     motif: str | None
 
 
-class PaieParcoursReponse(ModeleApi):
-    employe_id: int
+class PaieParcoursIndicateurs(ModeleApi):
     mois_payes: int
     total_percu: Nombre
     jours_travailles: Nombre
     premier_mois: PeriodePaie | None
     dernier_mois: PeriodePaie | None
+
+
+class PaieParcoursReponse(ModeleApi):
+    employe_id: int
+    indicateurs: PaieParcoursIndicateurs
     mois: list[PaieParcoursMois]
     evenements: list[PaieParcoursEvenement]
 
