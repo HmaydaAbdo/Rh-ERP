@@ -12,8 +12,8 @@ production : la bascule se fait à la fin d'E2 (KAN-50), conformément à la [st
 
 ## Périmètre de ce ticket
 
-Le socle et les outils des domaines déjà en Python : **5 des 31 outils** de lecture. Les autres arrivent avec leur
-domaine (KAN-49, un domaine = ses routes, son audit, ses outils), selon la décision du propriétaire du 2026-11-06.
+Le socle et les outils des domaines déjà en Python : **les 31 outils** de lecture de Spring (KAN-226 : employé, paie, heures supplémentaires et accueil
+rejoignent les outils déjà portés ; un domaine = ses routes, son audit, ses outils, décision du 2026-11-06).
 Le paquet `ia/` est installé dans l'image API ; ses routes (`/agui`, `/health/ia`, `/health/ready`) et son cycle de vie
 sont inclus dans la même application FastAPI quand `IA_ENABLED` est configuré. La bascule de Compose et de
 l'authentification attend KAN-50 : le jeton de connexion Spring HS256 ne peut pas être utilisé sur l'API Python RS256.
@@ -25,6 +25,13 @@ l'authentification attend KAN-50 : le jeton de connexion Spring HS256 ne peut pa
 | `roles_lister` | `ROLE_MANAGE` | idem | filtre sur le nom, pages de 1 à 20, total |
 | `audit_rechercher` | `AUDIT_READ` | idem | filtres combinables, plus récent d'abord, pages de 1 à 20, total |
 | `audit_historique` | `AUDIT_READ` | idem | versions d'un enregistrement, pages de 1 à 10, total |
+| `fonction_*`, `equipe_*`, `chantier_*` (6 outils) | `FONCTION_READ`, `EQUIPE_READ`, `CHANTIER_READ` | `OutilsReferentiels` | recherche et fiche de chaque référentiel |
+| `employes_rechercher`, `employe_fiche`, `employes_compter`, `employes_regrouper`, `employes_sorties`, `employe_parcours` | `EMPLOYEE_READ` (salaire : `PAIE_READ`) | `OutilsEmploye` | module `outils_employe.py`, mêmes paramètres, plafonds de 20 et pagination que Spring |
+| `accueil_lire` | `ACCUEIL_READ` | `OutilsAccueil` | accueil de l'utilisateur du jeton |
+| `paie_indicateurs`, `paie_periodes`, `paie_repartition`, `paie_evolution`, `paie_comparer`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` | `PAIE_READ` | `OutilsPaie` | module `outils_paie.py` ; mois par défaut = dernière paie importée |
+| `rapport_preparer` | `PAIE_EXPORT` et `PAIE_READ` | `OutilsPaie` | prépare la vue du rapport, sans générer le PDF |
+| `heures_supp_periodes`, `heures_supp_indicateurs`, `heures_supp_rechercher` | `HEURES_SUP_READ` et `PAIE_READ` | `OutilsHeuresSupp` | enveloppe `{vue, resultats}` comme Spring |
+| `heures_supp_import_prerequis` | `HEURES_SUP_IMPORT`, `PAIE_READ`, `CHANTIER_READ` | `OutilsHeuresSupp` | prérequis de l'import d'un chantier et d'un mois |
 
 Noms, descriptions, annotations (lecture seule, non destructif, idempotent, monde fermé) et clés de résultat sont ceux de
 Spring ; le client IA n'a rien à changer. La liste des comptes utilisateurs n'est volontairement pas exposée.
@@ -35,7 +42,7 @@ Spring ; le client IA n'a rien à changer. La liste des comptes utilisateurs n'e
 |---|---|
 | `serveur.py` | `FastMCP`, transport Streamable HTTP sans état en JSON, route `/mcp`, refus de tout appel portant un `Origin` |
 | `acces.py` | `TokenVerifier` de FastMCP : jeton agent RS256 vérifié, compte et droits relus en base à chaque requête ; permission par outil |
-| `outils.py` | Les cinq outils, ajoutés au serveur par `@serveur.tool` |
+| `outils.py`, `outils_employe.py`, `outils_paie.py` | Les outils, ajoutés au serveur par `@serveur.tool` (`formats.py` : types et aides partagés) |
 | `telemetrie.py` | Décorateur `@outil` : droit exigé, span OpenTelemetry, nombre de résultats |
 
 `ServiceAgent.authentifier` (domaine auth) porte la vérification du jeton et la relecture du compte : la route REST et la
@@ -73,8 +80,8 @@ route MCP partagent ainsi la même règle « un compte désactivé est refusé m
 ## Parité vérifiée
 
 Les 24 tests couvrent : 401 sans jeton ou avec un jeton invalide, jeton REST refusé, `Origin` refusé (403), compte
-désactivé après l'émission (401), droit `IA_UTILISER` retiré après l'émission (403), droits relus à chaque appel, les cinq
-outils au catalogue avec leurs annotations et un schéma de sortie, la permission de chaque outil, les filtres, pages et
+désactivé après l'émission (401), droit `IA_UTILISER` retiré après l'émission (403), droits relus à chaque appel, les 31
+outils au catalogue (`test_mcp_outils_metier.py` : permission refusée par outil, périmètre, cas vides) avec leurs annotations et un schéma de sortie, la permission de chaque outil, les filtres, pages et
 bornes (limite, page, nom trop long, date réelle, identifiant positif, énumérations), une modification retrouvée par le
 journal et l'historique, **aucune ligne ajoutée au journal par un appel d'outil**, et le span (statut, utilisateur,
 nombre de résultats, ni argument ni résultat). La suite complète de l'API passait (252 tests avant l'intégration IA), `ruff` et `pyright` strict
@@ -98,4 +105,10 @@ sans erreur.
 - **L'export des spans vers Phoenix** : un appel `systeme_identite` authentifié a produit un span reçu par Phoenix dans
   un projet Compose isolé, avec données synthétiques. L'essai utilise l'image API et la configuration d'export du service
   Compose ; il ne prouve pas le déploiement ni les données de production.
-- **Les 26 autres outils** : ils arrivent avec leur domaine (KAN-49).
+- **Formats non vérifiés contre Spring en exécution** : le mois est rendu `AAAA-MM` comme l'API REST (format JSON de
+  `YearMonth` supposé identique) ; `employes_sorties` ordonne les employés par identifiant ; une liste d'identifiants vide
+  n'applique aucun filtre ; le masquage des exceptions non `ToolError` par FastMCP n'est pas vérifié.
+- **Effets sur l'API REST** : l'alignement des services sur Spring (effectifs, parcours, moyennes d'âge et d'ancienneté,
+  regroupements lus en base) modifie quelques sorties REST, dans le sens du modèle Angular (`entrees` peut être nul,
+  libellés de mois du parcours).
+- **Tests sur base partagée** : l'absence totale de paie (« Aucune paie n'est encore importée ») n'est pas testée.
