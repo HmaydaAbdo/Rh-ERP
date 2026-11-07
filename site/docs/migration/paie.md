@@ -28,7 +28,7 @@ Deux tests de classeur couvrent les périmètres et ce placement. La comparaison
 styles, largeurs, formules recalculées dans Excel et données réelles reste à faire.
 
 Le périmètre restant avant clôture comprend le contrat complet du wizard d'import, les exports et
-le rapport PDF, la suppression-restauration de groupe, les outils MCP et la parité exhaustive des
+le rapport PDF (503 en attente), les outils MCP et la parité exhaustive des
 tests Spring documentés dans `docs/paie/skills/SKILL.md`.
 
 Le calcul automatique n'est pas introduit : `salaire_total` reste une valeur fournie par le contrat
@@ -68,9 +68,14 @@ Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart
 l'analyse et l'import final. La correction envoie en plus le texte JSON `corrections` avec les
 alignements et créations proposés; le serveur relit le classeur et vérifie les employés et lignes
 avant d'écrire, puis renvoie une analyse recalculée. Les permissions de correction sont
-`PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`. Cette tranche n'établit pas encore la parité complète
-du wizard : les propositions et confirmations de départ/STC/retour ne sont pas portées par FastAPI;
-les listes correspondantes restent vides et aucune transition de statut n'est déduite.
+`PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`. L'analyse propose désormais les départs (STC ou « sortie » dans la colonne Observation, motif prérempli ;
+actifs absents du fichier, motif à saisir) et les retours (inactifs présents). L'import reçoit les départs
+confirmés dans le champ multipart `departs` (JSON `{"departs":[{employeId,motif}]}`), refuse (400) un départ
+non proposé, un motif vide, un départ déjà enregistré ce mois ou un retour sans type de salaire, et annule
+alors toute l'importation (une transaction). La création et la modification d'un bulletin exigent
+`PAIE_WRITE` et `EMPLOYEE_WRITE` (la fiche Employé change de chantier et d'équipe), comme Spring. La
+suppression de groupe (`POST /paie/suppression`, `PAIE_PURGE`) et sa restauration depuis l'audit
+(`POST /paie/restauration/{id}`, `PAIE_RESTORE`) sont portées, atomiques et éprouvées sur PostgreSQL.
 
 Pour l'export, la parité Spring est le comportement par défaut. Le regroupement demandé est un
 choix distinct de la sélection des équipes à détailler. Le contrat Python prévoit
