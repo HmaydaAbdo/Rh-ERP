@@ -133,6 +133,15 @@ class ServiceRapportPaie:
         ):
             chantier = lignes_chantier[0][2]
             identifiant = f"{chantier.nom} ({code})" if chantier.nom else code
+            lignes_chantier_precedentes = [ligne for ligne in lignes_precedentes or [] if ligne[2].code == code]
+            pages.append(
+                (
+                    f"CHANTIER : {identifiant}",
+                    f'<div class="titre-chapitre">{escape(f"CHANTIER : {identifiant}")}</div>'
+                    f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
+                    f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
+                )
+            )
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
             regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
@@ -235,6 +244,24 @@ def _graphique_repartition(
         ),
         key=lambda element: element[1],
     )
+    return _graphique_barres(elements, "Masse salariale par chantier (DH)")
+
+
+def _graphique_equipes(
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> str:
+    montants: dict[str, Decimal] = {}
+    for paie, _, _, equipe, _ in lignes:
+        libelle = equipe.libelle.strip() if equipe and equipe.libelle.strip() else "Sans équipe"
+        montants[libelle] = montants.get(libelle, Decimal(0)) + paie.salaire_total
+    elements = sorted(montants.items(), key=lambda element: element[1], reverse=True)
+    if len(elements) > 15:
+        elements = [*elements[:15], ("Autres", sum((montant for _, montant in elements[15:]), Decimal(0)))]
+        elements.sort(key=lambda element: element[1], reverse=True)
+    return _graphique_barres(elements, "Masse salariale par équipe (DH)")
+
+
+def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str) -> str:
     hauteur = max(1.8, 0.34 * len(elements))
     figure = Figure(figsize=(10.5, hauteur), layout="constrained")
     axes = cast(Any, figure.subplots())
@@ -242,6 +269,7 @@ def _graphique_repartition(
     valeurs = [float(masse) for _, masse in elements]
     axes.barh(libelles, valeurs, color="#2563EB")
     axes.set_xlabel("Masse salariale (DH)")
+    axes.set_title(titre)
     axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
     axes.set_axisbelow(True)
     for bordure in axes.spines.values():
@@ -250,9 +278,7 @@ def _graphique_repartition(
     figure.set_facecolor("white")
     axes.set_facecolor("white")
     sortie = BytesIO()
-    cast(Any, figure).savefig(
-        sortie, format="svg", metadata={"Title": "Répartition de la masse salariale par chantier"}
-    )
+    cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
     return sortie.getvalue().decode("utf-8")
 
 
@@ -264,6 +290,8 @@ def _periode_precedente(periode: str) -> str:
 def _cartes_kpi(
     courantes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
     precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+    *,
+    inclure_chantiers: bool = True,
 ) -> str:
     bulletins = [ligne[0] for ligne in courantes]
     bulletins_precedents = [ligne[0] for ligne in precedentes]
@@ -271,7 +299,7 @@ def _cartes_kpi(
     precedent = mesurer(cast(list[BulletinRapport], bulletins_precedents)) if bulletins_precedents else None
     nombre_chantiers = len({ligne[2].id for ligne in courantes})
     nombre_chantiers_precedent = len({ligne[2].id for ligne in precedentes})
-    cartes = (
+    cartes = [
         (
             "Masse salariale",
             _masse(courant.masse),
@@ -302,7 +330,9 @@ def _cartes_kpi(
             _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None),
             "montant",
         ),
-    )
+    ]
+    if not inclure_chantiers:
+        cartes.pop(2)
     elements = [
         '<div class="titre-indicateurs">Indicateurs clés</div><div class="kpi-row">',
     ]
