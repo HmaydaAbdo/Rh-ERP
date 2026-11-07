@@ -1,12 +1,23 @@
+import asyncio
 from collections.abc import Callable
+from datetime import date
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
+from uuid import uuid4
 
 from conftest import ADMIN, Plateforme
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import Session
 
+from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.employee.models import Employee, EmployeeStatut
+from staport.domains.function.models import Fonction
 from staport.domains.paie import report
+from staport.domains.paie.models import Paie
 from staport.domains.paie.report import ServiceRapportPaie
 from staport.domains.paie.schemas import PaieRapportRequete
 
@@ -94,3 +105,101 @@ def test_comparaison_du_rapport_preserve_absence_et_base_nulle() -> None:
     assert rapport._periode_precedente("2026-01") == "2025-12"
     assert rapport._ecart_montant(Decimal("12.00"), None) == "Écart indisponible"
     assert rapport._ecart_montant(Decimal("12.00"), Decimal("0.00")) == "Écart : +12 DH (base à 0)"
+
+
+def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
+    rapport = cast(Any, report)
+    assert rapport._periodes_recentes("2026-01", 3) == [202601, 202512, 202511]
+    svg = rapport._graphique_evolution(
+        [
+            rapport.PointEvolution(202512, Decimal("1000"), 2, 1, Decimal("500")),
+            rapport.PointEvolution(202602, Decimal("1500"), 3, 0, Decimal(0)),
+        ]
+    )
+    assert "12/2025" in svg and "2/2026" in svg
+    assert "1/2026" not in svg
+
+
+def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
+    plateforme: Plateforme, monkeypatch: Any
+) -> None:
+    suffixe = uuid4().hex[:10]
+    fonction = Fonction(libelle=f"Rapport {suffixe}")
+    chantier = Chantier(code=f"R{suffixe}", nom="Chantier rapport")
+    employe = Employee(
+        nom_prenom="Employé rapport",
+        cin=f"Q{suffixe}",
+        date_naissance=date(1990, 1, 1),
+        date_embauche=date(2020, 1, 1),
+        fonction_id=0,
+        statut=EmployeeStatut.ACTIF,
+    )
+    ids: tuple[int, int, int] | None = None
+    try:
+        with Session(plateforme.moteur) as session, session.begin():
+            session.add_all([fonction, chantier])
+            session.flush()
+            employe.fonction_id = fonction.id
+            employe.chantier_id = chantier.id
+            session.add(employe)
+            session.flush()
+            for periode, salaire, observation in (
+                (202512, Decimal("100.00"), " STC\t"),
+                (202602, Decimal("200.00"), " sortie\n"),
+            ):
+                session.add(
+                    Paie(
+                        employee_id=employe.id,
+                        periode=periode,
+                        fonction_id=fonction.id,
+                        chantier_id=chantier.id,
+                        equipe_id=None,
+                        nombre_jours_travailles=Decimal("1"),
+                        salaire_mensuel=salaire,
+                        salaire_total=salaire,
+                        observation=observation,
+                    )
+                )
+            session.flush()
+            ids = fonction.id, chantier.id, employe.id
+
+        assert ids is not None
+        htmls: list[str] = []
+
+        async def capturer(html: str, _base: Path) -> bytes:
+            htmls.append(html)
+            return b"%PDF-1.7 synthetic"
+
+        monkeypatch.setattr(report, "rendre_pdf", capturer)
+        moteur_async = create_async_engine(plateforme.url)
+        sessions_async = async_sessionmaker(moteur_async, expire_on_commit=False)
+
+        async def generer() -> bytes:
+            try:
+                async with sessions_async() as session:
+                    return (
+                        await ServiceRapportPaie(cast(Auditeur, object())).generer(
+                            session,
+                            PaieRapportRequete(
+                                periode="2026-02",
+                                nom_prenom="Employé rapport",
+                                cin=f"Q{suffixe}",
+                                chantier_id=ids[1],
+                            ),
+                        )
+                    ).read()
+            finally:
+                await moteur_async.dispose()
+
+        assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
+        assert len(htmls) == 1
+        assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
+        assert "1/2026" not in htmls[0]
+        assert "STC / sorties" in htmls[0] and "200" in htmls[0]
+    finally:
+        if ids is not None:
+            with plateforme.moteur.begin() as connection:
+                connection.execute(delete(Paie).where(Paie.employee_id == ids[2]))
+                connection.execute(delete(Employee).where(Employee.id == ids[2]))
+                connection.execute(delete(Chantier).where(Chantier.id == ids[1]))
+                connection.execute(delete(Fonction).where(Fonction.id == ids[0]))
