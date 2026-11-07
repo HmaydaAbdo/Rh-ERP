@@ -20,6 +20,7 @@ from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from .exceptions import AucunePaiePeriode
+from .materiel import tableaux_materiel
 from .models import Paie
 from .rapport_calcul import BulletinRapport, mesurer, regrouper_sections
 from .rapport_texte import decouper_lignes, hauteur_ligne_employe
@@ -248,6 +249,17 @@ class ServiceRapportPaie:
                                 f'<div class="graphique">{graphique}</div>',
                             )
                         )
+                    if not est_regroupe:
+                        equipe_section = section[0].valeurs[3]
+                        if equipe_section is not None:
+                            graphique_materiel = _graphique_materiel(code, equipe_section.code, requete.materiel or {})
+                            if graphique_materiel:
+                                pages.append((f"CHANTIER : {identifiant}", graphique_materiel))
+                if libelle is None:
+                    pages.extend(
+                        (f"CHANTIER : {identifiant}", recap)
+                        for recap in _recaps_fonctions([detail.valeurs for detail in section])
+                    )
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -374,14 +386,58 @@ def _graphiques_fonctions(
     ]
 
 
-def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str) -> str:
+def _graphique_materiel(chantier_code: str, equipe_code: str, nombres: dict[str, int]) -> str | None:
+    tableau = next(
+        (t for t in tableaux_materiel() if t.chantier_code == chantier_code and t.equipe_code == equipe_code), None
+    )
+    if tableau is None:
+        return None
+    elements = [(libelle, Decimal(nombres[libelle])) for libelle in tableau.libelles if libelle in nombres]
+    if not any(nombre > 0 for _, nombre in elements):
+        return None
+    graphique = _graphique_barres(elements, f"Parc matériel — {tableau.titre}", unite="Nombre")
+    return (
+        f'<div class="titre-chapitre">Parc matériel — {escape(tableau.titre)}</div>'
+        f'<div class="graphique">{graphique}</div>'
+    )
+
+
+def _recaps_fonctions(lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]) -> list[str]:
+    par_fonction: dict[str, list[Paie]] = {}
+    for paie, _, _, _, fonction in lignes:
+        par_fonction.setdefault(fonction.libelle, []).append(paie)
+    lignes_recaps: list[str] = []
+    for fonction, bulletins in sorted(par_fonction.items(), key=lambda item: item[0].casefold()):
+        mesures = mesurer(cast(list[BulletinRapport], bulletins))
+        lignes_recaps.append(
+            f'<tr><td class="libelle">{escape(fonction)}</td>'
+            f'<td class="effectif">{_entier(mesures.effectif)}</td>'
+            f'<td class="stc-personnes">{_entier(mesures.stc)}</td>'
+            f'<td class="stc-montant">{_montant(mesures.montant_stc)}</td></tr>'
+        )
+    pages: list[str] = []
+    for debut in range(0, len(lignes_recaps), 20):
+        titre = "Répartition par fonction" if debut == 0 else "Répartition par fonction (suite)"
+        pages.append(
+            '<div class="recap-row"><div class="recap-bloc derniere">'
+            f'<div class="titre-recap">{titre}</div>'
+            '<table class="recap fonction"><col class="libelle"><col class="effectif">'
+            '<col class="stc-personnes"><col class="stc-montant">'
+            "<thead><tr><th>FONCTION</th><th>BULLETINS</th><th>STC (PERS.)</th><th>STC (DH)</th></tr></thead><tbody>"
+            + "".join(lignes_recaps[debut : debut + 20])
+            + "</tbody></table></div></div>"
+        )
+    return pages
+
+
+def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str, *, unite: str = "Masse salariale (DH)") -> str:
     hauteur = max(1.8, 0.34 * len(elements))
     figure = Figure(figsize=(10.5, hauteur), layout="constrained")
     axes = cast(Any, figure.subplots())
     libelles = [libelle for libelle, _ in elements]
     valeurs = [float(masse) for _, masse in elements]
     axes.barh(libelles, valeurs, color="#2563EB")
-    axes.set_xlabel("Masse salariale (DH)")
+    axes.set_xlabel(unite)
     axes.set_title(titre)
     axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
     axes.set_axisbelow(True)

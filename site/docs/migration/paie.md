@@ -100,6 +100,7 @@ virgule décimale, tiret pour les valeurs numériques absentes).
 Le prototype contient les cinq KPI globaux (masse, bulletins, chantiers, nombre et montant des STC), leurs comparaisons au mois précédent,
 deux courbes d'évolution globale, par chantier et par équipe sélectionnée sur les périodes réellement disponibles des douze derniers mois, ainsi que quatre KPI à ces niveaux et une répartition de la masse salariale par équipe.
 Le chantier sans équipe choisie présente sa répartition par fonction ; avec une sélection, il présente la répartition de toutes ses équipes. Chaque équipe choisie a sa propre répartition par fonction, poursuivie sur plusieurs pages au-delà de quinze fonctions.
+Les sections fusionnées ont un tableau récapitulatif par fonction (bulletins, STC et montant STC). Une équipe choisie du catalogue C168 affiche son graphique matériel lorsque le wizard fournit au moins une quantité positive.
 Une seule requête historique groupe les bulletins par chantier, équipe et mois en base, conserve les filtres du rapport et fournit les courbes globales et par chantier par totalisation. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
