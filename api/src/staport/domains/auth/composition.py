@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from staport.domains.accueil import audit as _historique_accueil  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.accueil.service import ServiceAccueil
 from staport.domains.audit.api import Audit
 from staport.domains.auth import audit as _historique_auth  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.auth.courriel import ServiceCourriel
@@ -37,6 +39,7 @@ class ContexteAuth:
     audit: Auditeur
     origines_autorisees: frozenset[str]
     cookie_secure: bool
+    accueil: ServiceAccueil
     fonctions: ServiceFonction
     equipes: ServiceEquipe
     chantiers: ServiceChantier
@@ -76,6 +79,7 @@ def creer_contexte(
     emetteur = EmetteurJetons(cles)
     publication = audit or Audit()
     service_parametre = ServiceParametre(publication)
+    service_accueil = ServiceAccueil(publication)
     service_fonction = ServiceFonction(publication)
     service_equipe = ServiceEquipe(publication)
     service_chantier = ServiceChantier(publication)
@@ -95,6 +99,7 @@ def creer_contexte(
         audit=publication,
         origines_autorisees=origines(configuration.cors_allowed_origins),
         cookie_secure=configuration.cookie_secure,
+        accueil=service_accueil,
         fonctions=service_fonction,
         equipes=service_equipe,
         chantiers=service_chantier,
