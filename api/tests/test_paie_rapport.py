@@ -155,6 +155,18 @@ def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -
     assert "CAMION CITERNE" in graphique and "<svg" in graphique
 
 
+def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> None:
+    rapport = cast(Any, report)
+    faible = SimpleNamespace(salaire_total=Decimal("100"))
+    fort = SimpleNamespace(salaire_total=Decimal("900"))
+    chantiers = {
+        "PETIT": [(faible, None, SimpleNamespace(nom="Petit"), None, None)],
+        "GRAND": [(fort, None, SimpleNamespace(nom="Grand"), None, None)],
+    }
+    svg = rapport._graphiques_repartition_chantiers(chantiers)[0]
+    assert svg.index("Grand") < svg.index("Petit")
+
+
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
     plateforme: Plateforme, monkeypatch: Any
 ) -> None:
