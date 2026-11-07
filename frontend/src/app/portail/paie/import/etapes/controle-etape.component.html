@@ -29,6 +29,21 @@
       </stp-table>
     }
 
+    @if (analyse.avertissements.length > 0) {
+      <h3 class="app-wizard__titre"><stp-icon name="triangle-alert" /> Avertissements à confirmer <span class="app-wizard__nombre">{{ analyse.avertissements.length }}</span></h3>
+      <ul class="app-controle__cartes">
+        @for (avertissement of analyse.avertissements; track avertissement.numeroLigne + (avertissement.codeAvertissement ?? '')) {
+          <li class="app-controle__carte">
+            <strong>Ligne {{ avertissement.numeroLigne }} · {{ avertissement.nomPrenom ?? avertissement.cin }}</strong>
+            <span>{{ avertissement.raison }}</span>
+          </li>
+        }
+      </ul>
+      @if (store.avertissementSalaireZero()) {
+        <label><input type="checkbox" [checked]="store.confirmerSalaireZero()" (change)="confirmerZero($event)" /> Ignorer et conserver 0</label>
+      }
+    }
+
     @if (analyse.chantiersClotures.length > 0) {
       <h3 class="app-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="app-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
       <p class="app-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.
@@ -72,8 +87,8 @@
                 <label class="app-controle__champ"><span>Date d’embauche</span>
                 <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
                 <label class="app-controle__champ"><span>Type de salaire</span>
-                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
-                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne) || store.occupe()" (click)="store.creer(inconnu.numeroLigne)">Créer l'employé</button>
+                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? store.typeSalairePropose(inconnu.salaire)" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
+                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne, inconnu.salaire) || store.occupe()" (click)="store.creer(inconnu.numeroLigne, inconnu.salaire)">Créer l'employé</button>
               </div>
             }
           </li>
@@ -107,7 +122,7 @@
             @if (store.peutCorriger()) {
               <div class="app-controle__saisie">
                 @if (salaireChange(ecart.champs)) {
-                  <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typesChoisis()[ecart.employeId] ?? ecart.typeSalaire" (valueChange)="store.choisirType(ecart.employeId, $any($event))" />
+                  <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typeSalairePourEcart(ecart.employeId, ecart.typeSalaire)" (valueChange)="store.choisirType(ecart.employeId, $any($event))" />
                 }
                 <button stp-button icon="check" type="button" [disabled]="store.occupe()" [attr.aria-label]="'Mettre à jour la fiche de ' + ecart.nomPrenom" (click)="store.aligner([ecart.employeId])">Mettre à jour la fiche</button>
               </div>

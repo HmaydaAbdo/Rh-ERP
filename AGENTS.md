@@ -28,6 +28,19 @@ Après toute modification :
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 
+**Boucle Ralph — persister jusqu'au résultat demandé.** Pour toute réalisation, Claude et Codex
+répètent : constater l'état réel, choisir la prochaine étape autorisée, agir, vérifier, corriger et
+recommencer jusqu'à satisfaire tous les critères demandés et leurs preuves. Un progrès partiel,
+un test vert, un commit, une limite de contexte ou un changement de session ne justifient pas de
+rendre la main. Reprendre depuis le code, Git et Jira sans refaire le travail déjà prouvé ; donner
+des nouvelles pendant le travail et actualiser Jira avant toute interruption.
+
+S'arrêter seulement si une action indispensable exige une autorisation encore absente, une règle
+métier ou un choix d'architecture réservé au propriétaire, ou si un blocage concret demeure après
+les vérifications et solutions sûres dans le périmètre. Expliquer les faits, les essais et la décision
+attendue. La persistance ne permet pas de contourner les protections ni n'étend les autorisations
+de push, CI, fusion, données ou production ; les autorisations déjà données restent valables.
+
 Deux règles imposées par le propriétaire, sans exception :
 
 - **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, **Deep Agents**,

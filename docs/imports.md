@@ -35,6 +35,13 @@ Pour **ré-importer un mois de paie**, supprimer d'abord les bulletins concerné
 modifie un bulletin existant, mais son assistant **met à jour les fiches employés** que l'utilisateur choisit d'aligner
 sur le fichier (et crée les CIN inconnus). Ces écritures sont des choix explicites de l'utilisateur, faites avant l'import.
 
+**Évolution validée pour la migration Python** : nom, fonction, chantier et équipe renseignée sont alignés
+automatiquement lors de la création des bulletins. Une équipe vide sur le bulletin ne supprime pas
+l'équipe de la fiche. Un salaire différent de celui de la fiche reste soumis au wizard ; le type de
+salaire y est proposé selon le seuil de 500. Un salaire nul exige l'action distincte « Ignorer et
+conserver 0 ». Un bulletin déjà présent reste refusé. Les départs et STC ne sont pas déduits
+automatiquement. Voir [migration Paie](../site/docs/migration/paie.md) pour l'état du portage.
+
 **Exception — Heures supplémentaires** : un doublon employé + mois + chantier bloque l'import par défaut. Le remplacement
 de données déjà importées n'est possible qu'après une action explicite de l'utilisateur dans l'assistant et reste audité.
 
@@ -89,17 +96,16 @@ dans la boucle (`conventions/performance.md`).
 | Lignes d'en-tête | 1 | 1 | 1 | **3** |
 | Colonnes | 2 | 1 | 6 | 13 |
 | En-têtes | `Code`, `Libellé` | `Fonction` | Voir [Employés](employee/README.md) | Voir [Paie](paie/README.md) |
-| Fonction | — | — (c'est la donnée importée) | Doit **exister** | **Créée automatiquement** si absente |
+| Fonction | — | — (c'est la donnée importée) | Doit **exister** | Doit **exister** ; absence signalée dans l'analyse |
 | Chantier | — | — | Doit exister **et être actif** | Doit exister **et être actif** |
 | Employé | — | — | Créé (toujours `ACTIF`) | Doit **exister** (par CIN) |
 | Équipe | Créée (code et libellé uniques) | — | — | Doit exister si renseignée ; jamais créée |
 | Période | — | — | — | Paramètre de la requête (`?periode=aaaa-MM`), valable pour tout le fichier |
 | Total de paie | — | — | — | Repris **tel quel** de la colonne « Total » ; jamais recalculé |
 
-Exception assumée : l'import Paie crée les fonctions inconnues (un intitulé qui n'a pas encore été saisi ne doit
-pas bloquer l'import mensuel de centaines de lignes), alors qu'un CIN, un chantier ou une équipe inconnus restent
-des erreurs de saisie à corriger. Ces créations sont dédupliquées et listées dans `fonctionsCreees`. Elles
-n'ont lieu que si **tout** le fichier est valide.
+Pour la migration Python validée par le propriétaire, l'import Paie ne crée aucune Fonction, aucun
+Chantier et aucune Équipe. Une référence absente est signalée dans l'analyse et bloque l'import ;
+une référence présente est appliquée automatiquement à la fiche Employé et au nouveau bulletin.
 
 ---
 

@@ -18,6 +18,10 @@ Pour reprendre et mener une tâche :
 
 La CI est lancée ou relancée uniquement sur demande explicite du propriétaire. Un push qui la
 déclencherait automatiquement attend également cette demande ; garder le travail prêt en local.
+
+Appliquer la **boucle Ralph** d'[AGENTS.md](AGENTS.md), détaillée dans
+[`conventions/workflow.md`](conventions/workflow.md) : poursuivre les étapes autorisées jusqu'à
+la fin prouvée de la demande ; un résultat partiel ne justifie pas de rendre la main.
 La branche distante `main` est protégée : ne jamais y pousser directement ni forcer sa mise à jour.
 Publier les changements destinés à `main` sur la branche head de la PR existante, ou ouvrir une PR
 ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine définie dans
