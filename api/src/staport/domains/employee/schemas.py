@@ -96,6 +96,15 @@ class DimensionEmployes(StrEnum):
     FONCTION = "FONCTION"
 
 
+class TriRegroupement(StrEnum):
+    """Critère de tri des groupes d'effectif."""
+
+    EFFECTIF = "EFFECTIF"
+    EN_POSTE = "EN_POSTE"
+    LIBELLE = "LIBELLE"
+    CODE = "CODE"
+
+
 class TrancheReponse(ModeleApi):
     min: int
     max: int | None

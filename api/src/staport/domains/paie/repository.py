@@ -157,6 +157,27 @@ async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[
     return list(rows), total
 
 
+async def rechercher_tries(
+    s: AsyncSession, c: PaieRecherche, page: int, taille: int, tri: str, croissant: bool
+) -> tuple[list[Paie], int]:
+    """Bulletins du filtre `_selection`, triés sur une colonne du bulletin ou sur `nom_prenom` de l'employé, puis par
+    nom et identifiant (ordre stable d'une page à l'autre)."""
+    q = _selection(c)
+    total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
+    if not (c.cin or c.nom_prenom):
+        q = q.join(Employee, Employee.id == Paie.employee_id)
+    colonne = Employee.nom_prenom if tri == "nom_prenom" else getattr(Paie, tri)
+    q = q.order_by(colonne.asc() if croissant else colonne.desc())
+    if tri != "nom_prenom":
+        q = q.order_by(Employee.nom_prenom.asc())
+    rows = (await s.execute(q.order_by(Paie.id.asc()).limit(taille).offset(page * taille))).scalars().all()
+    return list(rows), total
+
+
+async def derniere_periode(s: AsyncSession) -> int | None:
+    return (await s.execute(select(func.max(Paie.periode)))).scalar_one_or_none()
+
+
 async def periodes(s: AsyncSession) -> list[tuple[int, int, int, object, int, object]]:
     sortie = func.lower(func.btrim(Paie.observation)).in_(("stc", "sortie"))
     q = (
@@ -214,33 +235,3 @@ async def options_equipes(s: AsyncSession, periode: int, chantier_ids: list[int]
         q = q.order_by(colonne.asc() if asc else colonne.desc())
     q = q.order_by(Equipe.id.asc()).limit(p.taille).offset(p.decalage)
     return list((await s.execute(q)).scalars().all()), total
-
-
-async def effectifs(s: AsyncSession, c: PaieRecherche) -> list[tuple[int, int]]:
-    q = select(Paie.periode, func.count(func.distinct(Paie.employee_id))).join(
-        Employee, Employee.id == Paie.employee_id
-    )
-    if c.chantier_ids:
-        q = q.where(Paie.chantier_id.in_(c.chantier_ids))
-    if c.fonction_ids:
-        q = q.where(Paie.fonction_id.in_(c.fonction_ids))
-    if c.equipe_ids:
-        equipes = [x for x in c.equipe_ids if x != 0]
-        q = q.where(
-            or_(Paie.equipe_id.in_(equipes), Paie.equipe_id.is_(None))
-            if 0 in c.equipe_ids
-            else Paie.equipe_id.in_(equipes)
-        )
-    if c.nom_prenom:
-        q = q.where(func.lower(Employee.nom_prenom).like(f"%{c.nom_prenom.strip().lower()}%"))
-    if c.cin:
-        q = q.where(func.lower(Employee.cin).like(f"%{c.cin.strip().lower()}%"))
-    return list((await s.execute(q.group_by(Paie.periode).order_by(Paie.periode.asc()))).all())
-
-
-async def parcours(s: AsyncSession, employee_id: int) -> list[Paie]:
-    return list(
-        (await s.execute(select(Paie).where(Paie.employee_id == employee_id).order_by(Paie.periode.asc())))
-        .scalars()
-        .all()
-    )
