@@ -97,19 +97,17 @@ Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre page
 avec 65 lignes présentes dans le modèle HTML.
 Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
 virgule décimale, tiret pour les valeurs numériques absentes).
-Le prototype contient les cinq KPI globaux (masse, bulletins, chantiers, nombre et montant des STC), leurs comparaisons au mois précédent,
-La vue d'ensemble présente les cinq KPI globaux et les deux courbes d'évolution sur les périodes réellement disponibles des douze derniers mois. La répartition par chantier vient ensuite. Chaque chantier est numéroté en chiffres romains : après la vue globale, le premier chantier est II ; sans vue globale, il est I. Chaque chantier et équipe sélectionnée présente ses KPI et son évolution historique.
+Le rendu Python contient les cinq KPI globaux (masse, bulletins, chantiers, nombre et montant des STC) et leurs comparaisons au mois précédent.
+La vue d'ensemble présente les KPI et les courbes d'évolution sur les périodes réellement disponibles des douze derniers mois. La répartition par chantier vient ensuite. Chaque chantier est numéroté en chiffres romains : après la vue globale, le premier chantier est II ; sans vue globale, il est I. Chaque chantier et équipe sélectionnée présente ses KPI et son évolution historique.
 La répartition globale garde l'ordre de masse décroissante et répartit les chantiers en pages équilibrées, avec au plus seize catégories par page.
 Le chantier sans équipe choisie présente sa répartition par fonction ; avec une sélection, il présente la répartition de toutes ses équipes. Chaque équipe choisie a sa propre répartition par fonction, poursuivie sur plusieurs pages au-delà de quinze fonctions.
 Les sections fusionnées ont un tableau récapitulatif par fonction (bulletins, STC et montant STC). Une équipe choisie du catalogue C168 affiche son graphique matériel lorsque le wizard fournit au moins une quantité positive.
+Les pages propres à une équipe répètent dans leur bandeau et leur pied de page le chantier et le libellé d'équipe, comme le rapport Spring.
 Une seule requête historique groupe les bulletins par chantier, équipe et mois en base, conserve les filtres du rapport et fournit les courbes globales et par chantier par totalisation. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
-`POST /paie/report/pdf`
-répond temporairement `503` : le découpage n'a pas encore de preuve visuelle de parité,
-et les graphiques, comparaisons et sections complètes du rapport Spring restent à porter. La route ne sera
-ouverte qu'après portage complet et comparaison sur un même jeu de données.
+`POST /paie/report/pdf` répond temporairement `503` tant que les scénarios de pagination et la comparaison des PDF Spring/Python rendus sur un même jeu de données n'ont pas prouvé la parité. Les critères longs et les bandeaux d'équipe sont mesurés pour tenir dans leurs blocs ; les graphiques de fonctions répartissent leurs catégories entre pages équilibrées. Les scénarios Spring de récapitulatifs, de hauteur des cartes KPI et de placement des sections restent à vérifier et à corriger avant l'ouverture de la route.
 
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le

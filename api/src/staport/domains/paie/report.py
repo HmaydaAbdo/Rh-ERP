@@ -4,6 +4,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from html import escape
 from io import BytesIO
+from math import ceil
 from pathlib import Path
 from typing import Any, cast
 
@@ -23,7 +24,14 @@ from .exceptions import AucunePaiePeriode
 from .materiel import tableaux_materiel
 from .models import Paie
 from .rapport_calcul import BulletinRapport, mesurer, regrouper_sections
-from .rapport_texte import decouper_lignes, hauteur_ligne_employe
+from .rapport_texte import (
+    decouper,
+    decouper_lignes,
+    hauteur_ligne_employe,
+)
+from .rapport_texte import (
+    lignes as compter_lignes,
+)
 from .schemas import PaieRapportRequete
 
 
@@ -38,6 +46,8 @@ class PointEvolution:
 
 class ServiceRapportPaie:
     """Premier pipeline PDF natif Python, avec CSS et polices du rapport Spring embarqués."""
+
+    LARGEUR_NIVEAU_ENTETE = 436
 
     def __init__(self, audit: Auditeur) -> None:
         self._audit = audit
@@ -149,13 +159,15 @@ class ServiceRapportPaie:
         pages: list[tuple[str, str]] = []
         filtres = _filtres_actifs(requete, lignes)
         if filtres:
-            pages.append(
-                (
-                    "PÉRIMÈTRE",
-                    '<div class="titre-chapitre">Périmètre du rapport</div>'
-                    + "".join(f'<div class="perimetre-ligne">{escape(filtre)}</div>' for filtre in filtres),
+            lignes_perimetre = [ligne for filtre in filtres for ligne in decouper(filtre, 802, 10.5)]
+            lignes_par_page = int((495 - 24 - 8) / 14)
+            for debut in range(0, len(lignes_perimetre), lignes_par_page):
+                titre_perimetre = "Périmètre du rapport" if debut == 0 else "Périmètre du rapport (suite)"
+                contenu = f'<div class="titre-chapitre">{titre_perimetre}</div>' + "".join(
+                    f'<div class="perimetre-ligne">{escape(ligne)}</div>'
+                    for ligne in lignes_perimetre[debut : debut + lignes_par_page]
                 )
-            )
+                pages.append(("PÉRIMÈTRE", contenu))
         if not requete.sans_vue_ensemble:
             cartes = _cartes_kpi(lignes, lignes_precedentes or [])
             points_evolution = (
@@ -217,6 +229,9 @@ class ServiceRapportPaie:
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
             for index_section, (libelle, section, est_regroupe) in enumerate(sections):
                 titre = f"ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
+                niveau_section = (
+                    f"CHANTIER : {identifiant} · ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
+                )
                 avec_equipe = libelle is None or est_regroupe
                 if libelle is not None and evolution_equipes is not None:
                     identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
@@ -233,7 +248,7 @@ class ServiceRapportPaie:
                     graphique_section = _graphique_evolution([points_section[p] for p in sorted(points_section)])
                     pages.append(
                         (
-                            f"CHANTIER : {identifiant}",
+                            niveau_section,
                             f'<div class="titre-chapitre">{escape(titre)}</div>'
                             + _cartes_kpi(
                                 [detail.valeurs for detail in section],
@@ -246,7 +261,7 @@ class ServiceRapportPaie:
                     for graphique in _graphiques_fonctions([detail.valeurs for detail in section]):
                         pages.append(
                             (
-                                f"CHANTIER : {identifiant}",
+                                niveau_section,
                                 '<div class="titre-chapitre">Répartition par fonction</div>'
                                 f'<div class="graphique">{graphique}</div>',
                             )
@@ -256,11 +271,10 @@ class ServiceRapportPaie:
                         if equipe_section is not None:
                             graphique_materiel = _graphique_materiel(code, equipe_section.code, requete.materiel or {})
                             if graphique_materiel:
-                                pages.append((f"CHANTIER : {identifiant}", graphique_materiel))
+                                pages.append((niveau_section, graphique_materiel))
                 if libelle is None:
                     pages.extend(
-                        (f"CHANTIER : {identifiant}", recap)
-                        for recap in _recaps_fonctions([detail.valeurs for detail in section])
+                        (niveau_section, recap) for recap in _recaps_fonctions([detail.valeurs for detail in section])
                     )
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
@@ -318,15 +332,16 @@ class ServiceRapportPaie:
                     contenu_page.append(_table_entete(avec_equipe=avec_equipe, avec_entete=index_page == 0))
                     contenu_page.extend(lignes_html[i] for i in tranche)
                     contenu_page.append("</tbody></table>")
-                    pages.append((f"CHANTIER : {identifiant}", "".join(contenu_page)))
+                    pages.append((niveau_section, "".join(contenu_page)))
         for numero, (niveau, contenu_html) in enumerate(pages, start=1):
+            lignes_niveau = min(compter_lignes(niveau, self.LARGEUR_NIVEAU_ENTETE, 9, True), 4)
             niveau = escape(niveau)
             corps.append(
                 '<div class="page"><div class="page-header"><img class="logo" src="logo-staport.png">'
                 '<div class="separateur s1"></div><div class="bloc b1">Ressources Humaines</div>'
                 '<div class="separateur s2"></div>'
                 f'<div class="bloc b2">Paie {escape(requete.periode)}</div>'
-                f'<div class="separateur s3"></div><div class="bloc bloc-niveau lignes-1">{niveau}</div>'
+                f'<div class="separateur s3"></div><div class="bloc bloc-niveau lignes-{lignes_niveau}">{niveau}</div>'
                 f'<div class="filet"></div></div><div class="page-body">{contenu_html}</div>'
                 f'<div class="page-footer"><div class="niveau">{niveau}</div>'
                 f'<div class="pagination">Page {numero} / {len(pages)}</div></div></div>'
@@ -425,8 +440,8 @@ def _graphiques_fonctions(
         montants[fonction.libelle] = montants.get(fonction.libelle, Decimal(0)) + paie.salaire_total
     elements = sorted(montants.items(), key=lambda element: (-element[1], element[0].casefold()))
     return [
-        _graphique_barres(elements[debut : debut + 15], "Masse salariale par fonction (DH)")
-        for debut in range(0, len(elements), 15)
+        _graphique_barres(tranche, "Masse salariale par fonction (DH)")
+        for tranche in _repartir_graphiques(elements, maximum=15)
     ]
 
 
@@ -616,14 +631,33 @@ def _cartes_kpi(
     elements = [
         '<div class="titre-indicateurs">Indicateurs clés</div><div class="kpi-row">',
     ]
+    hauteur_cartes = _hauteur_cartes_kpi(cartes)
     for index, (libelle, valeur, sous_texte, classe) in enumerate(cartes):
         derniere = " derniere" if index == len(cartes) - 1 else ""
         elements.append(
-            f'<div class="kpi-carte{derniere}" style="height: 54pt"><div class="label">{libelle}</div>'
+            f'<div class="kpi-carte{derniere}" style="height: {hauteur_cartes}pt"><div class="label">{libelle}</div>'
             f'<div class="valeur {classe}">{valeur}</div><div class="sous-texte">{sous_texte}</div></div>'
         )
     elements.append("</div>")
     return "".join(elements)
+
+
+def _hauteur_cartes_kpi(cartes: list[tuple[str, str, str, str]]) -> int:
+    hauteur = 54
+    for libelle, valeur, sous_texte, classe in cartes:
+        est_montant = classe == "montant"
+        corps_valeur = 10 if est_montant else 12
+        interligne_valeur = 11.5 if est_montant else 13.5
+        besoin = (
+            10
+            + 8.5 * compter_lignes(libelle.upper(), 109, 7.5, True)
+            + 4
+            + interligne_valeur * compter_lignes(valeur, 109, corps_valeur, True)
+            + 2
+            + 8 * compter_lignes(sous_texte, 109, 7, False)
+        )
+        hauteur = max(hauteur, ceil(besoin))
+    return hauteur
 
 
 def _entier(valeur: int) -> str:
