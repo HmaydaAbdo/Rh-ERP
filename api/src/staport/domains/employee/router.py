@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile, status
@@ -9,6 +10,7 @@ from staport.domains.auth.securite import JetonAcces
 from staport.domains.common.pagination import Pagination, pagination
 from staport.platform.base_de_donnees import session_requete
 
+from .repository import CHAMPS_DE_PAIE, TRIS_PUBLICS
 from .schemas import (
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
@@ -23,17 +25,23 @@ from .schemas import (
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
-PageEmployees = Annotated[
-    Pagination,
-    Depends(
-        pagination("nom_prenom", frozenset({"nom_prenom", "cin", "date_embauche", "salaire", "statut", "version"}))
-    ),
-]
 employees = APIRouter(prefix="/employees", tags=["Employés"])
 
 
 def paie(acces: JetonAcces) -> bool:
     return "PAIE_READ" in acces.permissions or "PAIE_READ" in acces.roles
+
+
+def page_employes(
+    brute: Annotated[Pagination, Depends(pagination("nomPrenom", TRIS_PUBLICS))], acces: Authentifie
+) -> Pagination:
+    """Sans `PAIE_READ`, les tris sur les champs de paie sont retirés (Spring) : ils feraient deviner les salaires."""
+    if paie(acces):
+        return brute
+    return replace(brute, tri=tuple(t for t in brute.tri if t[0] not in CHAMPS_DE_PAIE))
+
+
+PageEmployees = Annotated[Pagination, Depends(page_employes)]
 
 
 @employees.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(exiger("EMPLOYEE_WRITE"))])
