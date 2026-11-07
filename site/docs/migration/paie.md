@@ -117,3 +117,7 @@ ligne d'exemple, sous `PAIE_IMPORT`.
 Le nom de feuille, les dimensions et toutes les cellules du modèle produit ont été comparés au
 fichier `Modele_Import_Paie.xlsx` fourni par le propriétaire : ils sont identiques. Cette comparaison
 ne porte pas sur les styles ni les propriétés internes du classeur.
+
+Le gabarit du rapport embarque désormais Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
+(rendu hors de la boucle d'événements). Rendu réel vérifié dans l'image Linux le 2026-11-07 (page de garde, tableau paginé),
+mais la route reste en `503` : les sections complètes du rapport Spring et la comparaison côte à côte restent à faire.

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.common.pdf import rendre_pdf
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
@@ -58,10 +59,7 @@ class ServiceRapportPaie:
         if not lignes:
             raise AucunePaiePeriode(requete.periode)
         html = self._html(requete, lignes)
-        from weasyprint import HTML  # pyright: ignore[reportMissingTypeStubs]
-
-        sortie = cast(bytes, HTML(string=html, base_url=str(self._ressources)).write_pdf())  # pyright: ignore[reportUnknownMemberType]
-        return BytesIO(sortie)
+        return BytesIO(await rendre_pdf(html, self._ressources))
 
     def _html(
         self, requete: PaieRapportRequete, lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]
