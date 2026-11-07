@@ -34,6 +34,11 @@ def mois_suivant(periode: int) -> int:
     return (annee + 1) * 100 + 1 if mois == 12 else annee * 100 + mois + 1
 
 
+def mois_precedent(periode: int) -> int:
+    annee, mois = divmod(periode, 100)
+    return (annee - 1) * 100 + 12 if mois == 1 else annee * 100 + mois - 1
+
+
 PeriodePaie = Annotated[
     int,
     BeforeValidator(lire_periode),
