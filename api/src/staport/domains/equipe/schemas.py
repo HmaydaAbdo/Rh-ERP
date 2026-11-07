@@ -28,3 +28,17 @@ class EquipeReponse(ModeleApi):
 
 
 EquipesPage = Page[EquipeReponse]
+
+
+class EquipeLigneIgnoree(ModeleApi):
+    numero_ligne: int
+    code: str
+    libelle: str
+    raison: str
+
+
+class EquipeImportReponse(ModeleApi):
+    total_lignes: int
+    crees: int
+    ignores: int
+    lignes_ignorees: list[EquipeLigneIgnoree]

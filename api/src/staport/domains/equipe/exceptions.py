@@ -22,3 +22,7 @@ class EquipeUtilisee(ErreurMetier):
 
     def __init__(self) -> None:
         super().__init__("Cette équipe est encore référencée et ne peut pas être supprimée.")
+
+
+class ErreurImportEquipe(ErreurMetier):
+    """Fichier illisible ou colonnes inattendues (HTTP 400, comme `EquipeImportException`)."""

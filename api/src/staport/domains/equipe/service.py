@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,10 +8,16 @@ from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 
-from . import repository
+from . import import_fichier, repository
 from .exceptions import EquipeDejaExistante, EquipeIntrouvable, EquipeUtilisee
 from .models import Equipe
-from .schemas import EquipeCreationRequete, EquipeModificationRequete, EquipeRecherche, EquipeReponse
+from .schemas import (
+    EquipeCreationRequete,
+    EquipeImportReponse,
+    EquipeModificationRequete,
+    EquipeRecherche,
+    EquipeReponse,
+)
 
 
 def _reponse(equipe: Equipe) -> EquipeReponse:
@@ -80,3 +88,10 @@ class ServiceEquipe:
             raise EquipeDejaExistante("code", code)
         if libelle_existe:
             raise EquipeDejaExistante("libellé", libelle)
+
+    async def importer(self, session: AsyncSession, nom_fichier: str | None, contenu: bytes) -> EquipeImportReponse:
+        return await import_fichier.importer(self._auditeur, session, nom_fichier, contenu)
+
+    @staticmethod
+    def modele_import() -> BytesIO:
+        return import_fichier.generer_modele()
