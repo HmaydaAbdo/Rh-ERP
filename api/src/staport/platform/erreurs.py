@@ -26,6 +26,16 @@ MESSAGE_METHODE = "Méthode non autorisée pour cette route."
 MESSAGE_ROUTE = "Route introuvable."
 MESSAGE_CORPS = "Corps de la requête illisible."
 MESSAGE_IMPREVU = "Une erreur inattendue est survenue."
+TYPES_CORPS_ILLISIBLE = frozenset(
+    {
+        "json_invalid", "enum", "literal_error", "date_parsing", "date_type", "date_from_datetime_parsing",
+        "datetime_parsing", "datetime_type", "time_parsing", "int_parsing", "int_type", "int_from_float",
+        "float_parsing", "float_type", "decimal_parsing", "decimal_type", "bool_parsing", "bool_type",
+        "string_type", "list_type", "dict_type", "uuid_parsing", "model_attributes_type", "model_type",
+    }
+)  # fmt: skip
+TYPES_PARAMETRE_ILLISIBLE = TYPES_CORPS_ILLISIBLE - {"json_invalid"}
+NOMS_PARAMETRES_SPRING = {"identifiant": "id"}  # Spring nomme le paramètre de chemin `id`, l'API Python `identifiant`
 
 
 class ReponseErreur(BaseModel):
@@ -85,7 +95,11 @@ def _message_validation(erreur: RequestValidationError) -> str:
     """`champ : message`, séparés par une virgule, comme `MethodArgumentNotValidException` côté Spring."""
     parties: list[str] = []
     for detail in erreur.errors():
-        champ = ".".join(str(p) for p in detail["loc"] if p not in ("body", "query", "path"))
+        champ = (
+            detail["ctx"]["champ"]
+            if detail["type"] == "regle_metier"
+            else ".".join(str(p) for p in detail["loc"] if p not in ("body", "query", "path"))
+        )
         parties.append(f"{champ} : {message_fr(detail)}")
     return ", ".join(parties)
 
@@ -112,11 +126,24 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
     async def _validation(  # pyright: ignore[reportUnusedFunction]
         requete: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        corps_illisible = any(
-            d["type"] in ("json_invalid", "missing") and d["loc"][:1] == ("body",) for d in exc.errors()
-        )
-        if corps_illisible and any(d["type"] == "json_invalid" for d in exc.errors()):
+        erreurs = exc.errors()
+        # Jackson refuse le corps entier (JSON invalide, corps absent, type, énumération ou date impossible à lire) :
+        # `HttpMessageNotReadableException` côté Spring, donc un message unique, sans détail de champ.
+        if any(
+            d["loc"][:1] == ("body",)
+            and (d["type"] in TYPES_CORPS_ILLISIBLE or (d["loc"] == ("body",) and d["type"] == "missing"))
+            for d in erreurs
+        ):
             return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
+        # Paramètre de chemin ou de requête illisible : `MethodArgumentTypeMismatchException` côté Spring.
+        for d in erreurs:
+            if d["loc"][:1] in (("path",), ("query",)) and d["type"] in TYPES_PARAMETRE_ILLISIBLE:
+                nom = str(d["loc"][1])
+                return reponse(
+                    requete,
+                    HTTPStatus.BAD_REQUEST,
+                    f"Valeur invalide pour le paramètre : {NOMS_PARAMETRES_SPRING.get(nom, nom)}.",
+                )
         return reponse(requete, HTTPStatus.BAD_REQUEST, _message_validation(exc))
 
     @app.exception_handler(StarletteHTTPException)

@@ -24,6 +24,11 @@ def _courriel(valeur: str) -> str:
     return valeur
 
 
+def regle_metier(champ: str, message: str) -> PydanticCustomError:
+    """Règle d'un `@AssertTrue` de Spring : l'erreur se rapporte à la propriété `champ`, pas à un champ saisi."""
+    return PydanticCustomError("regle_metier", message, {"champ": champ})
+
+
 NonVide = Annotated[str, AfterValidator(_non_vide)]
 """Équivalent de `@NotBlank` : au moins un caractère qui n'est pas une espace."""
 

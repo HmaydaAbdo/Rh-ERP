@@ -3,7 +3,7 @@
 from sqlalchemy import BigInteger, ForeignKey, Identity, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from staport.platform.base_de_donnees import Base
+from staport.platform.base_de_donnees import Base, version_suivante
 
 
 class PreferenceAccueil(Base):
@@ -14,7 +14,7 @@ class PreferenceAccueil(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     utilisateur_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("utilisateur.id", name="fk_accueil_preference_utilisateur", ondelete="CASCADE"),

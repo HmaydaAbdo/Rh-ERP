@@ -1,7 +1,9 @@
 from collections.abc import Sequence
 from typing import Any
 
+from pydantic.alias_generators import to_camel
 from sqlalchemy import ColumnElement, case, func, or_, select
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -29,6 +31,7 @@ _TRIS: dict[str, tuple[Any, str | None]] = {
     "nomPrenom": (Employee.nom_prenom, None),
     "cin": (Employee.cin, None),
     "dateEmbauche": (Employee.date_embauche, None),
+    "dateNaissance": (Employee.date_naissance, None),
     "statut": (Employee.statut, None),
     "salaire": (Employee.salaire, None),
     "typeSalaire": (Employee.type_salaire, None),
@@ -36,11 +39,16 @@ _TRIS: dict[str, tuple[Any, str | None]] = {
     "chantier.code": (_CHANTIER.code, "chantier"),
     "equipe.libelle": (_EQUIPE.libelle, "equipe"),
 }
+# Spring Data accepte toute propriété JPA de l'association (`chantier.designation`, `equipe.code`…), pas seulement
+# celles que l'écran utilise : mêmes noms (camelCase des attributs) pour les trois associations.
+for _prefixe, _alias in (("fonction", _FONCTION), ("chantier", _CHANTIER), ("equipe", _EQUIPE)):
+    for _attribut in sa_inspect(_alias).mapper.column_attrs:
+        _TRIS.setdefault(f"{_prefixe}.{to_camel(_attribut.key)}", (getattr(_alias, _attribut.key), _prefixe))
 TRIS_PUBLICS = frozenset(_TRIS)
 # Données de paie : réservées à `PAIE_READ` (Spring : `ProjectionPaieEmployee.CHAMPS_DE_PAIE`, tris retirés sinon).
 CHAMPS_DE_PAIE = frozenset({"salaire", "typeSalaire"})
 # Noms internes (appels programmatiques, p. ex. outils MCP) acceptés en plus des noms publics.
-_ALIAS_INTERNES = {"nom_prenom": "nomPrenom"}
+_ALIAS_INTERNES = {"nom_prenom": "nomPrenom", "date_embauche": "dateEmbauche", "date_naissance": "dateNaissance"}
 
 
 async def par_id(s: AsyncSession, i: int) -> Employee | None:

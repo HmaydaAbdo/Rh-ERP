@@ -19,7 +19,13 @@ from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from . import repository
-from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise, ErreurImportEmployee
+from .exceptions import (
+    EmployeeDejaExistant,
+    EmployeeIntrouvable,
+    EmployeeUtilise,
+    ErreurImportEmployee,
+    ReferenceInvalide,
+)
 from .models import Employee, EmployeeSortie
 from .schemas import (
     ChantierResume,
@@ -147,14 +153,27 @@ class ServiceEmployee:
             r.type_salaire = None
         return r
 
+    @staticmethod
+    async def _verifier_references(
+        s: AsyncSession, fonction_id: int, chantier_id: int | None, equipe_id: int | None
+    ) -> None:
+        """Mêmes contrôles et même ordre que les `resolve…Reference` de Spring (fonction, chantier, équipe)."""
+        if await s.get(Fonction, fonction_id) is None:
+            raise ReferenceInvalide("Fonction", fonction_id)
+        if chantier_id is not None and await s.get(Chantier, chantier_id) is None:
+            raise ReferenceInvalide("Chantier", chantier_id)
+        if equipe_id is not None and await s.get(Equipe, equipe_id) is None:
+            raise ReferenceInvalide("Équipe", equipe_id)
+
     async def creer(self, s: AsyncSession, r: EmployeeCreationRequete, voit_paie: bool) -> EmployeeReponse:
         action = self._auditeur.auditer(s, "EMPLOYE_CREATION", TypeOperation.CREATE, "Employee")
         async with s.begin(), action as cible:
             cin = r.cin.strip()
             if await repository.existe_cin(s, cin):
                 raise EmployeeDejaExistant(cin)
+            await self._verifier_references(s, r.fonction_id, r.chantier_id, r.equipe_id)
             x = Employee(
-                nom_prenom=r.nom_prenom.strip(),
+                nom_prenom=r.nom_prenom,
                 cin=cin,
                 date_naissance=r.date_naissance,
                 date_embauche=r.date_embauche,
@@ -177,9 +196,13 @@ class ServiceEmployee:
             x = await self._obtenir(s, i)
             verifier_version(r.version, x.version)
             if await repository.existe_cin(s, r.cin.strip(), i):
-                raise EmployeeDejaExistant(r.cin)
+                raise EmployeeDejaExistant(r.cin.strip())
+            actif = r.statut.value == "ACTIF"
+            await self._verifier_references(
+                s, r.fonction_id, r.chantier_id if actif else None, r.equipe_id if actif else None
+            )
             x.nom_prenom, x.cin, x.date_naissance, x.date_embauche, x.fonction_id, x.statut = (
-                r.nom_prenom.strip(),
+                r.nom_prenom,
                 r.cin.strip(),
                 r.date_naissance,
                 r.date_embauche,

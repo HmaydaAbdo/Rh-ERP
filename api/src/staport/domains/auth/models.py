@@ -22,7 +22,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from staport.platform.base_de_donnees import Base
+from staport.platform.base_de_donnees import Base, version_suivante
 
 # Table du domaine employee, déclarée ici pour la seule clé étrangère ; son modèle complet arrive avec KAN-49.
 employe = Table(
@@ -66,7 +66,7 @@ class Permission(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
 
@@ -76,7 +76,7 @@ class Role(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     nom: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str | None] = mapped_column(String(255))
     permissions: Mapped[set[Permission]] = relationship(secondary=role_permission, lazy="raise")
@@ -93,7 +93,7 @@ class Utilisateur(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     mot_de_passe_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -117,7 +117,7 @@ class RefreshToken(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     utilisateur_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("utilisateur.id", ondelete="CASCADE"))
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expire_le: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -135,7 +135,7 @@ class ResetPasswordToken(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
-    __mapper_args__ = {"version_id_col": version}  # noqa: RUF012
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": version_suivante}  # noqa: RUF012
     utilisateur_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("utilisateur.id", ondelete="CASCADE"))
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     expire_le: Mapped[datetime] = mapped_column(DateTime, nullable=False)

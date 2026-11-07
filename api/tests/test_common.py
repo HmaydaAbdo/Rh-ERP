@@ -95,11 +95,18 @@ def test_erreur_imprevue_ne_fuite_aucun_detail(client: TestClient) -> None:
 
 
 def test_validation_donne_400_avec_champ_et_message(client: TestClient) -> None:
-    r = client.post("/saisie", json={"nom": "", "age": "x"})
+    r = client.post("/saisie", json={"nom": "", "age": 3})
     assert r.status_code == 400
     corps = r.json()
     assert corps["status"] == 400 and corps["error"] == "Bad Request"
-    assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)., age : Un nombre entier est attendu."
+    assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)."
+
+
+def test_type_json_impossible_a_lire_donne_le_message_du_corps_illisible_comme_spring(client: TestClient) -> None:
+    """Banc différentiel (KAN-226) : Jackson refuse le corps entier, sans détail de champ."""
+    r = client.post("/saisie", json={"nom": "", "age": "x"})
+    assert r.status_code == 400
+    assert r.json()["message"] == "Corps de la requête illisible."
 
 
 def test_corps_illisible_donne_400_message_spring(client: TestClient) -> None:

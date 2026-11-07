@@ -14,7 +14,7 @@ class FonctionDejaExistante(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
     def __init__(self, libelle: str) -> None:
-        super().__init__(f"Une fonction avec le libellé existe déjà : {libelle}")
+        super().__init__(f"Une fonction existe déjà avec le libellé : {libelle}")
 
 
 class FonctionUtilisee(ErreurMetier):
