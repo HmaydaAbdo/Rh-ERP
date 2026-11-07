@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,10 +8,16 @@ from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 
-from . import repository
+from . import import_fichier, repository
 from .exceptions import FonctionDejaExistante, FonctionIntrouvable, FonctionUtilisee
 from .models import Fonction
-from .schemas import FonctionCreationRequete, FonctionModificationRequete, FonctionRecherche, FonctionReponse
+from .schemas import (
+    FonctionCreationRequete,
+    FonctionImportReponse,
+    FonctionModificationRequete,
+    FonctionRecherche,
+    FonctionReponse,
+)
 
 
 def _reponse(fonction: Fonction) -> FonctionReponse:
@@ -75,3 +83,10 @@ class ServiceFonction:
         if ligne is None:
             raise FonctionIntrouvable(identifiant)
         return ligne
+
+    async def importer(self, session: AsyncSession, nom_fichier: str | None, contenu: bytes) -> FonctionImportReponse:
+        return await import_fichier.importer(self._auditeur, session, nom_fichier, contenu)
+
+    @staticmethod
+    def modele_import() -> BytesIO:
+        return import_fichier.generer_modele()

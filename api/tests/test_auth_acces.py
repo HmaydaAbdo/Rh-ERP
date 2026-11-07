@@ -302,11 +302,15 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("GET", "/functions/{identifiant}"): {"FUNCTION_READ"},
     ("POST", "/functions/search"): {"FUNCTION_READ"},
     ("DELETE", "/functions/{identifiant}"): {"FUNCTION_DELETE"},
+    ("POST", "/functions/import"): {"FUNCTION_IMPORT"},
+    ("GET", "/functions/import/modele"): {"FUNCTION_IMPORT"},
     ("POST", "/equipes"): {"EQUIPE_WRITE"},
     ("PUT", "/equipes/{identifiant}"): {"EQUIPE_WRITE"},
     ("GET", "/equipes/{identifiant}"): {"EQUIPE_READ"},
     ("POST", "/equipes/search"): {"EQUIPE_READ"},
     ("DELETE", "/equipes/{identifiant}"): {"EQUIPE_DELETE"},
+    ("POST", "/equipes/import"): {"EQUIPE_IMPORT"},
+    ("GET", "/equipes/import/modele"): {"EQUIPE_IMPORT"},
     ("POST", "/chantiers"): {"CHANTIER_WRITE"},
     ("PUT", "/chantiers/{identifiant}"): {"CHANTIER_WRITE"},
     ("PUT", "/chantiers/{identifiant}/statut"): {"CHANTIER_WRITE"},
@@ -364,7 +368,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 71
+    assert len(declarees) == 75
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

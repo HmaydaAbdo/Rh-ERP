@@ -24,3 +24,7 @@ class FonctionUtilisee(ErreurMetier):
         super().__init__(
             "Cette fonction est utilisée par au moins un employé ou un bulletin de paie et ne peut pas être supprimée."
         )
+
+
+class ErreurImportFonction(ErreurMetier):
+    """Fichier illisible (HTTP 400, comme `FunctionImportException`) ; une ligne invalide n'en est pas une."""
