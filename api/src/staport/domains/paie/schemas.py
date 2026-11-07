@@ -46,6 +46,17 @@ class PaieRecherche(ModeleApi):
     equipe_ids: list[int] | None = None
 
 
+class PaieSuppressionGroupeRequete(ModeleApi):
+    """Groupe décrit par `criteres` (mois obligatoire) ; `nombre_attendu` est le nombre confirmé par l'utilisateur."""
+
+    criteres: PaieRecherche
+    nombre_attendu: Annotated[int, Field(ge=0)]
+
+
+class PaieSuppression(ModeleApi):
+    supprimes: int
+
+
 class PaieEmployeeResume(ModeleApi):
     id: int
     nom_prenom: str

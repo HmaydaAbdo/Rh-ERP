@@ -1,6 +1,6 @@
 from typing import cast
 
-from sqlalchemy import ColumnElement, case, func, or_, select
+from sqlalchemy import ColumnElement, Select, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -66,7 +66,8 @@ async def existe(s: AsyncSession, employee_id: int, periode: int, sauf_id: int |
     return (await s.execute(q)).scalar_one() > 0
 
 
-async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[list[Paie], int]:
+def _selection(c: PaieRecherche) -> Select[Paie]:
+    """Filtre unique de la liste et de la suppression de groupe : le groupe supprimé est celui que la liste compte."""
     f: list[ColumnElement[bool]] = []
     base = select(Paie)
     if c.cin or c.nom_prenom:
@@ -89,7 +90,15 @@ async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[
             f.append(or_(Paie.equipe_id.in_(equipes), Paie.equipe_id.is_(None)))
         else:
             f.append(Paie.equipe_id.in_(equipes))
-    q = base.where(*f)
+    return base.where(*f)
+
+
+async def groupe(s: AsyncSession, c: PaieRecherche) -> list[Paie]:
+    return list((await s.execute(_selection(c).order_by(Paie.id.asc()))).scalars().all())
+
+
+async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[list[Paie], int]:
+    q = _selection(c)
     total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
     for champ, asc in p.tri:
         q = q.order_by(getattr(Paie, champ).asc() if asc else getattr(Paie, champ).desc())
