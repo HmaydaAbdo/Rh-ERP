@@ -55,7 +55,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
                 paie,
                 SimpleNamespace(nom_prenom=nom, cin=nom),
                 chantier,
-                SimpleNamespace(id=equipe_id, libelle=equipe),
+                SimpleNamespace(id=equipe_id, code=equipe, libelle=equipe),
                 fonction,
             )
         )
@@ -80,7 +80,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
-    assert "Page 1 / 5" in html and "Page 5 / 5" in html
+    assert "Page 1 / 6" in html and "Page 6 / 6" in html
+    assert "STC (PERS.)" in html
     html_equipe = rendre(
         PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
         lignes,
@@ -91,13 +92,13 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     )
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
     assert "Masse salariale par fonction (DH)" in html_equipe
-    assert "Page 7 / 7" in html_equipe
+    assert "Page 8 / 8" in html_equipe
     filtre = PaieRapportRequete(periode="2026-10", nom_prenom="Ali%", sans_vue_ensemble=True)
     html_filtre = rendre(filtre, lignes)
     assert "Périmètre du rapport" in html_filtre
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "Synthèse de la paie" not in html_filtre
-    assert "Page 1 / 4" in html_filtre and "Page 4 / 4" in html_filtre
+    assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
 
     lignes_nombreuses: list[tuple[Any, Any, Any, Any, Any]] = [
         (paie, SimpleNamespace(nom_prenom=f"Employé {i}", cin=f"CIN{i}"), chantier, equipe, fonction)
@@ -106,8 +107,9 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     ]
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
-    assert "Page 6 / 6" in html_nombreux
-    assert html_nombreux.count("<thead><tr>") == 1
+    assert "Page 7 / 7" in html_nombreux
+    assert html_nombreux.count("<thead><tr>") == 2
+    assert html_nombreux.count('<table class="recap fonction">') == 1
 
 
 def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
@@ -137,6 +139,15 @@ def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
     )
     assert "12/2025" in svg and "2/2026" in svg
     assert "1/2026" not in svg
+
+
+def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
+    rapport = cast(Any, report)
+    assert rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 0}) is None
+    assert rapport._graphique_materiel("C168", "XX", {"CAMION CITERNE": 2}) is None
+    graphique = rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 2})
+    assert graphique is not None and "Parc matériel — CAMION" in graphique
+    assert "CAMION CITERNE" in graphique and "<svg" in graphique
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
