@@ -360,3 +360,34 @@ def test_la_modification_met_a_jour_l_equipe_de_l_employe(
     assert reponse.status_code == 200, reponse.text
     assert reponse.json()["equipe"]["id"] == equipe
     assert _equipe_employe(plateforme, jeu.employes[0]) == equipe
+
+
+def test_la_synchronisation_d_equipe_n_ecrit_qu_une_entree_de_journal_et_une_revision_employe(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe: int
+) -> None:
+    """Comme `GenericAuditAspect` : seule l'action la plus externe écrit une entrée ; l'historique garde l'employé."""
+    corps = _corps_bulletin(jeu, jeu.employes[0], "2098-06", equipeId=equipe)
+
+    reponse = plateforme.client.post("/paie", headers=_entetes(connecter), json=corps)
+
+    assert reponse.status_code == 201, reponse.text
+    with plateforme.moteur.connect() as c:
+        entree = (
+            c.execute(
+                text(
+                    "SELECT request_id, revision_id FROM audit_journal "
+                    "WHERE action = 'PAIE_CREATION' ORDER BY id DESC LIMIT 1"
+                )
+            )
+            .mappings()
+            .one()
+        )
+        autres = c.execute(
+            text("SELECT count(*) FROM audit_journal WHERE request_id = :r"), {"r": entree["request_id"]}
+        ).scalar_one()
+        revisions_employe = c.execute(
+            text("SELECT count(*) FROM employe_aud WHERE rev = :r AND id = :e"),
+            {"r": entree["revision_id"], "e": jeu.employes[0]},
+        ).scalar_one()
+    assert autres == 1
+    assert revisions_employe == 1
