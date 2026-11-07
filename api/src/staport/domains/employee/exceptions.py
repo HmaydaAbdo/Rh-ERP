@@ -22,3 +22,7 @@ class EmployeeUtilise(ErreurMetier):
 
     def __init__(self):
         super().__init__("Cet employé est encore référencé et ne peut pas être supprimé.")
+
+
+class ErreurImportEmployee(ErreurMetier):
+    """Fichier illisible, vide ou au mauvais format (HTTP 400, comme `EmployeeImportException`)."""
