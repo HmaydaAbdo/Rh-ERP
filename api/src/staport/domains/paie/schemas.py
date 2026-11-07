@@ -39,7 +39,6 @@ class PaieModificationRequete(PaieChampsBulletin):
 class PaieRecherche(ModeleApi):
     cin: str | None = Field(default=None, max_length=30)
     nom_prenom: str | None = Field(default=None, max_length=150)
-    employee_id: int | None = None
     periode: PeriodePaie | None = None
     fonction_ids: list[int] | None = None
     chantier_ids: list[int] | None = None

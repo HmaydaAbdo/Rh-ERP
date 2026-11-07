@@ -44,8 +44,13 @@ from .schemas import (
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
 PagePaie = Annotated[Pagination, Depends(pagination("periode", TRIS_PUBLICS))]
-PageChantiers = Annotated[Pagination, Depends(pagination("code", frozenset({"code"})))]
-PageEquipes = Annotated[Pagination, Depends(pagination("libelle", frozenset({"libelle", "code"})))]
+PageChantiers = Annotated[
+    Pagination, Depends(pagination("code", frozenset({"code"}), taille_defaut=30, tri_ignore_si_inconnu=True))
+]
+PageEquipes = Annotated[
+    Pagination,
+    Depends(pagination("libelle", frozenset({"libelle", "code"}), taille_defaut=30, tri_ignore_si_inconnu=True)),
+]
 paies = APIRouter(prefix="/paie", tags=["Paie"])
 
 
@@ -65,7 +70,7 @@ async def periodes(session: Session, contexte: Contexte) -> list[PaiePeriodeResu
 
 @paies.post("/periodes/search", dependencies=[Depends(exiger("PAIE_READ"))])
 async def periodes_recherche(
-    corps: PaieRecherche | None, session: Session, contexte: Contexte
+    corps: PaieRecherche | None = None, *, session: Session, contexte: Contexte
 ) -> list[PaiePeriodeResume]:
     return await contexte.paies.periodes_recherche(session, corps or PaieRecherche())
 
@@ -105,13 +110,13 @@ async def options_equipes(
 
 
 @paies.post("/effectifs", dependencies=[Depends(exiger("PAIE_READ"))])
-async def effectifs(corps: PaieRecherche | None, session: Session, contexte: Contexte) -> list[PaieEffectifMois]:
+async def effectifs(session: Session, contexte: Contexte, corps: PaieRecherche | None = None) -> list[PaieEffectifMois]:
     return await contexte.paies.effectifs(session, corps or PaieRecherche())
 
 
-@paies.get("/employes/{employee_id}/parcours", dependencies=[Depends(exiger("PAIE_READ"))])
-async def parcours(employee_id: int, session: Session, contexte: Contexte) -> PaieParcoursReponse:
-    return await contexte.paies.parcours(session, employee_id)
+@paies.get("/employes/{id}/parcours", dependencies=[Depends(exiger("PAIE_READ"))])
+async def parcours(id: int, session: Session, contexte: Contexte) -> PaieParcoursReponse:
+    return await contexte.paies.parcours(session, id)
 
 
 @paies.post("/export", dependencies=[Depends(exiger("PAIE_EXPORT"))])
@@ -204,7 +209,9 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> PaieRe
 
 
 @paies.post("/search", dependencies=[Depends(exiger("PAIE_READ"))], response_model=PaiesPage)
-async def rechercher(corps: PaieRecherche | None, page: PagePaie, session: Session, contexte: Contexte) -> PaiesPage:
+async def rechercher(
+    page: PagePaie, session: Session, contexte: Contexte, corps: PaieRecherche | None = None
+) -> PaiesPage:
     return await contexte.paies.rechercher(session, corps, page)
 
 

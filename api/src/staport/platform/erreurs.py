@@ -91,6 +91,13 @@ def reponse(requete: Request, statut: HTTPStatus, message: str) -> JSONResponse:
     return JSONResponse(status_code=statut.value, content=corps.model_dump(mode="json"))
 
 
+def _periode_corps_illisible(requete: Request) -> bool:
+    """Heures supp et paie (hors export/rapport) : un `YearMonth` mal formé rend le corps illisible côté Spring."""
+    chemin = requete.url.path
+    sortie = chemin in ("/paie/export", "/paie/report/pdf")
+    return (chemin.startswith("/heures-supp/") or (chemin.startswith("/paie") and not sortie)) and _corps_json(requete)
+
+
 def _corps_json(requete: Request) -> bool:
     return requete.headers.get("content-type", "").startswith("application/json")
 
@@ -142,7 +149,7 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
         for d in erreurs:
             if d["loc"][-1:] == ("periode",):
                 # Heures supp : `YearMonth` d'un corps JSON mal formé → corps illisible côté Spring.
-                if d["type"] != "missing" and requete.url.path.startswith("/heures-supp/") and _corps_json(requete):
+                if d["type"] != "missing" and _periode_corps_illisible(requete):
                     return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
                 if d["type"] == "missing":
                     if _corps_json(requete):  # DTO : Spring le contrôle

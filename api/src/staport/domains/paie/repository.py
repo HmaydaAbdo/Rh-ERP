@@ -111,8 +111,6 @@ def _selection(c: PaieRecherche) -> Select[Paie]:
         f.append(func.lower(Employee.cin).like(f"%{c.cin.strip().lower()}%"))
     if c.nom_prenom:
         f.append(func.lower(Employee.nom_prenom).like(f"%{c.nom_prenom.strip().lower()}%"))
-    if c.employee_id is not None:
-        f.append(Paie.employee_id == c.employee_id)
     if c.periode is not None:
         f.append(Paie.periode == c.periode)
     if c.fonction_ids:

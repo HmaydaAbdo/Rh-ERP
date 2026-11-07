@@ -15,6 +15,7 @@ SCENARIOS = [
     "scenarios_referentiels",
     "scenarios_paie_import",
     "scenarios_paie_sorties",
+    "scenarios_paie_lectures",
     "scenarios_heures_supp",
 ]
 

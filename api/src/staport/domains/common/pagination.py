@@ -38,7 +38,13 @@ def _entier(brut: str | None, defaut: int) -> int:
         return defaut
 
 
-def pagination(tri_defaut: str, autorises: frozenset[str]) -> Callable[..., Pagination]:
+def pagination(
+    tri_defaut: str,
+    autorises: frozenset[str],
+    *,
+    taille_defaut: int = TAILLE_DEFAUT,
+    tri_ignore_si_inconnu: bool = False,
+) -> Callable[..., Pagination]:
     """Dépendance FastAPI : `Depends(pagination("username", frozenset({...})))`."""
 
     def lire(
@@ -50,15 +56,17 @@ def pagination(tri_defaut: str, autorises: frozenset[str]) -> Callable[..., Pagi
         # illisible ou nulle vaut la taille par défaut, jamais une erreur.
         numero = _entier(page, 0)
         numero = 0 if numero < 0 else numero
-        demande = _entier(size, TAILLE_DEFAUT)
-        taille = TAILLE_DEFAUT if demande < 1 else min(demande, TAILLE_MAX)
+        demande = _entier(size, taille_defaut)
+        taille = taille_defaut if demande < 1 else min(demande, TAILLE_MAX)
         criteres: list[tuple[str, bool]] = []
         for brut in sort or [tri_defaut]:
             champ, _, sens = brut.partition(",")
             champ = champ.strip()
             if champ not in autorises:
+                if tri_ignore_si_inconnu:  # Spring : tri de liste d'options fixe, `sort` ignoré
+                    continue
                 raise TriInvalide(champ)
             criteres.append((champ, sens.strip().lower() != "desc"))
-        return Pagination(page=numero, taille=taille, tri=tuple(criteres))
+        return Pagination(page=numero, taille=taille, tri=tuple(criteres) or ((tri_defaut, True),))
 
     return lire
