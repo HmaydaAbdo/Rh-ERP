@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any, cast
@@ -5,7 +6,7 @@ from typing import Any, cast
 from conftest import ADMIN, Plateforme
 
 from staport.domains.common.audit_contexte import Auditeur
-from staport.domains.paie.report import ServiceRapportPaie, _montant, _quantite
+from staport.domains.paie.report import ServiceRapportPaie, _montant, _quantite  # pyright: ignore[reportPrivateUsage]
 from staport.domains.paie.schemas import PaieRapportRequete
 
 
@@ -22,7 +23,7 @@ def test_rapport_incomplet_ne_peut_pas_etre_telecharge(plateforme: Plateforme, c
 def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     chantier = SimpleNamespace(code="CH01", nom="Chantier A")
     fonction = SimpleNamespace(libelle="Conducteur")
-    lignes = []
+    lignes: list[tuple[Any, Any, Any, Any, Any]] = []
     for nom, equipe in (("Alice", "CH"), ("Bob", "OP"), ("Claire", "Autre")):
         paie = SimpleNamespace(
             chantier_id=1,
@@ -40,7 +41,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
         )
     requete = PaieRapportRequete(periode="2026-10", regroupements_equipes_par_chantier={"CH01": [["CH", "OP"]]})
     service = ServiceRapportPaie(cast(Auditeur, object()))
-    html = service._html(requete, cast(Any, lignes))
+    rendre = cast(Callable[..., str], service._html)  # pyright: ignore[reportPrivateUsage]
+    html = rendre(requete, lignes)
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
     assert html.count('<td class="nom-prenom">') == 3
@@ -48,18 +50,18 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">OP</td>' in html
     assert "Page 1 / 3" in html and "Page 3 / 3" in html
     filtre = PaieRapportRequete(periode="2026-10", nom_prenom="Ali%", sans_vue_ensemble=True)
-    html_filtre = service._html(filtre, cast(Any, lignes))
+    html_filtre = rendre(filtre, lignes)
     assert "Périmètre du rapport" in html_filtre
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "Synthèse de la paie" not in html_filtre
     assert "Page 1 / 2" in html_filtre and "Page 2 / 2" in html_filtre
 
-    lignes_nombreuses = [
+    lignes_nombreuses: list[tuple[Any, Any, Any, Any, Any]] = [
         (paie, SimpleNamespace(nom_prenom=f"Employé {i}", cin=f"CIN{i}"), chantier, equipe, fonction)
         for i in range(65)
         for paie, _, chantier, equipe, fonction in lignes[:1]
     ]
-    html_nombreux = service._html(PaieRapportRequete(periode="2026-10"), cast(Any, lignes_nombreuses))
+    html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
     assert "Page 4 / 4" in html_nombreux
     assert html_nombreux.count("<thead><tr>") == 1
