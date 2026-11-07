@@ -25,6 +25,7 @@ import httpx
 from openpyxl import load_workbook
 
 URLS = {"spring": "http://127.0.0.1:8081", "python": "http://127.0.0.1:8082"}
+MOT_DE_PASSE_TEST = "Diff-Test-Pwd-2026!"
 IDENTIFIANTS = {"username": "ci-admin", "password": "Diff-Admin-Pwd-2026!"}
 EN_TETES_UTILES = ("content-disposition", "content-type", "cache-control", "x-content-type-options")
 CLES_HORODATAGE = re.compile(
@@ -47,6 +48,7 @@ class Etape:
     donnees: dict[str, Any] | None = None
     parties_json: dict[str, Any] | None = None  # parties multipart application/json (@RequestPart)
     jeton: bool = True
+    utilisateur: str | None = None  # nom d'un compte créé par le scénario (mot de passe MOT_DE_PASSE_TEST), sinon admin
     capture: dict[str, str] | None = None  # nom -> chemin pointé dans la réponse JSON, ré-injecté en {nom}
     trier_listes: bool = False  # ordre non spécifié : compare les listes comme des ensembles
     ignorer: tuple[str, ...] = ()  # chemins pointés exclus (écart accepté documenté)
@@ -92,6 +94,7 @@ class Backend:
         self.nom = nom
         self.client = httpx.Client(base_url=URLS[nom], timeout=60.0)
         self.jeton: str | None = None
+        self.jetons_utilisateurs: dict[str, str] = {}
         self.captures: dict[str, Any] = {}
 
     def connecter(self) -> None:
@@ -102,7 +105,18 @@ class Backend:
     def executer(self, e: Etape) -> Reponse:
         chemin = e.chemin.format(**self.captures)
         en_tetes = dict(e.en_tetes or {})
-        if e.jeton and self.jeton:
+        if e.jeton and e.utilisateur:
+            if e.utilisateur not in self.jetons_utilisateurs:
+                connexion = httpx.post(
+                    URLS[self.nom] + "/auth/login",
+                    json={"username": e.utilisateur, "password": MOT_DE_PASSE_TEST},
+                    timeout=60.0,
+                )
+                self.jetons_utilisateurs[e.utilisateur] = (
+                    connexion.json().get("accessToken", "") if connexion.status_code == 200 else ""
+                )
+            en_tetes["Authorization"] = f"Bearer {self.jetons_utilisateurs[e.utilisateur]}"
+        elif e.jeton and self.jeton:
             en_tetes["Authorization"] = f"Bearer {self.jeton}"
         kwargs: dict[str, Any] = {"headers": en_tetes, "params": _formater(e.params, self.captures)}
         if e.fichiers or e.parties_json:
@@ -148,7 +162,13 @@ def _formater(valeur: Any, captures: dict[str, Any]) -> Any:
 def _extraire(corps: Any, chemin: str) -> Any:
     courant = corps
     for morceau in chemin.split("."):
-        courant = courant[int(morceau)] if isinstance(courant, list) else courant[morceau]
+        if (
+            isinstance(courant, list) and "=" in morceau
+        ):  # « code=PAIE_READ » : l'élément dont ce champ vaut cette valeur
+            champ, _, valeur = morceau.partition("=")
+            courant = next(x for x in courant if str(x[champ]) == valeur)
+        else:
+            courant = courant[int(morceau)] if isinstance(courant, list) else courant[morceau]
     return courant
 
 

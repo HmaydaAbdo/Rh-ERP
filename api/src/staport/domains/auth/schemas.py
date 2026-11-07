@@ -55,7 +55,7 @@ class RoleRecherche(ModeleApi):
 
 class UtilisateurCreationRequete(ModeleApi):
     username: Annotated[Rogne, Field(min_length=3, max_length=50)]
-    email: Annotated[Rogne, Field(max_length=255), Courriel]
+    email: Annotated[Courriel, BeforeValidator(_strip), Field(max_length=255)]
     mot_de_passe: Annotated[NonVide, Field(max_length=100)]
     employee_id: int | None = None
     role_ids: Identifiants
@@ -63,7 +63,7 @@ class UtilisateurCreationRequete(ModeleApi):
 
 class UtilisateurModificationRequete(ModeleApi):
     version: int
-    email: Annotated[Rogne, Field(max_length=255), Courriel]
+    email: Annotated[Courriel, BeforeValidator(_strip), Field(max_length=255)]
     actif: bool
     employee_id: int | None = None
     role_ids: Identifiants
