@@ -126,6 +126,14 @@ Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serve
 chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.
 
+Le contrat HTTP FastAPI du wizard utilise `multipart/form-data` sur les trois étapes : `file` et
+`periode` sont des champs du formulaire; `/import/corrections` reçoit également `corrections` comme
+texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, dateNaissance,
+dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
+identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
+de correction exige `PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`; l'analyse exige `PAIE_IMPORT` et
+`PAIE_READ`. Les contrôles de contrat et les preuves de parité restent consignés dans KAN-226.
+
 Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois lignes d'en-tête) :
 `Nom & prénom`, `Fonction`, `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`,
 `Total`, `Observation`, `Chantier`, `Équipe`.

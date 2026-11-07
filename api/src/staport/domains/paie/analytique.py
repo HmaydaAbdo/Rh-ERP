@@ -78,7 +78,7 @@ def construire_analytique(periode: int, lignes: list[Ligne], pas_tranche: Decima
             evolution=evolution,
             qualite=PaieQualite(sans_equipe=0, sans_observation=0),
         )
-    chantiers = []
+    chantiers: list[PaieChantierMasse] = []
     for groupe in _groupes(courant, 3):
         chantier = groupe[0][3]
         mesure = _kpi(groupe)
@@ -93,7 +93,7 @@ def construire_analytique(periode: int, lignes: list[Ligne], pas_tranche: Decima
                 stc_montant=mesure.stc_montant,
             )
         )
-    equipes = []
+    equipes: list[PaieEquipeMasse] = []
     for groupe in _groupes(courant, 4):
         equipe = groupe[0][4]
         mesure = _kpi(groupe)
@@ -108,7 +108,7 @@ def construire_analytique(periode: int, lignes: list[Ligne], pas_tranche: Decima
                 stc_montant=mesure.stc_montant,
             )
         )
-    fonctions = []
+    fonctions: list[PaieFonctionMasse] = []
     for groupe in _groupes(courant, 2):
         fonction = groupe[0][2]
         mesure = _kpi(groupe)

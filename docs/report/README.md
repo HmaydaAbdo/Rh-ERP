@@ -124,8 +124,11 @@ Les équipes sont proposées par leur libellé; les codes servent au rattachemen
 ## Permissions et audit
 
 Les deux routes d'export exigent `PAIE_EXPORT`. L'assistant lit également les périodes, marchés et
-tableaux matériel avec `PAIE_READ`. Les exports sont tracés dans l'audit sous `PAIE_EXPORT_EXCEL` et
-`PAIE_RAPPORT_PDF`. La permission d'export ne permet pas d'écrire dans la paie.
+tableaux matériel avec `PAIE_READ`. Le backend Spring trace actuellement les exports sous
+`PAIE_EXPORT_EXCEL` et `PAIE_RAPPORT_PDF`. Le backend Python suit la décision plus récente du
+propriétaire : le journal d'audit contient les opérations de modification, sans lectures ni sorties
+de données ; les exports n'y produisent donc pas d'entrée. La permission d'export ne permet pas
+d'écrire dans la paie.
 Le [catalogue RBAC Paie](../rbac/paie.md) indique les accès détaillés.
 
 ## Mise en œuvre et scénarios
