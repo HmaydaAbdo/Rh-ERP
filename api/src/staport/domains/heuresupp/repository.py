@@ -27,6 +27,7 @@ TRIS: dict[str, Any] = {
     "netAPayer": HeureSupp.net_a_payer,
     "heures": HeureSupp.heures,
     "salaireHoraire": HeureSupp.salaire_horaire,
+    "salaireReference": HeureSupp.salaire_reference,
     "employee.nomPrenom": Employee.nom_prenom,
     "employee.cin": Employee.cin,
     "chantier.code": Chantier.code,
@@ -169,3 +170,13 @@ async def de_la_personne(s: AsyncSession, employee_id: int, periode: int, chanti
         HeureSupp.employee_id == employee_id, HeureSupp.periode == periode, HeureSupp.chantier_id == chantier_id
     )
     return list((await s.execute(q)).scalars().all())
+
+
+async def toutes(s: AsyncSession, c: HeuresSuppRecherche, tri: tuple[tuple[str, bool], ...]) -> list[Fiche]:
+    """Tout le périmètre dans le tri demandé, puis l'employé et l'identifiant (ordre stable du rapport)."""
+    q = _filtrer(_base(), c)
+    for champ, croissant in tri:
+        colonne = TRIS[champ]
+        q = q.order_by(colonne.asc() if croissant else colonne.desc())
+    q = q.order_by(Employee.nom_prenom.asc(), HeureSupp.id.asc())
+    return cast(list[Fiche], [tuple(ligne) for ligne in (await s.execute(q)).all()])
