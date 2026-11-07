@@ -1,0 +1,44 @@
+<div class="app-page">
+  <div class="app-page__header">
+    <h1>Sorties</h1>
+  </div>
+
+  <div class="app-toolbar">
+    <app-month-picker [value]="periode()" (valueChange)="choisir($event)" />
+  </div>
+
+  @if (resultat(); as sorties) {
+    <p class="sortie-resume m-0" aria-live="polite">
+      <strong>{{ sorties.nombre }}</strong>
+      {{ sorties.nombre > 1 ? 'sorties' : 'sortie' }} sur la période {{ sorties.periode }}
+      @for (m of motifs(); track m.motif; let premier = $first) {
+        {{ premier ? ' —' : ',' }} {{ m.motif }} : {{ m.nombre }}
+      }
+    </p>
+  }
+
+  <app-column-chooser [state]="colonnes" />
+  <stp-table
+    label="Sorties du mois"
+    [value]="lignes()"
+    [columns]="colonnes.visible"
+    [loading]="chargement()"
+    [rowActionsVisible]="false"
+    [rowsPerPageOptions]="[10, 20, 50, 100]"
+    emptyMessage="Aucune sortie sur cette période."
+  >
+    <ng-template stpCell let-sortie let-col="col">
+      @switch (col.field) {
+        @case ('nomPrenom') {
+          <a [routerLink]="['/employees', sortie.employeId]">{{ sortie.nomPrenom }}</a>
+        }
+        @case ('motif') {
+          {{ libelleMotif(sortie.motif) }}
+        }
+        @default {
+          {{ sortie[col.field] }}
+        }
+      }
+    </ng-template>
+  </stp-table>
+</div>
