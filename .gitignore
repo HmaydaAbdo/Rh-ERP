@@ -106,3 +106,6 @@ api/.venv/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+# Couverture Python (pytest --cov) : rapports produits en local et en CI
+api/.coverage
+api/coverage.json
