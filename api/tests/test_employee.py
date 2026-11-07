@@ -52,7 +52,37 @@ def test_import_employee_xlsx_est_atomique(plateforme: Plateforme, connecter: An
             "file": ("employes.xlsx", invalide, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         },
     )
-    assert rejet.status_code == 200 and rejet.json()["crees"] == 0 and rejet.json()["ignores"] == 2
+    assert rejet.status_code == 400, rejet.text
+    assert rejet.json()["crees"] == 0 and rejet.json()["ignores"] == 2 and rejet.json()["totalLignes"] == 2
+    assert [ligne["numeroLigne"] for ligne in rejet.json()["lignesIgnorees"]] == [2, 3]
+
+
+def test_import_employee_fichier_illisible_ou_incomplet_est_un_400_avec_message(
+    plateforme: Plateforme, connecter: Any
+) -> None:
+    headers = _auth(connecter)
+    type_xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    etroit = Workbook()
+    feuille = etroit.active
+    assert feuille is not None
+    feuille.append(["Date d'embauche", "Nom & prénom", "CIN"])
+    flux = BytesIO()
+    etroit.save(flux)
+
+    illisible = plateforme.client.post(
+        "/employees/import", headers=headers, files={"file": ("x.xlsx", b"pas un classeur", type_xlsx)}
+    )
+    incomplet = plateforme.client.post(
+        "/employees/import", headers=headers, files={"file": ("x.xlsx", flux.getvalue(), type_xlsx)}
+    )
+
+    assert illisible.status_code == 400
+    assert illisible.json()["message"].startswith("Fichier Excel illisible : ")
+    assert incomplet.status_code == 400
+    assert incomplet.json()["message"] == (
+        "Format de fichier invalide : 6 colonnes attendues (Date d'embauche, Nom & prénom, CIN, Fonction, "
+        "Chantier, Date de naissance), 3 trouvée(s)."
+    )
 
 
 def test_modele_import_employes_reprend_les_six_entetes_spring(plateforme: Plateforme, connecter: Any) -> None:
@@ -113,7 +143,7 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         headers=entetes,
         json={"code": "SOR-1", "designation": "Chantier sorties", "nature": "AO", "afficherSurCarte": False},
     ).json()
-    ids = []
+    ids: list[int] = []
     for nom, cin in (("Zoe Sortie", "CIN-SOR-1"), ("Adam Sortie", "CIN-SOR-2")):
         corps = {
             "nomPrenom": nom,

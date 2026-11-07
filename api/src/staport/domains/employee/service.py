@@ -18,7 +18,7 @@ from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from . import repository
-from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise
+from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise, ErreurImportEmployee
 from .models import Employee, EmployeeSortie
 from .schemas import (
     ChantierResume,
@@ -282,14 +282,15 @@ class ServiceEmployee:
         nouveaux: list[Employee] = []
         try:
             feuille = load_workbook(BytesIO(contenu), read_only=True, data_only=True).active
-            if feuille is None:
-                raise ValueError("Classeur sans feuille")
-            lignes = list(feuille.iter_rows(values_only=True))
+            lignes = list(feuille.iter_rows(values_only=True)) if feuille is not None else []
         except Exception as exc:
-            raise ValueError(f"Fichier Excel illisible : {exc}") from exc
-        if not lignes or len(lignes[0]) < 6:
-            raise ValueError(
-                "Six colonnes attendues : Date d'embauche, Nom & prénom, CIN, Fonction, Chantier, Date de naissance"
+            raise ErreurImportEmployee(f"Fichier Excel illisible : {exc}") from exc
+        if not lignes:
+            raise ErreurImportEmployee("Fichier vide.")
+        if len(lignes[0]) < len(ENTETES_IMPORT):
+            raise ErreurImportEmployee(
+                f"Format de fichier invalide : {len(ENTETES_IMPORT)} colonnes attendues "
+                f"({', '.join(ENTETES_IMPORT)}), {len(lignes[0])} trouvée(s)."
             )
         async with s.begin():
             fonctions = {
