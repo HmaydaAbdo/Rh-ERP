@@ -36,7 +36,14 @@ const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieImportEtapeControleComponent {
-  protected readonly colonnesErreurs: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'cin', header: 'CIN' }, { field: 'nomPrenom', header: 'Nom' }, { field: 'raison', header: 'Problème' }];
+  protected readonly colonnesErreurs: TableColumn[] = [
+    { field: 'numeroLigne', header: 'Ligne' },
+    { field: 'cin', header: 'CIN' },
+    { field: 'nomPrenom', header: 'Nom' },
+    { field: 'champ', header: 'Champ' },
+    { field: 'valeur', header: 'Valeur reçue' },
+    { field: 'raison', header: 'Problème' }
+  ];
   protected readonly store = inject(PaieImportStore);
   protected readonly libellesChamps = LIBELLES_CHAMPS;
   protected readonly typesSalaire = TYPES_SALAIRE;
@@ -58,5 +65,9 @@ export class PaieImportEtapeControleComponent {
 
   protected salaireChange(champs: { champ: PaieImportChamp }[]): boolean {
     return champs.some((c) => c.champ === 'salaire');
+  }
+
+  protected confirmerZero(evenement: Event): void {
+    this.store.confirmerSalaireZero.set((evenement.target as HTMLInputElement).checked);
   }
 }

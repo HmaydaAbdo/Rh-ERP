@@ -12,6 +12,7 @@ const PRETE: PaieImportAnalyse = {
   periode: '2026-10',
   totalLignes: 2,
   erreurs: [],
+  avertissements: [],
   chantiersClotures: [],
   cinInconnus: [],
   ecarts: [],
@@ -72,6 +73,31 @@ describe('PaieImportStore', () => {
     expect(store.mois()).toBeNull();
     store.choisirMois(new Date(2026, 2, 1));
     expect(store.mois()).toBe('2026-03');
+  });
+
+  it('exige la confirmation du salaire zéro sans valider un salaire différent', () => {
+    const salaireZero = {
+      ...PRETE,
+      avertissements: [
+        { numeroLigne: 4, cin: 'AB1', nomPrenom: 'ALI', raison: 'salaire nul', codeAvertissement: 'SALAIRE_ZERO' as const }
+      ],
+      pret: false
+    };
+    service.analyserImport.mockReturnValue(of(salaireZero));
+    store.ouvrir(['2026-09']);
+    store.analyser(fichier);
+    expect(store.pret()).toBe(false);
+    store.confirmerSalaireZero.set(true);
+    expect(store.pret()).toBe(true);
+
+    store.analyse.set({
+      ...salaireZero,
+      avertissements: [
+        ...salaireZero.avertissements,
+        { numeroLigne: 4, cin: 'AB1', nomPrenom: 'ALI', raison: 'salaire différent', codeAvertissement: 'SALAIRE_DIFFERENT' }
+      ]
+    });
+    expect(store.pret()).toBe(false);
   });
 
   it('analyse le fichier, passe au contrôle et coche d’office les départs proposés', () => {
@@ -151,7 +177,7 @@ describe('PaieImportStore', () => {
 
     store.importer(importe);
 
-    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC' }]);
+    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC' }], false);
     expect(store.etat()).toBe('termine');
     expect(store.bilan()?.crees).toBe(2);
     expect(importe).toHaveBeenCalledTimes(1);

@@ -62,7 +62,7 @@ def chantiers(periode: int, lignes: list[Ligne]) -> list[PaieChantierPeriode]:
             courant[chantier_id].append(ligne)
         elif ligne[0].periode == precedent:
             ancien[chantier_id].append(ligne)
-    resultat = []
+    resultat: list[PaieChantierPeriode] = []
     for chantier_id, bulletins in courant.items():
         chantier = bulletins[0][3]
         mesure = _mesure(bulletins)
@@ -70,7 +70,7 @@ def chantiers(periode: int, lignes: list[Ligne]) -> list[PaieChantierPeriode]:
         for ligne in bulletins:
             if ligne[4] is not None:
                 groupes_equipes[ligne[4].id].append(ligne)
-        equipes = []
+        equipes: list[PaieEquipePeriode] = []
         for equipe_id, membres in groupes_equipes.items():
             equipe = cast(Equipe, membres[0][4])
             compteur = _mesure(membres)

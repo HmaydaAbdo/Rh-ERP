@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -291,6 +293,7 @@ class PaieRapportRequete(ModeleApi):
     chantier_ids: list[int] | None = None
     chantier_id: int | None = None
     equipes_par_chantier: dict[str, list[str]] | None = None
+    regroupements_equipes_par_chantier: dict[str, list[list[str]]] | None = None
     materiel: dict[str, int] | None = None
     sans_vue_ensemble: bool | None = None
 
@@ -303,6 +306,8 @@ class PaieImportErreur(ModeleApi):
     valeur: str | None
     raison: str
     avertissement: bool = False
+    code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT"] | None = None
+    type_salaire_propose: Literal["JOURNALIER", "MENSUEL"] | None = None
 
 
 class PaieImportAnalyse(ModeleApi):
@@ -310,26 +315,65 @@ class PaieImportAnalyse(ModeleApi):
     total_lignes: int
     erreurs: list[PaieImportErreur]
     avertissements: list[PaieImportErreur]
+    chantiers_clotures: list[PaieImportChantierCloture]
+    cin_inconnus: list[PaieImportCinInconnu]
+    ecarts: list[PaieImportEcart]
+    departs: list[dict[str, object]]
+    retours: list[dict[str, object]]
     pret: bool
 
 
-class PaieImportCorrection(ModeleApi):
-    employee_id: int
-    nom_prenom: str | None = Field(default=None, max_length=150)
-    fonction_id: int | None = None
-    chantier_id: int | None = None
-    equipe_id: int | None = None
-    salaire: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
-    type_salaire: str | None = Field(default=None, max_length=20)
+class PaieImportChantierCloture(ModeleApi):
+    chantier_id: int
+    code: str
+    designation: str | None
+    lignes: list[int]
 
 
-class PaieImportCreation(ModeleApi):
-    nom_prenom: str = Field(min_length=1, max_length=150)
-    cin: str = Field(min_length=1, max_length=30)
+class PaieImportCinInconnu(ModeleApi):
+    numero_ligne: int
+    cin: str
+    nom_prenom: str | None
+    fonction: str | None
+    chantier: str | None
+    equipe: str | None
+    salaire: Decimal | None
+
+
+class PaieImportChamp(ModeleApi):
+    champ: str
+    base: str | None
+    fichier: str | None
+
+
+class PaieImportEcart(ModeleApi):
+    employe_id: int
+    numero_ligne: int
+    cin: str
+    nom_prenom: str
+    champs: list[PaieImportChamp]
+    type_salaire: Literal["MENSUEL", "JOURNALIER"] | None
+
+
+class PaieImportAlignement(ModeleApi):
+    employe_id: int
+    type_salaire: Literal["MENSUEL", "JOURNALIER"] | None = None
+
+
+class PaieImportCreationCorrection(ModeleApi):
+    numero_ligne: int
     date_naissance: date
     date_embauche: date
-    fonction_id: int
-    chantier_id: int
-    equipe_id: int | None = None
-    salaire: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
-    type_salaire: str | None = Field(default=None, max_length=20)
+    type_salaire: Literal["MENSUEL", "JOURNALIER"]
+
+
+class PaieImportCorrections(ModeleApi):
+    aligner: list[PaieImportAlignement]
+    creer: list[PaieImportCreationCorrection]
+
+
+class PaieImportResult(ModeleApi):
+    periode: str
+    crees: int
+    departs: int
+    retours: int

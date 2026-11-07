@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,8 +20,8 @@ from .schemas import (
     PaieEquipeOption,
     PaieExportRequete,
     PaieImportAnalyse,
-    PaieImportCorrection,
-    PaieImportCreation,
+    PaieImportCorrections,
+    PaieImportResult,
     PaieMaterielTableau,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
@@ -126,9 +126,18 @@ async def rapport_pdf(corps: PaieRapportRequete, session: Session, contexte: Con
     )
 
 
-@paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+@paies.get("/import/modele", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+async def modele_import(contexte: Contexte) -> StreamingResponse:
+    return StreamingResponse(
+        contexte.import_paie.generer_modele(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=Modele_Import_Paie.xlsx"},
+    )
+
+
+@paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT")), Depends(exiger("PAIE_READ"))])
 async def analyser_import(
-    periode: PeriodePaie,
+    periode: Annotated[PeriodePaie, Form()],
     session: Session,
     contexte: Contexte,
     file: UploadFile = File(...),  # noqa: B008
@@ -138,28 +147,32 @@ async def analyser_import(
 
 @paies.post("/import", dependencies=[Depends(exiger("PAIE_IMPORT"))])
 async def importer(
-    periode: PeriodePaie,
+    periode: Annotated[PeriodePaie, Form()],
     session: Session,
     contexte: Contexte,
-    ignorer_salaires_zero: bool = False,
+    ignorer_salaires_zero: Annotated[bool, Form()] = False,
     file: UploadFile = File(...),  # noqa: B008
-) -> dict[str, str | int]:
+) -> PaieImportResult:
     nombre = await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero)
-    return {"periode": afficher_periode(periode), "crees": nombre}
+    return PaieImportResult(periode=afficher_periode(periode), crees=nombre, departs=0, retours=0)
 
 
-@paies.post("/import/corrections", dependencies=[Depends(exiger("PAIE_IMPORT"))])
+@paies.post(
+    "/import/corrections",
+    dependencies=[Depends(exiger("PAIE_IMPORT")), Depends(exiger("PAIE_READ")), Depends(exiger("EMPLOYEE_WRITE"))],
+)
 async def corriger_import(
-    corrections: list[PaieImportCorrection], session: Session, contexte: Contexte
-) -> dict[str, int]:
-    nombre = await contexte.import_paie.corriger(session, corrections)
-    return {"corrigees": nombre}
-
-
-@paies.post("/import/creations", dependencies=[Depends(exiger("PAIE_IMPORT"))])
-async def creer_import(creations: list[PaieImportCreation], session: Session, contexte: Contexte) -> dict[str, int]:
-    nombre = await contexte.import_paie.creer_employes(session, creations)
-    return {"crees": nombre}
+    periode: Annotated[PeriodePaie, Form()],
+    corrections: Annotated[str, Form()],
+    session: Session,
+    contexte: Contexte,
+    file: UploadFile = File(...),  # noqa: B008
+) -> PaieImportAnalyse:
+    try:
+        corps = PaieImportCorrections.model_validate_json(corrections)
+    except ValueError as erreur:
+        raise HTTPException(status_code=422, detail="Corrections invalides.") from erreur
+    return await contexte.import_paie.corriger_et_reanalyser(session, await file.read(), periode, corps)
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])

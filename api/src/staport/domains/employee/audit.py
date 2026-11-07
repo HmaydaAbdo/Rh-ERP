@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, Index, Numeric, SmallInteger, String, Table
+from sqlalchemy import BigInteger, Column, Date, ForeignKey, Index, Numeric, SmallInteger, String, Table
 
 from staport.domains.audit.api import ChampAudite, EntiteAuditee, registre
 from staport.platform.base_de_donnees import Base
@@ -13,8 +13,8 @@ employee_aud = Table(
     Column("revtype", SmallInteger, nullable=False),
     Column("nom_prenom", String(150)),
     Column("cin", String(30)),
-    Column("date_naissance", String),
-    Column("date_embauche", String),
+    Column("date_naissance", Date),
+    Column("date_embauche", Date),
     Column("fonction_id", BigInteger),
     Column("chantier_id", BigInteger),
     Column("equipe_id", BigInteger),

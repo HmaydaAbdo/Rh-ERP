@@ -59,3 +59,22 @@ def repartir_sections[T: LigneEquipe](
     if reste:
         resultat.append((None, reste))
     return resultat
+
+
+def regrouper_sections[T: LigneEquipe](
+    lignes: Sequence[T], equipes_selectionnees: set[str], regroupements: Sequence[Sequence[str]]
+) -> list[tuple[str | None, list[T], bool]]:
+    """Regroupe seulement les équipes explicitement réunies, sans doubler les lignes."""
+    equipes_groupees: set[str] = set()
+    resultat: list[tuple[str | None, list[T], bool]] = []
+    for groupe in regroupements:
+        noms = list(dict.fromkeys(groupe))
+        if len(noms) < 2 or any(nom in equipes_groupees for nom in noms):
+            raise ValueError("Un regroupement doit contenir au moins deux équipes distinctes, utilisées une seule fois")
+        equipes_groupees.update(noms)
+        membres = [ligne for ligne in lignes if ligne.equipe_libelle in noms]
+        if membres:
+            resultat.append((" + ".join(noms), membres, True))
+    autres = [ligne for ligne in lignes if ligne.equipe_libelle not in equipes_groupees]
+    resultat.extend((nom, membres, False) for nom, membres in repartir_sections(autres, equipes_selectionnees))
+    return resultat

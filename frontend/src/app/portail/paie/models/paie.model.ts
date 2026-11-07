@@ -235,7 +235,12 @@ export interface PaieImportErreur {
   numeroLigne: number;
   cin: string | null;
   nomPrenom: string | null;
+  champ?: string | null;
+  valeur?: string | null;
   raison: string;
+  avertissement?: boolean;
+  codeAvertissement?: 'SALAIRE_ZERO' | 'SALAIRE_DIFFERENT' | null;
+  typeSalairePropose?: TypeSalaire | null;
 }
 
 /** Un CIN sans fiche : à créer depuis l'assistant, ou à corriger dans le fichier. */
@@ -283,6 +288,7 @@ export interface PaieImportAnalyse {
   periode: string;
   totalLignes: number;
   erreurs: PaieImportErreur[];
+  avertissements: PaieImportErreur[];
   chantiersClotures: PaieImportChantierCloture[];
   cinInconnus: PaieImportCinInconnu[];
   ecarts: PaieImportEcart[];

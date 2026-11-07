@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from staport.domains.paie.rapport_calcul import mesurer, mesurer_precedent, repartir_sections
+import pytest
+
+from staport.domains.paie.rapport_calcul import mesurer, mesurer_precedent, regrouper_sections, repartir_sections
 
 
 @dataclass
@@ -40,3 +42,19 @@ def test_sections_equipes_et_reste_sans_doublon() -> None:
         (None, [op, sans]),
     ]
     assert repartir_sections([ch, op, sans], set()) == [(None, [ch, op, sans])]
+    assert repartir_sections([ch, op, sans], {"Chauffeurs", "Opérateurs"}) == [
+        ("Chauffeurs", [ch]),
+        ("Opérateurs", [op]),
+        (None, [sans]),
+    ]
+    assert regrouper_sections([ch, op, sans], {"Chauffeurs", "Opérateurs"}, []) == [
+        ("Chauffeurs", [ch], False),
+        ("Opérateurs", [op], False),
+        (None, [sans], False),
+    ]
+    assert regrouper_sections([ch, op, sans], set(), [["Chauffeurs", "Opérateurs"]]) == [
+        ("Chauffeurs + Opérateurs", [ch, op], True),
+        (None, [sans], False),
+    ]
+    with pytest.raises(ValueError):
+        regrouper_sections([ch, op, sans], set(), [["Chauffeurs", "Opérateurs"], ["Opérateurs", "Autres"]])

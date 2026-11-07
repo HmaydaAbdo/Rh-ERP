@@ -18,28 +18,81 @@ Les routes de la vue Cartes (`/paie/periodes/search`, `/paie/chantiers/search`,
 `PAIE_READ`. Les cartes conservent les employés sans équipe dans les totaux et comparent
 uniquement au mois calendaire précédent.
 
-Le périmètre restant avant clôture comprend l'import Excel atomique, les options chantier/équipe,
-l'analytique et les effectifs, le parcours employé, les exports/rapport, la suppression-restauration
-de groupe, les outils MCP et la parité des tests Spring documentés dans `docs/paie/skills/SKILL.md`.
+Dans le prototype Excel, la sélection personnalisée et l'exclusion des feuilles chantier
+interprètent les **libellés** d'équipes du contrat Spring. La comparaison d'une feuille équipe
+est limitée au même chantier et à la même équipe sur le mois précédent ; l'exclusion de la
+feuille chantier s'applique aussi au mois précédent. Les feuilles portent désormais les treize
+colonnes, les deux lignes d'en-tête, la formule de sous-total, le mois précédent, le récapitulatif
+par fonction et, sur les seules feuilles concernées, le tableau matériel du contrat Spring.
+Deux tests de classeur couvrent les périmètres et ce placement. La comparaison visuelle des
+styles, largeurs, formules recalculées dans Excel et données réelles reste à faire.
+
+Le périmètre restant avant clôture comprend le contrat complet du wizard d'import, les exports et
+le rapport PDF, la suppression-restauration de groupe, les outils MCP et la parité exhaustive des
+tests Spring documentés dans `docs/paie/skills/SKILL.md`.
 
 Le calcul automatique n'est pas introduit : `salaire_total` reste une valeur fournie par le contrat
 du bulletin, conformément au domaine existant. Les snapshots historiques et l'unicité employé ×
-période restent des invariants de la table.
+période restent des invariants de la table. L'import Python écrit désormais les révisions des
+bulletins dans `paie_aud` et celles des affectations modifiées dans `employe_aud`. Un test sur une
+base PostgreSQL migrée vérifie l'absence de création de référentiels, la mise à jour de la fiche et
+du bulletin, puis les deux historiques. Le typage des deux dates de l'historique Employé a été
+aligné sur les colonnes PostgreSQL `DATE` après découverte d'un échec transactionnel.
 
 Règle métier validée pour l'import : la création d'un bulletin est distincte de la mise à jour de la
 fiche Employé. Un salaire identique à celui de la fiche (dernier salaire connu) passe automatiquement;
 un salaire différent passe par le wizard, avec type proposé (`≤ 500` journalier, `> 500` mensuel).
 Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
 d'affectation ne sont pas déduits automatiquement.
+L'option « Ignorer et conserver 0 » ne confirme que l'avertissement de salaire nul ; un salaire
+différent de la fiche employé reste à traiter dans le wizard avant la création des bulletins.
+Si le fichier porte `0` et que la fiche porte un autre salaire, les deux avertissements sont rendus
+séparément (`SALAIRE_ZERO` et `SALAIRE_DIFFERENT`). Le second propose le type `JOURNALIER`
+jusqu'à 500 inclus et `MENSUEL` au-dessus ; l'action « Ignorer 0 » ne l'efface pas.
+Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel entièrement vides
+après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
+L'analyse signale avant import un bulletin déjà présent pour l'employé et le mois, ainsi qu'un CIN
+en doublon dans le fichier ou un champ obligatoire absent. Elle nomme aussi le champ et la valeur
+si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides ; les longueurs du nom,
+du CIN et de l'observation sont contrôlées. Lors de la création, le nom, la fonction,
+le chantier et l'équipe renseignée mettent à jour la fiche Employé dans la même transaction que les
+nouveaux bulletins. Une équipe vide sur la ligne reste vide sur le bulletin mais ne supprime pas
+l'affectation de la fiche Employé.
+Fonction, Chantier et Équipe sont des référentiels préexistants : l'analyse signale toute référence
+introuvable et bloque l'import. La Paie n'en crée aucune.
+Un chantier présent mais clôturé est signalé séparément et doit être rouvert avant l'import.
+S'il existe déjà de la paie, seul le mois civil suivant le dernier mois importé est accepté ;
+le refus indique le mois attendu.
 
-Pour l'export, la parité Spring est le comportement par défaut. Une étape optionnelle permet de
-regrouper plusieurs équipes sous un libellé unique (par exemple `CH+OP` pour `CH` et `OP`). Ce
-regroupement ne modifie aucune donnée : il agrège uniquement les lignes, totaux et analyses de
-l'export, partout où l'équipe apparaît.
+Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart/form-data` pour
+l'analyse et l'import final. La correction envoie en plus le texte JSON `corrections` avec les
+alignements et créations proposés; le serveur relit le classeur et vérifie les employés et lignes
+avant d'écrire, puis renvoie une analyse recalculée. Les permissions de correction sont
+`PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`. Cette tranche n'établit pas encore la parité complète
+du wizard : les propositions et confirmations de départ/STC/retour ne sont pas portées par FastAPI;
+les listes correspondantes restent vides et aucune transition de statut n'est déduite.
 
-Un prototype PDF FastAPI utilise WeasyPrint 70.0 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). `POST /paie/report/pdf` répond temporairement `503` : le prototype ne couvre
-pas encore les pages, graphiques, comparaisons et sections du rapport Spring. La route ne sera
+Pour l'export, la parité Spring est le comportement par défaut. Le regroupement demandé est un
+choix distinct de la sélection des équipes à détailler. Le contrat Python prévoit
+`regroupementsEquipesParChantier`, avec des groupes de libellés par chantier. Son calcul réunit les
+lignes des équipes choisies une seule fois, tandis que la sélection classique garde des sections
+séparées. L'étape facultative de l'assistant et l'agrégation de tous les indicateurs du PDF restent
+à livrer avant l'activation ; cette option n'est pas encore disponible à l'utilisateur.
+
+Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). La couverture, les bandeaux et le tableau de détail reprennent la structure
+HTML Spring ; un essai Linux sur trois bulletins a produit trois pages. Après pagination, un essai
+Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre pages de contenu),
+avec 65 lignes présentes dans le modèle HTML.
+Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
+virgule décimale, tiret pour les valeurs numériques absentes).
+Le prototype a une page de périmètre quand un filtre est actif et omet sa synthèse quand
+`sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
+La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
+prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
+`POST /paie/report/pdf`
+répond temporairement `503` : le découpage n'a pas encore de preuve visuelle de parité,
+et les graphiques, comparaisons et sections complètes du rapport Spring restent à porter. La route ne sera
 ouverte qu'après portage complet et comparaison sur un même jeu de données.
 
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
@@ -50,3 +103,8 @@ la valeur reçue et la contrainte violée; le message global « salaires et prim
 Le modèle Excel attendu conserve l'ordre Spring (trois lignes d'en-tête) : `Nom & prénom`, `Fonction`,
 `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`, `Total`, `Observation`,
 `Chantier`, `Équipe`.
+`GET /paie/import/modele` fournit désormais le classeur vierge `.xlsx` avec cet ordre et aucune
+ligne d'exemple, sous `PAIE_IMPORT`.
+Le nom de feuille, les dimensions et toutes les cellules du modèle produit ont été comparés au
+fichier `Modele_Import_Paie.xlsx` fourni par le propriétaire : ils sont identiques. Cette comparaison
+ne porte pas sur les styles ni les propriétés internes du classeur.

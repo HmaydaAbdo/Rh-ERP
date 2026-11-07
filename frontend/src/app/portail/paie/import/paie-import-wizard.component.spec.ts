@@ -11,6 +11,7 @@ const ANALYSE: PaieImportAnalyse = {
   periode: '2026-10',
   totalLignes: 3,
   erreurs: [{ numeroLigne: 4, cin: 'XX1', nomPrenom: 'INCONNU', raison: 'Chantier introuvable : C999' }],
+  avertissements: [],
   chantiersClotures: [{ chantierId: 8, code: 'C059', designation: 'Voirie', lignes: [6] }],
   cinInconnus: [{ numeroLigne: 5, cin: 'NV2', nomPrenom: 'NOUVEAU', fonction: 'MACON', chantier: 'C059', equipe: null, salaire: 4000 }],
   ecarts: [
@@ -80,7 +81,7 @@ describe('PaieImportWizardComponent', () => {
     expect(continuer.disabled).toBe(true);
 
     (dialogue().querySelector('button[aria-label="Mettre à jour la fiche de ALI ALAOUI"]') as HTMLButtonElement).click();
-    expect(service.corrigerImport).toHaveBeenCalledWith(expect.any(File), '2026-10', { aligner: [{ employeId: 9, typeSalaire: null }], creer: [] });
+    expect(service.corrigerImport).toHaveBeenCalledWith(expect.any(File), '2026-10', { aligner: [{ employeId: 9, typeSalaire: 'MENSUEL' }], creer: [] });
   });
 
   it('sans le droit d’écrire les employés, ne propose que de corriger le fichier', async () => {
