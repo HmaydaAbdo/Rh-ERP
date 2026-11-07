@@ -415,3 +415,15 @@ def test_sans_paie_read_les_tris_de_paie_des_employes_sont_retires(
     assert _employes(plateforme, paie, jeu, "salaire,desc") == [0, 2, 1]
     assert _employes(plateforme, paie, jeu, "salaire,asc") == [1, 2, 0]
     assert _employes(plateforme, _entetes(connecter), jeu, "salaire,desc") == [0, 2, 1]
+
+
+def test_sans_paie_read_la_recherche_masque_salaire_et_type(plateforme: Plateforme, connecter: Any, jeu: Jeu) -> None:
+    """Spring (`pourLeLecteur`) : sans `PAIE_READ`, la page ne porte ni salaire ni type de salaire."""
+    lecteur = _lecteur(plateforme, {"EMPLOYEE_READ"})
+    paie = _lecteur(plateforme, {"EMPLOYEE_READ", "PAIE_READ"})
+
+    masque = plateforme.client.post("/employees/search", headers=lecteur, json={}).json()["content"]
+    complet = plateforme.client.post("/employees/search", headers=paie, json={}).json()["content"]
+
+    assert masque and all(e["salaire"] is None and e["typeSalaire"] is None for e in masque)
+    assert any(e["salaire"] is not None for e in complet)

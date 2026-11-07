@@ -99,10 +99,16 @@ class ServiceEmployee:
     def __init__(self, auditeur: Auditeur):
         self._auditeur = auditeur
 
-    async def rechercher(self, s: AsyncSession, c: EmployeeRecherche | None, p: Pagination) -> Page[EmployeeReponse]:
+    async def rechercher(
+        self, s: AsyncSession, c: EmployeeRecherche | None, p: Pagination, voit_paie: bool
+    ) -> Page[EmployeeReponse]:
         async with s.begin():
             rows, total = await repository.rechercher(s, c or EmployeeRecherche(), p)
             contenu = await reponses(s, list(rows))
+        if not voit_paie:
+            for r in contenu:
+                r.salaire = None
+                r.type_salaire = None
         return creer_page(contenu, p.taille, p.page, total)
 
     async def lire(self, s: AsyncSession, i: int, voit_paie: bool) -> EmployeeReponse:
