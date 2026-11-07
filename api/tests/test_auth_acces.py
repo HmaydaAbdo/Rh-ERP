@@ -362,6 +362,17 @@ REQUIS_CUMULATIFS: dict[tuple[str, str], set[str]] = {
     ("PUT", "/heures-supp/{identifiant}"): {"HEURES_SUP_IMPORT", "PAIE_READ"},
     ("POST", "/heures-supp"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ", "CHANTIER_READ"},
     ("DELETE", "/heures-supp/{identifiant}"): {"HEURES_SUP_DELETE", "PAIE_READ"},
+    ("GET", "/heures-supp/import/prerequis"): {"HEURES_SUP_IMPORT", "PAIE_READ", "CHANTIER_READ"},
+    ("POST", "/heures-supp/import/analyse"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("POST", "/heures-supp/import/corrections"): {
+        "HEURES_SUP_IMPORT",
+        "PAIE_READ",
+        "EMPLOYEE_WRITE",
+        "FUNCTION_READ",
+    },
+    ("POST", "/heures-supp/import"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("POST", "/heures-supp/import/remplacement"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("GET", "/heures-supp/import/modele"): {"HEURES_SUP_IMPORT", "PAIE_READ"},
     ("POST", "/heures-supp/suppression-mois"): {"HEURES_SUP_PURGE", "PAIE_READ"},
     ("POST", "/paie"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
     ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
@@ -382,7 +393,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 89
+    assert len(declarees) == 95
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

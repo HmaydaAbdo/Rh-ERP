@@ -20,3 +20,8 @@ class HeuresSuppGroupeModifie(ErreurMetier):
 class LigneIntrouvable(HeuresSuppInvalide):
     def __init__(self) -> None:
         super().__init__("La ligne d'heures supplémentaires demandée n'existe pas.")
+
+
+class InvalidHeuresSuppPeriode(ErreurMetier):
+    def __init__(self, periode: str) -> None:
+        super().__init__(f"Période invalide, format attendu aaaa-MM (ex. 2026-10) : {periode}")

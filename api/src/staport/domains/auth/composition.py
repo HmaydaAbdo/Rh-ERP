@@ -19,6 +19,7 @@ from staport.domains.employee.service import ServiceEmployee
 from staport.domains.equipe.service import ServiceEquipe
 from staport.domains.function.service import ServiceFonction
 from staport.domains.heuresupp import audit as _historique_heuresupp  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.heuresupp.import_service import ServiceImportHeuresSupp
 from staport.domains.heuresupp.service import ServiceHeuresSupp
 from staport.domains.paie.export import ServiceExportPaie
 from staport.domains.paie.import_service import ServiceImportPaie
@@ -43,6 +44,7 @@ class ContexteAuth:
     cookie_secure: bool
     accueil: ServiceAccueil
     heures_supp: ServiceHeuresSupp
+    import_heures_supp: ServiceImportHeuresSupp
     fonctions: ServiceFonction
     equipes: ServiceEquipe
     chantiers: ServiceChantier
@@ -104,6 +106,7 @@ def creer_contexte(
         cookie_secure=configuration.cookie_secure,
         accueil=service_accueil,
         heures_supp=ServiceHeuresSupp(publication),
+        import_heures_supp=ServiceImportHeuresSupp(publication),
         fonctions=service_fonction,
         equipes=service_equipe,
         chantiers=service_chantier,

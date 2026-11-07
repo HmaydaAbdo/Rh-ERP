@@ -146,6 +146,7 @@ def creer_app(
             routes_employee.employees,
             routes_paie.paies,
             routes_heuresupp.heures_supp,
+            routes_heuresupp.imports,
         ):
             app.include_router(routeur)
         if application_mcp is not None:
