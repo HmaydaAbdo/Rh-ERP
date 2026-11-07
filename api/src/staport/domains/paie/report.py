@@ -69,6 +69,20 @@ class ServiceRapportPaie:
             .group_by(Paie.periode)
             .order_by(Paie.periode)
         )
+        q_evolution_chantier = (
+            select(
+                Paie.chantier_id,
+                Paie.periode,
+                func.coalesce(func.sum(Paie.salaire_total), Decimal(0)),
+                func.count(Paie.id),
+                func.coalesce(func.sum(case((est_stc, 1), else_=0)), 0),
+                func.coalesce(func.sum(case((est_stc, Paie.salaire_total), else_=Decimal(0))), Decimal(0)),
+            )
+            .join(Employee, Employee.id == Paie.employee_id)
+            .where(*conditions_evolution)
+            .group_by(Paie.chantier_id, Paie.periode)
+            .order_by(Paie.chantier_id, Paie.periode)
+        )
         async with session.begin():
             lignes = cast(
                 list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
@@ -78,12 +92,21 @@ class ServiceRapportPaie:
                 list[tuple[int, Decimal, int, int, Decimal]],
                 [tuple(row) for row in (await session.execute(q_evolution)).all()],
             )
+            evolution_chantiers_brute = cast(
+                list[tuple[int, int, Decimal, int, int, Decimal]],
+                [tuple(row) for row in (await session.execute(q_evolution_chantier)).all()],
+            )
         lignes_courantes = [ligne for ligne in lignes if ligne[0].periode == int(requete.periode.replace("-", ""))]
         lignes_precedentes = [ligne for ligne in lignes if ligne[0].periode == int(periode_precedente.replace("-", ""))]
         if not lignes_courantes:
             raise AucunePaiePeriode(requete.periode)
         evolution = [PointEvolution(*ligne) for ligne in evolution_brute]
-        html = self._html(requete, lignes_courantes, lignes_precedentes, evolution)
+        evolution_chantiers: dict[int, list[PointEvolution]] = {}
+        for chantier_id, periode, masse, effectif, stc, montant_stc in evolution_chantiers_brute:
+            evolution_chantiers.setdefault(chantier_id, []).append(
+                PointEvolution(periode, masse, effectif, stc, montant_stc)
+            )
+        html = self._html(requete, lignes_courantes, lignes_precedentes, evolution, evolution_chantiers)
         return BytesIO(await rendre_pdf(html, self._ressources))
 
     def _html(
@@ -92,6 +115,7 @@ class ServiceRapportPaie:
         lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
         lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]] | None = None,
         evolution: list[PointEvolution] | None = None,
+        evolution_chantiers: dict[int, list[PointEvolution]] | None = None,
     ) -> str:
         css = (self._ressources / "rapport.css").read_text(encoding="utf-8")
         par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
@@ -166,7 +190,12 @@ class ServiceRapportPaie:
                     f"CHANTIER : {identifiant}",
                     f'<div class="titre-chapitre">{escape(f"CHANTIER : {identifiant}")}</div>'
                     f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
-                    f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
+                    + (
+                        f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
+                        if evolution_chantiers and chantier.id in evolution_chantiers
+                        else ""
+                    )
+                    + f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
                 )
             )
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
