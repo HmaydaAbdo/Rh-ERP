@@ -481,7 +481,7 @@ def test_les_comptes_sont_pagines_filtres_et_tries_par_le_serveur(
     sans_corps = plateforme.client.post("/users/search?size=1", headers=admin)
     assert sans_corps.status_code == 200 and sans_corps.json()["page"]["size"] == 1
     plafonne = plateforme.client.post("/users/search?size=100000", headers=admin).json()
-    assert plafonne["page"]["size"] == 200
+    assert plafonne["page"]["size"] == 2000
 
 
 def test_un_joker_saisi_est_du_texte_pas_un_motif(plateforme: Plateforme, admin: dict[str, str]) -> None:

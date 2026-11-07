@@ -14,15 +14,17 @@ class ChantierDejaExistant(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
     def __init__(self, code: str) -> None:
-        super().__init__(f"Un chantier avec le code existe déjà : {code}")
+        super().__init__(f"Un chantier existe déjà avec le code : {code}")
 
 
 class ChantierUtilise(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
     def __init__(self) -> None:
-        super().__init__("Ce chantier est encore référencé et ne peut pas être supprimé.")
+        super().__init__(
+            "Ce chantier est utilisé par au moins un employé ou un bulletin de paie et ne peut pas être supprimé."
+        )
 
 
 class ChantierLocalisationInvalide(ErreurMetier):
-    statut = HTTPStatus.UNPROCESSABLE_ENTITY
+    statut = HTTPStatus.BAD_REQUEST

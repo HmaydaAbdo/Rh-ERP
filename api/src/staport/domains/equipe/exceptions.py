@@ -14,14 +14,16 @@ class EquipeDejaExistante(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
     def __init__(self, champ: str, valeur: str) -> None:
-        super().__init__(f"Une équipe avec le {champ} existe déjà : {valeur}")
+        super().__init__(f"Une équipe existe déjà avec le {champ} : {valeur}")
 
 
 class EquipeUtilisee(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
     def __init__(self) -> None:
-        super().__init__("Cette équipe est encore référencée et ne peut pas être supprimée.")
+        super().__init__(
+            "Cette équipe est utilisée par au moins un bulletin de paie ou un employé et ne peut pas être supprimée."
+        )
 
 
 class ErreurImportEquipe(ErreurMetier):

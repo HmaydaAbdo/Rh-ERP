@@ -25,7 +25,7 @@ EN_TETES_UTILES = ("content-disposition", "content-type", "cache-control", "x-co
 CLES_HORODATAGE = re.compile(
     r"(createdat|updatedat|horodatage|timestamp|datecreation|datemodification|expires|exp|iat)", re.I
 )
-CLES_ID = re.compile(r"(^id$|id$|^rev$|^token$|accesstoken|requestid|traceid)", re.I)
+CLES_ID = re.compile(r"(^rev$|^token$|accesstoken|requestid|traceid)", re.I)  # les ids métier se comparent bruts
 
 
 @dataclass
@@ -46,6 +46,9 @@ class Etape:
     trier_listes: bool = False  # ordre non spécifié : compare les listes comme des ensembles
     ignorer: tuple[str, ...] = ()  # chemins pointés exclus (écart accepté documenté)
     en_tetes: dict[str, str] | None = None
+    question: str | None = (
+        None  # écart connu soumis au propriétaire : classé « à valider », jamais « corrigé » en silence
+    )
 
 
 @dataclass
@@ -56,12 +59,16 @@ class Reponse:
     octets: bytes
 
 
+ANGLAIS_VALIDATION = re.compile(r"must not be|must be|size must|numeric value out of bounds")
+
+
 @dataclass
 class Ecart:
     etape: str
     objet: str
     spring: Any
     python: Any
+    categorie: str = "ecart"  # "ecart" = bug Python à corriger ; "a_valider" = décision du propriétaire attendue
 
 
 @dataclass
@@ -115,6 +122,8 @@ class Backend:
 
 def _formater(valeur: Any, captures: dict[str, Any]) -> Any:
     if isinstance(valeur, str):
+        if re.fullmatch(r"\{\w+\}", valeur) and valeur[1:-1] in captures:
+            return captures[valeur[1:-1]]  # valeur brute (entier) et non sa représentation texte
         return valeur.format(**captures) if "{" in valeur else valeur
     if isinstance(valeur, dict):
         return {k: _formater(v, captures) for k, v in valeur.items()}
@@ -197,6 +206,20 @@ def comparer_excel(a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
     return sortie
 
 
+def _ordre_libre(e: Etape) -> bool:
+    """Spring ne trie pas une recherche sans `sort` (ordre physique, non spécifié) : comparée comme un ensemble."""
+    return e.chemin.endswith("/search") and not (e.params or {}).get("sort")
+
+
+def _categorie(e: Etape, objet: str, spring: Any) -> str:
+    """Un message de validation anglais de Spring face à sa traduction française est une décision, pas un bug."""
+    if e.question:
+        return "a_valider"
+    if objet == "$.message" and isinstance(spring, str) and ANGLAIS_VALIDATION.search(spring):
+        return "a_valider"
+    return "ecart"
+
+
 def comparer(e: Etape, a: Reponse, b: Reponse, ids_a: dict, ids_b: dict) -> list[Ecart]:
     ecarts: list[tuple[str, Any, Any]] = []
     if a.statut != b.statut:
@@ -209,13 +232,13 @@ def comparer(e: Etape, a: Reponse, b: Reponse, ids_a: dict, ids_b: dict) -> list
             ecarts.append((f"en-tête {h}", va, vb))
     if a.json is not None or b.json is not None:
         na, nb = normaliser(a.json, ids_a), normaliser(b.json, ids_b)
-        _comparer_json(na, nb, "$", ecarts, e.trier_listes)
+        _comparer_json(na, nb, "$", ecarts, e.trier_listes or _ordre_libre(e))
     elif "spreadsheetml" in a.en_tetes.get("content-type", "") and a.statut == b.statut == 200:
         ecarts.extend(comparer_excel(a.octets, b.octets))
     elif a.octets != b.octets and a.statut == b.statut:
         ecarts.append(("corps binaire", f"{len(a.octets)} octets", f"{len(b.octets)} octets"))
     return [
-        Ecart(f"{e.module}/{e.nom}", o, x, y)
+        Ecart(f"{e.module}/{e.nom}", o, x, y, _categorie(e, o, x))
         for o, x, y in ecarts
         if not any(o.startswith(f"$.{i}") for i in e.ignorer)
     ]

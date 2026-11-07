@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs, unquote, urlparse
 
 from httpx import AsyncClient
@@ -29,7 +29,22 @@ def _rep(x: Chantier) -> ChantierReponse:
     return ChantierReponse.model_validate(x)
 
 
+_LIEN_INVALIDE = (
+    "La localisation doit être un lien Google Maps contenant les coordonnées, par exemple "
+    "https://www.google.com/maps?q=31.7243258,-8.1033938. Les liens courts et les adresses seules ne sont pas acceptés."
+)
+_COORDONNEES_DIFFERENTES = "La latitude et la longitude saisies ne correspondent pas au lien de localisation."
+_COORDONNEES_PAIRE = "Renseignez ensemble la latitude et la longitude."
+_COORDONNEES_BORNES = "Latitude : de -90 à 90 ; longitude : de -180 à 180."
+_COORDONNEES_DECIMALES = "La latitude et la longitude acceptent au maximum 8 décimales."
+_CARTE_INCOMPLETE = (
+    "Pour afficher le chantier sur la carte, renseignez sa nature et sa localisation : un lien Google Maps "
+    "contenant les coordonnées, ou sa latitude et sa longitude."
+)
+
+
 def _coord(req: ChantierCreationRequete) -> tuple[str | None, Decimal | None, Decimal | None]:
+    """Règles de `LocalisationChantierService` (Spring), mêmes messages et même ordre de vérification."""
     loc = req.localisation.strip() if req.localisation and req.localisation.strip() else None
     lat, lon = req.latitude, req.longitude
     if loc:
@@ -42,32 +57,33 @@ def _coord(req: ChantierCreationRequete) -> tuple[str | None, Decimal | None, De
             or raw.port
             or raw.fragment
         ):
-            raise ChantierLocalisationInvalide(
-                "La localisation doit être un lien Google Maps contenant les coordonnées."
-            )
+            raise ChantierLocalisationInvalide(_LIEN_INVALIDE)
         params = parse_qs(raw.query)
-        if ("q" in params and "query" in params) or len(params.get("q", params.get("query", []))) != 1:
-            raise ChantierLocalisationInvalide("La localisation Google Maps est invalide.")
+        if "q" in params and "query" in params:
+            raise ChantierLocalisationInvalide(_LIEN_INVALIDE)
         valeurs = params.get("q") or params.get("query")
-        if not valeurs:
-            raise ChantierLocalisationInvalide("La localisation Google Maps est invalide.")
+        if not valeurs or len(valeurs) != 1:
+            raise ChantierLocalisationInvalide(_LIEN_INVALIDE)
+        point = unquote(valeurs[0]).split(",")
+        if len(point) != 2:
+            raise ChantierLocalisationInvalide(_LIEN_INVALIDE)
         try:
-            lat_l, lon_l = (Decimal(v.strip()) for v in unquote(valeurs[0]).split(","))
-        except Exception as exc:
-            raise ChantierLocalisationInvalide("La localisation Google Maps est invalide.") from exc
+            lat_l, lon_l = (Decimal(v.strip()) for v in point)
+        except InvalidOperation as exc:
+            raise ChantierLocalisationInvalide(_LIEN_INVALIDE) from exc
         if (lat is not None and lat != lat_l) or (lon is not None and lon != lon_l):
-            raise ChantierLocalisationInvalide("Les coordonnées ne correspondent pas au lien.")
+            raise ChantierLocalisationInvalide(_COORDONNEES_DIFFERENTES)
         lat, lon = lat_l, lon_l
     if (lat is None) != (lon is None):
-        raise ChantierLocalisationInvalide("Renseignez ensemble la latitude et la longitude.")
-    if lat is not None:
-        if lon is None:
-            raise ChantierLocalisationInvalide("Renseignez ensemble la latitude et la longitude.")
+        raise ChantierLocalisationInvalide(_COORDONNEES_PAIRE)
+    if lat is not None and lon is not None:
         if abs(lat) > 90 or abs(lon) > 180:
-            raise ChantierLocalisationInvalide("Coordonnées invalides.")
-        loc = f"https://www.google.com/maps/search/?api=1&query={lat.normalize()},{lon.normalize()}"
-    if req.afficher_sur_carte and (loc is None or lat is None):
-        raise ChantierLocalisationInvalide("Nature et localisation requises pour la carte.")
+            raise ChantierLocalisationInvalide(_COORDONNEES_BORNES)
+        if lat.as_tuple().exponent < -8 or lon.as_tuple().exponent < -8:  # type: ignore[operator]
+            raise ChantierLocalisationInvalide(_COORDONNEES_DECIMALES)
+        loc = f"https://www.google.com/maps/search/?api=1&query={lat.normalize():f},{lon.normalize():f}"
+    if req.afficher_sur_carte and (req.nature is None or loc is None or lat is None):
+        raise ChantierLocalisationInvalide(_CARTE_INCOMPLETE)
     return loc, lat, lon
 
 

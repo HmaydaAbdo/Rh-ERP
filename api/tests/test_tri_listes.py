@@ -360,7 +360,7 @@ def test_chantiers_tries_par_chaque_colonne_de_l_interface(plateforme: Plateform
     [
         ("/employees/search", "inconnu"),
         ("/employees/search", "nom_prenom"),  # le contrat HTTP est le JSON (camelCase), pas les colonnes Python
-        ("/employees/search", "fonction.id"),
+        ("/employees/search", "fonction.inconnue"),
         ("/employees/search", "fonction.libelle.x"),
         ("/paie/search", "salaire_total"),
         ("/paie/search", "employee.salaire"),
