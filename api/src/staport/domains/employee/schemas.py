@@ -54,6 +54,23 @@ class EmployeeRecherche(ModeleApi):
     statut: EmployeeStatut | None = None
 
 
+class FonctionResume(ModeleApi):
+    id: int
+    libelle: str
+
+
+class ChantierResume(ModeleApi):
+    id: int
+    code: str
+    designation: str | None
+
+
+class EquipeResume(ModeleApi):
+    id: int
+    code: str
+    libelle: str
+
+
 class EmployeeReponse(ModeleApi):
     id: int
     version: int
@@ -61,9 +78,9 @@ class EmployeeReponse(ModeleApi):
     cin: str
     date_naissance: date
     date_embauche: date
-    fonction_id: int
-    chantier_id: int | None
-    equipe_id: int | None
+    fonction: FonctionResume
+    chantier: ChantierResume | None
+    equipe: EquipeResume | None
     salaire: Nombre | None
     type_salaire: TypeSalaire | None
     statut: EmployeeStatut

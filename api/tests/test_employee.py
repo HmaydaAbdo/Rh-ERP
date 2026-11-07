@@ -66,3 +66,37 @@ def test_modele_import_employes_reprend_les_six_entetes_spring(plateforme: Plate
     assert [[c.value for c in ligne] for ligne in feuille.iter_rows()] == [
         ["Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance"]
     ]
+
+
+def test_la_reponse_imbrique_fonction_chantier_et_equipe_comme_spring(plateforme: Plateforme, connecter: Any) -> None:
+    """Angular lit `employee.fonction.id` : la réponse plate `fonctionId` casserait l'édition d'un employé."""
+    entetes = _auth(connecter)
+    fonction = plateforme.client.post("/functions", headers=entetes, json={"libelle": "Imbrique fonction"}).json()
+    chantier = plateforme.client.post(
+        "/chantiers",
+        headers=entetes,
+        json={"code": "IMB-1", "designation": "Chantier imbriqué", "nature": "AO", "afficherSurCarte": False},
+    ).json()
+    corps = {
+        "nomPrenom": "Imbrique Employe",
+        "cin": "CIN-IMB-1",
+        "dateNaissance": "1990-01-02",
+        "dateEmbauche": "2024-01-02",
+        "fonctionId": fonction["id"],
+        "chantierId": chantier["id"],
+        "statut": "ACTIF",
+    }
+    cree = plateforme.client.post("/employees", headers=entetes, json=corps)
+    assert cree.status_code == 201, cree.text
+    attendu = {
+        "fonction": {"id": fonction["id"], "libelle": "Imbrique fonction"},
+        "chantier": {"id": chantier["id"], "code": "IMB-1", "designation": "Chantier imbriqué"},
+        "equipe": None,
+    }
+    lu = plateforme.client.get(f"/employees/{cree.json()['id']}", headers=entetes).json()
+    page = plateforme.client.post("/employees/search", headers=entetes, json={"nomPrenom": "Imbrique"}).json()
+
+    assert {k: cree.json()[k] for k in attendu} == attendu
+    assert {k: lu[k] for k in attendu} == attendu
+    assert {k: page["content"][0][k] for k in attendu} == attendu
+    assert "fonctionId" not in lu and "chantierId" not in lu and "equipeId" not in lu
