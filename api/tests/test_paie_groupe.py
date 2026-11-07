@@ -57,7 +57,8 @@ def jeu(plateforme: Plateforme) -> Iterator[Jeu]:
     yield Jeu(fonction, chantier, employes, bulletins)
     with plateforme.moteur.begin() as c:
         c.execute(text("DELETE FROM paie WHERE chantier_id = :c"), {"c": chantier})
-        c.execute(text("DELETE FROM employe WHERE chantier_id = :c"), {"c": chantier})
+        c.execute(text("DELETE FROM paie WHERE employee_id = ANY(:e)"), {"e": employes})
+        c.execute(text("DELETE FROM employe WHERE id = ANY(:e)"), {"e": employes})
         c.execute(text("DELETE FROM chantier WHERE id = :c"), {"c": chantier})
         c.execute(text("DELETE FROM fonction WHERE id = :f"), {"f": fonction})
 
@@ -266,3 +267,96 @@ def test_restauration_exige_paie_restore(
 
     assert reponse.status_code == 403
     assert _compte(plateforme, jeu.chantier) == 0
+
+
+def _corps_bulletin(jeu: Jeu, employe: int, periode: str, **remplacements: Any) -> dict[str, Any]:
+    corps: dict[str, Any] = {
+        "employeeId": employe,
+        "periode": periode,
+        "fonctionId": jeu.fonction,
+        "chantierId": jeu.chantier,
+        "equipeId": None,
+        "nombreJoursTravailles": "26",
+        "salaireMensuel": "100.00",
+        "salaireTotal": "100.00",
+    }
+    return corps | remplacements
+
+
+def _equipe_employe(plateforme: Plateforme, employe: int) -> int | None:
+    with plateforme.moteur.connect() as c:
+        return c.execute(text("SELECT equipe_id FROM employe WHERE id = :e"), {"e": employe}).scalar_one()
+
+
+@pytest.fixture
+def equipe(plateforme: Plateforme, jeu: Jeu) -> Iterator[int]:
+    with plateforme.moteur.begin() as c:
+        identifiant = c.execute(
+            text("INSERT INTO equipe (code, libelle) VALUES (:c, 'Equipe groupe') RETURNING id"),
+            {"c": f"E{uuid.uuid4().hex[:8]}"},
+        ).scalar_one()
+    yield identifiant
+    with plateforme.moteur.begin() as c:
+        c.execute(text("UPDATE employe SET equipe_id = NULL WHERE id = ANY(:e)"), {"e": jeu.employes})
+        c.execute(text("DELETE FROM paie WHERE equipe_id = :i"), {"i": identifiant})
+        c.execute(text("DELETE FROM equipe WHERE id = :i"), {"i": identifiant})
+
+
+def test_creation_rejette_les_references_inexistantes_avec_les_messages_de_spring(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    entetes = _entetes(connecter)
+    cas = [
+        (_corps_bulletin(jeu, 999999999, "2098-06"), "Employé introuvable avec l'id : 999999999"),
+        (
+            _corps_bulletin(jeu, jeu.employes[0], "2098-06", fonctionId=999999999),
+            "Fonction introuvable avec l'id : 999999999",
+        ),
+        (
+            _corps_bulletin(jeu, jeu.employes[0], "2098-06", chantierId=999999999),
+            "Chantier introuvable avec l'id : 999999999",
+        ),
+        (
+            _corps_bulletin(jeu, jeu.employes[0], "2098-06", equipeId=999999999),
+            "Équipe introuvable avec l'id : 999999999",
+        ),
+    ]
+    for corps, message in cas:
+        reponse = plateforme.client.post("/paie", headers=entetes, json=corps)
+        assert reponse.status_code == 400, reponse.text
+        assert reponse.json()["message"] == message
+
+
+def test_le_bulletin_cree_l_equipe_de_l_employe_actif_et_epargne_l_inactif(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe: int
+) -> None:
+    entetes = _entetes(connecter)
+    with plateforme.moteur.begin() as c:
+        c.execute(
+            text("UPDATE employe SET statut = 'INACTIF', chantier_id = NULL WHERE id = :e"), {"e": jeu.employes[1]}
+        )
+
+    actif = plateforme.client.post(
+        "/paie", headers=entetes, json=_corps_bulletin(jeu, jeu.employes[0], "2098-06", equipeId=equipe)
+    )
+    inactif = plateforme.client.post(
+        "/paie", headers=entetes, json=_corps_bulletin(jeu, jeu.employes[1], "2098-06", equipeId=equipe)
+    )
+
+    assert actif.status_code == 201, actif.text
+    assert inactif.status_code == 201, inactif.text
+    assert _equipe_employe(plateforme, jeu.employes[0]) == equipe
+    assert _equipe_employe(plateforme, jeu.employes[1]) is None
+
+
+def test_la_modification_met_a_jour_l_equipe_de_l_employe(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe: int
+) -> None:
+    entetes = _entetes(connecter)
+    corps = _corps_bulletin(jeu, jeu.employes[0], "2098-05", equipeId=equipe) | {"version": 0}
+
+    reponse = plateforme.client.put(f"/paie/{jeu.bulletins[0]}", headers=entetes, json=corps)
+
+    assert reponse.status_code == 200, reponse.text
+    assert reponse.json()["equipe"]["id"] == equipe
+    assert _equipe_employe(plateforme, jeu.employes[0]) == equipe
