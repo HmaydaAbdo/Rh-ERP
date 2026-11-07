@@ -459,6 +459,7 @@ AUDITEES = {
     ("POST", "/paie"): "PAIE_CREATION",
     ("PUT", "/paie/{identifiant}"): "PAIE_MODIFICATION",
     ("DELETE", "/paie/{identifiant}"): "PAIE_SUPPRESSION",
+    ("POST", "/paie/suppression"): "PAIE_SUPPRESSION_GROUPE",
     ("POST", "/paie/import"): "PAIE_IMPORT",
     ("POST", "/paie/import/corrections"): "PAIE_IMPORT_CORRECTION",
 }

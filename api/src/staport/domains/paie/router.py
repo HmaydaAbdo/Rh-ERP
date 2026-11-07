@@ -32,6 +32,8 @@ from .schemas import (
     PaieRecherche,
     PaieReponse,
     PaiesPage,
+    PaieSuppression,
+    PaieSuppressionGroupeRequete,
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
@@ -46,7 +48,7 @@ paies = APIRouter(prefix="/paie", tags=["Paie"])
 @paies.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(exiger("PAIE_WRITE"))],
+    dependencies=[Depends(exiger("PAIE_WRITE")), Depends(exiger("EMPLOYEE_WRITE"))],
 )
 async def creer(corps: PaieCreationRequete, session: Session, contexte: Contexte) -> PaieReponse:
     return await contexte.paies.creer(session, corps)
@@ -175,7 +177,7 @@ async def corriger_import(
     return await contexte.import_paie.corriger_et_reanalyser(session, await file.read(), periode, corps)
 
 
-@paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE"))])
+@paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE")), Depends(exiger("EMPLOYEE_WRITE"))])
 async def modifier(
     identifiant: int, corps: PaieModificationRequete, session: Session, contexte: Contexte
 ) -> PaieReponse:
@@ -190,6 +192,15 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> PaieRe
 @paies.post("/search", dependencies=[Depends(exiger("PAIE_READ"))], response_model=PaiesPage)
 async def rechercher(corps: PaieRecherche | None, page: PagePaie, session: Session, contexte: Contexte) -> PaiesPage:
     return await contexte.paies.rechercher(session, corps, page)
+
+
+@paies.post("/suppression", dependencies=[Depends(exiger("PAIE_PURGE"))])
+async def supprimer_groupe(
+    corps: PaieSuppressionGroupeRequete, session: Session, contexte: Contexte
+) -> PaieSuppression:
+    return PaieSuppression(
+        supprimes=await contexte.paies.supprimer_groupe(session, corps.criteres, corps.nombre_attendu)
+    )
 
 
 @paies.delete(

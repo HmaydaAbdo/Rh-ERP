@@ -18,8 +18,9 @@ from . import repository
 from .analytique import construire_analytique
 from .cartes import chantiers as construire_chantiers
 from .cartes import periodes as construire_periodes
-from .exceptions import PaieDejaExistante, PaieIntrouvable
+from .exceptions import PaieDejaExistante, PaieGroupeModifie, PaieIntrouvable, PeriodeObligatoire
 from .models import Paie
+from .periode import afficher_periode
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
@@ -62,6 +63,24 @@ def rep(ligne: tuple[Paie, Employee, Fonction, Chantier, Equipe | None]) -> Paie
         salaire_total=paie.salaire_total,
         observation=paie.observation,
     )
+
+
+def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str, object]:
+    """Périmètre audité d'une suppression de groupe (clés de `PerimetreSuppressionGroupePaie`)."""
+    perimetre: dict[str, object] = {
+        "periode": afficher_periode(criteres.periode) if criteres.periode is not None else None
+    }
+    for cle, valeur in (
+        ("chantierIds", criteres.chantier_ids),
+        ("equipeIds", criteres.equipe_ids),
+        ("fonctionIds", criteres.fonction_ids),
+        ("nomPrenom", criteres.nom_prenom),
+        ("cin", criteres.cin),
+    ):
+        if valeur is not None and valeur != [] and not (isinstance(valeur, str) and not valeur.strip()):
+            perimetre[cle] = valeur
+    perimetre["nombreConfirme"] = nombre_confirme
+    return perimetre
 
 
 class ServicePaie:
@@ -112,6 +131,21 @@ class ServicePaie:
                 await s.flush()
             except IntegrityError as e:
                 raise PaieIntrouvable(i) from e
+
+    async def supprimer_groupe(self, s: AsyncSession, criteres: PaieRecherche, nombre_attendu: int) -> int:
+        action = self._auditeur.auditer(s, "PAIE_SUPPRESSION_GROUPE", TypeOperation.DELETE, "Paie")
+        async with s.begin(), action as cible:
+            cible.perimetre = perimetre_groupe(criteres, nombre_attendu)
+            if criteres.periode is None:
+                raise PeriodeObligatoire
+            groupe = await repository.groupe(s, criteres)
+            if len(groupe) != nombre_attendu:
+                raise PaieGroupeModifie(len(groupe), nombre_attendu)
+            for bulletin in groupe:
+                await s.delete(bulletin)
+            await s.flush()
+            cible.nombre_elements = len(groupe)
+            return len(groupe)
 
     async def periodes(self, s: AsyncSession) -> list[PaiePeriodeResume]:
         async with s.begin():

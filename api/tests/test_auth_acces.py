@@ -324,8 +324,6 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/employees/regroupements"): {"EMPLOYEE_READ"},
     ("POST", "/employees/sorties-mois"): {"EMPLOYEE_READ"},
     ("POST", "/employees/import"): {"EMPLOYEE_IMPORT"},
-    ("POST", "/paie"): {"PAIE_WRITE"},
-    ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE"},
     ("GET", "/paie/{identifiant}"): {"PAIE_READ"},
     ("POST", "/paie/search"): {"PAIE_READ"},
     ("GET", "/paie/periodes"): {"PAIE_READ"},
@@ -343,8 +341,11 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("GET", "/paie/import/modele"): {"PAIE_IMPORT"},
     ("POST", "/paie/import"): {"PAIE_IMPORT"},
     ("DELETE", "/paie/{identifiant}"): {"PAIE_DELETE"},
+    ("POST", "/paie/suppression"): {"PAIE_PURGE"},
 }
 REQUIS_CUMULATIFS: dict[tuple[str, str], set[str]] = {
+    ("POST", "/paie"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
+    ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
     ("POST", "/paie/import/analyse"): {"PAIE_IMPORT", "PAIE_READ"},
     ("POST", "/paie/import/corrections"): {"PAIE_IMPORT", "PAIE_READ", "EMPLOYEE_WRITE"},
 }
@@ -362,7 +363,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 69
+    assert len(declarees) == 70
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 
