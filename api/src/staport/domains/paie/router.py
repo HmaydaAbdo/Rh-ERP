@@ -1,7 +1,9 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
@@ -10,7 +12,7 @@ from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
 from .materiel import tableaux_materiel
-from .periode import PeriodePaie, afficher_periode
+from .periode import PeriodePaie
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
@@ -21,6 +23,7 @@ from .schemas import (
     PaieExportRequete,
     PaieImportAnalyse,
     PaieImportCorrections,
+    PaieImportDeparts,
     PaieImportResult,
     PaieMaterielTableau,
     PaieModificationRequete,
@@ -154,10 +157,14 @@ async def importer(
     session: Session,
     contexte: Contexte,
     ignorer_salaires_zero: Annotated[bool, Form()] = False,
+    departs: Annotated[str | None, Form()] = None,
     file: UploadFile = File(...),  # noqa: B008
 ) -> PaieImportResult:
-    nombre = await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero)
-    return PaieImportResult(periode=afficher_periode(periode), crees=nombre, departs=0, retours=0)
+    try:
+        confirmes = PaieImportDeparts.model_validate_json(departs) if departs else PaieImportDeparts()
+    except ValidationError as erreur:
+        raise RequestValidationError(erreur.errors()) from erreur
+    return await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero, confirmes)
 
 
 @paies.post(
@@ -173,8 +180,8 @@ async def corriger_import(
 ) -> PaieImportAnalyse:
     try:
         corps = PaieImportCorrections.model_validate_json(corrections)
-    except ValueError as erreur:
-        raise HTTPException(status_code=422, detail="Corrections invalides.") from erreur
+    except ValidationError as erreur:
+        raise RequestValidationError(erreur.errors()) from erreur
     return await contexte.import_paie.corriger_et_reanalyser(session, await file.read(), periode, corps)
 
 

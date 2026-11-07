@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
-from staport.domains.employee.models import Employee, TypeSalaire
+from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut, TypeSalaire
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
+from .exceptions import ErreurImportPaie
 from .models import Paie
 from .periode import afficher_periode, mois_suivant
 from .schemas import (
@@ -20,8 +21,12 @@ from .schemas import (
     PaieImportChantierCloture,
     PaieImportCinInconnu,
     PaieImportCorrections,
+    PaieImportDepart,
+    PaieImportDeparts,
     PaieImportEcart,
     PaieImportErreur,
+    PaieImportResult,
+    PaieImportRetour,
 )
 
 
@@ -39,6 +44,43 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
         return lignes
     finally:
         classeur.close()
+
+
+def est_stc_ou_sortie(observation: str | None) -> bool:
+    """Règle `ObservationStc` : exactement « STC » ou « sortie », sans casse ni espaces superflus."""
+    return observation is not None and observation.strip().lower() in {"stc", "sortie"}
+
+
+def departs_et_retours(
+    lignes: list[tuple[int, list[Any]]], employees: dict[str, Employee], numeros_en_erreur: set[int]
+) -> tuple[list[PaieImportDepart], list[PaieImportRetour]]:
+    """STC et sorties du fichier, retours des inactifs présents, puis actifs absents du fichier (parité `examiner`)."""
+    departs: list[PaieImportDepart] = []
+    retours: list[PaieImportRetour] = []
+    cins_du_fichier = {str(ligne[2]).strip().upper() for _, ligne in lignes if len(ligne) > 2 and ligne[2] is not None}
+    for numero, ligne in lignes:
+        cin = str(ligne[2]).strip().upper() if len(ligne) > 2 and ligne[2] is not None else None
+        employe = employees.get(cin) if cin is not None and numero not in numeros_en_erreur else None
+        if employe is None:
+            continue
+        observation = str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None
+        if est_stc_ou_sortie(observation):
+            motif = "STC" if cast(str, observation).strip().lower() == "stc" else "Sortie"
+            departs.append(
+                PaieImportDepart(employe_id=employe.id, cin=employe.cin, nom_prenom=employe.nom_prenom, motif=motif)
+            )
+        elif employe.statut == EmployeeStatut.INACTIF:
+            retours.append(PaieImportRetour(employe_id=employe.id, cin=employe.cin, nom_prenom=employe.nom_prenom))
+    absents = sorted(
+        (
+            e
+            for e in employees.values()
+            if e.statut == EmployeeStatut.ACTIF and e.cin.strip().upper() not in cins_du_fichier
+        ),
+        key=lambda e: e.nom_prenom.lower(),
+    )
+    departs.extend(PaieImportDepart(employe_id=e.id, cin=e.cin, nom_prenom=e.nom_prenom, motif=None) for e in absents)
+    return departs, retours
 
 
 class ServiceImportPaie:
@@ -250,7 +292,8 @@ class ServiceImportPaie:
                     ),
                     None,
                 )
-                if chantier_id is not None and chantier_id != employe.chantier_id:
+                actif = employe.statut != EmployeeStatut.INACTIF  # un retour est réactivé par l'import
+                if actif and chantier_id is not None and chantier_id != employe.chantier_id:
                     chantier_actuel = (
                         chantiers_par_id.get(employe.chantier_id) if employe.chantier_id is not None else None
                     )
@@ -273,7 +316,7 @@ class ServiceImportPaie:
                     if equipe
                     else None
                 )
-                if equipe_id is not None and equipe_id != employe.equipe_id:
+                if actif and equipe_id is not None and equipe_id != employe.equipe_id:
                     equipe_actuelle = equipes_par_id.get(employe.equipe_id) if employe.equipe_id is not None else None
                     champs.append(PaieImportChamp(champ="equipe", base=equipe_actuelle, fichier=equipe))
                 try:
@@ -417,10 +460,11 @@ class ServiceImportPaie:
                             )
                         )
         if periode_invalide and dernier_mois is not None and not any(erreur.champ == "bulletin" for erreur in erreurs):
-            raise ValueError(
+            raise ErreurImportPaie(
                 f"Seul le mois {afficher_periode(mois_suivant(dernier_mois))} peut être importé : "
                 f"le dernier mois de paie est {afficher_periode(dernier_mois)}."
             )
+        departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
         return PaieImportAnalyse(
             periode=periode,
             total_lignes=len(lignes),
@@ -429,12 +473,19 @@ class ServiceImportPaie:
             chantiers_clotures=list(clotures.values()),
             cin_inconnus=cin_inconnus,
             ecarts=ecarts,
-            departs=[],
-            retours=[],
+            departs=departs,
+            retours=retours,
             pret=not erreurs and not avertissements and not ecarts,
         )
 
-    async def importer(self, session: AsyncSession, contenu: bytes, periode: int, ignorer_salaires_zero: bool) -> int:
+    async def importer(
+        self,
+        session: AsyncSession,
+        contenu: bytes,
+        periode: int,
+        ignorer_salaires_zero: bool,
+        departs_confirmes: PaieImportDeparts,
+    ) -> PaieImportResult:
         analyse = await self.analyser(session, contenu, periode)
         avertissements_non_confirmes = [
             avertissement
@@ -448,7 +499,13 @@ class ServiceImportPaie:
             or analyse.chantiers_clotures
             or avertissements_non_confirmes
         ):
-            raise ValueError("L'analyse n'est pas prête : corrigez les erreurs et confirmez les avertissements.")
+            raise ErreurImportPaie("L'analyse n'est pas prête : corrigez les erreurs et confirmez les avertissements.")
+        proposes = {depart.employe_id for depart in analyse.departs}
+        for depart in departs_confirmes.departs:
+            if depart.employe_id not in proposes:
+                raise ErreurImportPaie(
+                    f"Ce départ n'a pas été proposé par l'analyse du fichier : employé {depart.employe_id}"
+                )
         lignes = lire_lignes_paie(contenu)
         action = self._auditeur.auditer(session, "PAIE_IMPORT", TypeOperation.CREATE, "Paie")
         async with session.begin(), action as audit_import:
@@ -466,7 +523,7 @@ class ServiceImportPaie:
                     )
                 ).scalar_one_or_none()
                 if existe is not None:
-                    raise ValueError(f"Bulletin déjà existant pour {cin} et {periode}")
+                    raise ErreurImportPaie(f"Bulletin déjà existant pour {cin} et {periode}")
                 equipe = equipes.get(str(ligne[12]).strip().upper()) if len(ligne) > 12 and ligne[12] else None
                 fonction_id = fonctions[str(ligne[1]).strip().upper()]
                 chantier_id = chantiers[str(ligne[11]).strip().upper()]
@@ -511,10 +568,45 @@ class ServiceImportPaie:
                         observation=str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
                     )
                 )
+            lignes_par_cin = {str(ligne[2]).strip().upper(): ligne for _, ligne in lignes}
+            for retour in analyse.retours:
+                employe = employees[retour.cin.strip().upper()]
+                if employe.type_salaire is None:
+                    raise ErreurImportPaie(
+                        f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
+                    )
+                ligne = lignes_par_cin[retour.cin.strip().upper()]
+                employe.salaire = Decimal(str(ligne[6] or 0))
+                employe.statut = EmployeeStatut.ACTIF
+            par_id = {x.id: x for x in employees.values()}
+            for depart in departs_confirmes.departs:
+                employe = par_id[depart.employe_id]
+                existe = (
+                    await session.execute(
+                        select(EmployeeSortie.id).where(
+                            EmployeeSortie.employee_id == employe.id, EmployeeSortie.periode == periode
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existe is not None:
+                    raise ErreurImportPaie(
+                        f"Un départ est déjà enregistré pour cet employé ce mois-ci : {afficher_periode(periode)}"
+                    )
+                session.add(EmployeeSortie(employee_id=employe.id, periode=periode, motif=depart.motif.strip()))
+                employe.statut = EmployeeStatut.INACTIF
+                employe.chantier_id = None
+                employe.equipe_id = None
             audit_import.nombre_elements = len(lignes)
             audit_import.perimetre["employes_mis_a_jour"] = employes_mis_a_jour
+            audit_import.perimetre["departs"] = len(departs_confirmes.departs)
+            audit_import.perimetre["retours"] = len(analyse.retours)
             await session.flush()
-        return len(lignes)
+        return PaieImportResult(
+            periode=afficher_periode(periode),
+            crees=len(lignes),
+            departs=len(departs_confirmes.departs),
+            retours=len(analyse.retours),
+        )
 
     async def corriger_et_reanalyser(
         self, session: AsyncSession, contenu: bytes, periode: int, corrections: PaieImportCorrections
@@ -540,7 +632,7 @@ class ServiceImportPaie:
                 if erreur.numero_ligne == numero and not (erreur.champ == "cin" and erreur.raison == "CIN inconnu")
             ]
             if autres_erreurs:
-                raise ValueError(f"La ligne Excel {numero} contient des erreurs à corriger avant le wizard.")
+                raise ErreurImportPaie(f"La ligne Excel {numero} contient des erreurs à corriger avant le wizard.")
         async with session.begin():
             employees = {x.cin.strip().upper(): x for x in (await session.execute(select(Employee))).scalars()}
             fonctions = {x.libelle.strip().upper(): x.id for x in (await session.execute(select(Fonction))).scalars()}
@@ -550,13 +642,17 @@ class ServiceImportPaie:
             if len(ids) != len(set(ids)) or any(
                 identifiant not in par_id or identifiant not in employes_proposes for identifiant in ids
             ):
-                raise ValueError("Chaque correction doit viser une fiche proposée par l'analyse du fichier joint.")
+                raise ErreurImportPaie(
+                    "Chaque correction doit viser une fiche proposée par l'analyse du fichier joint."
+                )
             par_numero = {numero: ligne for numero, ligne in lignes}
             numeros_crees = [correction.numero_ligne for correction in corrections.creer]
             if len(numeros_crees) != len(set(numeros_crees)):
-                raise ValueError("Une seule création est permise par ligne proposée par l'analyse.")
+                raise ErreurImportPaie("Une seule création est permise par ligne proposée par l'analyse.")
             if any(numero not in lignes_proposees for numero in numeros_crees):
-                raise ValueError("Chaque création doit viser un CIN inconnu proposé par l'analyse du fichier joint.")
+                raise ErreurImportPaie(
+                    "Chaque création doit viser un CIN inconnu proposé par l'analyse du fichier joint."
+                )
             if corrections.aligner:
                 action = self._auditeur.auditer(session, "PAIE_IMPORT_CORRECTION", TypeOperation.UPDATE, "Employee")
                 async with action as journal:
@@ -569,7 +665,9 @@ class ServiceImportPaie:
                         )
                         equipe = equipes.get(str(ligne[12]).strip().upper()) if len(ligne) > 12 and ligne[12] else None
                         if fonction is None or chantier is None or (len(ligne) > 12 and ligne[12] and equipe is None):
-                            raise ValueError("La correction référence une Fonction, un Chantier ou une Équipe absente.")
+                            raise ErreurImportPaie(
+                                "La correction référence une Fonction, un Chantier ou une Équipe absente."
+                            )
                         employe.nom_prenom = str(ligne[0]).strip()
                         employe.fonction_id = fonction
                         employe.chantier_id = chantier
@@ -578,7 +676,9 @@ class ServiceImportPaie:
                         salaire = Decimal(str(ligne[6]))
                         if employe.salaire != salaire:
                             if correction.type_salaire is None:
-                                raise ValueError("Le salaire différent exige le choix explicite d'un type de salaire.")
+                                raise ErreurImportPaie(
+                                    "Le salaire différent exige le choix explicite d'un type de salaire."
+                                )
                             employe.salaire = salaire
                             employe.type_salaire = TypeSalaire(correction.type_salaire)
                     journal.nombre_elements = len(corrections.aligner)
@@ -590,17 +690,19 @@ class ServiceImportPaie:
                     for correction in corrections.creer:
                         ligne = par_numero.get(correction.numero_ligne)
                         if ligne is None or len(ligne) <= 12:
-                            raise ValueError(
+                            raise ErreurImportPaie(
                                 "La création doit viser une ligne proposée par l'analyse du fichier joint."
                             )
                         cin = str(ligne[2]).strip()
                         if cin.upper() in employees:
-                            raise ValueError("Le CIN de cette ligne n'est plus inconnu.")
+                            raise ErreurImportPaie("Le CIN de cette ligne n'est plus inconnu.")
                         fonction = fonctions.get(str(ligne[1]).strip().upper()) if ligne[1] else None
                         chantier = chantiers.get(str(ligne[11]).strip().upper()) if ligne[11] else None
                         equipe = equipes.get(str(ligne[12]).strip().upper()) if ligne[12] else None
                         if fonction is None or chantier is None or (ligne[12] and equipe is None):
-                            raise ValueError("La création référence une Fonction, un Chantier ou une Équipe absente.")
+                            raise ErreurImportPaie(
+                                "La création référence une Fonction, un Chantier ou une Équipe absente."
+                            )
                         employe = Employee(
                             nom_prenom=str(ligne[0]).strip(),
                             cin=cin,

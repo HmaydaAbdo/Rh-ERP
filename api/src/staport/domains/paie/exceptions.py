@@ -42,3 +42,18 @@ class PaieGroupeRestaurationConflit(ErreurMetier):
 
 class ReferenceInvalide(ErreurMetier):
     """Employé, fonction, chantier ou équipe inexistant (HTTP 400, comme `InvalidReferenceException`)."""
+
+
+class ErreurImportPaie(ErreurMetier):
+    """Import de paie refusé (HTTP 400, comme `PaieImportException`)."""
+
+
+class PeriodeInvalide(ErreurMetier):
+    """Mois absent ou invalide (HTTP 400, comme `InvalidPeriodeException`)."""
+
+
+class AucunePaiePeriode(ErreurMetier):
+    statut = HTTPStatus.NOT_FOUND
+
+    def __init__(self, periode: str) -> None:
+        super().__init__(f"Aucun bulletin de paie pour la période {periode} : aucun rapport à générer.")

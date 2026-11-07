@@ -9,9 +9,11 @@ from openpyxl import Workbook, load_workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.common.audit_contexte import Auditeur, AuditeurJournal
+from staport.domains.employee.models import EmployeeStatut
+from staport.domains.paie.exceptions import ErreurImportPaie
 from staport.domains.paie.import_service import ServiceImportPaie, lire_lignes_paie
 from staport.domains.paie.models import Paie
-from staport.domains.paie.schemas import PaieImportAnalyse, PaieImportErreur
+from staport.domains.paie.schemas import PaieImportAnalyse, PaieImportDeparts, PaieImportErreur
 
 
 @pytest.mark.asyncio
@@ -54,8 +56,10 @@ async def test_ignorer_salaire_zero_ne_confirme_pas_un_changement_de_salaire(mon
         )
 
     monkeypatch.setattr(service, "analyser", analyser)
-    with pytest.raises(ValueError, match="L'analyse n'est pas prête"):
-        await service.importer(cast(AsyncSession, object()), b"", 202610, ignorer_salaires_zero=True)
+    with pytest.raises(ErreurImportPaie, match="L'analyse n'est pas prête"):
+        await service.importer(
+            cast(AsyncSession, object()), b"", 202610, ignorer_salaires_zero=True, departs_confirmes=PaieImportDeparts()
+        )
 
 
 def test_lecteur_ignore_les_lignes_vides_sans_perdre_le_numero_excel() -> None:
@@ -126,6 +130,7 @@ async def test_analyse_signale_un_bulletin_deja_present_avant_import(
                         equipe_id=None,
                         salaire=None,
                         type_salaire="MENSUEL",
+                        statut=EmployeeStatut.ACTIF,
                     )
                 ],
                 [Ligne(id=1, libelle="Conducteur")],
@@ -182,8 +187,26 @@ async def test_import_met_a_jour_les_affectations_sans_supprimer_une_equipe_abse
             feuille.cell(numero, colonne, valeur)
     sortie = BytesIO()
     classeur.save(sortie)
-    alice = Ligne(id=1, cin="AA1", nom_prenom="Alice", fonction_id=1, chantier_id=1, equipe_id=1, salaire=1000)
-    bob = Ligne(id=2, cin="BB2", nom_prenom="Bob", fonction_id=1, chantier_id=1, equipe_id=9, salaire=1000)
+    alice = Ligne(
+        id=1,
+        cin="AA1",
+        nom_prenom="Alice",
+        fonction_id=1,
+        chantier_id=1,
+        equipe_id=1,
+        salaire=1000,
+        statut=EmployeeStatut.ACTIF,
+    )
+    bob = Ligne(
+        id=2,
+        cin="BB2",
+        nom_prenom="Bob",
+        fonction_id=1,
+        chantier_id=1,
+        equipe_id=9,
+        salaire=1000,
+        statut=EmployeeStatut.ACTIF,
+    )
 
     class SessionImport:
         def __init__(self) -> None:
@@ -231,7 +254,10 @@ async def test_import_met_a_jour_les_affectations_sans_supprimer_une_equipe_abse
         )
 
     monkeypatch.setattr(service, "analyser", analyser)
-    assert await service.importer(cast(AsyncSession, session), sortie.getvalue(), 202610, False) == 2
+    resultat = await service.importer(
+        cast(AsyncSession, session), sortie.getvalue(), 202610, False, PaieImportDeparts()
+    )
+    assert resultat.crees == 2
     assert (alice.nom_prenom, alice.fonction_id, alice.chantier_id, alice.equipe_id) == ("Alice Nouvelle", 2, 3, 4)
     assert bob.equipe_id == 9
     assert [bulletin.equipe_id for bulletin in session.bulletins] == [4, None]
@@ -257,7 +283,7 @@ async def test_analyse_refuse_un_mois_qui_ne_suit_pas_le_dernier_import() -> Non
                 return Ligne(scalar_one_or_none=lambda: 202610)
             return Ligne(scalars=lambda: iter(()))
 
-    with pytest.raises(ValueError, match="Seul le mois 2026-11"):
+    with pytest.raises(ErreurImportPaie, match="Seul le mois 2026-11"):
         await ServiceImportPaie(cast(Auditeur, object())).analyser(
             cast(AsyncSession, SessionMois()), sortie.getvalue(), 202612
         )
