@@ -100,3 +100,62 @@ def test_la_reponse_imbrique_fonction_chantier_et_equipe_comme_spring(plateforme
     assert {k: lu[k] for k in attendu} == attendu
     assert {k: page["content"][0][k] for k in attendu} == attendu
     assert "fonctionId" not in lu and "chantierId" not in lu and "equipeId" not in lu
+
+
+def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Plateforme, connecter: Any) -> None:
+    """Source du futur calcul des STC et du suivi des abandons de poste (décision du propriétaire, 2026-11-07)."""
+    from sqlalchemy import text
+
+    entetes = _auth(connecter)
+    fonction = plateforme.client.post("/functions", headers=entetes, json={"libelle": "Sortie fonction"}).json()
+    chantier = plateforme.client.post(
+        "/chantiers",
+        headers=entetes,
+        json={"code": "SOR-1", "designation": "Chantier sorties", "nature": "AO", "afficherSurCarte": False},
+    ).json()
+    ids = []
+    for nom, cin in (("Zoe Sortie", "CIN-SOR-1"), ("Adam Sortie", "CIN-SOR-2")):
+        corps = {
+            "nomPrenom": nom,
+            "cin": cin,
+            "dateNaissance": "1990-01-02",
+            "dateEmbauche": "2024-01-02",
+            "fonctionId": fonction["id"],
+            "chantierId": chantier["id"],
+        }
+        ids.append(plateforme.client.post("/employees", headers=entetes, json=corps).json()["id"])
+    with plateforme.moteur.begin() as c:
+        for identifiant, motif in zip(ids, ("ABANDON", " "), strict=True):
+            c.execute(
+                text("INSERT INTO employe_sortie (employee_id, periode, motif) VALUES (:e, 209703, :m)"),
+                {"e": identifiant, "m": motif},
+            )
+
+    reponse = plateforme.client.post("/employees/sorties-mois", headers=entetes, json={"periode": "2097-03"})
+    vide = plateforme.client.post("/employees/sorties-mois", headers=entetes, json={"periode": "2097-04"})
+    invalide = plateforme.client.post("/employees/sorties-mois", headers=entetes, json={"periode": "209703"})
+
+    assert reponse.status_code == 200, reponse.text
+    assert reponse.json() == {
+        "periode": "2097-03",
+        "nombre": 2,
+        "parMotif": {"ABANDON": 1, "NON_PRECISE": 1},
+        "sorties": [
+            {
+                "employeId": ids[1],
+                "nomPrenom": "Adam Sortie",
+                "cin": "CIN-SOR-2",
+                "periode": "2097-03",
+                "motif": "NON_PRECISE",
+            },
+            {
+                "employeId": ids[0],
+                "nomPrenom": "Zoe Sortie",
+                "cin": "CIN-SOR-1",
+                "periode": "2097-03",
+                "motif": "ABANDON",
+            },
+        ],
+    }
+    assert vide.json() == {"periode": "2097-04", "nombre": 0, "parMotif": {}, "sorties": []}
+    assert invalide.status_code == 400

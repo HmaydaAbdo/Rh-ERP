@@ -5,6 +5,7 @@ from typing import Annotated
 from pydantic import Field, model_validator
 
 from staport.domains.common.schemas import ModeleApi, Nombre, NonVide, Page
+from staport.domains.paie.periode import PeriodePaie
 
 from .models import EmployeeStatut, TypeSalaire
 
@@ -120,14 +121,20 @@ class EmployeeRegroupementReponse(ModeleApi):
     actifs: int
 
 
+class EmployeeSortiesRecherche(ModeleApi):
+    periode: PeriodePaie
+
+
 class EmployeeSortieReponse(ModeleApi):
     employe_id: int
-    periode: int
+    nom_prenom: str
+    cin: str
+    periode: PeriodePaie
     motif: str
 
 
 class EmployeeSortiesMoisReponse(ModeleApi):
-    periode: int
+    periode: PeriodePaie
     nombre: int
     par_motif: dict[str, int]
     sorties: list[EmployeeSortieReponse]
