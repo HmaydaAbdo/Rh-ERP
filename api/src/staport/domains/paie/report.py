@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from html import escape
 from io import BytesIO
 from pathlib import Path
@@ -9,6 +9,7 @@ from typing import Any, cast
 from matplotlib.figure import Figure
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur
@@ -32,7 +33,10 @@ class ServiceRapportPaie:
         self._ressources = Path(__file__).with_name("report")
 
     async def generer(self, session: AsyncSession, requete: PaieRapportRequete) -> BytesIO:
-        conditions = [Paie.periode == int(requete.periode.replace("-", ""))]
+        periode_precedente = _periode_precedente(requete.periode)
+        conditions: list[ColumnElement[bool]] = [
+            Paie.periode.in_([int(requete.periode.replace("-", "")), int(periode_precedente.replace("-", ""))])
+        ]
         if requete.nom_prenom:
             conditions.append(Employee.nom_prenom.icontains(requete.nom_prenom, autoescape=True))
         if requete.cin:
@@ -57,16 +61,20 @@ class ServiceRapportPaie:
                 list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
-        if not lignes:
+        lignes_courantes = [ligne for ligne in lignes if ligne[0].periode == int(requete.periode.replace("-", ""))]
+        lignes_precedentes = [ligne for ligne in lignes if ligne[0].periode == int(periode_precedente.replace("-", ""))]
+        if not lignes_courantes:
             raise AucunePaiePeriode(requete.periode)
-        html = self._html(requete, lignes)
+        html = self._html(requete, lignes_courantes, lignes_precedentes)
         return BytesIO(await rendre_pdf(html, self._ressources))
 
     def _html(
-        self, requete: PaieRapportRequete, lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]
+        self,
+        requete: PaieRapportRequete,
+        lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+        lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]] | None = None,
     ) -> str:
         css = (self._ressources / "rapport.css").read_text(encoding="utf-8")
-        total = mesurer(cast(list[BulletinRapport], [ligne[0] for ligne in lignes]))
         par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
         for ligne in lignes:
             par_chantier.setdefault(ligne[2].code, []).append(ligne)
@@ -111,12 +119,12 @@ class ServiceRapportPaie:
             )
         if not requete.sans_vue_ensemble:
             repartition = _graphique_repartition(par_chantier)
+            cartes = _cartes_kpi(lignes, lignes_precedentes or [])
             pages.append(
                 (
                     "GLOBAL",
                     '<div class="titre-chapitre">Synthèse de la paie</div>'
-                    f'<div class="perimetre-ligne">Bulletins : {total.effectif} — '
-                    f"Masse salariale : {total.masse:,.2f} DH — STC : {total.stc}</div>"
+                    f"{cartes}"
                     f'<div class="graphique">{repartition}</div>',
                 )
             )
@@ -222,7 +230,7 @@ def _graphique_repartition(
     """Rend la répartition de la masse par chantier avec le backend SVG officiel Matplotlib."""
     elements = sorted(
         (
-            (lignes[0][2].nom or code, sum((ligne[0].salaire_total for ligne in lignes), Decimal(0)))
+            ((lignes[0][2].nom or code).strip() or code, sum((ligne[0].salaire_total for ligne in lignes), Decimal(0)))
             for code, lignes in par_chantier.items()
         ),
         key=lambda element: element[1],
@@ -246,6 +254,96 @@ def _graphique_repartition(
         sortie, format="svg", metadata={"Title": "Répartition de la masse salariale par chantier"}
     )
     return sortie.getvalue().decode("utf-8")
+
+
+def _periode_precedente(periode: str) -> str:
+    annee, mois = (int(partie) for partie in periode.split("-"))
+    return f"{annee - 1}-12" if mois == 1 else f"{annee}-{mois - 1:02}"
+
+
+def _cartes_kpi(
+    courantes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+    precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> str:
+    bulletins = [ligne[0] for ligne in courantes]
+    bulletins_precedents = [ligne[0] for ligne in precedentes]
+    courant = mesurer(cast(list[BulletinRapport], bulletins))
+    precedent = mesurer(cast(list[BulletinRapport], bulletins_precedents)) if bulletins_precedents else None
+    nombre_chantiers = len({ligne[2].id for ligne in courantes})
+    nombre_chantiers_precedent = len({ligne[2].id for ligne in precedentes})
+    cartes = (
+        (
+            "Masse salariale",
+            _masse(courant.masse),
+            _ecart_montant(courant.masse, precedent.masse if precedent else None),
+            "montant",
+        ),
+        (
+            "Bulletins de paie",
+            _entier(courant.effectif),
+            _ecart_compte(courant.effectif, precedent.effectif if precedent else None),
+            "compte",
+        ),
+        (
+            "Chantiers",
+            _entier(nombre_chantiers),
+            _ecart_compte(nombre_chantiers, nombre_chantiers_precedent if precedentes else None),
+            "compte",
+        ),
+        (
+            "STC / sorties",
+            _entier(courant.stc),
+            _ecart_compte(courant.stc, precedent.stc if precedent else None),
+            "compte",
+        ),
+        (
+            "Montant des STC",
+            _montant(courant.montant_stc),
+            _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None),
+            "montant",
+        ),
+    )
+    elements = [
+        '<div class="titre-indicateurs">Indicateurs clés</div><div class="kpi-row">',
+    ]
+    for index, (libelle, valeur, sous_texte, classe) in enumerate(cartes):
+        derniere = " derniere" if index == len(cartes) - 1 else ""
+        elements.append(
+            f'<div class="kpi-carte{derniere}" style="height: 54pt"><div class="label">{libelle}</div>'
+            f'<div class="valeur {classe}">{valeur}</div><div class="sous-texte">{sous_texte}</div></div>'
+        )
+    elements.append("</div>")
+    return "".join(elements)
+
+
+def _entier(valeur: int) -> str:
+    return f"{valeur:,}".replace(",", "\u00a0")
+
+
+def _masse(valeur: Decimal) -> str:
+    arrondie = valeur.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    return f"{arrondie:,.0f}".replace(",", "\u00a0")
+
+
+def _ecart_compte(actuel: int, precedent: int | None) -> str:
+    if precedent is None:
+        return "Écart indisponible"
+    ecart = actuel - precedent
+    signe = "+" if ecart > 0 else "\u2212" if ecart < 0 else ""
+    return f"Écart : {signe}{_entier(abs(ecart))}"
+
+
+def _ecart_montant(actuel: Decimal, precedent: Decimal | None) -> str:
+    if precedent is None:
+        return "Écart indisponible"
+    ecart = actuel - precedent
+    signe = "+" if ecart > 0 else "\u2212" if ecart < 0 else ""
+    montant = f"{signe}{_masse(abs(ecart))} DH"
+    if precedent == 0:
+        return f"Écart : {montant} (base à 0)"
+    pourcentage = (ecart * Decimal(100) / precedent).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    signe_pourcentage = "+" if pourcentage > 0 else "\u2212" if pourcentage < 0 else ""
+    return f"Écart : {montant} ({signe_pourcentage}{abs(pourcentage):.1f} %)".replace(".", ",")
 
 
 def _filtres_actifs(

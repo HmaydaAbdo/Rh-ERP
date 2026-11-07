@@ -6,7 +6,8 @@ from typing import Any, cast
 from conftest import ADMIN, Plateforme
 
 from staport.domains.common.audit_contexte import Auditeur
-from staport.domains.paie.report import ServiceRapportPaie, _montant, _quantite  # pyright: ignore[reportPrivateUsage]
+from staport.domains.paie import report
+from staport.domains.paie.report import ServiceRapportPaie
 from staport.domains.paie.schemas import PaieRapportRequete
 
 
@@ -21,7 +22,7 @@ def test_rapport_incomplet_ne_peut_pas_etre_telecharge(plateforme: Plateforme, c
 
 
 def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
-    chantier = SimpleNamespace(code="CH01", nom="Chantier A")
+    chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
     fonction = SimpleNamespace(libelle="Conducteur")
     lignes: list[tuple[Any, Any, Any, Any, Any]] = []
     for nom, equipe in (("Alice", "CH"), ("Bob", "OP"), ("Claire", "Autre")):
@@ -40,13 +41,22 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
             (paie, SimpleNamespace(nom_prenom=nom, cin=nom), chantier, SimpleNamespace(libelle=equipe), fonction)
         )
     requete = PaieRapportRequete(periode="2026-10", regroupements_equipes_par_chantier={"CH01": [["CH", "OP"]]})
+    ligne_precedente = (
+        SimpleNamespace(salaire_total=Decimal("500.00"), observation="STC", chantier_id=1),
+        SimpleNamespace(),
+        chantier,
+        None,
+        fonction,
+    )
     service = ServiceRapportPaie(cast(Auditeur, object()))
     rendre = cast(Callable[..., str], service._html)  # pyright: ignore[reportPrivateUsage]
-    html = rendre(requete, lignes)
+    html = rendre(requete, lignes, [ligne_precedente])
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
     assert '<div class="graphique">' in html and "<svg" in html
     assert "Masse salariale (DH)" in html
+    assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
+    assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
@@ -70,8 +80,16 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
 
 
 def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
-    assert _montant(Decimal("1234567.80")) == "1\u00a0234\u00a0567,80"
-    assert _montant(None) == "-"
-    assert _quantite(Decimal("23.50")) == "23,5"
-    assert _quantite(Decimal("0.00")) == "0"
-    assert _quantite(None) == "-"
+    rapport = cast(Any, report)
+    assert rapport._montant(Decimal("1234567.80")) == "1\u00a0234\u00a0567,80"
+    assert rapport._montant(None) == "-"
+    assert rapport._quantite(Decimal("23.50")) == "23,5"
+    assert rapport._quantite(Decimal("0.00")) == "0"
+    assert rapport._quantite(None) == "-"
+
+
+def test_comparaison_du_rapport_preserve_absence_et_base_nulle() -> None:
+    rapport = cast(Any, report)
+    assert rapport._periode_precedente("2026-01") == "2025-12"
+    assert rapport._ecart_montant(Decimal("12.00"), None) == "Écart indisponible"
+    assert rapport._ecart_montant(Decimal("12.00"), Decimal("0.00")) == "Écart : +12 DH (base à 0)"
