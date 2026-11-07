@@ -92,8 +92,18 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
         {(1, 1): [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
     )
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
+    assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "Masse salariale par fonction (DH)" in html_equipe
     assert "Page 9 / 9" in html_equipe
+    chantier_long = SimpleNamespace(id=1, code="CH01", nom="Chantier avec un libellé très long " * 5)
+    lignes_longues = [
+        (paie, employe, chantier_long, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
+    ]
+    html_niveau_long = rendre(
+        PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
+        lignes_longues,
+    )
+    assert 'bloc bloc-niveau lignes-2">CHANTIER :' in html_niveau_long
     filtre = PaieRapportRequete(periode="2026-10", nom_prenom="Ali%", sans_vue_ensemble=True)
     html_filtre = rendre(filtre, lignes)
     assert "Périmètre du rapport" in html_filtre
@@ -101,6 +111,21 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "I — Vue d'ensemble" not in html_filtre
     assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
     assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
+
+    # Le contrat Spring découpe les critères longs avant de générer les pages physiques.
+    rapport = cast(Any, report)
+    original_filtres = rapport._filtres_actifs
+
+    def filtres_longs(_requete: Any, _lignes: Any) -> list[str]:
+        return ["Filtre : " + "mot " * 2500]
+
+    rapport._filtres_actifs = filtres_longs
+    try:
+        html_perimetre_long = rendre(PaieRapportRequete(periode="2026-10"), lignes)
+    finally:
+        rapport._filtres_actifs = original_filtres
+    assert "Périmètre du rapport (suite)" in html_perimetre_long
+    assert "Page 2 /" in html_perimetre_long
 
     lignes_nombreuses: list[tuple[Any, Any, Any, Any, Any]] = [
         (paie, SimpleNamespace(nom_prenom=f"Employé {i}", cin=f"CIN{i}"), chantier, equipe, fonction)
@@ -167,6 +192,29 @@ def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> No
     assert svg.index("Grand") < svg.index("Petit")
     assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(17)), maximum=16)] == [9, 8]
     assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(33)), maximum=16)] == [11, 11, 11]
+
+
+def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
+    chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
+    lignes = [
+        (
+            SimpleNamespace(salaire_total=Decimal("100")),
+            SimpleNamespace(nom_prenom=f"Employé {index}"),
+            chantier,
+            None,
+            SimpleNamespace(libelle=f"Fonction {index:02}"),
+        )
+        for index in range(16)
+    ]
+    graphiques = cast(Any, report)._graphiques_fonctions(lignes)
+    assert len(graphiques) == 2
+    assert all(sum(f"Fonction {index:02}" in graphique for index in range(16)) == 8 for graphique in graphiques)
+
+
+def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
+    rapport = cast(Any, report)
+    cartes = [("Indicateur", "1", "Écart indisponible " * 30, "compte")]
+    assert rapport._hauteur_cartes_kpi(cartes) > 54
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
