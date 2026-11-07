@@ -97,7 +97,8 @@ Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre page
 avec 65 lignes présentes dans le modèle HTML.
 Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
 virgule décimale, tiret pour les valeurs numériques absentes).
-Le prototype contient une répartition graphique de la masse salariale par chantier. Il a une page de périmètre quand un filtre est actif et omet sa synthèse quand
+Le prototype contient les cinq KPI globaux (masse, bulletins, chantiers, nombre et montant des STC), leurs comparaisons au mois précédent
+et une répartition graphique de la masse salariale par chantier. Il a une page de périmètre quand un filtre est actif et omet sa synthèse quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
