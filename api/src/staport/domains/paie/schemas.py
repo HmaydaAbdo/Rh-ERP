@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import Field
@@ -258,6 +259,8 @@ class PaieEffectifMois(ModeleApi):
 
 
 class PaieParcoursMois(ModeleApi):
+    """La photo du bulletin : libellé de la fonction, codes du chantier et de l'équipe du mois (`MoisDto`)."""
+
     bulletin_id: int
     periode: PeriodePaie
     fonction: str
@@ -290,6 +293,101 @@ class PaieParcoursReponse(ModeleApi):
     indicateurs: PaieParcoursIndicateurs
     mois: list[PaieParcoursMois]
     evenements: list[PaieParcoursEvenement]
+
+
+class DimensionPaie(StrEnum):
+    CHANTIER = "CHANTIER"
+    EQUIPE = "EQUIPE"
+    FONCTION = "FONCTION"
+
+
+class TriRepartition(StrEnum):
+    MASSE = "MASSE"
+    EFFECTIF = "EFFECTIF"
+    STC = "STC"
+    STC_MONTANT = "STC_MONTANT"
+    LIBELLE = "LIBELLE"
+    CODE = "CODE"
+
+
+class TriComparaison(StrEnum):
+    MASSE = "MASSE"
+    VARIATION_MASSE = "VARIATION_MASSE"
+    VARIATION_POURCENTAGE = "VARIATION_POURCENTAGE"
+    EFFECTIF = "EFFECTIF"
+    VARIATION_EFFECTIF = "VARIATION_EFFECTIF"
+    LIBELLE = "LIBELLE"
+
+
+class PaieRepartitionGroupe(ModeleApi):
+    id: int | None
+    code: str | None
+    libelle: str | None
+    masse: Nombre
+    effectif: int
+    stc: int
+    stc_montant: Nombre
+
+
+class PaieRepartitionReponse(ModeleApi):
+    """Répartition d'un mois de paie triée selon le critère demandé (`PaieRepartitionDto`)."""
+
+    periode: PeriodePaie
+    dimension: DimensionPaie
+    nombre_groupes: int
+    groupes: list[PaieRepartitionGroupe]
+
+
+class PaieComparaisonTotal(ModeleApi):
+    masse: Nombre
+    masse_reference: Nombre | None
+    variation_masse: Nombre | None
+    variation_pourcentage: Nombre | None
+    effectif: int
+    effectif_reference: int | None
+    variation_effectif: int | None
+    cout_moyen: Nombre | None
+    cout_moyen_reference: Nombre | None
+
+
+class PaieFonctionPrincipale(ModeleApi):
+    libelle: str
+    effectif: int
+
+
+class PaieComparaisonGroupe(ModeleApi):
+    """`statut` : COMPARABLE, NOUVEAU ou DISPARU ; les variations sont nulles si un mois manque."""
+
+    id: int | None
+    code: str | None
+    libelle: str | None
+    statut: Literal["COMPARABLE", "NOUVEAU", "DISPARU"]
+    masse: Nombre | None
+    masse_reference: Nombre | None
+    variation_masse: Nombre | None
+    variation_pourcentage: Nombre | None
+    effectif: int | None
+    effectif_reference: int | None
+    variation_effectif: int | None
+    cout_moyen: Nombre | None
+    cout_moyen_reference: Nombre | None
+    fonction_principale: PaieFonctionPrincipale | None
+
+
+class PaieComparaisonReponse(ModeleApi):
+    """Comparaison de deux mois de paie sur le même périmètre (`PaieComparaisonDto`)."""
+
+    periode: PeriodePaie
+    periode_reference: PeriodePaie
+    dimension: DimensionPaie
+    nombre_groupes: int
+    total: PaieComparaisonTotal
+    plus_forte_hausse: PaieComparaisonGroupe | None
+    plus_forte_baisse: PaieComparaisonGroupe | None
+    plus_forte_hausse_du_perimetre: PaieComparaisonGroupe | None
+    plus_forte_baisse_du_perimetre: PaieComparaisonGroupe | None
+    groupes: list[PaieComparaisonGroupe]
+    definitions: dict[str, str]
 
 
 class PaieExportRequete(ModeleApi):

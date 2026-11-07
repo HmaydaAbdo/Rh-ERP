@@ -1,5 +1,7 @@
-from decimal import Decimal
-from typing import Any
+from collections.abc import Callable
+from dataclasses import dataclass
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Any, cast
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +20,7 @@ from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
 from staport.domains.parametre.service import ServiceParametre
 
 from . import historique, repository
-from .analytique import construire_analytique
+from .analytique import Ligne, construire_analytique
 from .cartes import chantiers as construire_chantiers
 from .cartes import periodes as construire_periodes
 from .exceptions import (
@@ -32,18 +34,27 @@ from .exceptions import (
     ReferenceInvalide,
 )
 from .models import Paie
-from .periode import afficher_periode
+from .periode import afficher_periode, mois_precedent
 from .schemas import (
+    DimensionPaie,
     PaieAnalytiqueReponse,
+    PaieChantierMasse,
     PaieChantierOption,
     PaieChantierPeriode,
     PaieChantierResume,
+    PaieComparaisonGroupe,
+    PaieComparaisonReponse,
+    PaieComparaisonTotal,
     PaieCreationRequete,
     PaieEffectifMois,
     PaieEmployeeResume,
+    PaieEquipeMasse,
     PaieEquipeOption,
     PaieEquipeResume,
+    PaieEvolution,
+    PaieFonctionPrincipale,
     PaieFonctionResume,
+    PaieKpi,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -51,7 +62,11 @@ from .schemas import (
     PaieParcoursReponse,
     PaiePeriodeResume,
     PaieRecherche,
+    PaieRepartitionGroupe,
+    PaieRepartitionReponse,
     PaieReponse,
+    TriComparaison,
+    TriRepartition,
 )
 
 
@@ -109,6 +124,192 @@ def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str,
             perimetre[cle] = valeur
     perimetre["nombreConfirme"] = nombre_confirme
     return perimetre
+
+
+DEFINITIONS_COMPARAISON = {
+    "masse": "Masse salariale du mois récent, en dirhams",
+    "masseReference": "Masse salariale du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
+    "variationMasse": "Masse du mois récent moins masse du mois de comparaison, en dirhams (négative = baisse) ; "
+    "absente si un mois manque",
+    "variationPourcentage": "Variation de masse divisée par la masse du mois de comparaison, en pourcentage à une "
+    "décimale ; absente si la masse de référence est nulle",
+    "effectif": "Employés payés dans le mois récent (un bulletin par employé)",
+    "variationEffectif": "Effectif du mois récent moins effectif du mois de comparaison ; absent si un mois manque",
+    "coutMoyen": "Masse divisée par l'effectif du mois récent, en dirhams ; absent sans bulletin",
+    "fonctionPrincipale": "Fonction qui compte le plus d'employés payés dans le groupe au mois récent ; à égalité, le "
+    "libellé alphabétique vient en premier",
+    "statut": "COMPARABLE (paie aux deux mois), NOUVEAU (paie seulement au mois récent) ou DISPARU (paie seulement au "
+    "mois de comparaison)",
+    "plusForteHausse": "Groupe comparable dont la masse a le plus augmenté parmi les groupes rendus ; nul si aucun "
+    "n'augmente",
+    "plusForteHausseDuPerimetre": "Groupe comparable dont la masse a le plus augmenté sur tout le périmètre, même s'il "
+    "n'est pas dans la liste rendue",
+    "plusForteBaisse": "Groupe comparable dont la masse a le plus baissé parmi les groupes rendus ; nul si aucun ne "
+    "baisse",
+    "plusForteBaisseDuPerimetre": "Groupe comparable dont la masse a le plus baissé sur tout le périmètre, même s'il "
+    "n'est pas dans la liste rendue",
+}
+CENT = Decimal(100)
+
+
+def _groupes_repartition(resultat: PaieAnalytiqueReponse, dimension: DimensionPaie) -> list[PaieRepartitionGroupe]:
+    """Les groupes d'une dimension de l'analyse, dans l'ordre de l'analyse (masse décroissante) ; sans code pour une
+    fonction."""
+    if dimension is DimensionPaie.CHANTIER:
+        sources: list[PaieChantierMasse | PaieEquipeMasse] = [*resultat.par_chantier]
+    elif dimension is DimensionPaie.EQUIPE:
+        sources = [*resultat.par_equipe]
+    else:
+        return [
+            PaieRepartitionGroupe(
+                id=f.id,
+                code=None,
+                libelle=f.libelle,
+                masse=f.masse,
+                effectif=f.effectif,
+                stc=f.stc,
+                stc_montant=f.stc_montant,
+            )
+            for f in resultat.par_fonction
+        ]
+    return [
+        PaieRepartitionGroupe(
+            id=g.id,
+            code=g.code,
+            libelle=g.libelle,
+            masse=g.masse,
+            effectif=g.effectif,
+            stc=g.stc,
+            stc_montant=g.stc_montant,
+        )
+        for g in sources
+    ]
+
+
+def _cout_moyen(masse: Decimal, effectif: int) -> Decimal | None:
+    return None if effectif == 0 else (masse / effectif).quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+
+def _pourcentage(variation: Decimal, reference: Decimal) -> Decimal:
+    return (variation * CENT / reference).quantize(Decimal("0.1"), ROUND_HALF_UP)
+
+
+@dataclass(frozen=True)
+class _Comparaison:
+    """Un groupe aux deux mois : `source` au mois récent, `reference` au mois de comparaison (l'un peut manquer)."""
+
+    source: PaieRepartitionGroupe | None
+    reference: PaieRepartitionGroupe | None
+
+    @property
+    def groupe(self) -> PaieRepartitionGroupe:
+        return cast(PaieRepartitionGroupe, self.source or self.reference)
+
+    @property
+    def libelle(self) -> str:
+        return self.groupe.libelle or ""
+
+    @property
+    def variation_masse(self) -> Decimal | None:
+        if self.source is None or self.reference is None:
+            return None
+        return self.source.masse - self.reference.masse
+
+    @property
+    def variation_pourcentage(self) -> Decimal | None:
+        variation = self.variation_masse
+        if variation is None or self.reference is None or self.reference.masse == 0:
+            return None
+        return _pourcentage(variation, self.reference.masse)
+
+    @property
+    def variation_effectif(self) -> int | None:
+        if self.source is None or self.reference is None:
+            return None
+        return self.source.effectif - self.reference.effectif
+
+    def valeur(self, tri: TriComparaison) -> Decimal | None:
+        if tri is TriComparaison.MASSE:
+            return None if self.source is None else self.source.masse
+        if tri is TriComparaison.VARIATION_MASSE:
+            return self.variation_masse
+        if tri is TriComparaison.VARIATION_POURCENTAGE:
+            return self.variation_pourcentage
+        if tri is TriComparaison.EFFECTIF:
+            return None if self.source is None else Decimal(self.source.effectif)
+        if tri is TriComparaison.VARIATION_EFFECTIF:
+            variation = self.variation_effectif
+            return None if variation is None else Decimal(variation)
+        return None
+
+    def groupe_dto(self, fonction: PaieFonctionPrincipale | None) -> PaieComparaisonGroupe:
+        source, reference = self.source, self.reference
+        statut = "DISPARU" if source is None else "NOUVEAU" if reference is None else "COMPARABLE"
+        return PaieComparaisonGroupe(
+            id=self.groupe.id,
+            code=self.groupe.code,
+            libelle=self.groupe.libelle,
+            statut=statut,
+            masse=None if source is None else source.masse,
+            masse_reference=None if reference is None else reference.masse,
+            variation_masse=self.variation_masse,
+            variation_pourcentage=self.variation_pourcentage,
+            effectif=None if source is None else source.effectif,
+            effectif_reference=None if reference is None else reference.effectif,
+            variation_effectif=self.variation_effectif,
+            cout_moyen=None if source is None else _cout_moyen(source.masse, source.effectif),
+            cout_moyen_reference=None if reference is None else _cout_moyen(reference.masse, reference.effectif),
+            fonction_principale=fonction,
+        )
+
+
+def _fonction_principale(
+    comparaison: _Comparaison, dimension: DimensionPaie, courant: list[Ligne], periode: int, pas: Decimal
+) -> PaieFonctionPrincipale | None:
+    """La fonction qui compte le plus de bulletins du groupe au mois récent ; à égalité, le premier libellé."""
+    if dimension is DimensionPaie.FONCTION or comparaison.source is None:
+        return None
+    identifiant = comparaison.groupe.id
+    if dimension is DimensionPaie.CHANTIER:
+        membres = [ligne for ligne in courant if ligne[3].id == identifiant]
+    else:
+        membres = [ligne for ligne in courant if (ligne[4].id if ligne[4] is not None else None) == identifiant]
+    fonctions = construire_analytique(periode, membres, pas).par_fonction
+    if not fonctions:
+        return None
+    meilleure = min(fonctions, key=lambda f: (-f.effectif, f.libelle))
+    return PaieFonctionPrincipale(libelle=meilleure.libelle, effectif=meilleure.effectif)
+
+
+def _extreme(comparaisons: list[_Comparaison], *, hausse: bool) -> PaieComparaisonGroupe | None:
+    """Le groupe comparable de plus forte hausse (ou baisse) de masse ; le premier rencontré à égalité."""
+    retenu: _Comparaison | None = None
+    for c in comparaisons:
+        variation = c.variation_masse
+        if variation is None or (variation <= 0 if hausse else variation >= 0):
+            continue
+        meilleure = cast(Decimal, retenu.variation_masse) if retenu is not None else None
+        if meilleure is None or (variation > meilleure if hausse else variation < meilleure):
+            retenu = c
+    return None if retenu is None else retenu.groupe_dto(None)
+
+
+def _total(actuel: PaieKpi, ancien: PaieKpi) -> PaieComparaisonTotal:
+    comparable = ancien.effectif > 0
+    variation = actuel.masse - ancien.masse if comparable else None
+    return PaieComparaisonTotal(
+        masse=actuel.masse,
+        masse_reference=ancien.masse if comparable else None,
+        variation_masse=variation,
+        variation_pourcentage=_pourcentage(variation, ancien.masse)
+        if variation is not None and ancien.masse != 0
+        else None,
+        effectif=actuel.effectif,
+        effectif_reference=ancien.effectif if comparable else None,
+        variation_effectif=actuel.effectif - ancien.effectif if comparable else None,
+        cout_moyen=_cout_moyen(actuel.masse, actuel.effectif),
+        cout_moyen_reference=_cout_moyen(ancien.masse, ancien.effectif) if comparable else None,
+    )
 
 
 class ServicePaie:
@@ -291,6 +492,106 @@ class ServicePaie:
             rows, total = await repository.options_equipes(s, r.periode, r.chantier_ids, r.recherche, p)
         return creer_page([PaieEquipeOption.model_validate(x) for x in rows], p.taille, p.page, total)
 
+    async def derniere_periode(self, s: AsyncSession) -> int | None:
+        """Le dernier mois de paie importé, tous périmètres confondus (`findPeriodes(null)`) ; `None` sans paie."""
+        async with s.begin():
+            return await repository.derniere_periode(s)
+
+    async def rechercher_bulletins(
+        self, s: AsyncSession, c: PaieRecherche, page: int, taille: int, tri: str, croissant: bool
+    ) -> Page[PaieReponse]:
+        """Recherche des bulletins triée sur `tri` (colonne du bulletin, ou `nom_prenom` de l'employé), départagée par
+        le nom puis l'identifiant pour un ordre stable d'une page à l'autre (`SensTri.sur` de Spring)."""
+        async with s.begin():
+            rows, total = await repository.rechercher_tries(s, c, page, taille, tri, croissant)
+            fiches = await repository.fiches(s, rows)
+        par_id = {ligne[0].id: rep(ligne) for ligne in fiches}
+        return creer_page([par_id[x.id] for x in rows], taille, page, total)
+
+    async def evolution_jusqua(
+        self, s: AsyncSession, criteres: PaieRecherche, parametres: ServiceParametre
+    ) -> list[PaieEvolution]:
+        """Série mensuelle du périmètre, bornée au mois demandé (`evolutionJusqua`)."""
+        resultat = await self.analytique(s, criteres, parametres)
+        return [e for e in resultat.evolution if criteres.periode is None or e.periode <= criteres.periode]
+
+    async def repartir(
+        self,
+        s: AsyncSession,
+        criteres: PaieRecherche,
+        parametres: ServiceParametre,
+        dimension: DimensionPaie,
+        tri: TriRepartition | None,
+        croissant: bool | None,
+    ) -> PaieRepartitionReponse:
+        """Paie du mois par chantier, équipe ou fonction, triée (`PaieAnalytiqueService.repartir`)."""
+        resultat = await self.analytique(s, criteres, parametres)
+        groupes = _groupes_repartition(resultat, dimension)
+        critere = tri or TriRepartition.MASSE
+        texte = critere in (TriRepartition.LIBELLE, TriRepartition.CODE)
+        cles: dict[TriRepartition, Callable[[PaieRepartitionGroupe], Any]] = {
+            TriRepartition.MASSE: lambda g: g.masse,
+            TriRepartition.EFFECTIF: lambda g: g.effectif,
+            TriRepartition.STC: lambda g: g.stc,
+            TriRepartition.STC_MONTANT: lambda g: g.stc_montant,
+            TriRepartition.LIBELLE: lambda g: (g.libelle or "").lower(),
+            TriRepartition.CODE: lambda g: (g.code or "").lower(),
+        }
+        cle = cles[critere]
+        tries = sorted(groupes, key=cle, reverse=not (croissant if croissant is not None else texte))
+        return PaieRepartitionReponse(
+            periode=resultat.periode, dimension=dimension, nombre_groupes=len(tries), groupes=tries
+        )
+
+    async def comparer(
+        self,
+        s: AsyncSession,
+        recent: PaieRecherche,
+        reference: int | None,
+        parametres: ServiceParametre,
+        dimension: DimensionPaie,
+        tri: TriComparaison,
+        croissant: bool,
+    ) -> PaieComparaisonReponse:
+        """Comparaison de deux mois, groupe par groupe (`PaieAnalytiqueService.comparer`). Les deux mois partagent le
+        périmètre : les bulletins sont lus une seule fois, puis analysés pour chaque mois."""
+        if recent.periode is None:
+            raise PeriodeInvalide("La période est obligatoire (format aaaa-MM, ex. 2026-08)")
+        mois_reference = reference if reference is not None else mois_precedent(recent.periode)
+        async with s.begin():
+            pas = await parametres.pas_tranche_analytique(s)
+            lignes = await repository.lignes_analytiques(s, recent)
+        actuel = construire_analytique(recent.periode, lignes, pas)
+        ancien = construire_analytique(mois_reference, lignes, pas)
+        anciens = {g.id: g for g in _groupes_repartition(ancien, dimension)}
+        toutes: list[_Comparaison] = []
+        for groupe in _groupes_repartition(actuel, dimension):
+            toutes.append(_Comparaison(groupe, anciens.pop(groupe.id, None)))
+        toutes.extend(_Comparaison(None, g) for g in anciens.values())
+
+        if tri is TriComparaison.LIBELLE:
+            classees = sorted(toutes, key=lambda c: c.libelle.lower(), reverse=not croissant)
+        else:
+            valeurs = [c for c in toutes if c.valeur(tri) is not None]
+            absentes = [c for c in toutes if c.valeur(tri) is None]
+            classees = sorted(valeurs, key=lambda c: cast(Decimal, c.valeur(tri)), reverse=not croissant) + absentes
+        courant = [ligne for ligne in lignes if ligne[0].periode == recent.periode]
+        groupes = [c.groupe_dto(_fonction_principale(c, dimension, courant, recent.periode, pas)) for c in classees]
+        hausse, baisse = _extreme(toutes, hausse=True), _extreme(toutes, hausse=False)
+        return PaieComparaisonReponse(
+            periode=actuel.periode,
+            periode_reference=ancien.periode,
+            dimension=dimension,
+            nombre_groupes=len(toutes),
+            total=_total(actuel.kpis, ancien.kpis),
+            plus_forte_hausse=hausse,
+            plus_forte_baisse=baisse,
+            plus_forte_hausse_du_perimetre=hausse,
+            plus_forte_baisse_du_perimetre=baisse,
+            groupes=groupes,
+            definitions=DEFINITIONS_COMPARAISON,
+        )
+
     async def effectifs(self, s: AsyncSession, c: PaieRecherche) -> list[PaieEffectifMois]:
         async with s.begin():
             lignes = await historique.lignes_effectifs(s, c)
@@ -298,6 +599,7 @@ class ServicePaie:
         return historique.tendances_effectifs(lignes, departs)
 
     async def parcours(self, s: AsyncSession, employee_id: int) -> PaieParcoursReponse:
+        """Parcours d'un employé tel que ses bulletins et ses départs le racontent (`PaieParcoursService`)."""
         async with s.begin():
             if not await historique.employe_existe(s, employee_id):
                 raise EmployeeIntrouvable(employee_id)
