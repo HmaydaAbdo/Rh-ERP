@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -221,8 +222,9 @@ def comparer_pdf(nom: str, a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
     if len(pages_a) != len(pages_b):
         sortie.append(("pdf!pages", len(pages_a), len(pages_b)))
     for numero, (ta, tb) in enumerate(zip(pages_a, pages_b, strict=False), start=1):
-        if ta != tb:
-            sortie.append((f"pdf!page{numero}.texte", ta[:300], tb[:300]))
+        mots_a, mots_b = Counter(ta.split()), Counter(tb.split())  # l'ordre d'extraction suit la mise en page : ignoré
+        if mots_a != mots_b:
+            sortie.append((f"pdf!page{numero}.mots", dict(mots_a - mots_b), dict(mots_b - mots_a)))
     return sortie
 
 

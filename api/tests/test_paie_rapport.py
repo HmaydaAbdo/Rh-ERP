@@ -25,14 +25,13 @@ from staport.domains.paie.report import ServiceRapportPaie
 from staport.domains.paie.schemas import PaieRapportRequete
 
 
-def test_rapport_incomplet_ne_peut_pas_etre_telecharge(plateforme: Plateforme, connecter: Any) -> None:
+def test_rapport_sans_paie_pour_le_mois_est_introuvable(plateforme: Plateforme, connecter: Any) -> None:
     jeton = connecter(*ADMIN)["accessToken"]
     reponse = plateforme.client.post(
         "/paie/report/pdf", headers={"Authorization": f"Bearer {jeton}"}, json={"periode": "2026-10"}
     )
-    assert reponse.status_code == 503
+    assert reponse.status_code == 404
     assert reponse.headers["content-type"].startswith("application/json")
-    assert "temporairement indisponible" in reponse.json()["message"]
 
 
 def test_gabarit_pdf_et_regroupement_des_equipes() -> None:

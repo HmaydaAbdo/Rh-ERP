@@ -119,8 +119,42 @@ def _exports() -> list[Etape]:
     ]
 
 
+def _rapports() -> list[Etape]:
+    r = "/paie/report/pdf"
+    p = "2026-01"
+
+    def pdf(nom: str, corps: dict[str, Any], **kw: Any) -> Etape:
+        return _post(nom, r, json=corps, **kw)
+
+    return [
+        pdf("pdf-janvier", {"periode": p}),
+        pdf("pdf-mois-2-avec-depart", {"periode": "2026-02"}),
+        pdf("pdf-un-chantier", {"periode": p, "chantierIds": ["{c_b}"]}),
+        pdf("pdf-chantier-id-seul", {"periode": p, "chantierId": "{c_a}"}),
+        pdf("pdf-recherche-nom", {"periode": p, "nomPrenom": "amal"}),
+        pdf("pdf-recherche-cin", {"periode": p, "cin": "CD1002"}),
+        pdf("pdf-fonction", {"periode": p, "fonctionId": "{f_m}"}),
+        pdf("pdf-sans-vue-ensemble", {"periode": p, "sansVueEnsemble": True}),
+        pdf(
+            "pdf-equipes-par-chantier",
+            {"periode": p, "equipesParChantier": {"CH-A": ["Équipe 1"]}},
+            question="Pagination du détail d'une équipe sélectionnée : Spring 14 pages, Python 15 (non reproduit).",
+        ),
+        pdf(
+            "pdf-materiel",
+            {"periode": p, "chantierIds": ["{c_168}"], "materiel": {"CAMION CITERNE": 3, "PELLE PNEU": 4}},
+        ),
+        pdf("pdf-aucun-resultat", {"periode": p, "nomPrenom": "zzzz"}),
+        pdf("pdf-mois-sans-paie", {"periode": "2026-05"}),
+        pdf("pdf-periode-absente", {}),
+        pdf("pdf-periode-invalide", {"periode": "2026-13"}),
+        pdf("pdf-materiel-hors-borne", {"periode": p, "materiel": {"PICK UP": 1000}}),
+        pdf("pdf-sans-authentification", {"periode": p}, jeton=False),
+    ]
+
+
 def etapes() -> list[Etape]:
-    toutes = _donnees() + _exports()
+    toutes = _donnees() + _exports() + _rapports()
     for e in toutes:
         e.module = M
     return toutes
