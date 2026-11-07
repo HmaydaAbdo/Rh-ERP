@@ -1,6 +1,6 @@
 from typing import cast
 
-from sqlalchemy import ColumnElement, Select, case, func, or_, select
+from sqlalchemy import ColumnElement, Select, case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -91,6 +91,18 @@ def _selection(c: PaieRecherche) -> Select[Paie]:
         else:
             f.append(Paie.equipe_id.in_(equipes))
     return base.where(*f)
+
+
+async def couples_existants(s: AsyncSession, couples: set[tuple[int, int]]) -> int:
+    """Nombre de couples (employé, mois) qui ont déjà un bulletin."""
+    q = select(func.count()).select_from(Paie).where(tuple_(Paie.employee_id, Paie.periode).in_(couples))
+    return (await s.execute(q)).scalar_one()
+
+
+async def ids_existants(
+    s: AsyncSession, modele: type[Employee | Fonction | Chantier | Equipe], ids: set[int]
+) -> set[int]:
+    return set((await s.execute(select(modele.id).where(modele.id.in_(ids)))).scalars())
 
 
 async def groupe(s: AsyncSession, c: PaieRecherche) -> list[Paie]:

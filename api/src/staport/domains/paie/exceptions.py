@@ -26,3 +26,15 @@ class PaieGroupeModifie(ErreurMetier):
             f"Le groupe a changé depuis son affichage : {actuel} bulletin(s) correspondent maintenant, "
             f"{attendu} étaient attendus. Rien n'a été supprimé, actualisez la page."
         )
+
+
+class PaieGroupeRestaurationConflit(ErreurMetier):
+    """Le groupe entier est refusé si un bulletin employé/mois existe déjà ou si une référence n'existe plus."""
+
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self, conflits: int) -> None:
+        super().__init__(
+            f"Restauration refusée : {conflits} conflit(s) employé/mois ou référence manquante. "
+            "Aucun bulletin n'a été restauré."
+        )
