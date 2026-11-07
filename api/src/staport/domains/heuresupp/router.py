@@ -13,11 +13,13 @@ from staport.domains.paie.periode import PeriodePaie, lire_periode
 from staport.platform.base_de_donnees import session_requete
 
 from .exceptions import InvalidHeuresSuppPeriode
+from .export_pdf import nom_fichier
 from .import_fichier import generer_modele
 from .repository import TRIS
 from .schemas import (
     HeuresSuppAnalytique,
     HeuresSuppCreationRequete,
+    HeuresSuppExportRequete,
     HeuresSuppModificationRequete,
     HeuresSuppRecherche,
     HeuresSuppSuppressionMois,
@@ -208,4 +210,14 @@ async def modele() -> StreamingResponse:
         generer_modele(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=Modele_Heures_Supplementaires.xlsx"},
+    )
+
+
+@heures_supp.post("/export/pdf", dependencies=list(LECTURE))
+async def exporter_pdf(corps: HeuresSuppExportRequete, session: Session, contexte: Contexte) -> Response:
+    contenu = await contexte.export_pdf_heures_supp.generer(session, corps)
+    return Response(
+        contenu,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={nom_fichier(corps)}"},
     )

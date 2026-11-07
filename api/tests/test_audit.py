@@ -505,6 +505,7 @@ LECTURES_PAR_POST = {
     ("POST", "/heures-supp/search"),
     ("POST", "/heures-supp/analytique"),
     ("POST", "/heures-supp/import/analyse"),
+    ("POST", "/heures-supp/export/pdf"),
     ("POST", "/paie/periodes/search"),
     ("POST", "/paie/chantiers/search"),
     ("POST", "/paie/analytique"),

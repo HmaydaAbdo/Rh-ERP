@@ -192,3 +192,18 @@ class ImportCreation(ModeleApi):
 class ImportCorrections(ModeleApi):
     aligner: Annotated[list[ImportAlignement], Field(max_length=500)] = Field(default_factory=list[ImportAlignement])
     creer: Annotated[list[ImportCreation], Field(max_length=500)] = Field(default_factory=list[ImportCreation])
+
+
+class HeuresSuppExportRequete(HeuresSuppRecherche):
+    """Filtres, recherche et tri de la vue Tabulaire : l'export couvre toutes les lignes du périmètre."""
+
+    tri: Annotated[str, Field(max_length=60)] | None = None
+
+    def mois_demandes(self) -> list[int]:
+        """La liste `periodes` si elle est fournie, sinon le mois unique."""
+        if self.periodes:
+            return sorted(set(self.periodes))
+        return [] if self.periode is None else [self.periode]
+
+    def criteres(self) -> HeuresSuppRecherche:
+        return HeuresSuppRecherche.model_validate(self.model_dump(exclude={"tri"}))
