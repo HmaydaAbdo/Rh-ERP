@@ -18,6 +18,7 @@ from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.routing import Route
 
+from staport.domains.accueil import router as routes_accueil
 from staport.domains.audit import router as routes_audit
 from staport.domains.audit.api import Audit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
@@ -137,6 +138,7 @@ def creer_app(
             routes_auth.roles,
             routes_audit.logs,
             routes_parametre.parametres,
+            routes_accueil.accueil,
             routes_function.fonctions,
             routes_equipe.equipes,
             routes_chantier.chantiers,
