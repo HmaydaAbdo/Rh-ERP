@@ -1,8 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
+from typing import cast
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +37,9 @@ from .schemas import (
 
 def rep(x: Employee) -> EmployeeReponse:
     return EmployeeReponse.model_validate(x)
+
+
+ENTETES_IMPORT = ("Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance")
 
 
 class ServiceEmployee:
@@ -202,6 +207,20 @@ class ServiceEmployee:
         return EmployeeSortiesMoisReponse(
             periode=periode, nombre=len(sorties), par_motif=dict(sorted(motifs.items())), sorties=sorties
         )
+
+    @staticmethod
+    def modele_import() -> BytesIO:
+        """Classeur vierge aux six en-têtes de l'import (parité `EmployeeImportService.genererModele`)."""
+        classeur = Workbook()
+        feuille = cast(Worksheet, classeur.active)
+        feuille.title = "Employés"
+        feuille.append(list(ENTETES_IMPORT))
+        for colonne in "ABCDEF":
+            feuille.column_dimensions[colonne].width = 5000 / 256
+        sortie = BytesIO()
+        classeur.save(sortie)
+        sortie.seek(0)
+        return sortie
 
     async def importer(self, s: AsyncSession, contenu: bytes) -> EmployeeImportReponse:
         erreurs: list[EmployeeLigneIgnoree] = []

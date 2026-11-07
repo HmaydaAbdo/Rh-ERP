@@ -3,7 +3,7 @@ from io import BytesIO
 from typing import Any
 
 from conftest import ADMIN, Plateforme
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 
 def _auth(connecter: Any) -> dict[str, str]:
@@ -53,3 +53,16 @@ def test_import_employee_xlsx_est_atomique(plateforme: Plateforme, connecter: An
         },
     )
     assert rejet.status_code == 200 and rejet.json()["crees"] == 0 and rejet.json()["ignores"] == 2
+
+
+def test_modele_import_employes_reprend_les_six_entetes_spring(plateforme: Plateforme, connecter: Any) -> None:
+    jeton = connecter(*ADMIN)["accessToken"]
+    reponse = plateforme.client.get("/employees/import/modele", headers={"Authorization": f"Bearer {jeton}"})
+
+    assert reponse.status_code == 200
+    assert reponse.headers["content-disposition"] == "attachment; filename=Modele_Import_Employes.xlsx"
+    feuille = load_workbook(BytesIO(reponse.content)).worksheets[0]
+    assert feuille.title == "Employés"
+    assert [[c.value for c in ligne] for ligne in feuille.iter_rows()] == [
+        ["Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance"]
+    ]
