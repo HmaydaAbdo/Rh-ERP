@@ -333,9 +333,37 @@ class PaieImportAnalyse(ModeleApi):
     chantiers_clotures: list[PaieImportChantierCloture]
     cin_inconnus: list[PaieImportCinInconnu]
     ecarts: list[PaieImportEcart]
-    departs: list[dict[str, object]]
-    retours: list[dict[str, object]]
+    departs: list[PaieImportDepart]
+    retours: list[PaieImportRetour]
     pret: bool
+
+
+class PaieImportDepart(ModeleApi):
+    """Un employé qui quitte l'entreprise : STC ou sortie dans le fichier, ou actif absent du fichier (motif nul)."""
+
+    employe_id: int
+    cin: str
+    nom_prenom: str
+    motif: str | None
+
+
+class PaieImportRetour(ModeleApi):
+    """Un employé inactif présent dans le fichier : l'import le repasse ACTIF."""
+
+    employe_id: int
+    cin: str
+    nom_prenom: str
+
+
+class PaieImportDepartConfirme(ModeleApi):
+    employe_id: int
+    motif: Annotated[str, Field(min_length=1, max_length=255, pattern=r"\S")]
+
+
+class PaieImportDeparts(ModeleApi):
+    """Les départs confirmés à l'import : un départ proposé par l'analyse et absent d'ici n'est pas enregistré."""
+
+    departs: list[PaieImportDepartConfirme] = Field(default_factory=lambda: [])
 
 
 class PaieImportChantierCloture(ModeleApi):

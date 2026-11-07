@@ -15,6 +15,7 @@ from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
+from .exceptions import AucunePaiePeriode
 from .models import Paie
 from .rapport_calcul import BulletinRapport, mesurer, regrouper_sections
 from .rapport_texte import decouper_lignes, hauteur_ligne_employe
@@ -55,7 +56,7 @@ class ServiceRapportPaie:
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
         if not lignes:
-            raise ValueError(f"Aucune paie pour la période {requete.periode} et le périmètre demandé")
+            raise AucunePaiePeriode(requete.periode)
         html = self._html(requete, lignes)
         from weasyprint import HTML  # pyright: ignore[reportMissingTypeStubs]
 

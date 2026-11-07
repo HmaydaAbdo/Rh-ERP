@@ -25,6 +25,7 @@ from .exceptions import (
     PaieGroupeModifie,
     PaieGroupeRestaurationConflit,
     PaieIntrouvable,
+    PeriodeInvalide,
     PeriodeObligatoire,
     ReferenceInvalide,
 )
@@ -257,7 +258,7 @@ class ServicePaie:
 
     async def chantiers_periode(self, s: AsyncSession, criteres: PaieRecherche) -> list[PaieChantierPeriode]:
         if criteres.periode is None:
-            raise ValueError("La période est obligatoire pour les chantiers de paie")
+            raise PeriodeInvalide("La période est obligatoire (format aaaa-MM, ex. 2026-08)")
         async with s.begin():
             lignes = await repository.lignes_analytiques(s, criteres)
         return construire_chantiers(criteres.periode, lignes)
@@ -266,7 +267,7 @@ class ServicePaie:
         self, s: AsyncSession, criteres: PaieRecherche, parametres: ServiceParametre
     ) -> PaieAnalytiqueReponse:
         if criteres.periode is None:
-            raise ValueError("La période est obligatoire pour l'analyse de la paie")
+            raise PeriodeInvalide("La période est obligatoire (format aaaa-MM, ex. 2026-08)")
         async with s.begin():
             pas = await parametres.pas_tranche_analytique(s)
             lignes = await repository.lignes_analytiques(s, criteres)
