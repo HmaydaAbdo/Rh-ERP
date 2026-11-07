@@ -180,6 +180,8 @@ class ServiceRapportPaie:
             chantier = lignes_chantier[0][2]
             identifiant = f"{chantier.nom} ({code})" if chantier.nom else code
             lignes_chantier_precedentes = [ligne for ligne in lignes_precedentes or [] if ligne[2].code == code]
+            choix = set((requete.equipes_par_chantier or {}).get(code, []))
+            regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
             pages.append(
                 (
                     f"CHANTIER : {identifiant}",
@@ -189,12 +191,26 @@ class ServiceRapportPaie:
                         f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
                         if evolution_chantiers and chantier.id in evolution_chantiers
                         else ""
-                    )
-                    + f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
+                    ),
                 )
             )
-            choix = set((requete.equipes_par_chantier or {}).get(code, []))
-            regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
+            if choix or regroupements:
+                pages.append(
+                    (
+                        f"CHANTIER : {identifiant}",
+                        '<div class="titre-chapitre">Répartition par équipe</div>'
+                        f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
+                    )
+                )
+            else:
+                for graphique in _graphiques_fonctions(lignes_chantier):
+                    pages.append(
+                        (
+                            f"CHANTIER : {identifiant}",
+                            '<div class="titre-chapitre">Répartition par fonction</div>'
+                            f'<div class="graphique">{graphique}</div>',
+                        )
+                    )
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
             for index_section, (libelle, section, est_regroupe) in enumerate(sections):
                 titre = f"ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
@@ -224,6 +240,14 @@ class ServiceRapportPaie:
                             + f'<div class="graphique">{graphique_section}</div>',
                         )
                     )
+                    for graphique in _graphiques_fonctions([detail.valeurs for detail in section]):
+                        pages.append(
+                            (
+                                f"CHANTIER : {identifiant}",
+                                '<div class="titre-chapitre">Répartition par fonction</div>'
+                                f'<div class="graphique">{graphique}</div>',
+                            )
+                        )
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -335,6 +359,19 @@ def _graphique_equipes(
         elements = [*elements[:15], ("Autres", sum((montant for _, montant in elements[15:]), Decimal(0)))]
         elements.sort(key=lambda element: element[1], reverse=True)
     return _graphique_barres(elements, "Masse salariale par équipe (DH)")
+
+
+def _graphiques_fonctions(
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> list[str]:
+    montants: dict[str, Decimal] = {}
+    for paie, _, _, _, fonction in lignes:
+        montants[fonction.libelle] = montants.get(fonction.libelle, Decimal(0)) + paie.salaire_total
+    elements = sorted(montants.items(), key=lambda element: (-element[1], element[0].casefold()))
+    return [
+        _graphique_barres(elements[debut : debut + 15], "Masse salariale par fonction (DH)")
+        for debut in range(0, len(elements), 15)
+    ]
 
 
 def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str) -> str:
