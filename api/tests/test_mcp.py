@@ -121,7 +121,7 @@ def test_le_droit_ia_retire_apres_l_emission_donne_403(plateforme: Plateforme, a
 
 def test_le_catalogue_expose_les_outils_en_lecture_seule(plateforme: Plateforme, admin: tuple[str, str, int]) -> None:
     outils = {o["name"]: o for o in _rpc(plateforme, admin[0], "tools/list").json()["result"]["tools"]}
-    assert set(outils) == {
+    assert {
         "systeme_identite",
         "parametres_lire",
         "roles_lister",
@@ -133,9 +133,8 @@ def test_le_catalogue_expose_les_outils_en_lecture_seule(plateforme: Plateforme,
         "equipe_fiche",
         "chantier_rechercher",
         "chantier_fiche",
-        "employes_rechercher",
-        "employe_fiche",
-    }
+    } <= set(outils)
+    assert len(outils) == 31  # le détail des outils métier est vérifié dans test_mcp_outils_metier.py
     for outil in outils.values():
         assert outil["annotations"]["readOnlyHint"] is True and outil["annotations"]["destructiveHint"] is False
         assert outil["annotations"]["idempotentHint"] is True and outil["annotations"]["openWorldHint"] is False
