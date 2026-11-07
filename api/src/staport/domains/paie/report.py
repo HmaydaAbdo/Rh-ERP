@@ -699,11 +699,17 @@ def _cartes_kpi(
     precedent = mesurer(cast(list[BulletinRapport], bulletins_precedents)) if bulletins_precedents else None
     nombre_chantiers = len({ligne[2].id for ligne in courantes})
     nombre_chantiers_precedent = len({ligne[2].id for ligne in precedentes})
-    cartes = [
+    cartes: list[tuple[str, str, str | None, str]] = [
         (
             "Masse salariale",
             _masse(courant.masse),
             _ecart_montant(courant.masse, precedent.masse if precedent else None),
+            "montant",
+        ),
+        (
+            "Masse mois précédent",
+            f"{_masse(precedent.masse)} DH" if precedent else "",
+            None,
             "montant",
         ),
         (
@@ -732,22 +738,23 @@ def _cartes_kpi(
         ),
     ]
     if not inclure_chantiers:
-        cartes.pop(2)
+        cartes.pop(3)
     elements = [
         '<div class="titre-indicateurs">Indicateurs clés</div><div class="kpi-row">',
     ]
     hauteur_cartes = _hauteur_cartes_kpi(cartes)
     for index, (libelle, valeur, sous_texte, classe) in enumerate(cartes):
         derniere = " derniere" if index == len(cartes) - 1 else ""
+        sous_texte_html = f'<div class="sous-texte">{sous_texte}</div>' if sous_texte is not None else ""
         elements.append(
             f'<div class="kpi-carte{derniere}" style="height: {hauteur_cartes}pt"><div class="label">{libelle}</div>'
-            f'<div class="valeur {classe}">{valeur}</div><div class="sous-texte">{sous_texte}</div></div>'
+            f'<div class="valeur {classe}">{valeur}</div>{sous_texte_html}</div>'
         )
     elements.append("</div>")
     return "".join(elements)
 
 
-def _hauteur_cartes_kpi(cartes: list[tuple[str, str, str, str]]) -> int:
+def _hauteur_cartes_kpi(cartes: list[tuple[str, str, str | None, str]]) -> int:
     hauteur = 54
     for libelle, valeur, sous_texte, classe in cartes:
         est_montant = classe == "montant"
@@ -758,9 +765,9 @@ def _hauteur_cartes_kpi(cartes: list[tuple[str, str, str, str]]) -> int:
             + 8.5 * compter_lignes(libelle.upper(), 109, 7.5, True)
             + 4
             + interligne_valeur * compter_lignes(valeur, 109, corps_valeur, True)
-            + 2
-            + 8 * compter_lignes(sous_texte, 109, 7, False)
         )
+        if sous_texte is not None:
+            besoin += 2 + 8 * compter_lignes(sous_texte, 109, 7, False)
         hauteur = max(hauteur, ceil(besoin))
     return hauteur
 
