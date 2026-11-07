@@ -40,6 +40,7 @@ dev = [
     "pyright",
     "testcontainers[postgres]>=4.15.0",
     "opentelemetry-sdk>=1.45.2",
+    "pytest-cov>=7.1.0",
 ]
 
 [build-system]

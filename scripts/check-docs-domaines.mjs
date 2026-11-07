@@ -1,14 +1,14 @@
-// Contrôle doc ↔ code des domaines : chaque permission d'un contrôleur et chaque outil MCP du backend doit figurer dans la
+// Contrôle doc ↔ code des domaines : chaque permission d'un routeur FastAPI et chaque outil MCP de l'API doit figurer dans la
 // documentation de son domaine (README du domaine ou catalogue RBAC). Une permission ou un outil ajouté sans documentation
 // fait échouer le contrôle, pour que README et skills restent la source de lecture fiable (AGENTS.md, « synchronisés »).
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const racine = resolve(process.argv[2] ?? '.');
-const source = join(racine, 'backend/src/main/java/staport/rh');
+const source = join(racine, 'api/src/staport/domains');
 const docs = join(racine, 'docs');
 
-// Dossier du backend → dossier de documentation.
+// Dossier du domaine Python → dossier de documentation.
 const domaines = {
   equipe: 'equipe',
   function: 'function',
@@ -58,20 +58,20 @@ const manques = [];
 
 for (const [dossier, doc] of Object.entries(domaines)) {
   const texte = documentation(doc);
-  const controleurs = fichiers(join(source, dossier), (f) => /Controller\.java$/.test(f));
+  const routeurs = fichiers(join(source, dossier), (f) => /router\.py$/.test(f));
   const permissions = new Set();
-  for (const f of controleurs) {
-    for (const m of lire(f).matchAll(/has(?:Any)?Authority\(([^)]*)\)/g)) {
-      for (const p of m[1].matchAll(/'([A-Z][A-Z_]+)'/g)) permissions.add(p[1]);
+  for (const f of routeurs) {
+    for (const m of lire(f).matchAll(/exiger\(([^)]*)\)/g)) {
+      for (const p of m[1].matchAll(/"([A-Z][A-Z_]+)"/g)) permissions.add(p[1]);
     }
   }
   for (const permission of permissions) {
-    if (!texte.includes(permission)) manques.push(`permission ${permission} (backend/${dossier}) absente de docs/${doc}`);
+    if (!texte.includes(permission)) manques.push(`permission ${permission} (api/${dossier}) absente de docs/${doc}`);
   }
 }
 
-for (const f of fichiers(join(source, 'mcp/outils'), (chemin) => chemin.endsWith('.java'))) {
-  for (const m of lire(f).matchAll(/@McpTool\(name = "([a-z_]+)"/g)) {
+for (const f of fichiers(join(source, 'mcp'), (chemin) => chemin.endsWith('.py'))) {
+  for (const m of lire(f).matchAll(/\.tool\([^)]*?name="([a-z_]+)"/gs)) {
     const nom = m[1];
     const domaine = prefixesOutils.find(([prefixe]) => nom.startsWith(prefixe))?.[1];
     if (!domaine) {
