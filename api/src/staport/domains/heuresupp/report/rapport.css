@@ -9,7 +9,7 @@
 @page {
   size: 842pt 595pt;
   margin: 84pt 20pt 34pt 20pt;
-  @top-left { content: element(entete); width: 802pt; }
+  @top-left { content: element(entete); width: 802pt; vertical-align: top; }
   @bottom-left { content: element(pied); width: 640pt; }
   @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: 'Liberation Serif', serif; font-size: 8pt; width: 162pt; text-align: right; }
 }
@@ -39,7 +39,7 @@ table.heures th, table.heures td { padding: 5pt 4pt; border: 0.5pt solid #9a9a9a
 table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
-/* Émargement : cellule vide, assez large et haute pour une signature. */
+/* Émargement : cellule vide ; openhtmltopdf compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
 table.heures th.emargement, table.heures td.emargement { width: 90pt; }
-table.heures td.emargement { height: 24pt; }
+table.heures td.emargement { height: 14pt; }
 .vide { margin-top: 30pt; font-size: 11pt; }

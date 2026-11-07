@@ -11,9 +11,13 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
+import shutil
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -60,6 +64,7 @@ class Reponse:
     octets: bytes
 
 
+DOSSIER_PDF = Path(os.environ.get("DIFF_SORTIES", Path(__file__).parent / "sorties"))
 TOLERANCE_LARGEUR = 2.0  # caractères Excel
 ANGLAIS_VALIDATION = re.compile(r"must not be|must be|size must|numeric value out of bounds")
 
@@ -98,10 +103,10 @@ class Backend:
         en_tetes = dict(e.en_tetes or {})
         if e.jeton and self.jeton:
             en_tetes["Authorization"] = f"Bearer {self.jeton}"
-        kwargs: dict[str, Any] = {"headers": en_tetes, "params": e.params}
+        kwargs: dict[str, Any] = {"headers": en_tetes, "params": _formater(e.params, self.captures)}
         if e.fichiers or e.parties_json:
             fichiers = dict(e.fichiers or {})
-            donnees = dict(e.donnees or {})
+            donnees = _formater(dict(e.donnees or {}), self.captures)
             for nom, valeur in (e.parties_json or {}).items():
                 texte = json.dumps(_formater(valeur, self.captures))
                 if self.nom == "python":  # contrat Python documenté : champ texte contenant du JSON (wizard migré)
@@ -113,7 +118,7 @@ class Backend:
         elif e.json is not None:
             kwargs["json"] = _formater(e.json, self.captures)
         elif e.donnees:
-            kwargs["data"] = e.donnees
+            kwargs["data"] = _formater(e.donnees, self.captures)
         r = self.client.request(e.methode, chemin, **kwargs)
         corps = None
         if "json" in r.headers.get("content-type", ""):
@@ -205,6 +210,44 @@ def _styles_dict(cellule: Any) -> dict[str, Any]:
     }
 
 
+def comparer_pdf(nom: str, a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
+    """Pages et texte de chaque page (pdftotext -layout) ; les fichiers sont gardés pour la comparaison visuelle."""
+    sortie: list[tuple[str, Any, Any]] = []
+    DOSSIER_PDF.mkdir(parents=True, exist_ok=True)
+    fichier_a, fichier_b = DOSSIER_PDF / f"{nom}.spring.pdf", DOSSIER_PDF / f"{nom}.python.pdf"
+    fichier_a.write_bytes(a)
+    fichier_b.write_bytes(b)
+    pages_a, pages_b = _pages_pdf(fichier_a), _pages_pdf(fichier_b)
+    if len(pages_a) != len(pages_b):
+        sortie.append(("pdf!pages", len(pages_a), len(pages_b)))
+    for numero, (ta, tb) in enumerate(zip(pages_a, pages_b, strict=False), start=1):
+        if ta != tb:
+            sortie.append((f"pdf!page{numero}.texte", ta[:300], tb[:300]))
+    return sortie
+
+
+def _pages_pdf(fichier: Path) -> list[str]:
+    executable = shutil.which("pdftotext")
+    if executable is None:
+        raise RuntimeError("pdftotext est requis pour comparer les PDF")
+    traite = subprocess.run(  # noqa: S603
+        [executable, "-layout", "-enc", "UTF-8", str(fichier), "-"], capture_output=True, check=True
+    )
+    pages = traite.stdout.decode("utf-8").split("")
+    if pages and not pages[-1].strip():
+        pages.pop()
+    # Chantier sans nom : Spring imprime « null », Python « None » : question posée au propriétaire (rapport Jira)
+    return [
+        " ".join(
+            re.sub(r"Édité le \S+ à \S+", "Édité le <horodatage>", page)
+            .replace("· null", "· ?")
+            .replace("· None", "· ?")
+            .split()
+        )
+        for page in pages
+    ]
+
+
 def comparer_excel(a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
     """Cellule par cellule : valeurs, types, formats, largeurs, noms de feuilles, fusions."""
     sortie: list[tuple[str, Any, Any]] = []
@@ -276,6 +319,8 @@ def comparer(e: Etape, a: Reponse, b: Reponse, ids_a: dict, ids_b: dict) -> list
     if a.json is not None or b.json is not None:
         na, nb = normaliser(a.json, ids_a), normaliser(b.json, ids_b)
         _comparer_json(na, nb, "$", ecarts, e.trier_listes or _ordre_libre(e))
+    elif "application/pdf" in a.en_tetes.get("content-type", "") and a.statut == b.statut == 200:
+        ecarts.extend(comparer_pdf(f"{e.module}-{e.nom}", a.octets, b.octets))
     elif "spreadsheetml" in a.en_tetes.get("content-type", "") and a.statut == b.statut == 200:
         ecarts.extend(comparer_excel(a.octets, b.octets))
     elif a.octets != b.octets and a.statut == b.statut:

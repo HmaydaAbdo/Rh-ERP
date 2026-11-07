@@ -109,3 +109,4 @@ __pycache__/
 # Couverture Python (pytest --cov) : rapports produits en local et en CI
 api/.coverage
 api/coverage.json
+api/tests/differentiel/sorties/
