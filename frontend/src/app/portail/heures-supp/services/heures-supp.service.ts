@@ -57,7 +57,7 @@ export class HeuresSuppService {
 
   corrigerImport(file: File, periode: string, chantierId: number, corrections: HeuresSuppImportCorrections, forfaits: HeuresSuppImportForfait[] = []): Observable<HeuresSuppImportAnalyse> {
     const data = this.importForm(file, forfaits);
-    data.append('corrections', new Blob([JSON.stringify(corrections)], { type: 'application/json' }));
+    data.append('corrections', JSON.stringify(corrections));
     return this.http.post<HeuresSuppImportAnalyse>(`${this.baseUrl}/import/corrections`, data, { params: { periode, chantierId } });
   }
 
@@ -72,7 +72,7 @@ export class HeuresSuppService {
 
   private importForm(file: File, forfaits: HeuresSuppImportForfait[]): FormData {
     const data = new FormData(); data.append('file', file);
-    if (forfaits.length) data.append('forfaits', new Blob([JSON.stringify({ forfaits })], { type: 'application/json' }));
+    if (forfaits.length) data.append('forfaits', JSON.stringify({ forfaits }));
     return data;
   }
 }
