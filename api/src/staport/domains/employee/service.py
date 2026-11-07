@@ -14,12 +14,14 @@ from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
+from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
 from . import repository
 from .exceptions import EmployeeDejaExistant, EmployeeIntrouvable, EmployeeUtilise
 from .models import Employee, EmployeeSortie
 from .schemas import (
+    ChantierResume,
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
@@ -31,12 +33,63 @@ from .schemas import (
     EmployeeReponse,
     EmployeeSortieReponse,
     EmployeeSortiesMoisReponse,
+    EquipeResume,
+    FonctionResume,
     TrancheReponse,
 )
 
 
-def rep(x: Employee) -> EmployeeReponse:
-    return EmployeeReponse.model_validate(x)
+async def reponses(s: AsyncSession, employes: list[Employee]) -> list[EmployeeReponse]:
+    """Résumés de la fonction, du chantier et de l'équipe, chargés en lot (une requête par table, jamais par ligne)."""
+    fonctions = {
+        i: FonctionResume(id=i, libelle=libelle)
+        for i, libelle in (
+            await s.execute(
+                select(Fonction.id, Fonction.libelle).where(Fonction.id.in_({x.fonction_id for x in employes}))
+            )
+        ).all()
+    }
+    chantiers = {
+        i: ChantierResume(id=i, code=code, designation=designation)
+        for i, code, designation in (
+            await s.execute(
+                select(Chantier.id, Chantier.code, Chantier.designation).where(
+                    Chantier.id.in_({x.chantier_id for x in employes if x.chantier_id is not None})
+                )
+            )
+        ).all()
+    }
+    equipes = {
+        i: EquipeResume(id=i, code=code, libelle=libelle)
+        for i, code, libelle in (
+            await s.execute(
+                select(Equipe.id, Equipe.code, Equipe.libelle).where(
+                    Equipe.id.in_({x.equipe_id for x in employes if x.equipe_id is not None})
+                )
+            )
+        ).all()
+    }
+    return [
+        EmployeeReponse(
+            id=x.id,
+            version=x.version,
+            nom_prenom=x.nom_prenom,
+            cin=x.cin,
+            date_naissance=x.date_naissance,
+            date_embauche=x.date_embauche,
+            fonction=fonctions[x.fonction_id],
+            chantier=chantiers.get(x.chantier_id) if x.chantier_id is not None else None,
+            equipe=equipes.get(x.equipe_id) if x.equipe_id is not None else None,
+            salaire=x.salaire,
+            type_salaire=x.type_salaire,
+            statut=x.statut,
+        )
+        for x in employes
+    ]
+
+
+async def reponse(s: AsyncSession, x: Employee) -> EmployeeReponse:
+    return (await reponses(s, [x]))[0]
 
 
 ENTETES_IMPORT = ("Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance")
@@ -49,12 +102,13 @@ class ServiceEmployee:
     async def rechercher(self, s: AsyncSession, c: EmployeeRecherche | None, p: Pagination) -> Page[EmployeeReponse]:
         async with s.begin():
             rows, total = await repository.rechercher(s, c or EmployeeRecherche(), p)
-        return creer_page([rep(x) for x in rows], p.taille, p.page, total)
+            contenu = await reponses(s, list(rows))
+        return creer_page(contenu, p.taille, p.page, total)
 
     async def lire(self, s: AsyncSession, i: int, voit_paie: bool) -> EmployeeReponse:
         async with s.begin():
             x = await self._obtenir(s, i)
-            r = rep(x)
+            r = await reponse(s, x)
         if not voit_paie:
             r.salaire = None
             r.type_salaire = None
@@ -80,7 +134,7 @@ class ServiceEmployee:
             s.add(x)
             await s.flush()
             cible.identifiant = x.id
-            return rep(x)
+            return await reponse(s, x)
 
     async def modifier(
         self, s: AsyncSession, i: int, r: EmployeeModificationRequete, voit_paie: bool
@@ -103,7 +157,7 @@ class ServiceEmployee:
             if voit_paie:
                 x.salaire, x.type_salaire = r.salaire, r.type_salaire
             await s.flush()
-            return rep(x)
+            return await reponse(s, x)
 
     async def supprimer(self, s: AsyncSession, i: int) -> None:
         action = self._auditeur.auditer(s, "EMPLOYE_SUPPRESSION", TypeOperation.DELETE, "Employee", i)
