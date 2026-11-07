@@ -469,6 +469,10 @@ AUDITEES = {
     ("POST", "/paie/restauration/{identifiant_entree}"): "PAIE_RESTAURATION_GROUPE",
     ("POST", "/paie/import"): "PAIE_IMPORT",
     ("POST", "/paie/import/corrections"): "PAIE_IMPORT_CORRECTION",
+    ("POST", "/heures-supp"): "HEURES_SUP_CREATION_UNITAIRE",
+    ("PUT", "/heures-supp/{identifiant}"): "HEURES_SUP_MODIFICATION",
+    ("DELETE", "/heures-supp/{identifiant}"): "HEURES_SUP_SUPPRESSION",
+    ("POST", "/heures-supp/suppression-mois"): "HEURES_SUP_SUPPRESSION_MOIS",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
@@ -495,6 +499,8 @@ LECTURES_PAR_POST = {
     ("POST", "/employees/regroupements"),
     ("POST", "/employees/sorties-mois"),
     ("POST", "/paie/search"),
+    ("POST", "/heures-supp/search"),
+    ("POST", "/heures-supp/analytique"),
     ("POST", "/paie/periodes/search"),
     ("POST", "/paie/chantiers/search"),
     ("POST", "/paie/analytique"),

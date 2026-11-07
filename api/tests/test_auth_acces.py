@@ -355,6 +355,14 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/paie/restauration/{identifiant_entree}"): {"PAIE_RESTORE"},
 }
 REQUIS_CUMULATIFS: dict[tuple[str, str], set[str]] = {
+    ("POST", "/heures-supp/search"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("GET", "/heures-supp/periodes"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("GET", "/heures-supp/{identifiant}"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("POST", "/heures-supp/analytique"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("PUT", "/heures-supp/{identifiant}"): {"HEURES_SUP_IMPORT", "PAIE_READ"},
+    ("POST", "/heures-supp"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ", "CHANTIER_READ"},
+    ("DELETE", "/heures-supp/{identifiant}"): {"HEURES_SUP_DELETE", "PAIE_READ"},
+    ("POST", "/heures-supp/suppression-mois"): {"HEURES_SUP_PURGE", "PAIE_READ"},
     ("POST", "/paie"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
     ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
     ("POST", "/paie/import/analyse"): {"PAIE_IMPORT", "PAIE_READ"},
@@ -374,7 +382,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 81
+    assert len(declarees) == 89
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

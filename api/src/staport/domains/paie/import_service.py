@@ -14,6 +14,7 @@ from staport.domains.function.models import Fonction
 
 from .exceptions import ErreurImportPaie
 from .models import Paie
+from .observation import est_stc_ou_sortie
 from .periode import afficher_periode, mois_suivant
 from .schemas import (
     PaieImportAnalyse,
@@ -45,11 +46,6 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
         return lignes
     finally:
         classeur.close()
-
-
-def est_stc_ou_sortie(observation: str | None) -> bool:
-    """Règle `ObservationStc` : exactement « STC » ou « sortie », sans casse ni espaces superflus."""
-    return observation is not None and observation.strip().lower() in {"stc", "sortie"}
 
 
 def departs_et_retours(
