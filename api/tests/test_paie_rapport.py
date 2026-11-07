@@ -73,7 +73,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
     assert '<div class="graphique">' in html and "<svg" in html
-    assert "Masse salariale (DH)" in html
+    assert "Masse (DH)" in html
+    assert "Bulletins" in html and "STC bul." in html and "STC (DH)" in html
     assert "Masse salariale par équipe (DH)" in html
     assert "1. Masse salariale et montants des STC (DH)" in html
     assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
@@ -207,8 +208,8 @@ def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -
 
 def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> None:
     rapport = cast(Any, report)
-    faible = SimpleNamespace(salaire_total=Decimal("100"))
-    fort = SimpleNamespace(salaire_total=Decimal("900"))
+    faible = SimpleNamespace(salaire_total=Decimal("100"), observation=None, chantier_id=1)
+    fort = SimpleNamespace(salaire_total=Decimal("900"), observation="STC", chantier_id=1)
     chantiers = {
         "PETIT": [(faible, None, SimpleNamespace(nom="Petit"), None, None)],
         "GRAND": [(fort, None, SimpleNamespace(nom="Grand"), None, None)],
@@ -223,7 +224,7 @@ def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
     chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
     lignes = [
         (
-            SimpleNamespace(salaire_total=Decimal("100")),
+            SimpleNamespace(salaire_total=Decimal("100"), observation=None, chantier_id=1),
             SimpleNamespace(nom_prenom=f"Employé {index}"),
             chantier,
             None,
@@ -234,6 +235,36 @@ def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
     graphiques = cast(Any, report)._graphiques_fonctions(lignes)
     assert len(graphiques) == 2
     assert all(sum(f"Fonction {index:02}" in graphique for index in range(16)) == 8 for graphique in graphiques)
+
+
+def test_graphique_repartition_presente_les_quatre_mesures_spring() -> None:
+    chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
+    lignes = [
+        (
+            SimpleNamespace(salaire_total=Decimal("300"), observation=" STC ", chantier_id=1),
+            SimpleNamespace(),
+            chantier,
+            None,
+            SimpleNamespace(libelle="Conducteur"),
+        ),
+        (
+            SimpleNamespace(salaire_total=Decimal("700"), observation=None, chantier_id=1),
+            SimpleNamespace(),
+            chantier,
+            None,
+            SimpleNamespace(libelle="Conducteur"),
+        ),
+    ]
+    rapport = cast(Any, report)
+    point = rapport._point_repartition("Chantier A", lignes)
+    assert (point.masse, point.bulletins, point.stc, point.montant_stc) == (
+        Decimal("1000"),
+        2,
+        1,
+        Decimal("300"),
+    )
+    graphique = rapport._graphique_distribution([point], "Répartition", part_du_total=True)
+    assert all(libelle in graphique for libelle in ("Masse (DH)", "Bulletins", "STC bul.", "STC (DH)"))
 
 
 def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
