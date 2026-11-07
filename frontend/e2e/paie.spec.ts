@@ -181,7 +181,7 @@ test.describe('Paie', () => {
   test('importe la paie du mois suivant : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
     const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim', typeSalaire: 'MENSUEL',
       champs: [{ champ: 'chantier', base: 'C059', fichier: 'C168' }] };
-    const analyse = { periode: '2026-09', totalLignes: 1, erreurs: [], chantiersClotures: [], cinInconnus: [], ecarts: [ecart],
+    const analyse = { periode: '2026-09', totalLignes: 1, erreurs: [], avertissements: [], chantiersClotures: [], cinInconnus: [], ecarts: [ecart],
       departs: [{ employeId: 7, cin: 'CD5678', nomPrenom: 'BENNANI Omar', motif: null }], retours: [], pret: false };
     const mock = await mockApi(page, { username: 'paie', permissions: [...DROITS, 'EMPLOYEE_WRITE'] }, {
       ...routes(),
@@ -216,7 +216,7 @@ test.describe('Paie', () => {
 
   test('rouvre un chantier clôturé depuis l’assistant, puis réanalyse le même fichier', async ({ page }) => {
     let rouvert = false;
-    const analyse = () => ({ periode: '2026-09', totalLignes: 2, erreurs: [], cinInconnus: [], ecarts: [], departs: [], retours: [],
+    const analyse = () => ({ periode: '2026-09', totalLignes: 2, erreurs: [], avertissements: [], cinInconnus: [], ecarts: [], departs: [], retours: [],
       chantiersClotures: rouvert ? [] : [{ chantierId: 3, code: 'C168', designation: 'Nador', lignes: [4, 5] }], pret: rouvert });
     const mock = await mockApi(page, { username: 'paie', permissions: [...DROITS, 'CHANTIER_READ', 'CHANTIER_WRITE'] }, {
       ...routes(),
