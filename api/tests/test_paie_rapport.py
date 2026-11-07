@@ -45,6 +45,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     html = rendre(requete, lignes)
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
+    assert '<div class="graphique">' in html and "<svg" in html
+    assert "Masse salariale (DH)" in html
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html

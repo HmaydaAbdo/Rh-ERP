@@ -88,14 +88,16 @@ lignes des équipes choisies une seule fois, tandis que la sélection classique 
 séparées. L'étape facultative de l'assistant et l'agrégation de tous les indicateurs du PDF restent
 à livrer avant l'activation ; cette option n'est pas encore disponible à l'utilisateur.
 
-Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). La couverture, les bandeaux et le tableau de détail reprennent la structure
+Un prototype PDF FastAPI utilise WeasyPrint 70.0, Pillow 13.0.0 et Matplotlib 3.11.2 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). Matplotlib fournit le rendu SVG statique ; son interface `Figure.savefig` écrit le graphique dans un flux mémoire
+([backends](https://matplotlib.org/stable/users/explain/figure/backends.html), [Figure.savefig](https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.savefig.html)).
+La couverture, les bandeaux et le tableau de détail reprennent la structure
 HTML Spring ; un essai Linux sur trois bulletins a produit trois pages. Après pagination, un essai
 Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre pages de contenu),
 avec 65 lignes présentes dans le modèle HTML.
 Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
 virgule décimale, tiret pour les valeurs numériques absentes).
-Le prototype a une page de périmètre quand un filtre est actif et omet sa synthèse quand
+Le prototype contient une répartition graphique de la masse salariale par chantier. Il a une page de périmètre quand un filtre est actif et omet sa synthèse quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
