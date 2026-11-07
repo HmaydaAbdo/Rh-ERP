@@ -20,6 +20,7 @@ SCENARIOS = [
 
 
 def main(filtres: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]  # le PDF contient des espaces insécables fines
     rapport = Rapport()
     for nom in SCENARIOS:
         etapes = importlib.import_module(f"tests.differentiel.{nom}").etapes()

@@ -765,25 +765,27 @@ def _cartes_kpi(
         (
             "Bulletins de paie",
             _entier(courant.effectif),
-            _ecart_compte(courant.effectif, precedent.effectif if precedent else None),
+            _ecart_compte(courant.effectif, precedent.effectif if precedent else None, "bulletin", "bulletins"),
             "compte",
         ),
         (
             "Chantiers",
             _entier(nombre_chantiers),
-            _ecart_compte(nombre_chantiers, nombre_chantiers_precedent if precedentes else None),
+            _ecart_compte(
+                nombre_chantiers, nombre_chantiers_precedent if precedentes else None, "chantier", "chantiers"
+            ),
             "compte",
         ),
         (
             "STC / sorties (bulletins)",
             _entier(courant.stc),
-            _ecart_compte(courant.stc, precedent.stc if precedent else None),
+            _ecart_compte(courant.stc, precedent.stc if precedent else None, "bulletin", "bulletins"),
             "compte",
         ),
         (
             "STC / sorties (DH)",
             f"{_montant(courant.montant_stc)} DH",
-            _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None),
+            _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None, decimales=True),
             "montant",
         ),
     ]
@@ -830,24 +832,28 @@ def _masse(valeur: Decimal) -> str:
     return f"{arrondie:,.0f}".replace(",", "\u00a0")
 
 
-def _ecart_compte(actuel: int, precedent: int | None) -> str:
+_MOINS = chr(0x2212)  # signe moins typographique, comme Spring
+
+
+def _ecart_compte(actuel: int, precedent: int | None, singulier: str, pluriel: str) -> str:
     if precedent is None:
         return "Écart indisponible"
     ecart = actuel - precedent
-    signe = "+" if ecart > 0 else "\u2212" if ecart < 0 else ""
-    return f"Écart : {signe}{_entier(abs(ecart))}"
+    signe = "+" if ecart > 0 else _MOINS if ecart < 0 else ""
+    return f"Écart : {signe}{abs(ecart)} {singulier if abs(ecart) == 1 else pluriel} vs mois précédent"
 
 
-def _ecart_montant(actuel: Decimal, precedent: Decimal | None) -> str:
+def _ecart_montant(actuel: Decimal, precedent: Decimal | None, *, decimales: bool = False) -> str:
+    """La masse s'écrit à l'unité, le STC en DH garde ses deux décimales (comme Spring)."""
     if precedent is None:
         return "Écart indisponible"
     ecart = actuel - precedent
-    signe = "+" if ecart > 0 else "\u2212" if ecart < 0 else ""
-    montant = f"{signe}{_masse(abs(ecart))} DH"
+    signe = "+" if ecart > 0 else _MOINS if ecart < 0 else ""
+    montant = f"{signe}{_montant(abs(ecart)) if decimales else _masse(abs(ecart))} DH"
     if precedent == 0:
         return f"Écart : {montant} (base à 0)"
     pourcentage = (ecart * Decimal(100) / precedent).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
-    signe_pourcentage = "+" if pourcentage > 0 else "\u2212" if pourcentage < 0 else ""
+    signe_pourcentage = "+" if pourcentage > 0 else _MOINS if pourcentage < 0 else ""
     return f"Écart : {montant} ({signe_pourcentage}{abs(pourcentage):.1f} %)".replace(".", ",")
 
 
