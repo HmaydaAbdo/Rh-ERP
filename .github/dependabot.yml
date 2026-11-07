@@ -3,13 +3,15 @@
 # (Dependabot alerts) se règlent dans les paramètres du dépôt, pas ici.
 version: 2
 updates:
-  - package-ecosystem: maven
-    directory: /backend
+  # API FastAPI (application unique, ADR 0016) : verrou uv et images de base, au même rythme mensuel que le service IA, parce
+  # que FastAPI, Pydantic, SQLAlchemy et FastMCP publient souvent.
+  - package-ecosystem: uv
+    directory: /api
     schedule:
-      interval: quarterly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
-      maven:
+      api-python:
         patterns: ["*"]
   - package-ecosystem: npm
     directory: /frontend
@@ -25,9 +27,9 @@ updates:
       - dependency-name: typescript
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: docker
-    directory: /backend
+    directory: /api
     schedule:
-      interval: quarterly
+      interval: monthly
   - package-ecosystem: docker
     directory: /frontend
     schedule:
