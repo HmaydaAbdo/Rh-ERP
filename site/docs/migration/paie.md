@@ -121,3 +121,18 @@ ne porte pas sur les styles ni les propriétés internes du classeur.
 Le gabarit du rapport embarque désormais Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
 (rendu hors de la boucle d'événements). Rendu réel vérifié dans l'image Linux le 2026-11-07 (page de garde, tableau paginé),
 mais la route reste en `503` : les sections complètes du rapport Spring et la comparaison côte à côte restent à faire.
+
+## Parcours, effectifs et statuts HTTP (parité Spring, KAN-226)
+
+`GET /paie/employes/{id}/parcours` renvoie, pour chaque mois, `fonction` (libellé), `chantier` (code) et `equipe` (code, `null`
+sans équipe), comme `ParcoursEmployeDto.MoisDto`. Les événements du plus récent au plus ancien (à mois égal : `RETOUR`,
+`DEPART`, `CHANGEMENT_SALAIRE`, `CHANGEMENT_EQUIPE`, `CHANGEMENT_FONCTION`, `CHANGEMENT_CHANTIER`, `ENTREE`) sont : `ENTREE`
+(`apres` = « code chantier · libellé fonction »), les changements entre deux bulletins consécutifs (codes et libellés, salaire
+en décimal brut), `RETOUR` quand un départ tombe entre deux bulletins et `DEPART` (avec `motif`) pour chaque ligne de
+`employe_sortie`. Un employé inconnu répond `404`. Le calcul est dans `paie/historique.py`.
+
+`POST /paie/effectifs` calcule `entrees`, `sorties`, `mutations` et `plusPayes` comme `PaieEffectifsService`, face au mois civil
+précédent (`mois_precedent`, qui enjambe janvier). Le premier mois du périmètre n'a ni `entrees` ni `mutations`.
+
+Statuts : bulletin introuvable `404`, doublon employé/mois `409` (message avec le mois `AAAA-MM`), suppression bloquée par une
+contrainte `409`. Preuve : `api/tests/test_paie_parcours_contrat.py`.
