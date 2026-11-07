@@ -8,7 +8,7 @@ des autres domaines arrivent avec leur domaine (KAN-49). La liste des comptes n'
 
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -16,7 +16,6 @@ from fastmcp.server.dependencies import get_access_token
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mcp.types import ToolAnnotations
 from staport.domains.audit import consultation
 from staport.domains.audit.exceptions import EntiteAuditeeInconnue
 from staport.domains.audit.registre import registre
@@ -27,24 +26,14 @@ from staport.domains.auth.securite import SCOPE_LECTURE
 from staport.domains.chantier import repository as repository_chantier
 from staport.domains.chantier.schemas import ChantierRecherche
 from staport.domains.common.pagination import Pagination
-from staport.domains.employee import repository as repository_employee
-from staport.domains.employee.schemas import EmployeeRecherche
 from staport.domains.equipe import repository as repository_equipe
 from staport.domains.equipe.schemas import EquipeRecherche
 from staport.domains.function import repository as repository_fonction
+from staport.domains.mcp.formats import LECTURE_SEULE, Page, nombre_de, nombre_de_total, texte
 from staport.domains.mcp.telemetrie import outil
 
 LIGNES = 20
 VERSIONS = 10
-PAGE_DOC = (
-    "Numéro de la page de résultats, à partir de 0 (0 par défaut). Toutes les pages restent accessibles. Avec `limite` "
-    "comme taille de page, permet de parcourir tous les résultats quand `total` dépasse ce qui est rendu."
-)
-LECTURE_SEULE = ToolAnnotations(
-    read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False
-)
-
-Page = Annotated[int, Field(ge=0, description=PAGE_DOC)]
 
 
 def _jour(valeur: str | None, nom: str, *, fin: bool) -> datetime | None:
@@ -57,23 +46,6 @@ def _jour(valeur: str | None, nom: str, *, fin: bool) -> datetime | None:
         raise ToolError(f"« {nom} » doit être une date réelle au format aaaa-MM-jj.") from cause
     debut = datetime(jour.year, jour.month, jour.day, tzinfo=UTC)
     return debut + timedelta(days=1) - timedelta(microseconds=1) if fin else debut
-
-
-def _texte(valeur: str | None) -> str | None:
-    return None if valeur is None or not valeur.strip() else valeur.strip()
-
-
-def _nombre_de(cle: str) -> Callable[[dict[str, Any]], int | None]:
-    def compter(resultat: dict[str, Any]) -> int | None:
-        valeurs = resultat.get(cle)
-        return len(cast(list[Any], valeurs)) if isinstance(valeurs, list) else None
-
-    return compter
-
-
-def _nombre_de_total(resultat: dict[str, Any]) -> int | None:
-    total = resultat.get("total")
-    return total if isinstance(total, int) else None
 
 
 def enregistrer(
@@ -95,7 +67,7 @@ def enregistrer(
             "concerné. Sans paramètre ; la liste des droits est rendue en entier, sans pagination."
         ),
     )
-    @outil("systeme_identite", None, _nombre_de("autorites"))
+    @outil("systeme_identite", None, nombre_de("autorites"))
     async def systeme_identite() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
         jeton = get_access_token()
         # `get_access_token` n'est jamais vide ici : le décorateur a exigé le scope de lecture.
@@ -114,7 +86,7 @@ def enregistrer(
             "sans pagination. Pour savoir qui peut les gérer, `roles_lister`."
         ),
     )
-    @outil("parametres_lire", "PARAMETRE_READ", _nombre_de("parametres"))
+    @outil("parametres_lire", "PARAMETRE_READ", nombre_de("parametres"))
     async def parametres_lire() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
         async with fabrique()() as session:
             parametres = await contexte().parametres.lister(session)
@@ -147,7 +119,7 @@ def enregistrer(
             "un rôle, `audit_historique`."
         ),
     )
-    @outil("roles_lister", "ROLE_MANAGE", _nombre_de_total)
+    @outil("roles_lister", "ROLE_MANAGE", nombre_de_total)
     async def roles_lister(  # pyright: ignore[reportUnusedFunction]
         nom: Annotated[
             str | None, Field(max_length=50, description="Nom du rôle, partiel. Absent = tous les rôles.")
@@ -157,7 +129,7 @@ def enregistrer(
         ] = LIGNES,
         page: Page = 0,
     ) -> dict[str, Any]:
-        criteres = RoleRecherche(nom=_texte(nom))
+        criteres = RoleRecherche(nom=texte(nom))
         async with fabrique()() as session:
             resultats = await contexte().roles.rechercher(session, criteres, Pagination(page, limite, (("nom", True),)))
         return {
@@ -186,7 +158,7 @@ def enregistrer(
             "référentiel des fonctions. Lecture seule : ne modifie rien."
         ),
     )
-    @outil("fonction_rechercher", "FUNCTION_READ", _nombre_de_total)
+    @outil("fonction_rechercher", "FUNCTION_READ", nombre_de_total)
     async def fonction_rechercher(
         recherche: Annotated[str | None, Field(max_length=100, description="Libellé partiel de la fonction.")] = None,
         limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre de fonctions par page.")] = LIGNES,
@@ -194,7 +166,7 @@ def enregistrer(
     ) -> dict[str, Any]:
         async with fabrique()() as session:
             resultats = await repository_fonction.rechercher(
-                session, _texte(recherche), Pagination(page, limite, (("libelle", True),))
+                session, texte(recherche), Pagination(page, limite, (("libelle", True),))
             )
         lignes, total = resultats
         return {
@@ -236,7 +208,7 @@ def enregistrer(
             "le référentiel des équipes. Lecture seule : ne modifie rien."
         ),
     )
-    @outil("equipe_rechercher", "EQUIPE_READ", _nombre_de_total)
+    @outil("equipe_rechercher", "EQUIPE_READ", nombre_de_total)
     async def equipe_rechercher(
         recherche: Annotated[str | None, Field(max_length=100, description="Code ou libellé partiel.")] = None,
         limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre d'équipes par page.")] = LIGNES,
@@ -244,7 +216,7 @@ def enregistrer(
     ) -> dict[str, Any]:
         async with fabrique()() as session:
             lignes, total = await repository_equipe.rechercher(
-                session, EquipeRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+                session, EquipeRecherche(recherche=texte(recherche)), Pagination(page, limite, (("code", True),))
             )
         return {
             "total": total,
@@ -281,7 +253,7 @@ def enregistrer(
         annotations=LECTURE_SEULE,
         description="Trouve des chantiers par code, nom ou désignation. Lecture seule, résultats paginés.",
     )
-    @outil("chantier_rechercher", "CHANTIER_READ", _nombre_de_total)
+    @outil("chantier_rechercher", "CHANTIER_READ", nombre_de_total)
     async def chantier_rechercher(
         recherche: Annotated[str | None, Field(max_length=500, description="Texte partiel.")] = None,
         limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
@@ -289,7 +261,7 @@ def enregistrer(
     ) -> dict[str, Any]:
         async with fabrique()() as session:
             lignes, total = await repository_chantier.rechercher(
-                session, ChantierRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+                session, ChantierRecherche(recherche=texte(recherche)), Pagination(page, limite, (("code", True),))
             )
         return {
             "total": total,
@@ -329,58 +301,6 @@ def enregistrer(
         }
 
     @serveur.tool(
-        name="employes_rechercher",
-        title="Rechercher des employés",
-        annotations=LECTURE_SEULE,
-        description="Recherche paginée d'employés par nom, CIN ou statut. Le salaire est omis sans PAIE_READ.",
-    )
-    @outil("employes_rechercher", "EMPLOYEE_READ", _nombre_de_total)
-    async def employes_rechercher(
-        recherche: Annotated[str | None, Field(max_length=150)] = None,
-        limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
-        page: Page = 0,
-    ) -> dict[str, Any]:
-        async with fabrique()() as session:
-            lignes, total = await repository_employee.rechercher(
-                session,
-                EmployeeRecherche(nom_prenom=_texte(recherche)),
-                Pagination(page, limite, (("nom_prenom", True),)),
-            )
-        return {
-            "total": total,
-            "page": page,
-            "employes": [{"id": x.id, "nomPrenom": x.nom_prenom, "cin": x.cin, "statut": x.statut} for x in lignes],
-            "vue": {"module": "employee", "vue": "tabulaire", "parametres": {}},
-        }
-
-    @serveur.tool(
-        name="employe_fiche",
-        title="Fiche d'un employé",
-        annotations=LECTURE_SEULE,
-        description="Lit la fiche d'un employé par identifiant. Lecture seule.",
-    )
-    @outil("employe_fiche", "EMPLOYEE_READ", lambda _: 1)
-    async def employe_fiche(id: Annotated[int, Field(gt=0)]) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            employe = await repository_employee.par_id(session, id)
-        if employe is None:
-            raise ToolError(f"Employé introuvable avec l'id : {id}")
-        return {
-            "employe": {
-                "id": employe.id,
-                "nomPrenom": employe.nom_prenom,
-                "cin": employe.cin,
-                "dateNaissance": employe.date_naissance,
-                "dateEmbauche": employe.date_embauche,
-                "fonctionId": employe.fonction_id,
-                "chantierId": employe.chantier_id,
-                "equipeId": employe.equipe_id,
-                "statut": employe.statut,
-            },
-            "vue": {"module": "employee", "vue": "detail", "parametres": {"id": id}},
-        }
-
-    @serveur.tool(
         name="audit_rechercher",
         title="Journal d'audit",
         annotations=LECTURE_SEULE,
@@ -392,7 +312,7 @@ def enregistrer(
             "journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total."
         ),
     )
-    @outil("audit_rechercher", "AUDIT_READ", _nombre_de_total)
+    @outil("audit_rechercher", "AUDIT_READ", nombre_de_total)
     async def audit_rechercher(  # pyright: ignore[reportUnusedFunction]
         depuis: Annotated[
             str | None,
@@ -424,11 +344,11 @@ def enregistrer(
         criteres = RechercheJournal(
             date_debut=_jour(depuis, "depuis", fin=False),
             date_fin=_jour(jusqua, "jusqua", fin=True),
-            utilisateur=_texte(utilisateur),
+            utilisateur=texte(utilisateur),
             categorie=categorie,
-            action=_texte(action),
+            action=texte(action),
             resultat=resultat,
-            entite_type=_texte(entite),
+            entite_type=texte(entite),
             entite_id=entite_id,
         )
         pagination = Pagination(page, limite, (("horodatage", False),))
@@ -468,7 +388,7 @@ def enregistrer(
             "Pour chercher dans tout le journal sans cibler un enregistrement, utiliser `audit_rechercher`."
         ),
     )
-    @outil("audit_historique", "AUDIT_READ", _nombre_de_total)
+    @outil("audit_historique", "AUDIT_READ", nombre_de_total)
     async def audit_historique(  # pyright: ignore[reportUnusedFunction]
         entite: Annotated[str, Field(description=f"Type de l'enregistrement : {liste_entites}.")],
         id: Annotated[  # nom du paramètre exposé à l'agent, identique à celui de Spring
