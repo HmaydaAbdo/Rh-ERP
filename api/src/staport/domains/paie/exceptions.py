@@ -2,15 +2,26 @@ from http import HTTPStatus
 
 from staport.platform.erreurs import ErreurMetier
 
+from .periode import afficher_periode
+
 
 class PaieIntrouvable(ErreurMetier):
+    """Bulletin absent (HTTP 404, comme `PaieNotFoundException`)."""
+
+    statut = HTTPStatus.NOT_FOUND
+
     def __init__(self, identifiant: int):
-        super().__init__(f"Bulletin de paie introuvable : {identifiant}")
+        super().__init__(f"Bulletin de paie introuvable avec l'id : {identifiant}")
 
 
 class PaieDejaExistante(ErreurMetier):
+    """Doublon employé/mois (HTTP 409, comme `PaieAlreadyExistsException`) ; le mois s'affiche AAAA-MM."""
+
+    statut = HTTPStatus.CONFLICT
+
     def __init__(self, employee_id: int, periode: int):
-        super().__init__(f"Un bulletin existe déjà pour l'employé {employee_id} et la période {periode}")
+        mois = afficher_periode(periode)
+        super().__init__(f"Un bulletin de paie existe déjà pour l'employé id={employee_id} sur la période {mois}")
 
 
 class PeriodeObligatoire(ErreurMetier):

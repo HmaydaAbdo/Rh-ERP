@@ -1,5 +1,4 @@
 from decimal import Decimal
-from itertools import pairwise
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
@@ -11,13 +10,14 @@ from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
+from staport.domains.employee.exceptions import EmployeeIntrouvable
 from staport.domains.employee.models import Employee, EmployeeStatut
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
 from staport.domains.parametre.service import ServiceParametre
 
-from . import repository
+from . import historique, repository
 from .analytique import construire_analytique
 from .cartes import chantiers as construire_chantiers
 from .cartes import periodes as construire_periodes
@@ -26,6 +26,7 @@ from .exceptions import (
     PaieGroupeModifie,
     PaieGroupeRestaurationConflit,
     PaieIntrouvable,
+    PaieLiee,
     PeriodeInvalide,
     PeriodeObligatoire,
     ReferenceInvalide,
@@ -46,9 +47,7 @@ from .schemas import (
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
-    PaieParcoursEvenement,
     PaieParcoursIndicateurs,
-    PaieParcoursMois,
     PaieParcoursReponse,
     PaiePeriodeResume,
     PaieRecherche,
@@ -187,7 +186,7 @@ class ServicePaie:
             try:
                 await s.flush()
             except IntegrityError as e:
-                raise PaieIntrouvable(i) from e
+                raise PaieLiee("Une contrainte d'intégrité empêche cette opération.") from e
 
     async def supprimer_groupe(self, s: AsyncSession, criteres: PaieRecherche, nombre_attendu: int) -> int:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION_GROUPE", TypeOperation.DELETE, "Paie")
@@ -294,68 +293,28 @@ class ServicePaie:
 
     async def effectifs(self, s: AsyncSession, c: PaieRecherche) -> list[PaieEffectifMois]:
         async with s.begin():
-            lignes = await repository.effectifs(s, c)
-        par_periode = {periode: effectif for periode, effectif in lignes}
-        return [
-            PaieEffectifMois(
-                periode=periode,
-                effectif=effectif,
-                effectif_mois_precedent=par_periode.get(periode - 1),
-                variation=(effectif - par_periode[periode - 1]) if periode - 1 in par_periode else None,
-                entrees=0,
-                plus_payes=None,
-                sorties=0,
-                mutations=None,
-            )
-            for periode, effectif in lignes
-        ]
+            lignes = await historique.lignes_effectifs(s, c)
+            departs = await historique.tous_les_departs(s)
+        return historique.tendances_effectifs(lignes, departs)
 
     async def parcours(self, s: AsyncSession, employee_id: int) -> PaieParcoursReponse:
         async with s.begin():
-            bulletins = await repository.parcours(s, employee_id)
-        mois = [
-            PaieParcoursMois(
-                bulletin_id=x.id,
-                periode=x.periode,
-                fonction_id=x.fonction_id,
-                chantier_id=x.chantier_id,
-                equipe_id=x.equipe_id,
-                nombre_jours_travailles=x.nombre_jours_travailles,
-                salaire_mensuel=x.salaire_mensuel,
-                salaire_total=x.salaire_total,
-                observation=x.observation,
-            )
-            for x in reversed(bulletins)
-        ]
-        evenements: list[PaieParcoursEvenement] = []
-        for precedent, courant in pairwise(bulletins):
-            for _champ, avant, apres, type_ in (
-                ("chantier_id", precedent.chantier_id, courant.chantier_id, "CHANGEMENT_CHANTIER"),
-                ("fonction_id", precedent.fonction_id, courant.fonction_id, "CHANGEMENT_FONCTION"),
-                ("equipe_id", precedent.equipe_id, courant.equipe_id, "CHANGEMENT_EQUIPE"),
-                ("salaire_mensuel", precedent.salaire_mensuel, courant.salaire_mensuel, "CHANGEMENT_SALAIRE"),
-            ):
-                if avant != apres:
-                    evenements.append(
-                        PaieParcoursEvenement(
-                            periode=courant.periode, type=type_, avant=str(avant), apres=str(apres), motif=None
-                        )
-                    )
-        if bulletins:
-            evenements.append(
-                PaieParcoursEvenement(periode=bulletins[0].periode, type="ENTREE", avant=None, apres=None, motif=None)
-            )
+            if not await historique.employe_existe(s, employee_id):
+                raise EmployeeIntrouvable(employee_id)
+            bulletins = await historique.bulletins_de(s, employee_id)
+            departs = await historique.departs_de(s, employee_id)
+        paies = [b.paie for b in bulletins]
         return PaieParcoursReponse(
             employe_id=employee_id,
             indicateurs=PaieParcoursIndicateurs(
-                mois_payes=len(bulletins),
-                total_percu=sum((x.salaire_total for x in bulletins), Decimal(0)),
-                jours_travailles=sum((x.nombre_jours_travailles for x in bulletins), Decimal(0)),
-                premier_mois=bulletins[0].periode if bulletins else None,
-                dernier_mois=bulletins[-1].periode if bulletins else None,
+                mois_payes=len(paies),
+                total_percu=sum((x.salaire_total for x in paies), Decimal(0)),
+                jours_travailles=sum((x.nombre_jours_travailles for x in paies), Decimal(0)),
+                premier_mois=paies[0].periode if paies else None,
+                dernier_mois=paies[-1].periode if paies else None,
             ),
-            mois=mois,
-            evenements=sorted(evenements, key=lambda x: (x.periode, x.type), reverse=True),
+            mois=historique.mois_du_parcours(bulletins),
+            evenements=historique.evenements_du_parcours(bulletins, departs),
         )
 
     @staticmethod
