@@ -1,7 +1,7 @@
 from dataclasses import replace
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,3 +103,13 @@ async def importer(session: Session, contexte: Contexte, file: UploadFile = File
     resultat = await contexte.employees.importer(session, await file.read())
     statut = status.HTTP_400_BAD_REQUEST if resultat.ignores > 0 else status.HTTP_200_OK
     return JSONResponse(resultat.model_dump(by_alias=True, mode="json"), status_code=statut)
+
+
+@employees.delete(
+    "/{identifiant}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    dependencies=[Depends(exiger("EMPLOYEE_DELETE"))],
+)
+async def supprimer(identifiant: int, session: Session, contexte: Contexte) -> None:
+    await contexte.employees.supprimer(session, identifiant)

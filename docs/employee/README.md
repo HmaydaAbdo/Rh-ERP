@@ -224,6 +224,7 @@ Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienne
 | `POST /employees/search` | `EMPLOYEE_READ` | Page de fiches; critères invalides `400` |
 | `POST /employees/regroupements?dimension=CHANTIER\|EQUIPE\|FONCTION` | `EMPLOYEE_READ` | Groupes du périmètre; critères/dimension invalides `400` |
 | `POST /employees/analytique` | `EMPLOYEE_READ` | Chiffres et tranches du périmètre; critères invalides `400` |
+| `POST /employees/sorties-mois` | `EMPLOYEE_READ` | Départs du mois, regroupés par motif |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` | `204`; absent `404`, fiche utilisée `409` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` | Multipart `file`; résultat `200`, fichier ou lignes invalides `400` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` | Modèle XLSX vierge |

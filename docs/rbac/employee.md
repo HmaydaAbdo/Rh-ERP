@@ -13,6 +13,7 @@
 | `POST /employees/search` | `EMPLOYEE_READ` |
 | `POST /employees/regroupements` | `EMPLOYEE_READ` (aucun salaire) |
 | `POST /employees/analytique` | `EMPLOYEE_READ` (aucun salaire) |
+| `POST /employees/sorties-mois` | `EMPLOYEE_READ` |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` |
