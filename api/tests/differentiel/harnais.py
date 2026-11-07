@@ -46,6 +46,7 @@ class Etape:
     trier_listes: bool = False  # ordre non spécifié : compare les listes comme des ensembles
     ignorer: tuple[str, ...] = ()  # chemins pointés exclus (écart accepté documenté)
     en_tetes: dict[str, str] | None = None
+    decide: str | None = None  # refonte documentée et validée par le propriétaire : écart « décidé », pas un bug
     question: str | None = (
         None  # écart connu soumis au propriétaire : classé « à valider », jamais « corrigé » en silence
     )
@@ -99,10 +100,15 @@ class Backend:
         kwargs: dict[str, Any] = {"headers": en_tetes, "params": e.params}
         if e.fichiers or e.parties_json:
             fichiers = dict(e.fichiers or {})
+            donnees = dict(e.donnees or {})
             for nom, valeur in (e.parties_json or {}).items():
-                fichiers[nom] = (nom, json.dumps(valeur).encode(), "application/json")
+                texte = json.dumps(_formater(valeur, self.captures))
+                if self.nom == "python":  # contrat Python documenté : champ texte contenant du JSON (wizard migré)
+                    donnees[nom] = texte
+                else:  # Spring : @RequestPart, partie multipart application/json
+                    fichiers[nom] = (nom, texte.encode(), "application/json")
             kwargs["files"] = fichiers
-            kwargs["data"] = e.donnees
+            kwargs["data"] = donnees
         elif e.json is not None:
             kwargs["json"] = _formater(e.json, self.captures)
         elif e.donnees:
@@ -215,6 +221,8 @@ def _categorie(e: Etape, objet: str, spring: Any) -> str:
     """Un message de validation anglais de Spring face à sa traduction française est une décision, pas un bug."""
     if e.question:
         return "a_valider"
+    if e.decide:
+        return "decide"
     if objet == "$.message" and isinstance(spring, str) and ANGLAIS_VALIDATION.search(spring):
         return "a_valider"
     return "ecart"

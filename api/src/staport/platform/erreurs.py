@@ -135,6 +135,15 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
             for d in erreurs
         ):
             return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
+        for d in erreurs:
+            if d["loc"][-1:] == ("periode",):
+                if d["type"] == "missing":
+                    return reponse(requete, HTTPStatus.BAD_REQUEST, "Paramètre obligatoire absent : periode.")
+                return reponse(
+                    requete,
+                    HTTPStatus.BAD_REQUEST,
+                    f"Période invalide, format attendu aaaa-MM (ex. 2026-08) : {d.get('input', '')}",
+                )
         # Paramètre de chemin ou de requête illisible : `MethodArgumentTypeMismatchException` côté Spring.
         for d in erreurs:
             if d["loc"][:1] in (("path",), ("query",)) and d["type"] in TYPES_PARAMETRE_ILLISIBLE:
