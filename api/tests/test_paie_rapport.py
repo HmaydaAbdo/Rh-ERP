@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from typing import Any, cast
 from uuid import uuid4
 
+import pytest
 from conftest import ADMIN, Plateforme
+from pydantic import ValidationError
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session
@@ -80,7 +82,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
     assert "3. Répartition par chantier" in html
     assert "4. Liste des employés" in html
-    assert "Masse mois précédent" in html
+    assert "Masse mois precedent" in html
     assert '<div class="valeur montant">500 DH</div>' in html
     pages_rapport = html.split('<div class="page">')[1:]
     assert any('table class="recap fonction"' in page and "4. Liste des employés" in page for page in pages_rapport)
@@ -89,7 +91,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
-    assert "Page 1 / 6" in html and "Page 6 / 6" in html
+    assert "Page 1 / 8" in html and "Page 8 / 8" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "STC (PERS.)" in html
     html_equipe = rendre(
@@ -106,7 +108,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "STC (PERS.)" in html_equipe
     assert "3. Répartition par fonction" in html_equipe
     assert "4. Liste des employés" in html_equipe
-    assert '<div class="label">Masse mois précédent</div><div class="valeur montant"></div>' in html_equipe
+    assert '<div class="label">Masse mois precedent</div><div class="valeur montant"></div>' in html_equipe
     assert "Page 8 / 8" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
@@ -194,23 +196,59 @@ def test_comparaison_du_rapport_preserve_absence_et_base_nulle() -> None:
 def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
     rapport = cast(Any, report)
     assert rapport._periodes_recentes("2026-01", 3) == [202601, 202512, 202511]
-    svg = rapport._graphique_evolution(
-        [
-            rapport.PointEvolution(202512, Decimal("1000"), 2, 1, Decimal("500")),
-            rapport.PointEvolution(202602, Decimal("1500"), 3, 0, Decimal(0)),
-        ]
-    )
-    assert "12/2025" in svg and "2/2026" in svg
-    assert "1/2026" not in svg
+    points = [
+        rapport.PointEvolution(202512, Decimal("1000"), 2, 1, Decimal("500")),
+        rapport.PointEvolution(202602, Decimal("1500"), 3, 0, Decimal(0)),
+    ]
+    for groupe in ("MONTANTS", "EFFECTIFS"):
+        svg = rapport._graphique_evolution(points, groupe)
+        assert "12/2025" in svg and "2/2026" in svg
+        assert "1/2026" not in svg
+    indisponible = rapport._graphique_evolution([], "MONTANTS")
+    assert "Aucune donnée historique" in indisponible and "<svg" not in indisponible
 
 
 def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
     rapport = cast(Any, report)
     assert rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 0}) is None
+    assert rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": None}) is None
     assert rapport._graphique_materiel("C168", "XX", {"CAMION CITERNE": 2}) is None
-    graphique = rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 2})
-    assert graphique is not None and "Parc matériel — CAMION" in graphique
-    assert "CAMION CITERNE" in graphique and "<svg" in graphique
+    graphique = rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 2, "PELLE PNEU": None})
+    assert graphique is not None and "CAMION CITERNE" in graphique
+    assert "<svg" in graphique
+    assert "PELLE PNEU" not in graphique
+
+
+def test_contrat_rapport_borne_les_chantiers_et_quantites_materiel() -> None:
+    PaieRapportRequete(periode="2026-10", chantier_ids=list(range(500)))
+    PaieRapportRequete(periode="2026-10", materiel={"CAMION CITERNE": 0, "PELLE PNEU": 999})
+    PaieRapportRequete(periode="2026-10", materiel={"CAMION CITERNE": None})
+
+    for corps in (
+        {"periode": "2026-10", "chantierIds": list(range(501))},
+        {"periode": "2026-10", "chantierIds": [None]},
+    ):
+        with pytest.raises(ValidationError):
+            PaieRapportRequete.model_validate(corps)
+
+    for quantite in (-1, 1000):
+        with pytest.raises(ValidationError):
+            PaieRapportRequete(periode="2026-10", materiel={"CAMION CITERNE": quantite})
+
+
+def test_api_rapport_refuse_les_chantiers_et_quantites_hors_limites(plateforme: Plateforme, connecter: Any) -> None:
+    jeton = connecter(*ADMIN)["accessToken"]
+    headers = {"Authorization": f"Bearer {jeton}"}
+    corps_invalides = (
+        {"periode": "2026-10", "chantierIds": list(range(501))},
+        {"periode": "2026-10", "chantierIds": [None]},
+        {"periode": "2026-10", "materiel": {"CAMION CITERNE": -1}},
+        {"periode": "2026-10", "materiel": {"CAMION CITERNE": 1000}},
+    )
+
+    for corps in corps_invalides:
+        reponse = plateforme.client.post("/paie/report/pdf", headers=headers, json=corps)
+        assert reponse.status_code == 400
 
 
 def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> None:
@@ -374,7 +412,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
         assert len(htmls) == 1
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
-        assert htmls[0].count("12/2025") == 3
+        assert htmls[0].count("12/2025") == 6
         assert "1/2026" not in htmls[0]
         assert "STC / sorties" in htmls[0] and "200" in htmls[0]
     finally:

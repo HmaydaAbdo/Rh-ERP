@@ -83,7 +83,7 @@ de pages que nécessaire, avec une échelle de graphique cohérente entre les pa
 | `chantierIds` | `integer(int64)[]|null`, au plus 500 valeurs non nulles | Marchés du rapport; liste vide ou absente : tous. |
 | `chantierId` | `integer(int64)|null` | Sélection simple acceptée pour compatibilité; `chantierIds` prévaut s'il est fourni. |
 | `equipesParChantier` | `object<string,string[]>|null` | Code chantier → libellés des équipes disposant d'une section détaillée. Ce choix ne retire aucun employé du rapport. |
-| `materiel` | `object<string,integer>|null`, valeurs de 0 à 999 | Libellé d'une ligne du catalogue matériel → quantité. Une ligne absente reste non renseignée. |
+| `materiel` | `object<string,integer|null>|null`, valeurs entières de 0 à 999 | Libellé d'une ligne du catalogue matériel → quantité. Une ligne absente ou explicitement nulle reste non renseignée. |
 | `sansVueEnsemble` | `boolean|null` | `true` retire le chapitre global. Les chapitres chantier démarrent à I; les pages de périmètre sont conservées. |
 
 Le PDF accepte une fonction simple et une sélection de marchés. `equipesParChantier` règle le détail

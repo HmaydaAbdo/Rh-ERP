@@ -308,11 +308,11 @@ class PaieRapportRequete(ModeleApi):
     nom_prenom: str | None = Field(default=None, max_length=150)
     cin: str | None = Field(default=None, max_length=30)
     fonction_id: int | None = None
-    chantier_ids: list[int] | None = None
+    chantier_ids: list[int] | None = Field(default=None, max_length=500)
     chantier_id: int | None = None
     equipes_par_chantier: dict[str, list[str]] | None = None
     regroupements_equipes_par_chantier: dict[str, list[list[str]]] | None = None
-    materiel: dict[str, int] | None = None
+    materiel: dict[str, Annotated[int | None, Field(ge=0, le=999)]] | None = None
     sans_vue_ensemble: bool | None = None
 
 
