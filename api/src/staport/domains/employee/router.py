@@ -63,8 +63,10 @@ async def lire(identifiant: int, session: Session, contexte: Contexte, acces: Au
 
 
 @employees.post("/search", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
-async def rechercher(corps: EmployeeRecherche | None, page: PageEmployees, session: Session, contexte: Contexte):
-    return await contexte.employees.rechercher(session, corps, page)
+async def rechercher(
+    corps: EmployeeRecherche | None, page: PageEmployees, session: Session, contexte: Contexte, acces: Authentifie
+):
+    return await contexte.employees.rechercher(session, corps, page, paie(acces))
 
 
 @employees.post("/analytique", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
