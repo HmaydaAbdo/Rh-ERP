@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from matplotlib.figure import Figure
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -25,6 +26,15 @@ from .rapport_texte import decouper_lignes, hauteur_ligne_employe
 from .schemas import PaieRapportRequete
 
 
+@dataclass(frozen=True)
+class PointEvolution:
+    periode: int
+    masse: Decimal
+    effectif: int
+    stc: int
+    montant_stc: Decimal
+
+
 class ServiceRapportPaie:
     """Premier pipeline PDF natif Python, avec CSS et polices du rapport Spring embarqués."""
 
@@ -34,19 +44,7 @@ class ServiceRapportPaie:
 
     async def generer(self, session: AsyncSession, requete: PaieRapportRequete) -> BytesIO:
         periode_precedente = _periode_precedente(requete.periode)
-        conditions: list[ColumnElement[bool]] = [
-            Paie.periode.in_([int(requete.periode.replace("-", "")), int(periode_precedente.replace("-", ""))])
-        ]
-        if requete.nom_prenom:
-            conditions.append(Employee.nom_prenom.icontains(requete.nom_prenom, autoescape=True))
-        if requete.cin:
-            conditions.append(Employee.cin.icontains(requete.cin, autoescape=True))
-        if requete.fonction_id is not None:
-            conditions.append(Paie.fonction_id == requete.fonction_id)
-        if requete.chantier_ids:
-            conditions.append(Paie.chantier_id.in_(requete.chantier_ids))
-        elif requete.chantier_id is not None:
-            conditions.append(Paie.chantier_id == requete.chantier_id)
+        conditions = _conditions([requete.periode, periode_precedente], requete)
         q = (
             select(Paie, Employee, Chantier, Equipe, Fonction)
             .join(Employee, Employee.id == Paie.employee_id)
@@ -56,16 +54,36 @@ class ServiceRapportPaie:
             .where(*conditions)
             .order_by(Fonction.libelle, Employee.nom_prenom)
         )
+        conditions_evolution = _conditions(_periodes_recentes(requete.periode, 12), requete)
+        est_stc = func.lower(func.btrim(Paie.observation, " \t\n\r\f\v")).in_(["stc", "sortie"])
+        q_evolution = (
+            select(
+                Paie.periode,
+                func.coalesce(func.sum(Paie.salaire_total), Decimal(0)),
+                func.count(Paie.id),
+                func.coalesce(func.sum(case((est_stc, 1), else_=0)), 0),
+                func.coalesce(func.sum(case((est_stc, Paie.salaire_total), else_=Decimal(0))), Decimal(0)),
+            )
+            .join(Employee, Employee.id == Paie.employee_id)
+            .where(*conditions_evolution)
+            .group_by(Paie.periode)
+            .order_by(Paie.periode)
+        )
         async with session.begin():
             lignes = cast(
                 list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
+            evolution_brute = cast(
+                list[tuple[int, Decimal, int, int, Decimal]],
+                [tuple(row) for row in (await session.execute(q_evolution)).all()],
+            )
         lignes_courantes = [ligne for ligne in lignes if ligne[0].periode == int(requete.periode.replace("-", ""))]
         lignes_precedentes = [ligne for ligne in lignes if ligne[0].periode == int(periode_precedente.replace("-", ""))]
         if not lignes_courantes:
             raise AucunePaiePeriode(requete.periode)
-        html = self._html(requete, lignes_courantes, lignes_precedentes)
+        evolution = [PointEvolution(*ligne) for ligne in evolution_brute]
+        html = self._html(requete, lignes_courantes, lignes_precedentes, evolution)
         return BytesIO(await rendre_pdf(html, self._ressources))
 
     def _html(
@@ -73,6 +91,7 @@ class ServiceRapportPaie:
         requete: PaieRapportRequete,
         lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
         lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]] | None = None,
+        evolution: list[PointEvolution] | None = None,
     ) -> str:
         css = (self._ressources / "rapport.css").read_text(encoding="utf-8")
         par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
@@ -128,6 +147,14 @@ class ServiceRapportPaie:
                     f'<div class="graphique">{repartition}</div>',
                 )
             )
+            if evolution is not None:
+                pages.append(
+                    (
+                        "GLOBAL",
+                        '<div class="titre-chapitre">Évolution sur douze mois</div>'
+                        f'<div class="graphique">{_graphique_evolution(evolution)}</div>',
+                    )
+                )
         for code, lignes_chantier in sorted(
             par_chantier.items(), key=lambda item: -sum(ligne[0].salaire_total for ligne in item[1])
         ):
@@ -280,6 +307,61 @@ def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str) -> str:
     sortie = BytesIO()
     cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
     return sortie.getvalue().decode("utf-8")
+
+
+def _graphique_evolution(points: list[PointEvolution]) -> str:
+    figure = Figure(figsize=(10.5, 4.8), layout="constrained")
+    montant, personnes = figure.subplots(2, 1, sharex=True)
+    mois = [f"{point.periode % 100}/{point.periode // 100}" for point in points]
+    montant.plot(mois, [float(point.masse) for point in points], color="#2563EB", marker="o", label="Masse salariale")
+    montant.plot(
+        mois, [float(point.montant_stc) for point in points], color="#0F766E", marker="o", label="Montant des STC"
+    )
+    montant.set_ylabel("DH")
+    montant.legend(loc="upper left")
+    personnes.plot(mois, [point.effectif for point in points], color="#D97706", marker="o", label="Bulletins")
+    personnes.plot(mois, [point.stc for point in points], color="#B91C1C", marker="o", label="STC / sorties")
+    personnes.set_ylabel("Personnes")
+    personnes.legend(loc="upper left")
+    for axes in (montant, personnes):
+        axes.grid(axis="y", color="#C8D3DE", linewidth=0.6)
+        axes.set_axisbelow(True)
+        for bordure in axes.spines.values():
+            bordure.set_visible(False)
+        axes.tick_params(axis="both", length=0)
+    personnes.tick_params(axis="x", labelrotation=45)
+    figure.set_facecolor("white")
+    sortie = BytesIO()
+    cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": "Évolution de la paie sur douze mois"})
+    return sortie.getvalue().decode("utf-8")
+
+
+def _conditions(periodes: Sequence[str | int], requete: PaieRapportRequete) -> list[ColumnElement[bool]]:
+    conditions: list[ColumnElement[bool]] = [
+        Paie.periode.in_(
+            [int(periode.replace("-", "")) if isinstance(periode, str) else periode for periode in periodes]
+        )
+    ]
+    if requete.nom_prenom:
+        conditions.append(Employee.nom_prenom.icontains(requete.nom_prenom, autoescape=True))
+    if requete.cin:
+        conditions.append(Employee.cin.icontains(requete.cin, autoescape=True))
+    if requete.fonction_id is not None:
+        conditions.append(Paie.fonction_id == requete.fonction_id)
+    if requete.chantier_ids:
+        conditions.append(Paie.chantier_id.in_(requete.chantier_ids))
+    elif requete.chantier_id is not None:
+        conditions.append(Paie.chantier_id == requete.chantier_id)
+    return conditions
+
+
+def _periodes_recentes(periode: str, nombre: int) -> list[int]:
+    annee, mois = (int(partie) for partie in periode.split("-"))
+    periodes: list[int] = []
+    for _ in range(nombre):
+        periodes.append(annee * 100 + mois)
+        annee, mois = (annee - 1, 12) if mois == 1 else (annee, mois - 1)
+    return periodes
 
 
 def _periode_precedente(periode: str) -> str:
