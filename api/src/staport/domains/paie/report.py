@@ -175,16 +175,19 @@ class ServiceRapportPaie:
                         f'<div class="graphique">{graphique}</div>',
                     )
                 )
-        for code, lignes_chantier in sorted(
+        chantiers_ordonnes = sorted(
             par_chantier.items(), key=lambda item: -sum(ligne[0].salaire_total for ligne in item[1])
-        ):
+        )
+        chapitres_fixes = 0 if requete.sans_vue_ensemble else 1
+        for rang_chantier, (code, lignes_chantier) in enumerate(chantiers_ordonnes, start=chapitres_fixes + 1):
             chantier = lignes_chantier[0][2]
             identifiant = f"{chantier.nom} ({code})" if chantier.nom else code
+            titre_chantier = f"{_romain(rang_chantier)} — CHANTIER : {identifiant}"
             lignes_chantier_precedentes = [ligne for ligne in lignes_precedentes or [] if ligne[2].code == code]
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
             regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
             bloc_chantier = (
-                f'<div class="titre-chapitre">{escape(f"CHANTIER : {identifiant}")}</div>'
+                f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + (
                     f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
@@ -310,7 +313,7 @@ class ServiceRapportPaie:
                     contenu_page: list[str] = []
                     if index_page == 0:
                         if index_section == 0:
-                            contenu_page.append(f'<div class="titre-chapitre">CHANTIER : {escape(identifiant)}</div>')
+                            contenu_page.append(f'<div class="titre-chapitre">{escape(titre_chantier)}</div>')
                         contenu_page.append(f'<div class="titre-section">{escape(titre)}</div>')
                     contenu_page.append(_table_entete(avec_equipe=avec_equipe, avec_entete=index_page == 0))
                     contenu_page.extend(lignes_html[i] for i in tranche)
@@ -342,6 +345,31 @@ def _identite(label: str, valeur: str) -> str:
         '<div class="bloc-identite">'
         f'<div class="label">{escape(label)}</div><div class="valeur">{escape(valeur)}</div></div>'
     )
+
+
+def _romain(valeur: int) -> str:
+    """Numérote les chapitres comme le rapport Spring (I à MMMCMXCIX)."""
+    symboles = (
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+    )
+    restant = valeur
+    resultat: list[str] = []
+    for nombre, symbole in symboles:
+        repetitions, restant = divmod(restant, nombre)
+        resultat.extend([symbole] * repetitions)
+    return "".join(resultat)
 
 
 def _graphiques_repartition_chantiers(
