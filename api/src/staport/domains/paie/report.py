@@ -176,15 +176,20 @@ class ServiceRapportPaie:
             pages.append(
                 (
                     "GLOBAL",
-                    f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}' + points_evolution,
+                    f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}'
+                    + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                    + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
+                    + points_evolution,
                 )
             )
-            for graphique in _graphiques_repartition_chantiers(par_chantier):
+            for index_graphique, graphique in enumerate(_graphiques_repartition_chantiers(par_chantier)):
+                titre_repartition = (
+                    "Répartition par chantier" if index_graphique == 0 else "Répartition par chantier (suite)"
+                )
                 pages.append(
                     (
                         "GLOBAL",
-                        '<div class="titre-chapitre">Répartition par chantier</div>'
-                        f'<div class="graphique">{graphique}</div>',
+                        _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>',
                     )
                 )
         chantiers_ordonnes = sorted(
@@ -201,6 +206,8 @@ class ServiceRapportPaie:
             bloc_chantier = (
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
+                + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
                 + (
                     f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
                     if evolution_chantiers and chantier.id in evolution_chantiers
@@ -212,18 +219,20 @@ class ServiceRapportPaie:
                 pages.append(
                     (
                         f"CHANTIER : {identifiant}",
-                        '<div class="titre-chapitre">Répartition par équipe</div>'
-                        f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
+                        _rubrique(3, "Répartition par équipe")
+                        + f'<div class="graphique">{_graphique_equipes(lignes_chantier)}</div>',
                     )
                 )
             else:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
-                for graphique in _graphiques_fonctions(lignes_chantier):
+                for index_graphique, graphique in enumerate(_graphiques_fonctions(lignes_chantier)):
+                    titre_repartition = (
+                        "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
+                    )
                     pages.append(
                         (
                             f"CHANTIER : {identifiant}",
-                            '<div class="titre-chapitre">Répartition par fonction</div>'
-                            f'<div class="graphique">{graphique}</div>',
+                            _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>',
                         )
                     )
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
@@ -233,6 +242,7 @@ class ServiceRapportPaie:
                     f"CHANTIER : {identifiant} · ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
                 )
                 avec_equipe = libelle is None or est_regroupe
+                graphique_materiel = None
                 if libelle is not None and evolution_equipes is not None:
                     identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
                     lignes_section_precedentes = [
@@ -255,15 +265,21 @@ class ServiceRapportPaie:
                                 lignes_section_precedentes,
                                 inclure_chantiers=False,
                             )
+                            + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                            + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
                             + f'<div class="graphique">{graphique_section}</div>',
                         )
                     )
-                    for graphique in _graphiques_fonctions([detail.valeurs for detail in section]):
+                    for index_graphique, graphique in enumerate(
+                        _graphiques_fonctions([detail.valeurs for detail in section])
+                    ):
+                        titre_repartition = (
+                            "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
+                        )
                         pages.append(
                             (
                                 niveau_section,
-                                '<div class="titre-chapitre">Répartition par fonction</div>'
-                                f'<div class="graphique">{graphique}</div>',
+                                _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>',
                             )
                         )
                     if not est_regroupe:
@@ -271,7 +287,16 @@ class ServiceRapportPaie:
                         if equipe_section is not None:
                             graphique_materiel = _graphique_materiel(code, equipe_section.code, requete.materiel or {})
                             if graphique_materiel:
-                                pages.append((niveau_section, graphique_materiel))
+                                pages.append(
+                                    (
+                                        niveau_section,
+                                        graphique_materiel.replace(
+                                            '<div class="titre-chapitre">Parc matériel —',
+                                            '<div class="titre-section rubrique-titre">4. Parc matériel —',
+                                            1,
+                                        ),
+                                    )
+                                )
                 pages.extend(
                     (niveau_section, recap) for recap in _recaps_fonctions([detail.valeurs for detail in section])
                 )
@@ -325,9 +350,10 @@ class ServiceRapportPaie:
                 for index_page, tranche in enumerate(decouper_lignes(hauteurs, budget_initial, budget_suite)):
                     contenu_page: list[str] = []
                     if index_page == 0:
-                        if index_section == 0:
+                        if index_section == 0 and libelle is not None:
                             contenu_page.append(f'<div class="titre-chapitre">{escape(titre_chantier)}</div>')
-                        contenu_page.append(f'<div class="titre-section">{escape(titre)}</div>')
+                        numero_rubrique_liste = 5 if graphique_materiel else 4
+                        contenu_page.append(_rubrique(numero_rubrique_liste, "Liste des employés"))
                     contenu_page.append(_table_entete(avec_equipe=avec_equipe, avec_entete=index_page == 0))
                     contenu_page.extend(lignes_html[i] for i in tranche)
                     contenu_page.append("</tbody></table>")
@@ -359,6 +385,10 @@ def _identite(label: str, valeur: str) -> str:
         '<div class="bloc-identite">'
         f'<div class="label">{escape(label)}</div><div class="valeur">{escape(valeur)}</div></div>'
     )
+
+
+def _rubrique(numero: int, titre: str) -> str:
+    return f'<div class="titre-section rubrique-titre">{numero}. {escape(titre)}</div>'
 
 
 def _romain(valeur: int) -> str:
