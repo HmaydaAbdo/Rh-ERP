@@ -107,7 +107,7 @@ Une seule requête historique groupe les bulletins par chantier, équipe et mois
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
-`POST /paie/report/pdf` répond temporairement `503` tant que les scénarios de pagination et la comparaison des PDF Spring/Python rendus sur un même jeu de données n'ont pas prouvé la parité. Les critères longs et les bandeaux d'équipe sont mesurés pour tenir dans leurs blocs ; les graphiques de fonctions répartissent leurs catégories entre pages équilibrées. Les scénarios Spring de récapitulatifs, de hauteur des cartes KPI et de placement des sections restent à vérifier et à corriger avant l'ouverture de la route.
+`POST /paie/report/pdf` répond temporairement `503` tant que les scénarios de pagination et la comparaison des PDF Spring/Python rendus sur un même jeu de données n'ont pas prouvé la parité. Les tests ciblés couvrent les rubriques, les récapitulatifs par fonction, la hauteur des cartes KPI, les répartitions et le placement des sections ; les tests Spring de construction de pages et de rendu PDF passent également. Reste à comparer les deux rendus sur les mêmes données, confirmer le contrat HTTP du téléchargement, et vérifier les limites de validation des champs de requête. La route ne doit pas être activée avant ces preuves.
 
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
@@ -123,9 +123,8 @@ Le nom de feuille, les dimensions et toutes les cellules du modèle produit ont 
 fichier `Modele_Import_Paie.xlsx` fourni par le propriétaire : ils sont identiques. Cette comparaison
 ne porte pas sur les styles ni les propriétés internes du classeur.
 
-Le gabarit du rapport embarque désormais Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
-(rendu hors de la boucle d'événements). Rendu réel vérifié dans l'image Linux le 2026-11-07 (page de garde, tableau paginé),
-mais la route reste en `503` : les sections complètes du rapport Spring et la comparaison côte à côte restent à faire.
+Le gabarit du rapport embarque Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
+(rendu hors de la boucle d'événements). Un rendu Linux réel a été vérifié le 2026-11-07 pour la page de garde et un tableau paginé. Le portage des sections et graphiques est couvert par des tests ciblés, mais la comparaison côte à côte avec Spring sur les mêmes données reste à faire ; la route reste en `503` jusque-là.
 
 ## Parcours, effectifs et statuts HTTP (parité Spring, KAN-226)
 

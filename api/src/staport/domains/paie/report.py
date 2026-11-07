@@ -7,9 +7,11 @@ from html import escape
 from io import BytesIO
 from math import ceil
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
+from matplotlib.text import Text
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
@@ -34,6 +36,18 @@ from .rapport_texte import (
     lignes as compter_lignes,
 )
 from .schemas import PaieRapportRequete
+
+
+def _police_serif(figure: Figure) -> None:
+    for artiste in figure.findobj():
+        if isinstance(artiste, Text):
+            gras = artiste.get_fontweight() in {"bold", "heavy", "black"}
+            italique = artiste.get_fontstyle() in {"italic", "oblique"}
+            variante = "Bold" if gras else "Regular"
+            if italique:
+                variante += "Italic"
+            chemin = Path(__file__).parent / "report" / "fonts" / f"LiberationSerif-{variante}.ttf"
+            artiste.set_fontproperties(FontProperties(fname=chemin))
 
 
 @dataclass(frozen=True)
@@ -180,16 +194,14 @@ class ServiceRapportPaie:
                 pages.append(("PÉRIMÈTRE", contenu))
         if not requete.sans_vue_ensemble:
             cartes = _cartes_kpi(lignes, lignes_precedentes or [])
-            points_evolution = (
-                f'<div class="graphique">{_graphique_evolution(evolution)}</div>' if evolution is not None else ""
-            )
             pages.append(
                 (
                     "GLOBAL",
                     f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}'
                     + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                    + f'<div class="graphique">{_graphique_evolution(evolution or [], "MONTANTS")}</div>'
                     + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
-                    + points_evolution,
+                    + f'<div class="graphique">{_graphique_evolution(evolution or [], "EFFECTIFS")}</div>',
                 )
             )
             graphiques_globaux = _graphiques_repartition_chantiers(par_chantier)
@@ -218,12 +230,13 @@ class ServiceRapportPaie:
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                + '<div class="graphique">'
+                + _graphique_evolution((evolution_chantiers or {}).get(chantier.id, []), "MONTANTS")
+                + "</div>"
                 + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
-                + (
-                    f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
-                    if evolution_chantiers and chantier.id in evolution_chantiers
-                    else ""
-                )
+                + '<div class="graphique">'
+                + _graphique_evolution((evolution_chantiers or {}).get(chantier.id, []), "EFFECTIFS")
+                + "</div>"
             )
             if choix or regroupements:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
@@ -254,19 +267,21 @@ class ServiceRapportPaie:
                 )
                 avec_equipe = libelle is None or est_regroupe
                 graphique_materiel = None
-                if libelle is not None and evolution_equipes is not None:
+                if libelle is not None:
                     identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
                     lignes_section_precedentes = [
-                        ligne for ligne in lignes_chantier_precedentes if ligne[0].equipe_id in identifiants_equipes
+                        ligne
+                        for ligne in lignes_chantier_precedentes
+                        if getattr(ligne[0], "equipe_id", None) in identifiants_equipes
                     ]
                     points_section: dict[int, PointEvolution] = {}
                     for equipe_id in identifiants_equipes:
                         if equipe_id is not None:
-                            for point in evolution_equipes.get((chantier.id, equipe_id), []):
+                            for point in (evolution_equipes or {}).get((chantier.id, equipe_id), []):
                                 points_section[point.periode] = _additionner_points(
                                     points_section.get(point.periode), point
                                 )
-                    graphique_section = _graphique_evolution([points_section[p] for p in sorted(points_section)])
+                    evolutions_section = [points_section[p] for p in sorted(points_section)]
                     pages.append(
                         (
                             niveau_section,
@@ -277,8 +292,9 @@ class ServiceRapportPaie:
                                 inclure_chantiers=False,
                             )
                             + _rubrique(1, "Masse salariale et montants des STC (DH)")
+                            + f'<div class="graphique">{_graphique_evolution(evolutions_section, "MONTANTS")}</div>'
                             + _rubrique(2, "Bulletins de paie et sorties du personnel (bulletins)")
-                            + f'<div class="graphique">{graphique_section}</div>',
+                            + f'<div class="graphique">{_graphique_evolution(evolutions_section, "EFFECTIFS")}</div>',
                         )
                     )
                     graphiques_fonctions = _graphiques_fonctions([detail.valeurs for detail in section])
@@ -389,7 +405,7 @@ class ServiceRapportPaie:
                 '<div class="page"><div class="page-header"><img class="logo" src="logo-staport.png">'
                 '<div class="separateur s1"></div><div class="bloc b1">Ressources Humaines</div>'
                 '<div class="separateur s2"></div>'
-                f'<div class="bloc b2">Paie {escape(requete.periode)}</div>'
+                f'<div class="bloc b2">Paie {noms_mois[mois - 1].capitalize()} {escape(requete.periode[:4])}</div>'
                 f'<div class="separateur s3"></div><div class="bloc bloc-niveau lignes-{lignes_niveau}">{niveau}</div>'
                 f'<div class="filet"></div></div><div class="page-body">{contenu_html}</div>'
                 f'<div class="page-footer"><div class="niveau">{niveau}</div>'
@@ -530,13 +546,15 @@ def _point_repartition(
     return PointRepartition(libelle, mesures.masse, mesures.effectif, mesures.stc, mesures.montant_stc)
 
 
-def _graphique_materiel(chantier_code: str, equipe_code: str, nombres: dict[str, int]) -> str | None:
+def _graphique_materiel(chantier_code: str, equipe_code: str, nombres: dict[str, int | None]) -> str | None:
     tableau = next(
         (t for t in tableaux_materiel() if t.chantier_code == chantier_code and t.equipe_code == equipe_code), None
     )
     if tableau is None:
         return None
-    elements = [(libelle, Decimal(nombres[libelle])) for libelle in tableau.libelles if libelle in nombres]
+    elements = [
+        (libelle, Decimal(nombre)) for libelle in tableau.libelles if (nombre := nombres.get(libelle)) is not None
+    ]
     if not any(nombre > 0 for _, nombre in elements):
         return None
     graphique = _graphique_barres(elements, f"Parc matériel — {tableau.titre}", unite="Nombre")
@@ -580,7 +598,7 @@ def _recaps_fonctions(
         titre = "Répartition par fonction" if index == 0 else "Répartition par fonction (suite)"
         pages.append(
             (
-                '<div class="recap-row"><div class="recap-bloc derniere">'
+                f'<div class="recap-row" style="height: {hauteur}pt"><div class="recap-bloc derniere">'
                 f'<div class="titre-recap">{titre}</div>'
                 '<table class="recap fonction"><col class="libelle"><col class="effectif">'
                 '<col class="stc-personnes"><col class="stc-montant">'
@@ -595,50 +613,82 @@ def _recaps_fonctions(
 
 
 def _graphique_barres(elements: list[tuple[str, Decimal]], titre: str, *, unite: str = "Masse salariale (DH)") -> str:
-    hauteur = max(1.8, 0.34 * len(elements))
+    hauteur = max(0.75, 0.25 * len(elements))
     figure = Figure(figsize=(10.5, hauteur), layout="constrained")
     axes = cast(Any, figure.subplots())
     libelles = [libelle for libelle, _ in elements]
     valeurs = [float(masse) for _, masse in elements]
-    axes.barh(libelles, valeurs, color="#2563EB")
-    axes.set_xlabel(unite)
-    axes.set_title(titre)
-    axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
-    axes.set_axisbelow(True)
+    axes.barh(libelles, valeurs, color="#7C3AED", height=0.45)
+    maximum = max(valeurs, default=0.0)
+    axes.set_xlim(0, maximum * 1.14 if maximum > 0 else 1)
+    for index, valeur in enumerate(valeurs):
+        axes.text(maximum * 1.04 if maximum > 0 else 0.04, index, _entier(int(valeur)), va="center", fontsize=7)
+    axes.set_xticks([])
+    axes.tick_params(axis="y", labelsize=8)
+    for libelle in axes.get_yticklabels():
+        libelle.set_fontweight("bold")
     for bordure in axes.spines.values():
         bordure.set_visible(False)
     axes.tick_params(axis="both", length=0)
     figure.set_facecolor("white")
     axes.set_facecolor("white")
+    _police_serif(figure)
     sortie = BytesIO()
     cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
     return sortie.getvalue().decode("utf-8")
 
 
-def _graphique_evolution(points: list[PointEvolution]) -> str:
-    figure = Figure(figsize=(10.5, 4.8), layout="constrained")
-    montant, personnes = figure.subplots(2, 1, sharex=True)
+def _graphique_evolution(points: list[PointEvolution], groupe: Literal["MONTANTS", "EFFECTIFS"]) -> str:
+    if not points:
+        return (
+            '<div class="evolution-indisponible">'
+            "Aucune donnée historique disponible pour le périmètre sélectionné."
+            "</div>"
+        )
+    figure = Figure(figsize=(10.5, 2.36), layout="constrained")
+    axes = cast(Any, figure.subplots())
     mois = [f"{point.periode % 100}/{point.periode // 100}" for point in points]
-    montant.plot(mois, [float(point.masse) for point in points], color="#2563EB", marker="o", label="Masse salariale")
-    montant.plot(
-        mois, [float(point.montant_stc) for point in points], color="#0F766E", marker="o", label="Montant des STC"
-    )
-    montant.set_ylabel("DH")
-    montant.legend(loc="upper left")
-    personnes.plot(mois, [point.effectif for point in points], color="#D97706", marker="o", label="Bulletins")
-    personnes.plot(mois, [point.stc for point in points], color="#B91C1C", marker="o", label="STC / sorties")
-    personnes.set_ylabel("Personnes")
-    personnes.legend(loc="upper left")
-    for axes in (montant, personnes):
-        axes.grid(axis="y", color="#C8D3DE", linewidth=0.6)
-        axes.set_axisbelow(True)
-        for bordure in axes.spines.values():
-            bordure.set_visible(False)
-        axes.tick_params(axis="both", length=0)
-    personnes.tick_params(axis="x", labelrotation=45)
+    if groupe == "MONTANTS":
+        series = (
+            ("Masse salariale", "#2563EB", [float(point.masse) for point in points]),
+            ("Montants des STC", "#0F766E", [float(point.montant_stc) for point in points]),
+        )
+        axe_y = "DH"
+        titre = "Évolution de la masse et des montants STC"
+    else:
+        series = (
+            ("Bulletins de paie", "#D97706", [point.effectif for point in points]),
+            ("Sorties du personnel (STC)", "#B91C1C", [point.stc for point in points]),
+        )
+        axe_y = "Bulletins"
+        titre = "Évolution des bulletins et sorties"
+    maximum = max(max(valeurs, default=0) for _, _, valeurs in series)
+    for index, (libelle, couleur, valeurs) in enumerate(series):
+        axes.plot(mois, valeurs, color=couleur, marker="o", linewidth=1.2, markersize=3, label=libelle)
+        for periode, valeur in zip(mois, valeurs, strict=True):
+            axes.annotate(
+                _masse(Decimal(str(valeur))) if groupe == "MONTANTS" else _entier(int(valeur)),
+                (periode, valeur),
+                xytext=(0, 7 if index == 0 else -10),
+                textcoords="offset points",
+                ha="center",
+                va="bottom" if index == 0 else "top",
+                fontsize=7.2,
+                fontweight="bold",
+                color=couleur,
+            )
+    axes.set_ylim(0, maximum * 1.18 if maximum > 0 else 1)
+    axes.set_ylabel(axe_y)
+    axes.legend(loc="upper left", ncol=2, fontsize=7, frameon=False)
+    axes.grid(axis="y", color="#C8D3DE", linewidth=0.6)
+    axes.set_axisbelow(True)
+    axes.tick_params(axis="both", length=0, labelsize=7)
+    for bordure in axes.spines.values():
+        bordure.set_visible(False)
     figure.set_facecolor("white")
+    _police_serif(figure)
     sortie = BytesIO()
-    cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": "Évolution de la paie sur douze mois"})
+    cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
     return sortie.getvalue().decode("utf-8")
 
 
@@ -702,12 +752,12 @@ def _cartes_kpi(
     cartes: list[tuple[str, str, str | None, str]] = [
         (
             "Masse salariale",
-            _masse(courant.masse),
+            f"{_masse(courant.masse)} DH",
             _ecart_montant(courant.masse, precedent.masse if precedent else None),
             "montant",
         ),
         (
-            "Masse mois précédent",
+            "Masse mois precedent",
             f"{_masse(precedent.masse)} DH" if precedent else "",
             None,
             "montant",
@@ -725,24 +775,23 @@ def _cartes_kpi(
             "compte",
         ),
         (
-            "STC / sorties",
+            "STC / sorties (bulletins)",
             _entier(courant.stc),
             _ecart_compte(courant.stc, precedent.stc if precedent else None),
             "compte",
         ),
         (
-            "Montant des STC",
-            _montant(courant.montant_stc),
+            "STC / sorties (DH)",
+            f"{_montant(courant.montant_stc)} DH",
             _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None),
             "montant",
         ),
     ]
     if not inclure_chantiers:
         cartes.pop(3)
-    elements = [
-        '<div class="titre-indicateurs">Indicateurs clés</div><div class="kpi-row">',
-    ]
+    elements = ['<div class="titre-indicateurs">Indicateurs clés</div>']
     hauteur_cartes = _hauteur_cartes_kpi(cartes)
+    elements.append(f'<div class="kpi-row" style="height: {hauteur_cartes}pt">')
     for index, (libelle, valeur, sous_texte, classe) in enumerate(cartes):
         derniere = " derniere" if index == len(cartes) - 1 else ""
         sous_texte_html = f'<div class="sous-texte">{sous_texte}</div>' if sous_texte is not None else ""
@@ -863,7 +912,6 @@ def _graphique_distribution(
     axes.set_xlim(0, 2.35)
     axes.set_ylim(len(visibles) - 0.5, -1.1)
     axes.set_xticks([])
-    axes.set_title(titre)
     axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
     axes.set_axisbelow(True)
     for bordure in axes.spines.values():
@@ -872,6 +920,7 @@ def _graphique_distribution(
     axes.legend(ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.08), fontsize=7, frameon=False)
     figure.set_facecolor("white")
     axes.set_facecolor("white")
+    _police_serif(figure)
     sortie = BytesIO()
     cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
     return sortie.getvalue().decode("utf-8")
