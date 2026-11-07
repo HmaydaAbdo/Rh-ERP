@@ -165,6 +165,8 @@ def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> No
     }
     svg = rapport._graphiques_repartition_chantiers(chantiers)[0]
     assert svg.index("Grand") < svg.index("Petit")
+    assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(17)), maximum=16)] == [9, 8]
+    assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(33)), maximum=16)] == [11, 11, 11]
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(

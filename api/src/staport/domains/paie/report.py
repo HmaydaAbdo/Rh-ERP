@@ -384,9 +384,23 @@ def _graphiques_repartition_chantiers(
         reverse=True,
     )
     return [
-        _graphique_barres(elements[debut : debut + 15], "Masse salariale par chantier (DH)")
-        for debut in range(0, len(elements), 15)
-    ] or [_graphique_barres([], "Masse salariale par chantier (DH)")]
+        _graphique_barres(tranche, "Masse salariale par chantier (DH)")
+        for tranche in _repartir_graphiques(elements, maximum=16)
+    ]
+
+
+def _repartir_graphiques[T](elements: list[T], *, maximum: int) -> list[list[T]]:
+    if not elements:
+        return [[]]
+    nombre_pages = (len(elements) + maximum - 1) // maximum
+    taille_base, reste = divmod(len(elements), nombre_pages)
+    tranches: list[list[T]] = []
+    debut = 0
+    for page in range(nombre_pages):
+        taille = taille_base + int(page < reste)
+        tranches.append(elements[debut : debut + taille])
+        debut += taille
+    return tranches
 
 
 def _graphique_equipes(
