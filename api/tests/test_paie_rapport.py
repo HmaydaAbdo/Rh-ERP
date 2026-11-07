@@ -81,6 +81,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
     assert "Page 1 / 7" in html and "Page 7 / 7" in html
+    assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "STC (PERS.)" in html
     html_equipe = rendre(
         PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
@@ -98,6 +99,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Périmètre du rapport" in html_filtre
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "I — Vue d'ensemble" not in html_filtre
+    assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
     assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
 
     lignes_nombreuses: list[tuple[Any, Any, Any, Any, Any]] = [
@@ -126,6 +128,9 @@ def test_comparaison_du_rapport_preserve_absence_et_base_nulle() -> None:
     assert rapport._periode_precedente("2026-01") == "2025-12"
     assert rapport._ecart_montant(Decimal("12.00"), None) == "Écart indisponible"
     assert rapport._ecart_montant(Decimal("12.00"), Decimal("0.00")) == "Écart : +12 DH (base à 0)"
+    assert rapport._romain(1) == "I"
+    assert rapport._romain(4) == "IV"
+    assert rapport._romain(3999) == "MMMCMXCIX"
 
 
 def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
