@@ -21,6 +21,7 @@ from .schemas import (
     PaieImportChantierCloture,
     PaieImportCinInconnu,
     PaieImportCorrections,
+    PaieImportDecisionsEquipe,
     PaieImportDepart,
     PaieImportDeparts,
     PaieImportEcart,
@@ -319,6 +320,23 @@ class ServiceImportPaie:
                 if actif and equipe_id is not None and equipe_id != employe.equipe_id:
                     equipe_actuelle = equipes_par_id.get(employe.equipe_id) if employe.equipe_id is not None else None
                     champs.append(PaieImportChamp(champ="equipe", base=equipe_actuelle, fichier=equipe))
+                if actif and not equipe and employe.equipe_id is not None:
+                    avertissements.append(
+                        PaieImportErreur(
+                            numero_ligne=numero,
+                            cin=cin,
+                            nom_prenom=nom,
+                            champ="equipe",
+                            valeur=None,
+                            raison=(
+                                f"équipe vide dans le fichier alors que la fiche porte "
+                                f"« {equipes_par_id.get(employe.equipe_id)} » : conserver ou vider ?"
+                            ),
+                            avertissement=True,
+                            code_avertissement="EQUIPE_VIDE",
+                            employe_id=employe.id,
+                        )
+                    )
                 try:
                     salaire_fichier = Decimal(str(ligne[6])) if len(ligne) > 6 and ligne[6] is not None else None
                 except InvalidOperation:
@@ -429,7 +447,8 @@ class ServiceImportPaie:
                         )
                     )
                     continue
-                if champ == "salaireMensuel" and nombre == 0:
+                connu = employees.get(cin.upper()) if cin else None
+                if champ == "salaireMensuel" and nombre == 0 and not (connu and connu.salaire != 0):
                     avertissements.append(
                         PaieImportErreur(
                             numero_ligne=numero,
@@ -453,9 +472,14 @@ class ServiceImportPaie:
                                 nom_prenom=nom,
                                 champ=champ,
                                 valeur=str(valeur),
-                                raison="salaire différent de la dernière paie : confirmation wizard requise",
+                                raison=(
+                                    f"salaire différent de la dernière paie (ancien salaire : {employe.salaire}) : "
+                                    "confirmation wizard requise"
+                                ),
                                 avertissement=True,
                                 code_avertissement="SALAIRE_DIFFERENT",
+                                employe_id=employe.id,
+                                salaire_actuel=str(employe.salaire),
                                 type_salaire_propose="JOURNALIER" if nombre <= 500 else "MENSUEL",
                             )
                         )
@@ -485,12 +509,17 @@ class ServiceImportPaie:
         periode: int,
         ignorer_salaires_zero: bool,
         departs_confirmes: PaieImportDeparts,
+        decisions_equipe: PaieImportDecisionsEquipe | None = None,
     ) -> PaieImportResult:
         analyse = await self.analyser(session, contenu, periode)
+        decisions = {d.employe_id: d.action for d in (decisions_equipe or PaieImportDecisionsEquipe()).decisions}
         avertissements_non_confirmes = [
             avertissement
             for avertissement in analyse.avertissements
-            if avertissement.code_avertissement != "SALAIRE_ZERO" or not ignorer_salaires_zero
+            if not (
+                (avertissement.code_avertissement == "SALAIRE_ZERO" and ignorer_salaires_zero)
+                or (avertissement.code_avertissement == "EQUIPE_VIDE" and avertissement.employe_id in decisions)
+            )
         ]
         if (
             analyse.erreurs
@@ -540,6 +569,9 @@ class ServiceImportPaie:
                     changement = True
                 if equipe is not None and employe.equipe_id != equipe:
                     employe.equipe_id = equipe
+                    changement = True
+                elif equipe is None and decisions.get(employe.id) == "VIDER" and employe.equipe_id is not None:
+                    employe.equipe_id = None
                     changement = True
                 if changement:
                     employes_mis_a_jour += 1

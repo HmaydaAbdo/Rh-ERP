@@ -277,3 +277,71 @@ def test_un_retour_sans_type_de_salaire_est_refuse_et_annule_l_import(
     assert reponse.json()["message"] == "Le type de salaire de Import D doit être renseigné avant son retour"
     assert _bulletins(plateforme, jeu) == 0
     assert _statut(plateforme, jeu.retour)[0] == "INACTIF"
+
+
+@pytest.fixture
+def equipe_de_present(plateforme: Plateforme, jeu: Jeu) -> Iterator[int]:
+    """Donne une équipe à l'employé présent dans le fichier ; le fichier la laisse vide."""
+    with plateforme.moteur.begin() as c:
+        equipe = c.execute(
+            text("INSERT INTO equipe (code, libelle) VALUES (:c, 'Equipe import') RETURNING id"),
+            {"c": f"E{jeu.marque}"},
+        ).scalar_one()
+        c.execute(text("UPDATE employe SET equipe_id = :q WHERE id = :e"), {"q": equipe, "e": jeu.present})
+    yield equipe
+    with plateforme.moteur.begin() as c:
+        c.execute(text("UPDATE employe SET equipe_id = NULL WHERE id = :e"), {"e": jeu.present})
+        c.execute(text("DELETE FROM equipe WHERE id = :q"), {"q": equipe})
+
+
+def _equipe_de(plateforme: Plateforme, employe: int) -> int | None:
+    with plateforme.moteur.connect() as c:
+        return c.execute(text("SELECT equipe_id FROM employe WHERE id = :e"), {"e": employe}).scalar_one()
+
+
+def _importer_avec_equipes(
+    plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu, decisions: list[dict[str, Any]]
+) -> Any:
+    return plateforme.client.post(
+        "/paie/import",
+        headers=entetes,
+        data={"periode": jeu.periode, "equipes": json.dumps({"decisions": decisions})},
+        files={"file": ("paie.xlsx", _classeur(jeu), TYPE_XLSX)},
+    )
+
+
+def test_equipe_vide_dans_le_fichier_est_un_avertissement_a_decider(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe_de_present: int
+) -> None:
+    entetes = _entetes(connecter)
+
+    analyse = _analyser(plateforme, entetes, jeu, _classeur(jeu)).json()
+    sans_decision = _importer(plateforme, entetes, jeu, _classeur(jeu), [])
+
+    avertissements = [a for a in analyse["avertissements"] if a["employeId"] == jeu.present]
+    assert [a["codeAvertissement"] for a in avertissements] == ["EQUIPE_VIDE"]
+    assert sans_decision.status_code == 400, sans_decision.text
+    assert _bulletins(plateforme, jeu) == 0
+    assert _equipe_de(plateforme, jeu.present) == equipe_de_present
+
+
+def test_decision_conserver_laisse_l_equipe_et_importe(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe_de_present: int
+) -> None:
+    reponse = _importer_avec_equipes(
+        plateforme, _entetes(connecter), jeu, [{"employeId": jeu.present, "action": "CONSERVER"}]
+    )
+
+    assert reponse.status_code == 200, reponse.text
+    assert _equipe_de(plateforme, jeu.present) == equipe_de_present
+
+
+def test_decision_vider_retire_l_equipe_de_la_fiche(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe_de_present: int
+) -> None:
+    reponse = _importer_avec_equipes(
+        plateforme, _entetes(connecter), jeu, [{"employeId": jeu.present, "action": "VIDER"}]
+    )
+
+    assert reponse.status_code == 200, reponse.text
+    assert _equipe_de(plateforme, jeu.present) is None

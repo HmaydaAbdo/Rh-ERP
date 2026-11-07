@@ -239,7 +239,10 @@ export interface PaieImportErreur {
   valeur?: string | null;
   raison: string;
   avertissement?: boolean;
-  codeAvertissement?: 'SALAIRE_ZERO' | 'SALAIRE_DIFFERENT' | null;
+  codeAvertissement?: 'SALAIRE_ZERO' | 'SALAIRE_DIFFERENT' | 'EQUIPE_VIDE' | null;
+  employeId?: number | null;
+  /** Ancien salaire de la fiche, affiché avec l'avertissement `SALAIRE_DIFFERENT`. */
+  salaireActuel?: string | null;
   typeSalairePropose?: TypeSalaire | null;
 }
 

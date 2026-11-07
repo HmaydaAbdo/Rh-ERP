@@ -109,9 +109,12 @@ export class PaieService {
   }
 
   /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif). */
-  importer(file: File, periode: string, departs: { employeId: number; motif: string }[], ignorerSalairesZero: boolean): Observable<PaieImportResult> {
+  importer(
+    file: File, periode: string, departs: { employeId: number; motif: string }[], ignorerSalairesZero: boolean,
+    decisionsEquipe: { employeId: number; action: 'CONSERVER' | 'VIDER' }[] = []
+  ): Observable<PaieImportResult> {
     return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, this.formulaireImport(file, periode, {
-      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero
+      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero, equipes: { decisions: decisionsEquipe }
     }));
   }
 

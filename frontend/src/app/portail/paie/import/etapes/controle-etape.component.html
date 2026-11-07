@@ -36,6 +36,12 @@
           <li class="app-controle__carte">
             <strong>Ligne {{ avertissement.numeroLigne }} · {{ avertissement.nomPrenom ?? avertissement.cin }}</strong>
             <span>{{ avertissement.raison }}</span>
+            @if (avertissement.codeAvertissement === 'EQUIPE_VIDE' && avertissement.employeId != null) {
+              <div class="app-controle__saisie">
+                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'CONSERVER'" (change)="store.decider(avertissement.employeId, 'CONSERVER')" /> Conserver l'équipe</label>
+                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'VIDER'" (change)="store.decider(avertissement.employeId, 'VIDER')" /> Vider l'équipe</label>
+              </div>
+            }
           </li>
         }
       </ul>

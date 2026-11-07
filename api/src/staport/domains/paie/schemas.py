@@ -321,7 +321,9 @@ class PaieImportErreur(ModeleApi):
     valeur: str | None
     raison: str
     avertissement: bool = False
-    code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT"] | None = None
+    code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT", "EQUIPE_VIDE"] | None = None
+    employe_id: int | None = None
+    salaire_actuel: str | None = None
     type_salaire_propose: Literal["JOURNALIER", "MENSUEL"] | None = None
 
 
@@ -353,6 +355,17 @@ class PaieImportRetour(ModeleApi):
     employe_id: int
     cin: str
     nom_prenom: str
+
+
+class PaieImportDecisionEquipe(ModeleApi):
+    """Choix de l'utilisateur quand le fichier laisse vide l'équipe d'un employé qui en a une."""
+
+    employe_id: int
+    action: Literal["CONSERVER", "VIDER"]
+
+
+class PaieImportDecisionsEquipe(ModeleApi):
+    decisions: list[PaieImportDecisionEquipe] = Field(default_factory=lambda: [])
 
 
 class PaieImportDepartConfirme(ModeleApi):
