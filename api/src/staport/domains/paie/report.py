@@ -272,10 +272,9 @@ class ServiceRapportPaie:
                             graphique_materiel = _graphique_materiel(code, equipe_section.code, requete.materiel or {})
                             if graphique_materiel:
                                 pages.append((niveau_section, graphique_materiel))
-                if libelle is None:
-                    pages.extend(
-                        (niveau_section, recap) for recap in _recaps_fonctions([detail.valeurs for detail in section])
-                    )
+                pages.extend(
+                    (niveau_section, recap) for recap in _recaps_fonctions([detail.valeurs for detail in section])
+                )
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -466,7 +465,8 @@ def _recaps_fonctions(lignes: list[tuple[Paie, Employee, Chantier, Equipe | None
     for paie, _, _, _, fonction in lignes:
         par_fonction.setdefault(fonction.libelle, []).append(paie)
     lignes_recaps: list[str] = []
-    for fonction, bulletins in sorted(par_fonction.items(), key=lambda item: item[0].casefold()):
+    fonctions_triees = sorted(par_fonction.items(), key=lambda item: item[0].casefold())
+    for fonction, bulletins in fonctions_triees:
         mesures = mesurer(cast(list[BulletinRapport], bulletins))
         lignes_recaps.append(
             f'<tr><td class="libelle">{escape(fonction)}</td>'
@@ -474,16 +474,29 @@ def _recaps_fonctions(lignes: list[tuple[Paie, Employee, Chantier, Equipe | None
             f'<td class="stc-personnes">{_entier(mesures.stc)}</td>'
             f'<td class="stc-montant">{_montant(mesures.montant_stc)}</td></tr>'
         )
+    tranches: list[list[str]] = []
+    tranche: list[str] = []
+    hauteur_tranche = 34
+    for ligne, (fonction, _bulletins) in zip(lignes_recaps, fonctions_triees, strict=True):
+        hauteur_ligne = max(15, compter_lignes(fonction, 151, 9) * 11 + 1)
+        if tranche and hauteur_tranche + hauteur_ligne > 487:
+            tranches.append(tranche)
+            tranche = []
+            hauteur_tranche = 34
+        tranche.append(ligne)
+        hauteur_tranche += hauteur_ligne
+    if tranche:
+        tranches.append(tranche)
     pages: list[str] = []
-    for debut in range(0, len(lignes_recaps), 20):
-        titre = "Répartition par fonction" if debut == 0 else "Répartition par fonction (suite)"
+    for index, tranche in enumerate(tranches):
+        titre = "Répartition par fonction" if index == 0 else "Répartition par fonction (suite)"
         pages.append(
             '<div class="recap-row"><div class="recap-bloc derniere">'
             f'<div class="titre-recap">{titre}</div>'
             '<table class="recap fonction"><col class="libelle"><col class="effectif">'
             '<col class="stc-personnes"><col class="stc-montant">'
             "<thead><tr><th>FONCTION</th><th>BULLETINS</th><th>STC (PERS.)</th><th>STC (DH)</th></tr></thead><tbody>"
-            + "".join(lignes_recaps[debut : debut + 20])
+            + "".join(tranche)
             + "</tbody></table></div></div>"
         )
     return pages
