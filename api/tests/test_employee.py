@@ -113,7 +113,7 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         headers=entetes,
         json={"code": "SOR-1", "designation": "Chantier sorties", "nature": "AO", "afficherSurCarte": False},
     ).json()
-    ids = []
+    ids: list[int] = []
     for nom, cin in (("Zoe Sortie", "CIN-SOR-1"), ("Adam Sortie", "CIN-SOR-2")):
         corps = {
             "nomPrenom": nom,
