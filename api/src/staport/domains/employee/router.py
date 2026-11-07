@@ -19,6 +19,7 @@ from .schemas import (
     EmployeeRegroupementReponse,
     EmployeeReponse,
     EmployeeSortiesMoisReponse,
+    EmployeeSortiesRecherche,
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
@@ -74,8 +75,10 @@ async def regroupements(
 
 
 @employees.post("/sorties-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
-async def sorties_mois(periode: int, session: Session, contexte: Contexte) -> EmployeeSortiesMoisReponse:
-    return await contexte.employees.sorties_mois(session, periode)
+async def sorties_mois(
+    corps: EmployeeSortiesRecherche, session: Session, contexte: Contexte
+) -> EmployeeSortiesMoisReponse:
+    return await contexte.employees.sorties_mois(session, corps.periode)
 
 
 @employees.get("/import/modele", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])

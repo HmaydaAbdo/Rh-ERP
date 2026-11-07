@@ -242,22 +242,23 @@ class ServiceEmployee:
     async def sorties_mois(self, s: AsyncSession, periode: int) -> EmployeeSortiesMoisReponse:
         async with s.begin():
             rows = (
-                (
-                    await s.execute(
-                        select(EmployeeSortie)
-                        .where(EmployeeSortie.periode == periode)
-                        .order_by(EmployeeSortie.employee_id)
-                    )
+                await s.execute(
+                    select(EmployeeSortie.employee_id, Employee.nom_prenom, Employee.cin, EmployeeSortie.motif)
+                    .join(Employee, Employee.id == EmployeeSortie.employee_id)
+                    .where(EmployeeSortie.periode == periode)
+                    .order_by(Employee.nom_prenom, EmployeeSortie.employee_id)
                 )
-                .scalars()
-                .all()
-            )
+            ).all()
         motifs: dict[str, int] = {}
         sorties: list[EmployeeSortieReponse] = []
-        for row in rows:
-            motif = row.motif.strip() or "NON_PRECISE"
+        for employee_id, nom_prenom, cin, brut in rows:
+            motif = brut.strip() or "NON_PRECISE"
             motifs[motif] = motifs.get(motif, 0) + 1
-            sorties.append(EmployeeSortieReponse(employe_id=row.employee_id, periode=row.periode, motif=motif))
+            sorties.append(
+                EmployeeSortieReponse(
+                    employe_id=employee_id, nom_prenom=nom_prenom, cin=cin, periode=periode, motif=motif
+                )
+            )
         return EmployeeSortiesMoisReponse(
             periode=periode, nombre=len(sorties), par_motif=dict(sorted(motifs.items())), sorties=sorties
         )
