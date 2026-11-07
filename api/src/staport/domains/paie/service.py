@@ -11,7 +11,7 @@ from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
-from staport.domains.employee.models import Employee
+from staport.domains.employee.models import Employee, EmployeeStatut
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 from staport.domains.parametre.service import ServiceParametre
@@ -26,6 +26,7 @@ from .exceptions import (
     PaieGroupeRestaurationConflit,
     PaieIntrouvable,
     PeriodeObligatoire,
+    ReferenceInvalide,
 )
 from .models import Paie
 from .periode import afficher_periode
@@ -127,8 +128,13 @@ class ServicePaie:
     async def creer(self, s: AsyncSession, r: PaieCreationRequete) -> PaieReponse:
         action = self._auditeur.auditer(s, "PAIE_CREATION", TypeOperation.CREATE, "Paie")
         async with s.begin(), action as cible:
+            employe = await s.get(Employee, r.employee_id)
+            if employe is None:
+                raise ReferenceInvalide(f"Employé introuvable avec l'id : {r.employee_id}")
             if await repository.existe(s, r.employee_id, r.periode):
                 raise PaieDejaExistante(r.employee_id, r.periode)
+            await self._verifier_references(s, r.equipe_id, r.fonction_id, r.chantier_id)
+            self._synchroniser_equipe(employe, r.equipe_id)
             x = Paie(**r.model_dump())
             s.add(x)
             await s.flush()
@@ -142,10 +148,31 @@ class ServicePaie:
             verifier_version(r.version, x.version)
             if await repository.existe(s, x.employee_id, x.periode, i):
                 raise PaieDejaExistante(x.employee_id, x.periode)
+            await self._verifier_references(s, r.equipe_id, r.fonction_id, r.chantier_id)
+            employe = await s.get(Employee, x.employee_id)
+            if employe is not None:
+                self._synchroniser_equipe(employe, r.equipe_id)
             for k, v in r.model_dump(exclude={"version", "employee_id", "periode"}).items():
                 setattr(x, k, v)
             await s.flush()
             return rep((await repository.fiches(s, [x]))[0])
+
+    async def _verifier_references(
+        self, s: AsyncSession, equipe_id: int | None, fonction_id: int, chantier_id: int
+    ) -> None:
+        """Contrôles et messages de `resolve*Reference` de Spring (400 ; ordre équipe, fonction, chantier)."""
+        if equipe_id is not None and not await repository.ids_existants(s, Equipe, {equipe_id}):
+            raise ReferenceInvalide(f"Équipe introuvable avec l'id : {equipe_id}")
+        if not await repository.ids_existants(s, Fonction, {fonction_id}):
+            raise ReferenceInvalide(f"Fonction introuvable avec l'id : {fonction_id}")
+        if not await repository.ids_existants(s, Chantier, {chantier_id}):
+            raise ReferenceInvalide(f"Chantier introuvable avec l'id : {chantier_id}")
+
+    @staticmethod
+    def _synchroniser_equipe(employe: Employee, equipe_id: int | None) -> None:
+        """L'équipe saisie sur le bulletin devient l'affectation courante de l'employé (sauf s'il est inactif)."""
+        if employe.statut != EmployeeStatut.INACTIF and employe.equipe_id != equipe_id:
+            employe.equipe_id = equipe_id
 
     async def supprimer(self, s: AsyncSession, i: int) -> None:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION", TypeOperation.DELETE, "Paie", i)

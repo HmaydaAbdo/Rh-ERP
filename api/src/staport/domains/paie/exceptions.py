@@ -38,3 +38,7 @@ class PaieGroupeRestaurationConflit(ErreurMetier):
             f"Restauration refusée : {conflits} conflit(s) employé/mois ou référence manquante. "
             "Aucun bulletin n'a été restauré."
         )
+
+
+class ReferenceInvalide(ErreurMetier):
+    """Employé, fonction, chantier ou équipe inexistant (HTTP 400, comme `InvalidReferenceException`)."""
