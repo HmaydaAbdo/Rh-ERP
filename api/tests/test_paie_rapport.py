@@ -194,6 +194,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
         assert len(htmls) == 1
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
+        assert htmls[0].count("12/2025") == 2
         assert "1/2026" not in htmls[0]
         assert "STC / sorties" in htmls[0] and "200" in htmls[0]
     finally:
