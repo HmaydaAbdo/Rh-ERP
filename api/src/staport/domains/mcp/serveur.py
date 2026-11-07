@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from staport.domains.auth.composition import ContexteAuth
-from staport.domains.mcp import outils
+from staport.domains.mcp import outils, outils_employe, outils_paie
 from staport.domains.mcp.acces import VerificateurJetonAgent
 
 CHEMIN = "/mcp"
@@ -48,6 +48,8 @@ def creer_serveur(
     n'existent qu'au démarrage de l'application hôte : ils sont demandés à chaque appel."""
     serveur = FastMCP("erp-rh", auth=VerificateurJetonAgent(lambda: contexte().agent, fabrique))
     outils.enregistrer(serveur, contexte, fabrique)
+    outils_employe.enregistrer(serveur, contexte, fabrique)
+    outils_paie.enregistrer(serveur, contexte, fabrique)
     application = serveur.http_app(path=CHEMIN, stateless_http=True, json_response=True)
     application.add_middleware(RefuserOrigine)
     return application
