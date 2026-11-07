@@ -60,6 +60,7 @@ class Reponse:
     octets: bytes
 
 
+TOLERANCE_LARGEUR = 2.0  # caractères Excel
 ANGLAIS_VALIDATION = re.compile(r"must not be|must be|size must|numeric value out of bounds")
 
 
@@ -181,6 +182,29 @@ def _comparer_json(a: Any, b: Any, chemin: str, sortie: list[tuple[str, Any, Any
         sortie.append((chemin, a, b))
 
 
+def _valeur_cellule(v: Any) -> Any:
+    """Un entier et un flottant égaux s'affichent pareil dans Excel ; une chaîne vide et une cellule vide aussi."""
+    if v == "" or v is None:
+        return None
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return round(float(v), 9)
+    return v
+
+
+def _couleur(c: Any) -> Any:
+    return None if c is None or c.type != "rgb" else c.rgb[-6:]  # l'alpha (POI FF, openpyxl 00) n'est pas rendu
+
+
+def _styles_dict(cellule: Any) -> dict[str, Any]:
+    f, r, a, b = cellule.font, cellule.fill, cellule.alignment, cellule.border
+    return {
+        "police": (f.name, f.sz, bool(f.b), bool(f.i), _couleur(f.color)),
+        "fond": (r.fill_type, _couleur(r.fgColor) if r.fill_type else None),
+        "alignement": (a.horizontal, a.vertical, bool(a.wrap_text)),
+        "bordures": (b.left.style, b.right.style, b.top.style, b.bottom.style),
+    }
+
+
 def comparer_excel(a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
     """Cellule par cellule : valeurs, types, formats, largeurs, noms de feuilles, fusions."""
     sortie: list[tuple[str, Any, Any]] = []
@@ -197,18 +221,29 @@ def comparer_excel(a: bytes, b: bytes) -> list[tuple[str, Any, Any]]:
             )
         largeurs_a = {k: round(d.width or 0, 1) for k, d in sa.column_dimensions.items() if d.width}
         largeurs_b = {k: round(d.width or 0, 1) for k, d in sb.column_dimensions.items() if d.width}
-        if largeurs_a != largeurs_b:
+        if largeurs_a.keys() != largeurs_b.keys() or any(
+            abs(largeurs_a[k] - largeurs_b[k]) > TOLERANCE_LARGEUR for k in largeurs_a
+        ):  # autoSizeColumn mesure avec les métriques Java : l'égalité exacte n'est pas atteignable
             sortie.append((f"{nom}!largeurs", largeurs_a, largeurs_b))
         for ligne in range(1, max(sa.max_row, sb.max_row) + 1):
             for col in range(1, max(sa.max_column, sb.max_column) + 1):
                 ca, cb = sa.cell(ligne, col), sb.cell(ligne, col)
                 ref = f"{nom}!{ca.coordinate}"
-                if ca.value != cb.value:
-                    sortie.append((f"{ref}.valeur", ca.value, cb.value))
-                elif type(ca.value) is not type(cb.value):
-                    sortie.append((f"{ref}.type", type(ca.value).__name__, type(cb.value).__name__))
+                va, vb = _valeur_cellule(ca.value), _valeur_cellule(cb.value)
+                if va != vb:
+                    sortie.append((f"{ref}.valeur", va, vb))
                 if ca.number_format != cb.number_format:
                     sortie.append((f"{ref}.format", ca.number_format, cb.number_format))
+                styles_a, styles_b = _styles_dict(ca), _styles_dict(cb)
+                for aspect, x in styles_a.items():
+                    if x != styles_b[aspect]:
+                        sortie.append((f"{ref}.{aspect}", x, styles_b[aspect]))
+        hauteurs_a = {k: round(d.height, 1) for k, d in sa.row_dimensions.items() if d.height}
+        hauteurs_b = {k: round(d.height, 1) for k, d in sb.row_dimensions.items() if d.height}
+        if hauteurs_a != hauteurs_b:
+            sortie.append((f"{nom}!hauteurs", hauteurs_a, hauteurs_b))
+        if sa.freeze_panes != sb.freeze_panes:
+            sortie.append((f"{nom}!volets", sa.freeze_panes, sb.freeze_panes))
     return sortie
 
 

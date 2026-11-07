@@ -398,7 +398,7 @@ class PaieExportRequete(ModeleApi):
     chantiers: list[str] | None = None
     # Compatibilité du premier contrat Python ; les nouveaux clients utilisent equipes_par_chantier.
     regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)
-    materiel: dict[str, int] | None = None
+    materiel: dict[str, Annotated[int, Field(ge=0, le=999)]] | None = None
 
 
 class PaieRapportRequete(ModeleApi):

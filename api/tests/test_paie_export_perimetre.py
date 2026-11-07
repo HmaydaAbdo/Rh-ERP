@@ -93,3 +93,33 @@ async def test_excel_materiel_reste_sur_la_feuille_equipe_concernee() -> None:
     assert classeur["C168_CH"]["G10"].value == "CAMION CITERNE"
     assert classeur["C168_CH"]["H10"].value == 3
     classeur.close()
+
+
+@pytest.mark.asyncio
+async def test_excel_un_bulletin_sans_equipe_n_a_pas_de_feuille_equipe_comme_spring() -> None:
+    sans_equipe = bulletin("Carl", "X", "X", 202610, "500")
+    sans_equipe = (*sans_equipe[:3], None, sans_equipe[4])
+    courant = [bulletin("Alice", "CH", "Chauffeurs", 202610, "1000"), sans_equipe]
+    requete = PaieExportRequete(periode=202610, feuilles_equipe_mode="TOUTES")
+    sortie = await ServiceExportPaie().exporter(cast(AsyncSession, SessionExport(courant, [])), requete)
+    classeur = load_workbook(sortie)
+    assert classeur.sheetnames == ["GLB", "C168", "C168_CH"]
+    classeur.close()
+
+
+@pytest.mark.asyncio
+async def test_excel_la_selection_personnalisee_cite_des_libelles_jamais_des_codes() -> None:
+    courant = [bulletin("Alice", "CH", "Chauffeurs", 202610, "1000")]
+    requete = PaieExportRequete(
+        periode=202610, feuilles_equipe_mode="PERSONNALISE", equipes_par_chantier={"C168": ["CH"]}
+    )
+    sortie = await ServiceExportPaie().exporter(cast(AsyncSession, SessionExport(courant, [])), requete)
+    classeur = load_workbook(sortie)
+    assert classeur.sheetnames == ["GLB", "C168"]
+    classeur.close()
+
+
+@pytest.mark.parametrize("nombre", [-1, 1000])
+def test_le_materiel_est_borne_entre_0_et_999_comme_spring(nombre: int) -> None:
+    with pytest.raises(ValueError, match="materiel"):
+        PaieExportRequete(periode=202610, materiel={"PICK UP": nombre})

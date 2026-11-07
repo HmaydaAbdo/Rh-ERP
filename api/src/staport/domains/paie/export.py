@@ -20,6 +20,11 @@ from .models import Paie
 from .schemas import PaieExportRequete
 
 
+def _police(**options: bool) -> Font:
+    """Calibri 11 comme les polices créées par POI : une police sans nom n'est pas celle du classeur de référence."""
+    return Font(name="Calibri", size=11, **options)
+
+
 class ServiceExportPaie:
     async def exporter(self, session: AsyncSession, requete: PaieExportRequete) -> BytesIO:
         q = (
@@ -74,20 +79,19 @@ class ServiceExportPaie:
             )
             equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
             for ligne in chantier_lignes:
-                equipe = ligne[3].code if ligne[3] else "SANS_EQUIPE"
-                equipes.setdefault(groupes.get(equipe, equipe), []).append(ligne)
+                if ligne[3] is None:  # Spring : pas de feuille pour les bulletins sans équipe
+                    continue
+                equipes.setdefault(groupes.get(ligne[3].code, ligne[3].code), []).append(ligne)
             if requete.feuilles_equipe_mode == "AUCUNE":
                 continue
             selection = None
             if requete.feuilles_equipe_mode == "PERSONNALISE":
                 selection = set((requete.equipes_par_chantier or {}).get(code, []))
             for equipe, equipe_lignes in sorted(equipes.items()):
-                if (
-                    selection is not None
-                    and equipe not in selection
-                    and not any(ligne[3] and ligne[3].libelle in selection for ligne in equipe_lignes)
+                if selection is not None and not any(
+                    ligne[3] and ligne[3].libelle in selection for ligne in equipe_lignes
                 ):
-                    continue
+                    continue  # PERSONNALISE : la requête cite des libellés d'équipe, jamais des codes
                 nom = _nom_feuille_valide(f"{code}_{equipe}")
                 feuille_equipe = workbook.create_sheet(nom)
                 tableau = next(
@@ -151,7 +155,7 @@ def _ecrire(
     sous_entete = PatternFill("solid", fgColor="F0F0F0")
     feuille.merge_cells("A1:M1")
     feuille["A1"] = f"CHANTIER : {titre_zone}  -  PAIE MOIS {periode % 100:02d}-{periode // 100}"
-    feuille["A1"].font = Font(bold=True, size=11)
+    feuille["A1"].font = _police(bold=True)
     feuille["A1"].alignment = Alignment(horizontal="center", vertical="center")
     feuille.append([])
     feuille.append(
@@ -160,7 +164,7 @@ def _ecrire(
     feuille.append(["", "", "", "P", "J.R.O", "J.R.D", "SALAIRE", "RO", "RD", "", "", "", ""])
     for plage in ("D3:F3", "G3:I3", "A3:A4", "B3:B4", "C3:C4", "J3:J4", "K3:K4", "L3:L4", "M3:M4"):
         feuille.merge_cells(plage)
-    for ligne_entete, fond, police in ((3, entete, Font(bold=True)), (4, sous_entete, Font(italic=True))):
+    for ligne_entete, fond, police in ((3, entete, _police(bold=True)), (4, sous_entete, _police(italic=True))):
         for cellule in feuille[ligne_entete]:
             cellule.fill = fond
             cellule.font = police
@@ -199,13 +203,13 @@ def _ecrire(
     for index, libelle in ((total_ligne, "TOTAL GENERAL"), (precedent_ligne, "TOTAL GENERAL MOIS PRECEDENT")):
         feuille.merge_cells(start_row=index, start_column=4, end_row=index, end_column=9)
         cellule = feuille.cell(index, 4, libelle)
-        cellule.font = Font(bold=True)
+        cellule.font = _police(bold=True)
         cellule.border = bordure
-        cellule.alignment = Alignment(horizontal="center")
+        cellule.alignment = Alignment(horizontal="center", vertical="center")
         valeur = feuille.cell(index, 10)
-        valeur.font = Font(bold=True)
+        valeur.font = _police(bold=True)
         valeur.border = bordure
-        valeur.alignment = Alignment(horizontal="right")
+        valeur.alignment = Alignment(horizontal="right", vertical="center")
         valeur.number_format = "#,##0.00"
     cast(Cell, feuille.cell(total_ligne, 10)).value = (
         f"=SUBTOTAL(9,J5:J{4 + len(ordonnees)})" if ordonnees else "=SUBTOTAL(9,J1:J1)-SUBTOTAL(9,J1:J1)"
@@ -219,8 +223,8 @@ def _ecrire(
     for colonne, libelle in enumerate(("FONCTION", "BULLETINS DE PAIE", "STC"), start=1):
         cellule = feuille.cell(depart_recap, colonne, libelle)
         cellule.fill = entete
-        cellule.font = Font(bold=True)
-        cellule.alignment = Alignment(horizontal="center")
+        cellule.font = _police(bold=True)
+        cellule.alignment = Alignment(horizontal="center", vertical="center")
     fonctions: dict[str, tuple[int, int]] = {}
     for paie, _, _, _, fonction in lignes:
         compte, stc = fonctions.get(fonction.libelle, (0, 0))
@@ -231,23 +235,47 @@ def _ecrire(
         for colonne, valeur in enumerate((fonction, compte, stc), start=1):
             cellule = feuille.cell(index, colonne, valeur)
             cellule.border = bordure
-            cellule.alignment = Alignment(horizontal="left" if colonne == 1 else "center")
+            cellule.alignment = Alignment(horizontal="left" if colonne == 1 else "center", vertical="center")
     if materiel:
         titre, libelles, nombres = materiel
         for colonne, libelle in ((7, titre), (8, "Nbre")):
             cellule = feuille.cell(depart_recap, colonne, libelle)
             cellule.fill = entete
-            cellule.font = Font(bold=True)
-            cellule.alignment = Alignment(horizontal="center")
+            cellule.font = _police(bold=True)
+            cellule.alignment = Alignment(horizontal="center", vertical="center")
         for index, libelle in enumerate(libelles, start=depart_recap + 1):
-            feuille.cell(index, 7, libelle).border = bordure
+            etiquette = feuille.cell(index, 7, libelle)
+            etiquette.border = bordure
+            etiquette.alignment = Alignment(horizontal="left", vertical="center")
             cellule = feuille.cell(index, 8, nombres.get(libelle))
             cellule.border = bordure
-            cellule.alignment = Alignment(horizontal="center")
+            cellule.alignment = Alignment(horizontal="center", vertical="center")
+    _ajuster_largeurs(feuille)
+
+
+def _largeur_texte(valeur: object, format_nombre: str) -> float:
+    if isinstance(valeur, float) and format_nombre == "#,##0.00":
+        valeur = f"{valeur:,.2f}"
+    elif isinstance(valeur, float):
+        valeur = f"{valeur:g}"
+    # Calibri 11 : majuscule ≈ 1,1 chiffre, minuscule ≈ 0,9, espace ≈ 0,5 (approximation des métriques de POI)
+    return sum(
+        1.1 if caractere.isupper() else 0.5 if caractere == " " else 0.9 if caractere.isalpha() else 1.0
+        for caractere in str(valeur or "")
+    )
+
+
+def _ajuster_largeurs(feuille: Worksheet) -> None:
+    """`autoSizeColumn` de POI ignore les cellules fusionnées ; la feuille ajoute 3 caractères (minimum 3000/256)."""
+    fusionnees = {cellule for plage in feuille.merged_cells.ranges for cellule in plage.cells}
     for index in range(1, 14):
         longueur = max(
-            len(str(cellule.value or ""))
-            for colonne in feuille.iter_cols(min_col=index, max_col=index)
-            for cellule in colonne
+            (
+                _largeur_texte(cellule.value, cellule.number_format)
+                for colonne in feuille.iter_cols(min_col=index, max_col=index)
+                for cellule in colonne
+                if (cellule.row, cellule.column) not in fusionnees and not str(cellule.value or "").startswith("=")
+            ),
+            default=0.0,
         )
-        feuille.column_dimensions[chr(64 + index)].width = max(12, longueur + 3)
+        feuille.column_dimensions[chr(64 + index)].width = max(3000 / 256, longueur + 3)
