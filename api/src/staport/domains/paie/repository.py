@@ -1,7 +1,8 @@
-from typing import cast
+from typing import Any, cast
 
 from sqlalchemy import ColumnElement, Select, case, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.pagination import Pagination
@@ -11,6 +12,40 @@ from staport.domains.function.models import Fonction
 
 from .models import Paie
 from .schemas import PaieRecherche
+
+_EMPLOYEE = aliased(Employee)
+_FONCTION = aliased(Fonction)
+_CHANTIER = aliased(Chantier)
+_EQUIPE = aliased(Equipe)
+_JOINTURES: dict[str, tuple[Any, ColumnElement[bool]]] = {
+    "employee": (_EMPLOYEE, _EMPLOYEE.id == Paie.employee_id),
+    "fonction": (_FONCTION, _FONCTION.id == Paie.fonction_id),
+    "chantier": (_CHANTIER, _CHANTIER.id == Paie.chantier_id),
+    "equipe": (_EQUIPE, _EQUIPE.id == Paie.equipe_id),
+}
+# Nom de tri public (celui du JSON, comme Spring Data) -> (colonne, jointure externe nécessaire ou None).
+_TRIS: dict[str, tuple[Any, str | None]] = {
+    "id": (Paie.id, None),
+    "version": (Paie.version, None),
+    "periode": (Paie.periode, None),
+    "nombreJoursTravailles": (Paie.nombre_jours_travailles, None),
+    "joursRecuperationOuvrable": (Paie.jours_recuperation_ouvrable, None),
+    "joursRecuperationDimanche": (Paie.jours_recuperation_dimanche, None),
+    "salaireMensuel": (Paie.salaire_mensuel, None),
+    "primeRoulageOrdinaire": (Paie.prime_roulage_ordinaire, None),
+    "primeRoulageDimanche": (Paie.prime_roulage_dimanche, None),
+    "salaireTotal": (Paie.salaire_total, None),
+    "observation": (Paie.observation, None),
+    "employee.nomPrenom": (_EMPLOYEE.nom_prenom, "employee"),
+    "employee.cin": (_EMPLOYEE.cin, "employee"),
+    "fonction.libelle": (_FONCTION.libelle, "fonction"),
+    "chantier.code": (_CHANTIER.code, "chantier"),
+    "chantier.nom": (_CHANTIER.nom, "chantier"),
+    "chantier.designation": (_CHANTIER.designation, "chantier"),
+    "equipe.code": (_EQUIPE.code, "equipe"),
+    "equipe.libelle": (_EQUIPE.libelle, "equipe"),
+}
+TRIS_PUBLICS = frozenset(_TRIS)
 
 
 async def par_id(s: AsyncSession, identifiant: int) -> Paie | None:
@@ -112,8 +147,12 @@ async def groupe(s: AsyncSession, c: PaieRecherche) -> list[Paie]:
 async def rechercher(s: AsyncSession, c: PaieRecherche, p: Pagination) -> tuple[list[Paie], int]:
     q = _selection(c)
     total = (await s.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    for champ, asc in p.tri:
-        q = q.order_by(getattr(Paie, champ).asc() if asc else getattr(Paie, champ).desc())
+    criteres = [(_TRIS[champ], asc) for champ, asc in p.tri]
+    for jointure in dict.fromkeys(j for (_, j), _ in criteres if j):
+        cible, condition = _JOINTURES[jointure]
+        q = q.outerjoin(cible, condition)
+    for (colonne, _), asc in criteres:
+        q = q.order_by(colonne.asc() if asc else colonne.desc())
     rows = (await s.execute(q.order_by(Paie.id.asc()).limit(p.taille).offset(p.decalage))).scalars().all()
     return list(rows), total
 

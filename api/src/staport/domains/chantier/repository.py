@@ -9,6 +9,20 @@ from staport.domains.common.recherche import ECHAPPEMENT, motif_contient
 from .models import Chantier
 from .schemas import ChantierRecherche
 
+# Nom de tri public (celui du JSON, comme Spring Data) -> colonne.
+_TRIS = {
+    "id": Chantier.id,
+    "version": Chantier.version,
+    "code": Chantier.code,
+    "designation": Chantier.designation,
+    "nom": Chantier.nom,
+    "nature": Chantier.nature,
+    "afficherSurCarte": Chantier.afficher_sur_carte,
+    "sourceErp": Chantier.source_erp,
+    "actif": Chantier.actif,
+}
+TRIS_PUBLICS = frozenset(_TRIS)
+
 
 async def par_id(session: AsyncSession, identifiant: int) -> Chantier | None:
     return (await session.execute(select(Chantier).where(Chantier.id == identifiant))).scalar_one_or_none()
@@ -43,7 +57,8 @@ async def rechercher(
     total = (await session.execute(select(func.count()).select_from(Chantier).where(and_(*filtres)))).scalar_one()
     q = select(Chantier).where(and_(*filtres))
     for champ, asc in page.tri:
-        q = q.order_by(getattr(Chantier, champ).asc() if asc else getattr(Chantier, champ).desc())
+        colonne = _TRIS[champ]
+        q = q.order_by(colonne.asc() if asc else colonne.desc())
     q = q.order_by(Chantier.id.asc()).limit(page.taille).offset(page.decalage)
     return (await session.execute(q)).scalars().all(), total
 
