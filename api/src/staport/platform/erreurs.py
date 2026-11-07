@@ -122,9 +122,17 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
 
     @app.exception_handler(NonAuthentifie)
     async def _non_authentifie(  # pyright: ignore[reportUnusedFunction]
-        _requete: Request, exc: NonAuthentifie
+        requete: Request, exc: NonAuthentifie
     ) -> Response:
-        en_tete = 'Bearer error="invalid_token"' if exc.jeton_invalide else "Bearer"
+        # RFC 9728 : les clients MCP découvrent le serveur d'autorisation grâce à `resource_metadata` (comme Spring).
+        metadonnees = f'resource_metadata="{str(requete.base_url).rstrip("/")}/.well-known/oauth-protected-resource"'
+        if exc.jeton_invalide:
+            en_tete = (
+                'Bearer error="invalid_token", error_description="An error occurred while attempting to decode the '
+                'Jwt: Malformed token", error_uri="https://tools.ietf.org/html/rfc6750#section-3.1", ' + metadonnees
+            )
+        else:
+            en_tete = f"Bearer {metadonnees}"
         return Response(status_code=HTTPStatus.UNAUTHORIZED, headers={"WWW-Authenticate": en_tete})
 
     @app.exception_handler(StaleDataError)

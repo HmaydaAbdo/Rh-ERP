@@ -27,7 +27,14 @@ from openpyxl import load_workbook
 URLS = {"spring": "http://127.0.0.1:8081", "python": "http://127.0.0.1:8082"}
 MOT_DE_PASSE_TEST = "Diff-Test-Pwd-2026!"
 IDENTIFIANTS = {"username": "ci-admin", "password": "Diff-Admin-Pwd-2026!"}
-EN_TETES_UTILES = ("content-disposition", "content-type", "cache-control", "x-content-type-options")
+EN_TETES_UTILES = (
+    "set-cookie",
+    "www-authenticate",
+    "content-disposition",
+    "content-type",
+    "cache-control",
+    "x-content-type-options",
+)
 CLES_HORODATAGE = re.compile(
     r"(createdat|updatedat|horodatage|timestamp|datecreation|datemodification|expires|exp|iat)", re.I
 )
@@ -115,7 +122,8 @@ class Backend:
                 self.jetons_utilisateurs[e.utilisateur] = (
                     connexion.json().get("accessToken", "") if connexion.status_code == 200 else ""
                 )
-            en_tetes["Authorization"] = f"Bearer {self.jetons_utilisateurs[e.utilisateur]}"
+            if self.jetons_utilisateurs[e.utilisateur]:
+                en_tetes["Authorization"] = f"Bearer {self.jetons_utilisateurs[e.utilisateur]}"
         elif e.jeton and self.jeton:
             en_tetes["Authorization"] = f"Bearer {self.jeton}"
         kwargs: dict[str, Any] = {"headers": en_tetes, "params": _formater(e.params, self.captures)}
@@ -141,10 +149,22 @@ class Backend:
                 corps = r.json()
             except ValueError:
                 corps = None
-        rep = Reponse(r.status_code, {k.lower(): v for k, v in r.headers.items()}, corps, r.content)
+        en_tetes_reponse = {k.lower(): v.replace(URLS[self.nom], "<base>") for k, v in r.headers.items()}
+        cookies = [_normaliser_cookie(c) for c in r.headers.get_list("set-cookie")]
+        if cookies:
+            en_tetes_reponse["set-cookie"] = " | ".join(cookies)
+        rep = Reponse(r.status_code, en_tetes_reponse, corps, r.content)
         for nom, chemin_json in (e.capture or {}).items():
             self.captures[nom] = _extraire(corps, chemin_json)
         return rep
+
+
+def _normaliser_cookie(brut: str) -> str:
+    """Nom, attributs et durée du cookie ; la valeur (jeton) et la date d'expiration absolue ne se comparent pas."""
+    morceaux = [m.strip() for m in brut.split(";")]
+    nom = morceaux[0].partition("=")[0]
+    attributs = sorted(m.lower() for m in morceaux[1:] if not m.lower().startswith("expires"))
+    return "; ".join([f"{nom}=<valeur>", *attributs])
 
 
 def _formater(valeur: Any, captures: dict[str, Any]) -> Any:
@@ -180,6 +200,8 @@ def normaliser(valeur: Any, ids: dict[Any, str], cle: str = "") -> Any:
         return [normaliser(v, ids, cle) for v in valeur]
     if valeur is not None and CLES_HORODATAGE.search(cle):
         return "<horodatage>"
+    if valeur is not None and re.fullmatch(r"(?i)(accesstoken|token)", cle):
+        return "<jeton>"  # deux jetons émis la même seconde peuvent être égaux : leur valeur n'a pas de sens métier
     if valeur is not None and CLES_ID.search(cle) and not isinstance(valeur, bool):
         return ids.setdefault(valeur, f"<id{len(ids) + 1}>")
     return valeur
