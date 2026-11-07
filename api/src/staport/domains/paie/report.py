@@ -157,22 +157,22 @@ class ServiceRapportPaie:
                 )
             )
         if not requete.sans_vue_ensemble:
-            repartition = _graphique_repartition(par_chantier)
             cartes = _cartes_kpi(lignes, lignes_precedentes or [])
+            points_evolution = (
+                f'<div class="graphique">{_graphique_evolution(evolution)}</div>' if evolution is not None else ""
+            )
             pages.append(
                 (
                     "GLOBAL",
-                    '<div class="titre-chapitre">Synthèse de la paie</div>'
-                    f"{cartes}"
-                    f'<div class="graphique">{repartition}</div>',
+                    f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}' + points_evolution,
                 )
             )
-            if evolution is not None:
+            for graphique in _graphiques_repartition_chantiers(par_chantier):
                 pages.append(
                     (
                         "GLOBAL",
-                        '<div class="titre-chapitre">Évolution sur douze mois</div>'
-                        f'<div class="graphique">{_graphique_evolution(evolution)}</div>',
+                        '<div class="titre-chapitre">Répartition par chantier</div>'
+                        f'<div class="graphique">{graphique}</div>',
                     )
                 )
         for code, lignes_chantier in sorted(
@@ -344,10 +344,9 @@ def _identite(label: str, valeur: str) -> str:
     )
 
 
-def _graphique_repartition(
+def _graphiques_repartition_chantiers(
     par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]],
-) -> str:
-    """Rend la répartition de la masse par chantier avec le backend SVG officiel Matplotlib."""
+) -> list[str]:
     elements = sorted(
         (
             ((lignes[0][2].nom or code).strip() or code, sum((ligne[0].salaire_total for ligne in lignes), Decimal(0)))
@@ -355,7 +354,10 @@ def _graphique_repartition(
         ),
         key=lambda element: element[1],
     )
-    return _graphique_barres(elements, "Masse salariale par chantier (DH)")
+    return [
+        _graphique_barres(elements[debut : debut + 15], "Masse salariale par chantier (DH)")
+        for debut in range(0, len(elements), 15)
+    ] or [_graphique_barres([], "Masse salariale par chantier (DH)")]
 
 
 def _graphique_equipes(
