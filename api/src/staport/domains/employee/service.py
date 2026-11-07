@@ -1,7 +1,8 @@
+from collections.abc import Callable
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from io import BytesIO
-from typing import cast
+from typing import Any, cast
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
@@ -36,7 +37,33 @@ from .schemas import (
     EquipeResume,
     FonctionResume,
     TrancheReponse,
+    TriRegroupement,
 )
+
+
+def _annees_revolues(depuis: date, jour: date) -> int:
+    """Années entières écoulées (`Period.between(depuis, jour).getYears()`)."""
+    return jour.year - depuis.year - ((jour.month, jour.day) < (depuis.month, depuis.day))
+
+
+def _moins_un_an(jour: date) -> date:
+    """`LocalDate.minusYears(1)` : un 29 février devient le 28."""
+    try:
+        return jour.replace(year=jour.year - 1)
+    except ValueError:
+        return jour.replace(year=jour.year - 1, day=28)
+
+
+def _annees_moyennes(jours: int, effectif: int) -> Decimal | None:
+    """Moyenne de jours en années à une décimale (HALF_UP sur 365,2425 jours) ; `None` sans employé."""
+    if effectif == 0:
+        return None
+    return (Decimal(jours) / (Decimal(effectif) * Decimal("365.2425"))).quantize(Decimal("0.1"), ROUND_HALF_UP)
+
+
+def _valeur_texte(valeur: str | None) -> str:
+    """`String.valueOf` comparé sans casse : une valeur absente se lit « null »."""
+    return "null" if valeur is None else valeur.lower()
 
 
 async def reponses(s: AsyncSession, employes: list[Employee]) -> list[EmployeeReponse]:
@@ -179,24 +206,9 @@ class ServiceEmployee:
         async with s.begin():
             rows, _ = await repository.rechercher(s, c or EmployeeRecherche(), Pagination(0, 100000, (("id", True),)))
         today = date.today()
-        ages = [
-            max(
-                0,
-                today.year
-                - x.date_naissance.year
-                - ((today.month, today.day) < (x.date_naissance.month, x.date_naissance.day)),
-            )
-            for x in rows
-        ]
-        anciennetes = [
-            max(
-                0,
-                today.year
-                - x.date_embauche.year
-                - ((today.month, today.day) < (x.date_embauche.month, x.date_embauche.day)),
-            )
-            for x in rows
-        ]
+        ages = [_annees_revolues(x.date_naissance, today) for x in rows]
+        anciennetes = [max(0, _annees_revolues(x.date_embauche, today)) for x in rows]
+        il_y_a_un_an = _moins_un_an(today)
 
         def tranches(valeurs: list[int], bornes: list[int]) -> list[TrancheReponse]:
             return [
@@ -211,11 +223,11 @@ class ServiceEmployee:
         n = len(rows)
         return EmployeeAnalytiqueReponse(
             effectif=n,
-            actifs=sum(x.statut.value == "ACTIF" for x in rows),
-            inactifs=sum(x.statut.value == "INACTIF" for x in rows),
-            age_moyen=Decimal(str(round(sum(ages) / n, 1))) if n else None,
-            anciennete_moyenne=Decimal(str(round(sum(anciennetes) / n, 1))) if n else None,
-            embauches_douze_mois=sum(today.replace(year=today.year - 1) < x.date_embauche <= today for x in rows),
+            actifs=sum(str(x.statut) == "ACTIF" for x in rows),
+            inactifs=sum(str(x.statut) == "INACTIF" for x in rows),
+            age_moyen=_annees_moyennes(sum((today - x.date_naissance).days for x in rows), n),
+            anciennete_moyenne=_annees_moyennes(sum(max(0, (today - x.date_embauche).days) for x in rows), n),
+            embauches_douze_mois=sum(il_y_a_un_an < x.date_embauche <= today for x in rows),
             par_age=tranches(ages, [0, 25, 35, 45, 55]),
             par_anciennete=tranches(anciennetes, [0, 1, 3, 5, 10]),
         )
@@ -223,27 +235,39 @@ class ServiceEmployee:
     async def regrouper(
         self, s: AsyncSession, c: EmployeeRecherche | None, dimension: DimensionEmployes
     ) -> list[EmployeeRegroupementReponse]:
+        """Parité `EmployeeAnalytiqueService.regrouper` : libellés lus en base, plus grand groupe d'abord."""
         async with s.begin():
-            rows, _ = await repository.rechercher(s, c or EmployeeRecherche(), Pagination(0, 100000, (("id", True),)))
-        champ = {
-            DimensionEmployes.CHANTIER: "chantier_id",
-            DimensionEmployes.EQUIPE: "equipe_id",
-            DimensionEmployes.FONCTION: "fonction_id",
-        }[dimension]
-        groupes: dict[int, list[Employee]] = {}
-        for row in rows:
-            identifiant = getattr(row, champ) or 0
-            groupes.setdefault(identifiant, []).append(row)
+            lignes = await repository.regrouper(s, c or EmployeeRecherche(), dimension)
+        sans = "Sans chantier" if dimension is DimensionEmployes.CHANTIER else "Sans équipe"
         return [
             EmployeeRegroupementReponse(
-                id=i,
-                code=None,
-                libelle="Sans affectation" if i == 0 else str(i),
-                effectif=len(v),
-                actifs=sum(x.statut.value == "ACTIF" for x in v),
+                id=0 if i is None else i,
+                code=None if i is None else code,
+                libelle=sans if i is None else libelle or "",
+                effectif=effectif,
+                actifs=actifs,
             )
-            for i, v in sorted(groupes.items())
+            for i, code, libelle, effectif, actifs in lignes
         ]
+
+    async def regrouper_trie(
+        self,
+        s: AsyncSession,
+        c: EmployeeRecherche | None,
+        dimension: DimensionEmployes,
+        tri: TriRegroupement,
+        croissant: bool,
+    ) -> list[EmployeeRegroupementReponse]:
+        """Les groupes classés selon `tri` puis par code (absents en dernier) et identifiant, pour un ordre stable."""
+        groupes = await self.regrouper(s, c, dimension)
+        cle: dict[TriRegroupement, Callable[[EmployeeRegroupementReponse], Any]] = {
+            TriRegroupement.EFFECTIF: lambda g: g.effectif,
+            TriRegroupement.EN_POSTE: lambda g: g.actifs,
+            TriRegroupement.LIBELLE: lambda g: _valeur_texte(g.libelle),
+            TriRegroupement.CODE: lambda g: _valeur_texte(g.code),
+        }
+        stable = sorted(groupes, key=lambda g: (g.code is None, (g.code or "").lower(), g.id))
+        return sorted(stable, key=cle[tri], reverse=not croissant)
 
     async def sorties_mois(self, s: AsyncSession, periode: int) -> EmployeeSortiesMoisReponse:
         async with s.begin():

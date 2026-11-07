@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import ColumnElement, and_, func, or_, select
+from sqlalchemy import ColumnElement, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -11,8 +11,8 @@ from staport.domains.common.recherche import ECHAPPEMENT, motif_contient
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 
-from .models import Employee
-from .schemas import EmployeeRecherche
+from .models import Employee, EmployeeSortie, EmployeeStatut
+from .schemas import DimensionEmployes, EmployeeRecherche
 
 _FONCTION = aliased(Fonction)
 _CHANTIER = aliased(Chantier)
@@ -54,7 +54,8 @@ async def existe_cin(s: AsyncSession, cin: str, sauf_id: int | None = None) -> b
     return (await s.execute(q)).scalar_one() > 0
 
 
-async def rechercher(s: AsyncSession, c: EmployeeRecherche, p: Pagination) -> tuple[Sequence[Employee], int]:
+def filtres(c: EmployeeRecherche) -> list[ColumnElement[bool]]:
+    """Filtres de la recherche (`EmployeeSpecification`), partagés par la liste, l'analyse et les regroupements."""
     f: list[ColumnElement[bool]] = []
     if c.nom_prenom and c.nom_prenom.strip():
         f.append(func.lower(Employee.nom_prenom).like(motif_contient(c.nom_prenom), escape=ECHAPPEMENT))
@@ -73,8 +74,13 @@ async def rechercher(s: AsyncSession, c: EmployeeRecherche, p: Pagination) -> tu
         f.append(or_(*equipe_filtres))
     if c.statut is not None:
         f.append(Employee.statut == c.statut)
-    total = (await s.execute(select(func.count()).select_from(Employee).where(and_(*f)))).scalar_one()
-    q = select(Employee).where(and_(*f))
+    return f
+
+
+async def rechercher(s: AsyncSession, c: EmployeeRecherche, p: Pagination) -> tuple[Sequence[Employee], int]:
+    f = filtres(c)
+    total = (await s.execute(select(func.count()).select_from(Employee).where(*f))).scalar_one()
+    q = select(Employee).where(*f)
     criteres = [(_TRIS[_ALIAS_INTERNES.get(champ, champ)], asc) for champ, asc in p.tri]
     for jointure in dict.fromkeys(j for (_, j), _ in criteres if j):
         cible, condition = _JOINTURES[jointure]
@@ -83,3 +89,45 @@ async def rechercher(s: AsyncSession, c: EmployeeRecherche, p: Pagination) -> tu
         q = q.order_by(colonne.asc() if asc else colonne.desc())
     q = q.order_by(Employee.id.asc()).limit(p.taille).offset(p.decalage)
     return (await s.execute(q)).scalars().all(), total
+
+
+async def regrouper(
+    s: AsyncSession, c: EmployeeRecherche, dimension: DimensionEmployes
+) -> list[tuple[int | None, str | None, str | None, int, int]]:
+    """Effectif et nombre en poste par chantier, équipe ou fonction, comptés par la base (`GROUP BY`), du plus grand
+    groupe au plus petit puis par code (`EmployeeAnalytiqueService.regrouper`). Les employés sans chantier ou sans
+    équipe forment le groupe d'identifiant nul."""
+    effectif = func.count(Employee.id)
+    en_poste = func.sum(case((Employee.statut == EmployeeStatut.ACTIF, 1), else_=0))
+    if dimension is DimensionEmployes.CHANTIER:
+        colonnes = (Chantier.id, Chantier.code, Chantier.designation)
+        q = (
+            select(*colonnes, effectif, en_poste)
+            .select_from(Employee)
+            .outerjoin(Chantier, Chantier.id == Employee.chantier_id)
+        )
+    elif dimension is DimensionEmployes.EQUIPE:
+        colonnes = (Equipe.id, Equipe.code, Equipe.libelle)
+        q = (
+            select(*colonnes, effectif, en_poste)
+            .select_from(Employee)
+            .outerjoin(Equipe, Equipe.id == Employee.equipe_id)
+        )
+    else:
+        colonnes = (Fonction.id, Fonction.libelle, Fonction.libelle)
+        q = (
+            select(*colonnes, effectif, en_poste)
+            .select_from(Employee)
+            .join(Fonction, Fonction.id == Employee.fonction_id)
+        )
+    q = q.where(*filtres(c)).group_by(*colonnes).order_by(effectif.desc(), colonnes[1].asc())
+    return [(i, code, libelle, int(n), int(a)) for i, code, libelle, n, a in (await s.execute(q)).all()]
+
+
+async def sorties(s: AsyncSession, employee_id: int | None = None) -> list[tuple[int, int, str]]:
+    """Départs enregistrés `(employé, mois, motif)`, du plus ancien au plus récent ; tous, ou ceux d'un employé."""
+    q = select(EmployeeSortie.employee_id, EmployeeSortie.periode, EmployeeSortie.motif)
+    if employee_id is not None:
+        q = q.where(EmployeeSortie.employee_id == employee_id)
+    q = q.order_by(EmployeeSortie.periode.asc(), EmployeeSortie.id.asc())
+    return [(e, p, m) for e, p, m in (await s.execute(q)).all()]
