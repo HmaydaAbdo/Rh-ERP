@@ -47,6 +47,7 @@ from .schemas import (
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
     PaieParcoursEvenement,
+    PaieParcoursIndicateurs,
     PaieParcoursMois,
     PaieParcoursReponse,
     PaiePeriodeResume,
@@ -346,11 +347,13 @@ class ServicePaie:
             )
         return PaieParcoursReponse(
             employe_id=employee_id,
-            mois_payes=len(bulletins),
-            total_percu=sum((x.salaire_total for x in bulletins), Decimal(0)),
-            jours_travailles=sum((x.nombre_jours_travailles for x in bulletins), Decimal(0)),
-            premier_mois=bulletins[0].periode if bulletins else None,
-            dernier_mois=bulletins[-1].periode if bulletins else None,
+            indicateurs=PaieParcoursIndicateurs(
+                mois_payes=len(bulletins),
+                total_percu=sum((x.salaire_total for x in bulletins), Decimal(0)),
+                jours_travailles=sum((x.nombre_jours_travailles for x in bulletins), Decimal(0)),
+                premier_mois=bulletins[0].periode if bulletins else None,
+                dernier_mois=bulletins[-1].periode if bulletins else None,
+            ),
             mois=mois,
             evenements=sorted(evenements, key=lambda x: (x.periode, x.type), reverse=True),
         )
