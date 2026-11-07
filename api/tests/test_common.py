@@ -165,3 +165,14 @@ def test_nombre_reste_decimal_en_python_et_devient_un_nombre_json() -> None:
 
     assert montant.model_dump()["total"] == Decimal("600.50")
     assert montant.model_dump(mode="json", by_alias=True) == {"total": 600.5}
+
+
+def test_en_tetes_de_securite_comme_spring_security(client: TestClient) -> None:
+    """Écart trouvé par le banc différentiel (KAN-226) : Spring posait ces en-têtes sur chaque réponse."""
+    reponse = client.get("/refus")
+    assert reponse.headers["X-Content-Type-Options"] == "nosniff"
+    assert reponse.headers["X-Frame-Options"] == "DENY"
+    assert reponse.headers["X-XSS-Protection"] == "0"
+    assert reponse.headers["Cache-Control"] == "no-cache, no-store, max-age=0, must-revalidate"
+    assert reponse.headers["Pragma"] == "no-cache"
+    assert reponse.headers["Expires"] == "0"

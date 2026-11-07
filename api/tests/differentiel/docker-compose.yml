@@ -1,0 +1,85 @@
+# Banc de comparaison Spring (tag java-final, référence) contre l'API Python (KAN-226).
+# Deux bases PostgreSQL 18 + pgvector identiques au départ ; valeurs de TEST uniquement, jamais de production.
+# Usage : docker compose --env-file .env.cles -p diff up -d   (voir README.md du dossier)
+name: diff
+
+x-pg: &pg
+  image: pgvector/pgvector:0.8.7-pg18
+  environment:
+    POSTGRES_DB: staport_rh
+    POSTGRES_USER: staport
+    POSTGRES_PASSWORD: diff-owner-pwd
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U staport -d staport_rh"]
+    interval: 3s
+    timeout: 3s
+    retries: 20
+
+x-app-env: &app-env
+  DB_PORT: "5432"
+  DB_NAME: staport_rh
+  DB_USER: staport_app
+  DB_PASSWORD: diff-app-pwd
+  DB_MIGRATION_USER: staport
+  DB_MIGRATION_PASSWORD: diff-owner-pwd
+  JWT_SECRET: ${JWT_SECRET}
+  MCP_ENABLED: "true"
+  MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY}
+  MCP_JWT_KEY_ID: diff-cle-1
+  FRONTEND_URL: http://localhost:4300
+  CORS_ALLOWED_ORIGINS: http://localhost:4300
+  COOKIE_SECURE: "false"
+  ADMIN_USERNAME: ci-admin
+  ADMIN_EMAIL: ci-admin@example.invalid
+  ADMIN_PASSWORD: Diff-Admin-Pwd-2026!
+  MAIL_FROM: noreply@example.invalid
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_USERNAME: ""
+  SMTP_PASSWORD: ""
+  SMTP_AUTH: "false"
+  SMTP_STARTTLS: "false"
+  CHANTIER_SYNC_BASE_URL: http://example.invalid/x
+  OTEL_SDK_DISABLED: "true"
+
+services:
+  pg-spring:
+    <<: *pg
+    ports: ["127.0.0.1:56001:5432"]
+  pg-python:
+    <<: *pg
+    ports: ["127.0.0.1:56002:5432"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:58025:8025"]
+
+  spring:
+    image: spring-ref:java-final
+    depends_on:
+      pg-spring: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      DB_HOST: pg-spring
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+    ports: ["127.0.0.1:8081:8080"]
+
+  # Étape de migration de l'API Python (Alembic, compte propriétaire), avant l'API.
+  python-migrate:
+    image: erp-rh-api:differentiel
+    depends_on:
+      pg-python: {condition: service_healthy}
+    environment:
+      <<: *app-env
+      DB_HOST: pg-python
+    entrypoint: ["python", "-m", "staport.migrations.deploiement"]
+    restart: "no"
+
+  python:
+    image: erp-rh-api:differentiel
+    depends_on:
+      python-migrate: {condition: service_completed_successfully}
+    environment:
+      <<: *app-env
+      DB_HOST: pg-python
+    ports: ["127.0.0.1:8082:8080"]

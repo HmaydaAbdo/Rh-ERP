@@ -14,6 +14,16 @@ from dataclasses import dataclass
 from fastapi import FastAPI, Request, Response
 
 EN_TETE_REQUEST_ID = "X-Request-Id"
+# En-têtes de sécurité que Spring Security posait sur toute réponse (parité KAN-226) ; une route qui fixe elle-même
+# Cache-Control (JWKS, jeton de connexion) garde sa valeur, comme avec Spring.
+EN_TETES_SECURITE = {
+    "X-Content-Type-Options": "nosniff",
+    "X-XSS-Protection": "0",
+    "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "X-Frame-Options": "DENY",
+}
 USER_AGENT_LONGUEUR_MAX = 255
 
 
@@ -56,4 +66,7 @@ def enregistrer_identifiant_requete(app: FastAPI) -> None:
         finally:
             _contexte.reset(jeton)
         reponse.headers[EN_TETE_REQUEST_ID] = identifiant
+        for nom, valeur in EN_TETES_SECURITE.items():
+            if nom not in reponse.headers:
+                reponse.headers[nom] = valeur
         return reponse
