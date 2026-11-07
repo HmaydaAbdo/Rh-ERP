@@ -1,3 +1,7 @@
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Regular.ttf"); font-weight: normal; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Italic.ttf"); font-weight: normal; font-style: italic; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-BoldItalic.ttf"); font-weight: bold; font-style: italic; }
 /* Feuille de style STATIQUE du rapport PDF de paie (voir PaieReportHtmlBuilder) — jamais chargée
    comme un template, jamais interpolée avec une donnée métier : son contenu est injecté tel quel
    (jsoup DataNode) dans le document généré. Aucune valeur ici ne doit jamais dépendre d'une donnée

@@ -67,5 +67,7 @@ journal (audit = opérations seulement).
 Preuves : `api/tests/test_heuresupp_export.py` (gabarit, tri, route avec rendu simulé, plafond), matrices d'accès mises à jour
 (96 routes).
 
-**Non vérifié** : le rendu WeasyPrint réel. Pango n'existe pas sous Windows ; la preuve doit être faite dans l'image Linux
-(`erp-rh-api`), ce qui reste à faire.
+**Rendu réel prouvé** (2026-11-07) : l'image `api/Dockerfile`, reconstruite sans cache, produit un PDF valide avec le logo,
+les accents, la police Liberation Serif embarquée et la pagination (40 lignes d'essai sur 4 pages). Une première image avait été
+construite disque plein et contenait des milliers de fichiers vides : toute preuve doit se faire sur une image construite sans cache.
+Reste : comparaison côte à côte avec le PDF Spring sur un même jeu de données.
