@@ -56,3 +56,16 @@ l'ordre de vidage d'Hibernate).
 Preuves : `api/tests/test_heuresupp_import.py` (PostgreSQL réel : prérequis, analyse, écarts, import, doublon, remplacement,
 forfait seul, fichiers invalides, en-têtes variantes, corrections, modèle), matrices d'audit et d'accès (95 routes) et les
 tests Angular du service d'import.
+
+## Lot 3 — export PDF (KAN-227)
+
+`POST /heures-supp/export/pdf` reprend le rapport Spring : mêmes filtres, tri et gabarit HTML/CSS que Java, rendu par
+WeasyPrint (`common/pdf.py`, exécuté hors de la boucle d'événements). Les polices Liberation Serif sont embarquées dans le
+CSS et l'image `api/Dockerfile` installe Pango et HarfBuzz. Plafond de 5 000 lignes (`LIGNES_MAX`). L'export n'écrit pas dans le
+journal (audit = opérations seulement).
+
+Preuves : `api/tests/test_heuresupp_export.py` (gabarit, tri, route avec rendu simulé, plafond), matrices d'accès mises à jour
+(96 routes).
+
+**Non vérifié** : le rendu WeasyPrint réel. Pango n'existe pas sous Windows ; la preuve doit être faite dans l'image Linux
+(`erp-rh-api`), ce qui reste à faire.
