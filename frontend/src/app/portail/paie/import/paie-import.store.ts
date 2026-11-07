@@ -83,6 +83,8 @@ export class PaieImportStore {
   readonly typesChoisis = signal<Record<number, TypeSalaire | null>>({});
   /** Saisies des employés à créer, par numéro de ligne du fichier. */
   readonly creations = signal<Record<number, CreationSaisie>>({});
+  /** Choix de l'utilisateur quand le fichier laisse vide l'équipe d'un employé qui en a une (par employé). */
+  readonly decisionsEquipe = signal<Record<number, 'CONSERVER' | 'VIDER'>>({});
   /** Départs proposés, par identifiant d'employé. */
   readonly departs = signal<Record<number, DepartSaisi>>({});
 
@@ -91,7 +93,8 @@ export class PaieImportStore {
     const analyse = this.analyse();
     if (!analyse) return false;
     const avertissementsNonConfirmes = analyse.avertissements.filter((a) =>
-      a.codeAvertissement !== 'SALAIRE_ZERO' || !this.confirmerSalaireZero()
+      !((a.codeAvertissement === 'SALAIRE_ZERO' && this.confirmerSalaireZero()) ||
+        (a.codeAvertissement === 'EQUIPE_VIDE' && a.employeId != null && this.decisionsEquipe()[a.employeId] !== undefined))
     );
     return analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 &&
       (analyse.pret || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
@@ -104,6 +107,9 @@ export class PaieImportStore {
     const a = this.analyse();
     return a ? a.erreurs.length + a.avertissements.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
   });
+  readonly decisionsEquipeEnvoyees = computed(() =>
+    Object.entries(this.decisionsEquipe()).map(([id, action]) => ({ employeId: Number(id), action }))
+  );
   readonly departsConfirmes = computed(() =>
     (this.analyse()?.departs ?? [])
       .filter((d) => this.departs()[d.employeId]?.coche)
@@ -276,7 +282,7 @@ export class PaieImportStore {
     }
     this.etat.set('import');
     this.envoyer(
-      this.paieService.importer(fichier, mois, this.departsConfirmes(), this.confirmerSalaireZero()),
+      this.paieService.importer(fichier, mois, this.departsConfirmes(), this.confirmerSalaireZero(), this.decisionsEquipeEnvoyees()),
       (bilan) => {
         this.bilan.set(bilan);
         this.etat.set('termine');
@@ -293,6 +299,10 @@ export class PaieImportStore {
       return;
     }
     this.envoyer(this.paieService.corrigerImport(fichier, mois, corrections), (analyse) => this.recevoir(analyse));
+  }
+
+  decider(employeId: number, action: 'CONSERVER' | 'VIDER'): void {
+    this.decisionsEquipe.update((d) => ({ ...d, [employeId]: action }));
   }
 
   /** Nouvelle analyse : les départs gardent ce que l'utilisateur a déjà saisi, les nouveaux sont cochés d'office. */

@@ -23,6 +23,7 @@ from .schemas import (
     PaieExportRequete,
     PaieImportAnalyse,
     PaieImportCorrections,
+    PaieImportDecisionsEquipe,
     PaieImportDeparts,
     PaieImportResult,
     PaieMaterielTableau,
@@ -158,13 +159,17 @@ async def importer(
     contexte: Contexte,
     ignorer_salaires_zero: Annotated[bool, Form()] = False,
     departs: Annotated[str | None, Form()] = None,
+    equipes: Annotated[str | None, Form()] = None,
     file: UploadFile = File(...),  # noqa: B008
 ) -> PaieImportResult:
     try:
         confirmes = PaieImportDeparts.model_validate_json(departs) if departs else PaieImportDeparts()
+        decisions = PaieImportDecisionsEquipe.model_validate_json(equipes) if equipes else None
     except ValidationError as erreur:
         raise RequestValidationError(erreur.errors()) from erreur
-    return await contexte.import_paie.importer(session, await file.read(), periode, ignorer_salaires_zero, confirmes)
+    return await contexte.import_paie.importer(
+        session, await file.read(), periode, ignorer_salaires_zero, confirmes, decisions
+    )
 
 
 @paies.post(

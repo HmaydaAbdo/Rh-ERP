@@ -100,6 +100,24 @@ describe('PaieImportStore', () => {
     expect(store.pret()).toBe(false);
   });
 
+  it('laisse l’utilisateur décider d’une équipe vide, et envoie sa décision à l’import', () => {
+    const equipeVide = {
+      ...PRETE,
+      avertissements: [
+        { numeroLigne: 4, cin: 'AB1', nomPrenom: 'ALI', raison: 'équipe vide', codeAvertissement: 'EQUIPE_VIDE' as const, employeId: 1 }
+      ],
+      pret: false
+    };
+    service.analyserImport.mockReturnValue(of(equipeVide));
+    store.ouvrir(['2026-09']);
+    store.analyser(fichier);
+    expect(store.pret()).toBe(false);
+
+    store.decider(1, 'VIDER');
+    expect(store.pret()).toBe(true);
+    expect(store.decisionsEquipeEnvoyees()).toEqual([{ employeId: 1, action: 'VIDER' }]);
+  });
+
   it('analyse le fichier, passe au contrôle et coche d’office les départs proposés', () => {
     service.analyserImport.mockReturnValue(of(PRETE));
     store.ouvrir(['2026-09']);
@@ -177,7 +195,7 @@ describe('PaieImportStore', () => {
 
     store.importer(importe);
 
-    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC' }], false);
+    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC' }], false, []);
     expect(store.etat()).toBe('termine');
     expect(store.bilan()?.crees).toBe(2);
     expect(importe).toHaveBeenCalledTimes(1);

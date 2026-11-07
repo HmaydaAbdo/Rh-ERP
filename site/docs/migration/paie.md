@@ -46,8 +46,12 @@ Un bulletin existant n'est jamais écrasé sans confirmation auditée; les dépa
 d'affectation ne sont pas déduits automatiquement.
 L'option « Ignorer et conserver 0 » ne confirme que l'avertissement de salaire nul ; un salaire
 différent de la fiche employé reste à traiter dans le wizard avant la création des bulletins.
-Si le fichier porte `0` et que la fiche porte un autre salaire, les deux avertissements sont rendus
-séparément (`SALAIRE_ZERO` et `SALAIRE_DIFFERENT`). Le second propose le type `JOURNALIER`
+Si le fichier porte `0` et que la fiche porte un autre salaire, seul `SALAIRE_DIFFERENT` est rendu
+(décision du propriétaire du 2026-11-07), avec l'ancien salaire dans `salaireActuel` et dans la raison ;
+`SALAIRE_ZERO` reste réservé aux fiches dont le salaire est déjà nul. Une équipe vide dans le fichier pour
+un employé actif qui en a une produit `EQUIPE_VIDE` : l'utilisateur choisit `CONSERVER` ou `VIDER` par
+employé (champ multipart `equipes`, JSON `{"decisions":[{employeId,action}]}`), sans décision l'import est refusé.
+`SALAIRE_DIFFERENT` propose le type `JOURNALIER`
 jusqu'à 500 inclus et `MENSUEL` au-dessus ; l'action « Ignorer 0 » ne l'efface pas.
 Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel entièrement vides
 après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
