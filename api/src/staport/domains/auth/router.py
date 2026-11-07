@@ -140,6 +140,17 @@ async def cles_publiques(contexte: Contexte) -> JSONResponse:
     return JSONResponse(contexte.agent.cles_publiques(), headers={"Cache-Control": "max-age=300"})
 
 
+@auth.get("/.well-known/oauth-protected-resource", summary="Métadonnées de la ressource protégée (RFC 9728)")
+async def ressource_protegee(requete: Request) -> JSONResponse:
+    return JSONResponse(
+        {
+            "resource": str(requete.base_url).rstrip("/"),
+            "bearer_methods_supported": ["header"],
+            "tls_client_certificate_bound_access_tokens": True,
+        }
+    )
+
+
 @agent.post(
     "/auth/jetons/agent",
     summary="Obtenir un jeton délégué pour l'assistant IA",

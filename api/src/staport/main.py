@@ -8,7 +8,7 @@ Démarrage : `uvicorn staport.main:application --factory`.
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -16,6 +16,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from starlette.requests import Request
+from starlette.responses import Response
 from starlette.routing import Route
 
 from staport.domains.accueil import router as routes_accueil
@@ -41,7 +43,7 @@ from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires
-from staport.platform.requete import EN_TETE_REQUEST_ID, enregistrer_identifiant_requete
+from staport.platform.requete import EN_TETE_REQUEST_ID, EN_TETES_SECURITE, enregistrer_identifiant_requete
 from staport.platform.sante import sante
 
 if TYPE_CHECKING:
@@ -132,6 +134,17 @@ def creer_app(
             expose_headers=[EN_TETE_REQUEST_ID],
             allow_credentials=True,
         )
+
+        @app.middleware("http")
+        async def _refuser_origine_inconnue(
+            requete: Request, suite: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
+            """Comme `DefaultCorsProcessor` de Spring : origine inconnue (hors même origine) = 403."""
+            origine = requete.headers.get("origin")
+            if origine is not None and origine not in origines and origine != str(requete.base_url).rstrip("/"):
+                return Response("Invalid CORS request", status_code=403, headers=EN_TETES_SECURITE)
+            return await suite(requete)
+
         for routeur in (
             routes_auth.auth,
             routes_auth.agent,
