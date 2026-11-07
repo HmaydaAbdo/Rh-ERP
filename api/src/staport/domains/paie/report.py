@@ -381,6 +381,7 @@ def _graphiques_repartition_chantiers(
             for code, lignes in par_chantier.items()
         ),
         key=lambda element: element[1],
+        reverse=True,
     )
     return [
         _graphique_barres(elements[debut : debut + 15], "Masse salariale par chantier (DH)")
