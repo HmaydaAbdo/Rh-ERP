@@ -33,6 +33,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Constat | Règle |
 |---|---|
 | Les premières routes Paie Python acceptaient `AAAAMM` et renvoyaient des identifiants plats alors que le frontend envoyait `AAAA-MM` et attendait des résumés de références ; les options rejetaient même son tri. | Avant de déclarer un domaine migré, comparer chaque requête et réponse au service Angular et au contrôleur Spring, puis exécuter au moins un test HTTP de contrat sur la base de test. |
+| Deux E2E du wizard Paie utilisaient encore une réponse d'analyse simulée sans le nouveau champ obligatoire `avertissements` ; le store levait une erreur avant d'afficher le contrôle. | Quand un contrat de réponse évolue, mettre à jour toutes les réponses simulées consommées par les E2E, puis exécuter les scénarios Playwright concernés. |
 | Une mesure de débordement horizontal dans les e2e lisait la page avant le rendu du contenu. | Attendre un élément rendu (titre, ligne de tableau) avant de mesurer ou d'ouvrir une palette de commandes (`Ctrl+K`). |
 | Le premier lancement de `ng serve` rendait des e2e instables. | Attendre le titre de la page avant d'interagir ; relancer avec `--workers=1` avant de soupçonner une régression. |
 | Des vulnérabilités critiques transitives (npm) bloquaient la CI. | Les corriger par `overrides` dans `package.json` (par exemple `dompurify`), pas en retirant le contrôle. |
