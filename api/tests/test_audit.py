@@ -456,6 +456,11 @@ AUDITEES = {
     ("PUT", "/employees/{identifiant}"): "EMPLOYE_MODIFICATION",
     ("DELETE", "/employees/{identifiant}"): "EMPLOYE_SUPPRESSION",
     ("POST", "/employees/import"): "EMPLOYE_IMPORT",
+    ("POST", "/paie"): "PAIE_CREATION",
+    ("PUT", "/paie/{identifiant}"): "PAIE_MODIFICATION",
+    ("DELETE", "/paie/{identifiant}"): "PAIE_SUPPRESSION",
+    ("POST", "/paie/import"): "PAIE_IMPORT",
+    ("POST", "/paie/import/corrections"): "PAIE_IMPORT_CORRECTION",
 }
 """Routes d'écriture qui changent des données auditées : chacune écrit une entrée d'opération."""
 
@@ -481,6 +486,16 @@ LECTURES_PAR_POST = {
     ("POST", "/employees/analytique"),
     ("POST", "/employees/regroupements"),
     ("POST", "/employees/sorties-mois"),
+    ("POST", "/paie/search"),
+    ("POST", "/paie/periodes/search"),
+    ("POST", "/paie/chantiers/search"),
+    ("POST", "/paie/analytique"),
+    ("POST", "/paie/options/chantiers"),
+    ("POST", "/paie/options/equipes"),
+    ("POST", "/paie/effectifs"),
+    ("POST", "/paie/export"),
+    ("POST", "/paie/report/pdf"),
+    ("POST", "/paie/import/analyse"),
 }
 """Recherches par POST : elles ne changent rien et ne sont pas auditées."""
 

@@ -75,26 +75,32 @@ describe('PaieService', () => {
 
   it('analyse, corrige puis importe un fichier : fichier et parties JSON en multipart, mois dans l’URL', async () => {
     const fichier = new File(['x'], 'paie.xlsx');
-    const json = async (formulaire: FormData, partie: string) => JSON.parse(await (formulaire.get(partie) as Blob).text());
+    const json = (formulaire: FormData, partie: string) => JSON.parse(formulaire.get(partie) as string);
 
     service.analyserImport(fichier, '2026-10').subscribe();
     const analyse = requete(http, 'POST', 'paie/import/analyse');
     expect((analyse.request.body as FormData).get('file')).toBe(fichier);
-    expect(analyse.request.params.get('periode')).toBe('2026-10');
+    expect((analyse.request.body as FormData).get('periode')).toBe('2026-10');
     analyse.flush({});
 
     const corrections = { aligner: [{ employeId: 9, typeSalaire: null }], creer: [] };
     service.corrigerImport(fichier, '2026-10', corrections).subscribe();
     const correction = requete(http, 'POST', 'paie/import/corrections');
-    expect((correction.request.body as FormData).get('corrections')).toBeInstanceOf(Blob);
-    expect(((correction.request.body as FormData).get('corrections') as Blob).type).toBe('application/json');
-    expect(await json(correction.request.body as FormData, 'corrections')).toEqual(corrections);
+    expect((correction.request.body as FormData).get('periode')).toBe('2026-10');
+    expect(json(correction.request.body as FormData, 'corrections')).toEqual(corrections);
     correction.flush({});
 
-    service.importer(fichier, '2026-10', [{ employeId: 2, motif: 'STC' }]).subscribe();
+    service.importer(fichier, '2026-10', [{ employeId: 2, motif: 'STC' }], false).subscribe();
     const import_ = requete(http, 'POST', 'paie/import');
     expect(await json(import_.request.body as FormData, 'departs')).toEqual({ departs: [{ employeId: 2, motif: 'STC' }] });
+    expect((import_.request.body as FormData).get('periode')).toBe('2026-10');
+    expect((import_.request.body as FormData).get('ignorer_salaires_zero')).toBe('false');
     import_.flush({ periode: '2026-10', crees: 1, departs: 1, retours: 0 });
+
+    service.importer(fichier, '2026-10', [], true).subscribe();
+    const confirmationZero = requete(http, 'POST', 'paie/import');
+    expect((confirmationZero.request.body as FormData).get('ignorer_salaires_zero')).toBe('true');
+    confirmationZero.flush({ periode: '2026-10', crees: 1, departs: 0, retours: 0 });
   });
 
   it('télécharge le modèle d’import, l’export Excel et le rapport PDF en binaire', () => {

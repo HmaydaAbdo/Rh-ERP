@@ -77,6 +77,7 @@ export class PaieImportStore {
   readonly fichier = signal<File | null>(null);
   readonly analyse = signal<PaieImportAnalyse | null>(null);
   readonly bilan = signal<PaieImportResult | null>(null);
+  readonly confirmerSalaireZero = signal(false);
 
   /** Type de salaire choisi pour une fiche en écart (par identifiant d'employé) ; absent = celui de la fiche. */
   readonly typesChoisis = signal<Record<number, TypeSalaire | null>>({});
@@ -86,10 +87,22 @@ export class PaieImportStore {
   readonly departs = signal<Record<number, DepartSaisi>>({});
 
   readonly indexEtape = computed(() => ETAPES.indexOf(this.etape()));
-  readonly pret = computed(() => this.analyse()?.pret ?? false);
+  readonly pret = computed(() => {
+    const analyse = this.analyse();
+    if (!analyse) return false;
+    const avertissementsNonConfirmes = analyse.avertissements.filter((a) =>
+      a.codeAvertissement !== 'SALAIRE_ZERO' || !this.confirmerSalaireZero()
+    );
+    return analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 &&
+      (analyse.pret || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
+  });
+  readonly avertissementSalaireZero = computed(() => {
+    const avertissements = this.analyse()?.avertissements ?? [];
+    return avertissements.some((a) => a.codeAvertissement === 'SALAIRE_ZERO');
+  });
   readonly nombreProblemes = computed(() => {
     const a = this.analyse();
-    return a ? a.erreurs.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
+    return a ? a.erreurs.length + a.avertissements.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
   });
   readonly departsConfirmes = computed(() =>
     (this.analyse()?.departs ?? [])
@@ -123,6 +136,7 @@ export class PaieImportStore {
     this.fichier.set(null);
     this.analyse.set(null);
     this.bilan.set(null);
+    this.confirmerSalaireZero.set(false);
     this.typesChoisis.set({});
     this.creations.set({});
     this.departs.set({});
@@ -153,7 +167,24 @@ export class PaieImportStore {
   /** Met à jour les fiches choisies avec les valeurs de leur ligne ; chacune disparaît alors de la liste des écarts. */
   aligner(employeIds: number[]): void {
     const types = this.typesChoisis();
-    this.corriger({ aligner: employeIds.map((employeId) => ({ employeId, typeSalaire: types[employeId] ?? null })), creer: [] });
+    this.corriger({
+      aligner: employeIds.map((employeId) => {
+        const ecart = this.analyse()?.ecarts.find((item) => item.employeId === employeId);
+        const salaire = ecart?.champs.find((champ) => champ.champ === 'salaire')?.fichier;
+        return {
+          employeId,
+          typeSalaire: types[employeId] ?? (salaire !== undefined && salaire !== null ? this.typeSalairePropose(Number(salaire)) : null)
+        };
+      }),
+      creer: []
+    });
+  }
+
+  typeSalairePourEcart(employeId: number, typeActuel: TypeSalaire | null): TypeSalaire | null {
+    const choisi = this.typesChoisis()[employeId];
+    if (choisi) return choisi;
+    const salaire = this.analyse()?.ecarts.find((item) => item.employeId === employeId)?.champs.find((champ) => champ.champ === 'salaire')?.fichier;
+    return salaire !== undefined && salaire !== null ? this.typeSalairePropose(Number(salaire)) : typeActuel;
   }
 
   alignerTout(): void {
@@ -167,19 +198,25 @@ export class PaieImportStore {
     }));
   }
 
-  creationComplete(numeroLigne: number): boolean {
-    const saisie = this.creations()[numeroLigne];
-    return !!saisie?.dateNaissance && !!saisie.dateEmbauche && !!saisie.typeSalaire;
+  /** Préremplissage métier du type de salaire : 500 DH et moins = journalier, au-delà = mensuel. */
+  typeSalairePropose(salaire: number): TypeSalaire {
+    return salaire <= 500 ? 'JOURNALIER' : 'MENSUEL';
   }
 
-  creer(numeroLigne: number): void {
+  creationComplete(numeroLigne: number, salaire: number): boolean {
     const saisie = this.creations()[numeroLigne];
-    if (!saisie?.dateNaissance || !saisie.dateEmbauche || !saisie.typeSalaire) {
+    return !!saisie?.dateNaissance && !!saisie.dateEmbauche && !!(saisie.typeSalaire ?? this.typeSalairePropose(salaire));
+  }
+
+  creer(numeroLigne: number, salaire: number): void {
+    const saisie = this.creations()[numeroLigne];
+    const typeSalaire = saisie?.typeSalaire ?? this.typeSalairePropose(salaire);
+    if (!saisie?.dateNaissance || !saisie.dateEmbauche) {
       return;
     }
     this.corriger({
       aligner: [],
-      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire: saisie.typeSalaire }]
+      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire }]
     });
   }
 
@@ -239,7 +276,7 @@ export class PaieImportStore {
     }
     this.etat.set('import');
     this.envoyer(
-      this.paieService.importer(fichier, mois, this.departsConfirmes()),
+      this.paieService.importer(fichier, mois, this.departsConfirmes(), this.confirmerSalaireZero()),
       (bilan) => {
         this.bilan.set(bilan);
         this.etat.set('termine');
@@ -261,6 +298,9 @@ export class PaieImportStore {
   /** Nouvelle analyse : les départs gardent ce que l'utilisateur a déjà saisi, les nouveaux sont cochés d'office. */
   private recevoir(analyse: PaieImportAnalyse): void {
     this.analyse.set(analyse);
+    if (!analyse.avertissements.some((a) => a.codeAvertissement === 'SALAIRE_ZERO')) {
+      this.confirmerSalaireZero.set(false);
+    }
     const precedents = this.departs();
     const departs: Record<number, DepartSaisi> = {};
     for (const depart of analyse.departs) {

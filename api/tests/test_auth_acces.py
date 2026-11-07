@@ -324,6 +324,29 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/employees/regroupements"): {"EMPLOYEE_READ"},
     ("POST", "/employees/sorties-mois"): {"EMPLOYEE_READ"},
     ("POST", "/employees/import"): {"EMPLOYEE_IMPORT"},
+    ("POST", "/paie"): {"PAIE_WRITE"},
+    ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE"},
+    ("GET", "/paie/{identifiant}"): {"PAIE_READ"},
+    ("POST", "/paie/search"): {"PAIE_READ"},
+    ("GET", "/paie/periodes"): {"PAIE_READ"},
+    ("POST", "/paie/periodes/search"): {"PAIE_READ"},
+    ("POST", "/paie/chantiers/search"): {"PAIE_READ"},
+    ("GET", "/paie/chantiers"): {"PAIE_READ"},
+    ("GET", "/paie/materiel"): {"PAIE_READ"},
+    ("POST", "/paie/analytique"): {"PAIE_READ"},
+    ("POST", "/paie/options/chantiers"): {"PAIE_READ"},
+    ("POST", "/paie/options/equipes"): {"PAIE_READ"},
+    ("POST", "/paie/effectifs"): {"PAIE_READ"},
+    ("GET", "/paie/employes/{employee_id}/parcours"): {"PAIE_READ"},
+    ("POST", "/paie/export"): {"PAIE_EXPORT"},
+    ("POST", "/paie/report/pdf"): {"PAIE_EXPORT"},
+    ("GET", "/paie/import/modele"): {"PAIE_IMPORT"},
+    ("POST", "/paie/import"): {"PAIE_IMPORT"},
+    ("DELETE", "/paie/{identifiant}"): {"PAIE_DELETE"},
+}
+REQUIS_CUMULATIFS: dict[tuple[str, str], set[str]] = {
+    ("POST", "/paie/import/analyse"): {"PAIE_IMPORT", "PAIE_READ"},
+    ("POST", "/paie/import/corrections"): {"PAIE_IMPORT", "PAIE_READ", "EMPLOYEE_WRITE"},
 }
 
 
@@ -338,13 +361,13 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
-    declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES)
-    assert len(declarees) == 48
+    declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
+    assert len(declarees) == 69
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 
 def test_les_autorites_exigees_correspondent_a_la_table_de_reference(plateforme: Plateforme) -> None:
-    exigees = set().union(*EXIGENCES.values())
+    exigees = set().union(*EXIGENCES.values(), *REQUIS_CUMULATIFS.values())
     with plateforme.moteur.connect() as c:
         connues = set(c.execute(text("SELECT code FROM permission")).scalars())
     assert exigees <= connues
@@ -357,7 +380,7 @@ def _appeler(p: Plateforme, methode: str, chemin: str, jeton: str) -> int:
 
 def test_chaque_route_refuse_une_identite_sans_l_autorite_exigee(plateforme: Plateforme) -> None:
     sans_droit = _jeton(plateforme, {"AUCUN_DROIT"})
-    for (methode, chemin), _exigees in EXIGENCES.items():
+    for (methode, chemin), _exigees in (EXIGENCES | REQUIS_CUMULATIFS).items():
         assert _appeler(plateforme, methode, chemin, sans_droit) == 403, (methode, chemin)
 
 
@@ -366,6 +389,13 @@ def test_chaque_route_accepte_chacune_des_autorites_alternatives(plateforme: Pla
         for autorite in exigees:
             statut = _appeler(plateforme, methode, chemin, _jeton(plateforme, {autorite}))
             assert statut not in (401, 403), (methode, chemin, autorite, statut)
+
+
+def test_import_paie_exige_les_permissions_cumulatives(plateforme: Plateforme) -> None:
+    for (methode, chemin), droits in REQUIS_CUMULATIFS.items():
+        assert _appeler(plateforme, methode, chemin, _jeton(plateforme, droits)) not in (401, 403)
+        for droit in droits:
+            assert _appeler(plateforme, methode, chemin, _jeton(plateforme, {droit})) == 403
 
 
 def test_une_autre_permission_du_meme_domaine_ne_donne_pas_acces(plateforme: Plateforme) -> None:

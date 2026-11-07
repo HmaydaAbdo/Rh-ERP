@@ -15,6 +15,11 @@
 | Table | `paie` |
 | Endpoints | `/paie`, `/paie/search`, `/paie/periodes`, `/paie/chantiers`, `/paie/materiel`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
+La migration FastAPI est en cours sous `api/src/staport/domains/paie/`. Son contrat HTTP emploie
+`AAAA-MM` pour les mois et restitue les résumés des références dans les réponses de bulletin.
+La route PDF Python répond `503` jusqu'à preuve de parité avec le rapport Spring ; voir
+[Migration Paie](../../site/docs/migration/paie.md).
+
 La façade `IPaieService.findByEmployeeIdAndPeriode` fournit aux domaines consommateurs le bulletin exact d'un employé pour un
 mois. Heures supplémentaires l'utilise pour vérifier l'existence de la paie et lire l'observation STC/sortie ; le marqueur et
 les montants sont ensuite conservés dans son propre instantané.
@@ -77,7 +82,7 @@ règles détaillées suivent dans les sections suivantes.
 - **Un bulletin par employé et par mois** (`uk_paie_employee_periode`) ; il garde l'affectation de **son** mois (chantier,
   équipe, fonction) : une mutation ultérieure ne réécrit pas l'historique.
 - **Import.** L'assistant analyse le fichier, signale les problèmes (chantiers clôturés avec « Rouvrir le chantier »,
-  fonctions inconnues créées, fiches à corriger, départs à confirmer), applique les corrections des fiches puis importe.
+  références Fonction/Chantier/Équipe inconnues, fiches à corriger, départs à confirmer), applique les corrections des fiches puis importe.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/README.md)).
 - **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
   d'export, formulaire de bulletin, parcours d'un employé.
@@ -267,6 +272,13 @@ permission et `conventions/security.md` pour la conception du RBAC.
 
 ## Import Excel (assistant)
 
+Les étapes ci-dessous décrivent l'assistant Spring encore utilisé. Pour la migration Python,
+la décision métier plus récente automatise le nom, la fonction, le chantier et l'équipe renseignée
+de la fiche lors de l'import ; un salaire différent passe toujours par le wizard, un salaire nul
+demande une confirmation distincte, et aucun départ ou STC n'est déduit automatiquement.
+Le [suivi du portage](../../site/docs/migration/paie.md) distingue ce qui est déjà implémenté de ce
+qui reste à prouver avant la bascule.
+
 L'import se fait dans un **assistant** qui ne laisse passer qu'un fichier **en accord avec les fiches des employés** :
 la fiche porte l'état du dernier mois de paie, et un import la tient à jour (voir
 [ADR 0010](../adr/0010-employe-etat-du-dernier-mois-de-paie.md)). Le serveur ne garde rien entre les étapes : chacune
@@ -290,8 +302,9 @@ reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `Lecteu
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 
 Le **type de salaire** (mensuel ou journalier) n'est pas dans le fichier : quand le salaire change, l'assistant propose
-celui de la fiche ; il est obligatoire si la fiche n'en a pas encore. Une **fonction** inconnue du référentiel n'est
-pas une erreur : elle est créée quand une fiche est mise à jour ou créée avec elle (mêmes règles qu'un import Function).
+celui de la fiche ; il est obligatoire si la fiche n'en a pas encore. Pour la migration Python,
+une **fonction**, un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent
+l'import ; aucune de ces références n'est créée par la Paie.
 Les corrections demandent `PAIE_IMPORT`, `EMPLOYEE_WRITE` et `PAIE_READ` ; sans `EMPLOYEE_WRITE`, l'assistant n'offre que de
 corriger le fichier.
 

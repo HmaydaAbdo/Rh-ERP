@@ -1,5 +1,19 @@
 # Routine de travail et de livraison
 
+## Boucle Ralph : poursuivre jusqu'à la fin
+
+Pour une réalisation, répéter : lire l'état et les preuves, choisir la prochaine étape autorisée,
+agir, vérifier, corriger et poursuivre. Ne pas terminer le tour après une étape intermédiaire
+simplement parce qu'elle est testée, documentée, commitée ou poussée. Après une interruption,
+reprendre depuis Git, le code et Jira ; ne pas recommencer ce qui est déjà prouvé. Communiquer
+pendant le travail et mettre Jira à jour avant toute interruption.
+
+La boucle s'achève lorsque tous les critères demandés sont satisfaits et vérifiés. Elle ne peut
+être suspendue que devant un blocage concret non résoluble dans le périmètre, ou une décision ou
+autorisation indispensable non encore donnée. Présenter alors les faits, les démarches tentées et
+la décision nécessaire. Les règles de sécurité, production, CI et livraison continuent de
+s'appliquer ; la persistance n'accorde aucune autorisation supplémentaire.
+
 Cette routine s'applique à chaque tâche du dépôt, dans le périmètre demandé par le propriétaire.
 Elle organise l'application des conventions ; les exigences détaillées restent dans leurs documents
 de référence. `AGENTS.md` en est la porte d'entrée.

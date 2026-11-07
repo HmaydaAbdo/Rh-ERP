@@ -18,7 +18,7 @@ décimaux; une période est une chaîne `aaaa-MM`.
 | `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
 | `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
 | `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
-| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, deux décimales au plus | Salaire de base ou tarif journalier selon la situation. L'import refuse zéro. |
+| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, deux décimales au plus | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
 | `primeRoulageOrdinaire` | `number|null`, mêmes bornes et précision que le salaire | Prime ordinaire. |
 | `primeRoulageDimanche` | `number|null`, mêmes bornes et précision que le salaire | Prime dimanche. |
 | `salaireTotal` | `number`, obligatoire, mêmes bornes et précision que le salaire | Total repris tel quel, jamais calculé par le backend. |
@@ -83,11 +83,60 @@ Sans bulletin sur le mois choisi : KPI à zéro, coût moyen absent et répartit
 `evolution` du périmètre reste disponible. Le mois précédent est `null` s'il ne contient aucun
 bulletin sur ce périmètre.
 
+## Export Excel et regroupement d'équipes
+
+L'export Python doit reproduire le classeur Spring à options identiques : feuille globale, feuilles
+par chantier, feuilles par équipe, totaux, mois précédent et tableaux matériel. Le regroupement est
+une option de présentation de l'export, jamais une modification de la base. Une configuration peut
+déclarer un libellé de groupe et plusieurs codes d'équipes sources, par exemple `CH+OP = [CH, OP]`.
+Toutes les lignes des équipes sources sont alors agrégées sous ce seul libellé dans chaque feuille,
+et tous les calculs (effectif, masse, totaux et comparaisons) utilisent le groupe agrégé. Sans option
+de regroupement, le résultat reste strictement celui du Spring.
+La requête accepte aussi `materiel: {libelle: quantité}` pour reproduire les lignes matériel du
+classeur; une quantité absente reste vide et n'est jamais inventée.
+
 ## Assistant d’import
+
+### Règle de synchronisation
+
+La création d'un bulletin et la mise à jour de la fiche Employé sont deux opérations distinctes.
+Pour un employé reconnu par son CIN, la ligne importée alimente le snapshot historique du bulletin
+(fonction, chantier, équipe et valeurs de la période). Si aucun bulletin n'existe pour le couple
+`employé + période`, le bulletin est créé sans écraser un autre bulletin.
+
+Le salaire n'est soumis au wizard que lorsqu'il diffère du salaire courant de la fiche Employé,
+lequel correspond normalement au salaire de la dernière paie. S'il est identique, l'import passe
+automatiquement. S'il diffère, le wizard propose la valeur et déduit le type : `salaire <= 500` →
+`JOURNALIER`, `salaire > 500` → `MENSUEL`; la fiche n'est alignée qu'après confirmation.
+
+Un bulletin déjà présent pour le même employé et la même période n'est jamais écrasé automatiquement.
+Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
+Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
+
+Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenche un avertissement
+bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
+0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
+`salaireMensuel`, `primeRoulageOrdinaire`,
+`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, avec au plus deux décimales et une
+borne maximale de `99 999 999,99`. Toute erreur de cellule doit identifier la ligne Excel, le nom
+exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
+salaires et primes n'est pas un contrat suffisant.
 
 Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serveur relit le fichier à
 chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.
+
+Le contrat HTTP FastAPI du wizard utilise `multipart/form-data` sur les trois étapes : `file` et
+`periode` sont des champs du formulaire; `/import/corrections` reçoit également `corrections` comme
+texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, dateNaissance,
+dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
+identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
+de correction exige `PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`; l'analyse exige `PAIE_IMPORT` et
+`PAIE_READ`. Les contrôles de contrat et les preuves de parité restent consignés dans KAN-226.
+
+Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois lignes d'en-tête) :
+`Nom & prénom`, `Fonction`, `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`,
+`Total`, `Observation`, `Chantier`, `Équipe`.
 
 | Contrat | Champs et types | Description |
 |---|---|---|
