@@ -420,7 +420,8 @@ def enregistrer(
         chantiers, equipes, fonctions = ids(chantierIds), ids(equipeIds), ids(fonctionIds)
         demande = mois(periode)
         async with fabrique()() as session:
-            retenus = await contexte().paies.effectifs(session, _criteres(None, chantiers, equipes, fonctions), demande)
+            tous = await contexte().paies.effectifs(session, _criteres(None, chantiers, equipes, fonctions))
+        retenus = [m for m in tous if demande is None or m.periode == demande]
         return {
             "mois": [
                 {

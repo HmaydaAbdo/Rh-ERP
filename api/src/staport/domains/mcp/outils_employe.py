@@ -205,7 +205,9 @@ def enregistrer(
             statut=statut_api,
         )
         async with fabrique()() as session:
-            resultats = await contexte().employees.rechercher(session, criteres, Pagination(page, limite, ordre))
+            resultats = await contexte().employees.rechercher(
+                session, criteres, Pagination(page, limite, ordre), voit_paie
+            )
         fiches = [_fiche(e, voit_paie) for e in resultats.content]
         parametres = parametres_url(chantiers, equipes, fonctions)
         if nom_recherche:
