@@ -25,3 +25,10 @@ nombre de sorties du mois, leur répartition par motif (`NON_PRECISE` quand aucu
 donnée est la source du futur calcul automatique des STC et du suivi des abandons de poste ; elle est affichée dans un module
 **Sorties** de la barre latérale (`/sorties`, permission `EMPLOYEE_READ`), distinct des vues des employés parce que le domaine
 va s'enrichir. L'écran assemble le sélecteur de mois et le tableau du socle partagé.
+
+## Import Excel : statuts (parité Spring, KAN-226)
+
+`POST /employees/import` répond `400` avec le rapport (`totalLignes`, `crees: 0`, `ignores`, `lignesIgnorees`) dès qu'une ligne
+est rejetée (import atomique), et `200` quand tout est créé. Un fichier illisible, vide ou de moins de six colonnes répond `400`
+avec le message Spring (`Fichier Excel illisible : …`, `Fichier vide.`, `Format de fichier invalide : 6 colonnes attendues (…), N
+trouvée(s).`) au lieu d'un `500`. Preuve : `api/tests/test_employee.py`.
