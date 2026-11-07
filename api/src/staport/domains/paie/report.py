@@ -56,19 +56,6 @@ class ServiceRapportPaie:
         )
         conditions_evolution = _conditions(_periodes_recentes(requete.periode, 12), requete)
         est_stc = func.lower(func.btrim(Paie.observation, " \t\n\r\f\v")).in_(["stc", "sortie"])
-        q_evolution = (
-            select(
-                Paie.periode,
-                func.coalesce(func.sum(Paie.salaire_total), Decimal(0)),
-                func.count(Paie.id),
-                func.coalesce(func.sum(case((est_stc, 1), else_=0)), 0),
-                func.coalesce(func.sum(case((est_stc, Paie.salaire_total), else_=Decimal(0))), Decimal(0)),
-            )
-            .join(Employee, Employee.id == Paie.employee_id)
-            .where(*conditions_evolution)
-            .group_by(Paie.periode)
-            .order_by(Paie.periode)
-        )
         q_evolution_chantier = (
             select(
                 Paie.chantier_id,
@@ -88,10 +75,6 @@ class ServiceRapportPaie:
                 list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
-            evolution_brute = cast(
-                list[tuple[int, Decimal, int, int, Decimal]],
-                [tuple(row) for row in (await session.execute(q_evolution)).all()],
-            )
             evolution_chantiers_brute = cast(
                 list[tuple[int, int, Decimal, int, int, Decimal]],
                 [tuple(row) for row in (await session.execute(q_evolution_chantier)).all()],
@@ -100,12 +83,21 @@ class ServiceRapportPaie:
         lignes_precedentes = [ligne for ligne in lignes if ligne[0].periode == int(periode_precedente.replace("-", ""))]
         if not lignes_courantes:
             raise AucunePaiePeriode(requete.periode)
-        evolution = [PointEvolution(*ligne) for ligne in evolution_brute]
+        cumul_global: dict[int, PointEvolution] = {}
         evolution_chantiers: dict[int, list[PointEvolution]] = {}
         for chantier_id, periode, masse, effectif, stc, montant_stc in evolution_chantiers_brute:
             evolution_chantiers.setdefault(chantier_id, []).append(
                 PointEvolution(periode, masse, effectif, stc, montant_stc)
             )
+            precedent = cumul_global.get(periode)
+            cumul_global[periode] = PointEvolution(
+                periode,
+                masse + (precedent.masse if precedent else Decimal(0)),
+                effectif + (precedent.effectif if precedent else 0),
+                stc + (precedent.stc if precedent else 0),
+                montant_stc + (precedent.montant_stc if precedent else Decimal(0)),
+            )
+        evolution = [cumul_global[periode] for periode in sorted(cumul_global)]
         html = self._html(requete, lignes_courantes, lignes_precedentes, evolution, evolution_chantiers)
         return BytesIO(await rendre_pdf(html, self._ressources))
 
