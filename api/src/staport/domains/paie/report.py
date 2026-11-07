@@ -183,19 +183,17 @@ class ServiceRapportPaie:
             lignes_chantier_precedentes = [ligne for ligne in lignes_precedentes or [] if ligne[2].code == code]
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
             regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
-            pages.append(
-                (
-                    f"CHANTIER : {identifiant}",
-                    f'<div class="titre-chapitre">{escape(f"CHANTIER : {identifiant}")}</div>'
-                    f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
-                    + (
-                        f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
-                        if evolution_chantiers and chantier.id in evolution_chantiers
-                        else ""
-                    ),
+            bloc_chantier = (
+                f'<div class="titre-chapitre">{escape(f"CHANTIER : {identifiant}")}</div>'
+                f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
+                + (
+                    f'<div class="graphique">{_graphique_evolution(evolution_chantiers[chantier.id])}</div>'
+                    if evolution_chantiers and chantier.id in evolution_chantiers
+                    else ""
                 )
             )
             if choix or regroupements:
+                pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
                 pages.append(
                     (
                         f"CHANTIER : {identifiant}",
@@ -204,6 +202,7 @@ class ServiceRapportPaie:
                     )
                 )
             else:
+                pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
                 for graphique in _graphiques_fonctions(lignes_chantier):
                     pages.append(
                         (
