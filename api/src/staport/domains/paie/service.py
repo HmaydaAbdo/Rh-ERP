@@ -14,6 +14,7 @@ from staport.domains.common.schemas import Page, creer_page
 from staport.domains.employee.models import Employee, EmployeeStatut
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
+from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
 from staport.domains.parametre.service import ServiceParametre
 
 from . import repository
@@ -156,6 +157,7 @@ class ServicePaie:
             for k, v in r.model_dump(exclude={"version", "employee_id", "periode"}).items():
                 setattr(x, k, v)
             await s.flush()
+            await ecouteur_heures_supp.paie_modifiee(s, x.id, x.observation)
             return rep((await repository.fiches(s, [x]))[0])
 
     async def _verifier_references(
@@ -179,6 +181,7 @@ class ServicePaie:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION", TypeOperation.DELETE, "Paie", i)
         async with s.begin(), action:
             x = await self._obtenir(s, i)
+            await ecouteur_heures_supp.suppression_demandee(s, [x.id])
             await s.delete(x)
             try:
                 await s.flush()
@@ -194,6 +197,7 @@ class ServicePaie:
             groupe = await repository.groupe(s, criteres)
             if len(groupe) != nombre_attendu:
                 raise PaieGroupeModifie(len(groupe), nombre_attendu)
+            await ecouteur_heures_supp.suppression_demandee(s, [bulletin.id for bulletin in groupe])
             for bulletin in groupe:
                 await s.delete(bulletin)
             await s.flush()

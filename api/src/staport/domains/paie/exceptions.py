@@ -57,3 +57,9 @@ class AucunePaiePeriode(ErreurMetier):
 
     def __init__(self, periode: str) -> None:
         super().__init__(f"Aucun bulletin de paie pour la période {periode} : aucun rapport à générer.")
+
+
+class PaieLiee(ErreurMetier):
+    """Bulletin encore référencé par des heures supplémentaires (HTTP 409, comme `PaieLieeException`)."""
+
+    statut = HTTPStatus.CONFLICT

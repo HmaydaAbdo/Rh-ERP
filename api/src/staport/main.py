@@ -32,6 +32,7 @@ from staport.domains.equipe import audit as _historique_equipe  # noqa: F401  # 
 from staport.domains.equipe import router as routes_equipe
 from staport.domains.function import audit as _historique_function  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.function import router as routes_function
+from staport.domains.heuresupp import router as routes_heuresupp
 from staport.domains.mcp.serveur import CHEMIN as CHEMIN_MCP
 from staport.domains.mcp.serveur import creer_serveur
 from staport.domains.paie import audit as _historique_paie  # noqa: F401  # pyright: ignore[reportUnusedImport]
@@ -144,6 +145,7 @@ def creer_app(
             routes_chantier.chantiers,
             routes_employee.employees,
             routes_paie.paies,
+            routes_heuresupp.heures_supp,
         ):
             app.include_router(routeur)
         if application_mcp is not None:
