@@ -91,6 +91,10 @@ def reponse(requete: Request, statut: HTTPStatus, message: str) -> JSONResponse:
     return JSONResponse(status_code=statut.value, content=corps.model_dump(mode="json"))
 
 
+def _corps_json(requete: Request) -> bool:
+    return requete.headers.get("content-type", "").startswith("application/json")
+
+
 def _message_validation(erreur: RequestValidationError) -> str:
     """`champ : message`, séparés par une virgule, comme `MethodArgumentNotValidException` côté Spring."""
     parties: list[str] = []
@@ -137,10 +141,11 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
             return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
         for d in erreurs:
             if d["loc"][-1:] == ("periode",):
+                # Heures supp : `YearMonth` d'un corps JSON mal formé → corps illisible côté Spring.
+                if d["type"] != "missing" and requete.url.path.startswith("/heures-supp/") and _corps_json(requete):
+                    return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
                 if d["type"] == "missing":
-                    if requete.headers.get("content-type", "").startswith(
-                        "application/json"
-                    ):  # DTO : Spring le contrôle
+                    if _corps_json(requete):  # DTO : Spring le contrôle
                         return reponse(
                             requete,
                             HTTPStatus.BAD_REQUEST,

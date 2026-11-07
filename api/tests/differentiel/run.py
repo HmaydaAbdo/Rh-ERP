@@ -10,7 +10,13 @@ import sys
 
 from .harnais import Ecart, Rapport, rejouer
 
-SCENARIOS = ["scenarios_modeles", "scenarios_referentiels", "scenarios_paie_import", "scenarios_paie_sorties"]
+SCENARIOS = [
+    "scenarios_modeles",
+    "scenarios_referentiels",
+    "scenarios_paie_import",
+    "scenarios_paie_sorties",
+    "scenarios_heures_supp",
+]
 
 
 def main(filtres: list[str]) -> int:
