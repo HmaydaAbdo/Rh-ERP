@@ -57,6 +57,10 @@ class PaieSuppression(ModeleApi):
     supprimes: int
 
 
+class PaieRestauration(ModeleApi):
+    restaures: int
+
+
 class PaieEmployeeResume(ModeleApi):
     id: int
     nom_prenom: str

@@ -1,9 +1,11 @@
 from decimal import Decimal
 from itertools import pairwise
+from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.audit.api import instantanes_suppression
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.optimiste import verifier_version
@@ -18,7 +20,13 @@ from . import repository
 from .analytique import construire_analytique
 from .cartes import chantiers as construire_chantiers
 from .cartes import periodes as construire_periodes
-from .exceptions import PaieDejaExistante, PaieGroupeModifie, PaieIntrouvable, PeriodeObligatoire
+from .exceptions import (
+    PaieDejaExistante,
+    PaieGroupeModifie,
+    PaieGroupeRestaurationConflit,
+    PaieIntrouvable,
+    PeriodeObligatoire,
+)
 from .models import Paie
 from .periode import afficher_periode
 from .schemas import (
@@ -63,6 +71,23 @@ def rep(ligne: tuple[Paie, Employee, Fonction, Chantier, Equipe | None]) -> Paie
         salaire_total=paie.salaire_total,
         observation=paie.observation,
     )
+
+
+CHAMPS_RESTAURES = (
+    "employee_id",
+    "periode",
+    "fonction_id",
+    "chantier_id",
+    "equipe_id",
+    "nombre_jours_travailles",
+    "jours_recuperation_ouvrable",
+    "jours_recuperation_dimanche",
+    "salaire_mensuel",
+    "prime_roulage_ordinaire",
+    "prime_roulage_dimanche",
+    "salaire_total",
+    "observation",
+)
 
 
 def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str, object]:
@@ -146,6 +171,42 @@ class ServicePaie:
             await s.flush()
             cible.nombre_elements = len(groupe)
             return len(groupe)
+
+    async def restaurer_groupe(self, s: AsyncSession, identifiant_entree: int) -> int:
+        action = self._auditeur.auditer(s, "PAIE_RESTAURATION_GROUPE", TypeOperation.CREATE, "Paie")
+        async with s.begin(), action as cible:
+            cible.perimetre = {"entreeAuditSourceId": identifiant_entree}
+            instantanes = await instantanes_suppression(s, identifiant_entree, "PAIE_SUPPRESSION_GROUPE", "Paie")
+            conflits = await self._conflits_restauration(s, instantanes)
+            if conflits:
+                raise PaieGroupeRestaurationConflit(conflits)
+            bulletins = [Paie(**{champ: x[champ] for champ in CHAMPS_RESTAURES}) for x in instantanes]
+            s.add_all(bulletins)
+            try:
+                await s.flush()
+            except IntegrityError as e:
+                raise PaieGroupeRestaurationConflit(1) from e
+            cible.nombre_elements = len(bulletins)
+            return len(bulletins)
+
+    async def _conflits_restauration(self, s: AsyncSession, instantanes: list[dict[str, Any]]) -> int:
+        couples = [(x["employee_id"], x["periode"]) for x in instantanes]
+        conflits = await repository.couples_existants(s, set(couples)) + (len(couples) - len(set(couples)))
+        employes = await repository.ids_existants(s, Employee, {x["employee_id"] for x in instantanes})
+        fonctions = await repository.ids_existants(s, Fonction, {x["fonction_id"] for x in instantanes})
+        chantiers = await repository.ids_existants(s, Chantier, {x["chantier_id"] for x in instantanes})
+        equipes = await repository.ids_existants(
+            s, Equipe, {x["equipe_id"] for x in instantanes if x["equipe_id"] is not None}
+        )
+        for x in instantanes:
+            if (
+                x["employee_id"] not in employes
+                or x["fonction_id"] not in fonctions
+                or x["chantier_id"] not in chantiers
+                or (x["equipe_id"] is not None and x["equipe_id"] not in equipes)
+            ):
+                conflits += 1
+        return conflits
 
     async def periodes(self, s: AsyncSession) -> list[PaiePeriodeResume]:
         async with s.begin():

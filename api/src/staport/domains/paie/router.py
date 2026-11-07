@@ -31,6 +31,7 @@ from .schemas import (
     PaieRapportRequete,
     PaieRecherche,
     PaieReponse,
+    PaieRestauration,
     PaiesPage,
     PaieSuppression,
     PaieSuppressionGroupeRequete,
@@ -201,6 +202,15 @@ async def supprimer_groupe(
     return PaieSuppression(
         supprimes=await contexte.paies.supprimer_groupe(session, corps.criteres, corps.nombre_attendu)
     )
+
+
+@paies.post(
+    "/restauration/{identifiant_entree}",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(exiger("PAIE_RESTORE"))],
+)
+async def restaurer_groupe(identifiant_entree: int, session: Session, contexte: Contexte) -> PaieRestauration:
+    return PaieRestauration(restaures=await contexte.paies.restaurer_groupe(session, identifiant_entree))
 
 
 @paies.delete(

@@ -147,3 +147,122 @@ def test_suppression_de_groupe_exige_paie_purge(
 
     assert reponse.status_code == 403
     assert _compte(plateforme, jeu.chantier) == 3
+
+
+def _entree_suppression(plateforme: Plateforme) -> int:
+    with plateforme.moteur.connect() as c:
+        return c.execute(
+            text("SELECT id FROM audit_journal WHERE action = 'PAIE_SUPPRESSION_GROUPE' ORDER BY id DESC LIMIT 1")
+        ).scalar_one()
+
+
+def _supprimer_puis_entree(plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu) -> int:
+    assert _supprimer(plateforme, entetes, jeu, 3).status_code == 200
+    return _entree_suppression(plateforme)
+
+
+def test_restauration_recree_le_groupe_depuis_l_audit(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    entetes = _entetes(connecter)
+    entree = _supprimer_puis_entree(plateforme, entetes, jeu)
+
+    reponse = plateforme.client.post(f"/paie/restauration/{entree}", headers=entetes)
+
+    assert reponse.status_code == 201, reponse.text
+    assert reponse.json() == {"restaures": 3}
+    with plateforme.moteur.connect() as c:
+        lignes = c.execute(
+            text(
+                "SELECT employee_id, periode, salaire_total, id FROM paie WHERE chantier_id = :c ORDER BY employee_id"
+            ),
+            {"c": jeu.chantier},
+        ).all()
+        journal = (
+            c.execute(
+                text(
+                    "SELECT nombre_elements, perimetre, type_operation FROM audit_journal "
+                    "WHERE action = 'PAIE_RESTAURATION_GROUPE' ORDER BY id DESC LIMIT 1"
+                )
+            )
+            .mappings()
+            .one()
+        )
+    assert [(x[0], x[1], str(x[2])) for x in lignes] == [(e, PERIODE, "100.00") for e in sorted(jeu.employes)]
+    assert set(jeu.bulletins).isdisjoint({x[3] for x in lignes}), "les bulletins reçoivent de nouveaux identifiants"
+    assert journal["nombre_elements"] == 3
+    assert journal["type_operation"] == "CREATE"
+    assert journal["perimetre"] == {"entreeAuditSourceId": entree}
+
+
+def test_restauration_refuse_tout_si_un_bulletin_existe_deja(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    entetes = _entetes(connecter)
+    entree = _supprimer_puis_entree(plateforme, entetes, jeu)
+    assert plateforme.client.post(f"/paie/restauration/{entree}", headers=entetes).status_code == 201
+
+    reponse = plateforme.client.post(f"/paie/restauration/{entree}", headers=entetes)
+
+    assert reponse.status_code == 409
+    assert reponse.json()["message"] == (
+        "Restauration refusée : 3 conflit(s) employé/mois ou référence manquante. Aucun bulletin n'a été restauré."
+    )
+    assert _compte(plateforme, jeu.chantier) == 3
+
+
+def test_restauration_refuse_tout_si_une_reference_a_disparu(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    entetes = _entetes(connecter)
+    entree = _supprimer_puis_entree(plateforme, entetes, jeu)
+    with plateforme.moteur.begin() as c:
+        c.execute(text("DELETE FROM employe WHERE id = :e"), {"e": jeu.employes[0]})
+
+    reponse = plateforme.client.post(f"/paie/restauration/{entree}", headers=entetes)
+
+    assert reponse.status_code == 409
+    assert "1 conflit(s)" in reponse.json()["message"]
+    assert _compte(plateforme, jeu.chantier) == 0, "atomique : aucun des trois bulletins n'est restauré"
+
+
+def test_restauration_refuse_une_entree_qui_n_est_pas_une_suppression_de_groupe(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    entetes = _entetes(connecter)
+    with plateforme.moteur.connect() as c:
+        autre = c.execute(
+            text("SELECT id FROM audit_journal WHERE action <> 'PAIE_SUPPRESSION_GROUPE' LIMIT 1")
+        ).scalar_one()
+
+    reponse = plateforme.client.post(f"/paie/restauration/{autre}", headers=entetes)
+
+    assert reponse.status_code == 409
+    assert reponse.json()["message"] == (
+        f"L'entrée d'audit {autre} ne correspond pas à une suppression de groupe restaurable."
+    )
+    assert _compte(plateforme, jeu.chantier) == 3
+
+
+def test_restauration_d_une_entree_inconnue_est_introuvable(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]]
+) -> None:
+    reponse = plateforme.client.post("/paie/restauration/999999999", headers=_entetes(connecter))
+
+    assert reponse.status_code == 404
+
+
+def test_restauration_exige_paie_restore(
+    plateforme: Plateforme,
+    connecter: Callable[[str, str], dict[str, Any]],
+    creer_utilisateur: Callable[..., tuple[int, str]],
+    jeu: Jeu,
+) -> None:
+    nom = f"sans-restore-{uuid.uuid4().hex[:8]}"
+    _, mot_de_passe = creer_utilisateur(roles=("SYSTEM_ADMIN",), refusees=("PAIE_RESTORE",), username=nom)
+    entree = _supprimer_puis_entree(plateforme, _entetes(connecter), jeu)
+
+    reponse = plateforme.client.post(f"/paie/restauration/{entree}", headers=_entetes(connecter, (nom, mot_de_passe)))
+
+    assert reponse.status_code == 403
+    assert _compte(plateforme, jeu.chantier) == 0
