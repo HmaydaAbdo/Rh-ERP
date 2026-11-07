@@ -55,18 +55,19 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "ÉQUIPE : CH + OP" in html
     assert '<div class="graphique">' in html and "<svg" in html
     assert "Masse salariale (DH)" in html
+    assert "Masse salariale par équipe (DH)" in html
     assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
-    assert "Page 1 / 3" in html and "Page 3 / 3" in html
+    assert "Page 1 / 4" in html and "Page 4 / 4" in html
     filtre = PaieRapportRequete(periode="2026-10", nom_prenom="Ali%", sans_vue_ensemble=True)
     html_filtre = rendre(filtre, lignes)
     assert "Périmètre du rapport" in html_filtre
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "Synthèse de la paie" not in html_filtre
-    assert "Page 1 / 2" in html_filtre and "Page 2 / 2" in html_filtre
+    assert "Page 1 / 3" in html_filtre and "Page 3 / 3" in html_filtre
 
     lignes_nombreuses: list[tuple[Any, Any, Any, Any, Any]] = [
         (paie, SimpleNamespace(nom_prenom=f"Employé {i}", cin=f"CIN{i}"), chantier, equipe, fonction)
@@ -75,7 +76,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     ]
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
-    assert "Page 4 / 4" in html_nombreux
+    assert "Page 5 / 5" in html_nombreux
     assert html_nombreux.count("<thead><tr>") == 1
 
 
