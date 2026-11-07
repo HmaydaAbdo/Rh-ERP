@@ -138,6 +138,14 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
         for d in erreurs:
             if d["loc"][-1:] == ("periode",):
                 if d["type"] == "missing":
+                    if requete.headers.get("content-type", "").startswith(
+                        "application/json"
+                    ):  # DTO : Spring le contrôle
+                        return reponse(
+                            requete,
+                            HTTPStatus.BAD_REQUEST,
+                            "Période obligatoire, format attendu aaaa-MM (ex. 2026-08).",
+                        )
                     return reponse(requete, HTTPStatus.BAD_REQUEST, "Paramètre obligatoire absent : periode.")
                 return reponse(
                     requete,

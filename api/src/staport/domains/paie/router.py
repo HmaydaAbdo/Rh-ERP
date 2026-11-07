@@ -12,7 +12,7 @@ from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
 from .materiel import tableaux_materiel
-from .periode import PeriodePaie
+from .periode import PeriodePaie, afficher_periode
 from .repository import TRIS_PUBLICS
 from .schemas import (
     PaieAnalytiqueReponse,
@@ -120,7 +120,7 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
     return StreamingResponse(
         contenu,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="Paie_Export_{corps.periode}.xlsx"'},
+        headers={"Content-Disposition": f"attachment; filename=Paie_Export_{afficher_periode(corps.periode)}.xlsx"},
     )
 
 

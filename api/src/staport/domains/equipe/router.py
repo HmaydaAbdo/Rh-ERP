@@ -16,7 +16,7 @@ from .schemas import (
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
-PageEquipes = Annotated[Pagination, Depends(pagination("code", frozenset({"code", "libelle", "version"})))]
+PageEquipes = Annotated[Pagination, Depends(pagination("code", frozenset({"id", "code", "libelle", "version"})))]
 equipes = APIRouter(prefix="/equipes", tags=["Équipes"])
 
 

@@ -16,7 +16,7 @@ from .schemas import (
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
-PageFonctions = Annotated[Pagination, Depends(pagination("libelle", frozenset({"libelle", "version"})))]
+PageFonctions = Annotated[Pagination, Depends(pagination("libelle", frozenset({"id", "libelle", "version"})))]
 fonctions = APIRouter(prefix="/functions", tags=["Fonctions"])
 
 
