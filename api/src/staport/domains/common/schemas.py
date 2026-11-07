@@ -1,10 +1,11 @@
 """Schémas partagés : base des DTO (JSON en camelCase, comme Spring) et page de résultats (`VIA_DTO` de Spring Data)."""
 
 import re
+from decimal import Decimal
 from math import ceil
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, PlainSerializer
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
@@ -28,6 +29,10 @@ NonVide = Annotated[str, AfterValidator(_non_vide)]
 
 Courriel = Annotated[str, AfterValidator(_non_vide), AfterValidator(_courriel)]
 """Équivalent de `@NotBlank @Email` (syntaxe tolérante comme Hibernate Validator : `local@domaine`)."""
+
+
+Nombre = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
+"""Décimal exact en Python, nombre JSON sur HTTP comme Jackson (Pydantic sérialise `Decimal` en chaîne par défaut)."""
 
 
 class ModeleApi(BaseModel):

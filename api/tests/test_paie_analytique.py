@@ -40,11 +40,11 @@ def test_analyse_courant_precedent_groupes_qualite_et_historique() -> None:
     json = resultat.model_dump(mode="json", by_alias=True)
 
     assert json["periode"] == "2027-01"
-    assert json["kpis"]["masse"] == "600.00"
+    assert json["kpis"]["masse"] == 600.0
     assert json["kpis"]["effectif"] == 2
     assert json["kpis"]["stc"] == 1
-    assert json["kpis"]["stcMontant"] == "600.00"
-    assert json["moisPrecedent"]["masse"] == "100.00"
+    assert json["kpis"]["stcMontant"] == 600.0
+    assert json["moisPrecedent"]["masse"] == 100.0
     assert [x["periode"] for x in json["evolution"]] == ["2026-12", "2027-01", "2027-02"]
     assert len(json["parChantier"]) == 2
     assert len(json["parEquipe"]) == 2
@@ -109,7 +109,7 @@ def test_route_analytique_agrege_les_bulletins_du_mois(plateforme: Plateforme, c
         contenu = reponse.json()
         assert contenu["kpis"]["effectif"] == 1
         assert contenu["kpis"]["stc"] == 1
-        assert contenu["kpis"]["masse"] == "600.00"
+        assert contenu["kpis"]["masse"] == 600.0
         assert contenu["parChantier"][0]["code"] == "TEST-ANA"
     finally:
         with plateforme.moteur.begin() as connexion:

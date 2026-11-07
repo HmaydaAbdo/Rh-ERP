@@ -1,11 +1,10 @@
 from datetime import date
-from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated
 
 from pydantic import Field, model_validator
 
-from staport.domains.common.schemas import ModeleApi, NonVide, Page
+from staport.domains.common.schemas import ModeleApi, Nombre, NonVide, Page
 
 from .models import EmployeeStatut, TypeSalaire
 
@@ -18,7 +17,7 @@ class EmployeeCreationRequete(ModeleApi):
     fonction_id: int
     chantier_id: int | None
     equipe_id: int | None = None
-    salaire: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    salaire: Nombre | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
     type_salaire: TypeSalaire | None = None
 
     @model_validator(mode="after")
@@ -65,7 +64,7 @@ class EmployeeReponse(ModeleApi):
     fonction_id: int
     chantier_id: int | None
     equipe_id: int | None
-    salaire: Decimal | None
+    salaire: Nombre | None
     type_salaire: TypeSalaire | None
     statut: EmployeeStatut
 
@@ -89,8 +88,8 @@ class EmployeeAnalytiqueReponse(ModeleApi):
     effectif: int
     actifs: int
     inactifs: int
-    age_moyen: Decimal | None
-    anciennete_moyenne: Decimal | None
+    age_moyen: Nombre | None
+    anciennete_moyenne: Nombre | None
     embauches_douze_mois: int
     par_age: list[TrancheReponse]
     par_anciennete: list[TrancheReponse]

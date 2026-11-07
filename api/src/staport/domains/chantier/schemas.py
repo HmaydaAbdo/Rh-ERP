@@ -1,9 +1,8 @@
-from decimal import Decimal
 from typing import Annotated
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, NonVide, Page
+from staport.domains.common.schemas import ModeleApi, Nombre, NonVide, Page
 
 from .models import NatureChantier
 
@@ -14,8 +13,8 @@ class ChantierCreationRequete(ModeleApi):
     nom: Annotated[str | None, Field(max_length=255)] = None
     nature: NatureChantier
     localisation: Annotated[str | None, Field(max_length=2048)] = None
-    latitude: Decimal | None = Field(default=None, ge=-90, le=90, max_digits=11, decimal_places=8)
-    longitude: Decimal | None = Field(default=None, ge=-180, le=180, max_digits=11, decimal_places=8)
+    latitude: Nombre | None = Field(default=None, ge=-90, le=90, max_digits=11, decimal_places=8)
+    longitude: Nombre | None = Field(default=None, ge=-180, le=180, max_digits=11, decimal_places=8)
     afficher_sur_carte: bool
 
 
@@ -46,8 +45,8 @@ class ChantierReponse(ModeleApi):
     actif: bool
     nature: NatureChantier | None
     localisation: str | None
-    latitude: Decimal | None
-    longitude: Decimal | None
+    latitude: Nombre | None
+    longitude: Nombre | None
     afficher_sur_carte: bool
 
 
@@ -58,8 +57,8 @@ class ChantierCarteReponse(ModeleApi):
     nom: str | None
     nature: NatureChantier | None
     localisation: str | None
-    latitude: Decimal | None
-    longitude: Decimal | None
+    latitude: Nombre | None
+    longitude: Nombre | None
 
 
 class SynchronisationReponse(ModeleApi):
