@@ -13,6 +13,7 @@ from staport.platform.base_de_donnees import session_requete
 
 from .materiel import tableaux_materiel
 from .periode import PeriodePaie
+from .repository import TRIS_PUBLICS
 from .schemas import (
     PaieAnalytiqueReponse,
     PaieChantierOption,
@@ -42,9 +43,7 @@ from .schemas import (
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
-PagePaie = Annotated[
-    Pagination, Depends(pagination("periode", frozenset({"periode", "salaire_total", "id", "version"})))
-]
+PagePaie = Annotated[Pagination, Depends(pagination("periode", TRIS_PUBLICS))]
 PageChantiers = Annotated[Pagination, Depends(pagination("code", frozenset({"code"})))]
 PageEquipes = Annotated[Pagination, Depends(pagination("libelle", frozenset({"libelle", "code"})))]
 paies = APIRouter(prefix="/paie", tags=["Paie"])
