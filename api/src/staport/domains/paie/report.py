@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -280,36 +281,35 @@ class ServiceRapportPaie:
                             + f'<div class="graphique">{graphique_section}</div>',
                         )
                     )
-                    for index_graphique, graphique in enumerate(
-                        _graphiques_fonctions([detail.valeurs for detail in section])
-                    ):
-                        titre_repartition = (
-                            "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
-                        )
-                        pages.append(
-                            (
-                                niveau_section,
-                                _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>',
-                            )
-                        )
+                    graphiques_fonctions = _graphiques_fonctions([detail.valeurs for detail in section])
                     if not est_regroupe:
                         equipe_section = section[0].valeurs[3]
                         if equipe_section is not None:
                             graphique_materiel = _graphique_materiel(code, equipe_section.code, requete.materiel or {})
                             if graphique_materiel:
-                                pages.append(
-                                    (
-                                        niveau_section,
-                                        graphique_materiel.replace(
-                                            '<div class="titre-chapitre">Parc matériel —',
-                                            '<div class="titre-section rubrique-titre">4. Parc matériel —',
-                                            1,
-                                        ),
-                                    )
+                                graphique_materiel = graphique_materiel.replace(
+                                    '<div class="titre-chapitre">Parc matériel —',
+                                    '<div class="titre-section rubrique-titre">4. Parc matériel —',
+                                    1,
                                 )
-                pages.extend(
-                    (niveau_section, recap) for recap in _recaps_fonctions([detail.valeurs for detail in section])
-                )
+                    materiel_avec_fonctions = (
+                        graphique_materiel is not None
+                        and len(graphiques_fonctions) == 1
+                        and _hauteur_svg(graphiques_fonctions[0]) + _hauteur_svg(graphique_materiel) + 36 <= 487
+                    )
+                    for index_graphique, graphique in enumerate(graphiques_fonctions):
+                        titre_repartition = (
+                            "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
+                        )
+                        contenu_graphique = (
+                            _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>'
+                        )
+                        if materiel_avec_fonctions:
+                            contenu_graphique += cast(str, graphique_materiel)
+                        pages.append((niveau_section, contenu_graphique))
+                    if graphique_materiel and not materiel_avec_fonctions:
+                        pages.append((niveau_section, graphique_materiel))
+                pages_recap = _recaps_fonctions([detail.valeurs for detail in section])
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -355,8 +355,15 @@ class ServiceRapportPaie:
                     )
                 # 495 pt utiles, moins la marge de sécurité et les blocs présents sur la page.
                 # Mêmes hauteurs de base que RapportPageModelBuilder et rapport.css.
-                budget_initial = 495 - 8 - (24 if index_section == 0 else 0) - 24 - 40
+                titre_chantier_hauteur = 24 if index_section == 0 and libelle is not None else 0
+                budget_initial_sans_recap = 495 - 8 - titre_chantier_hauteur - 18 - 40
+                budget_initial_avec_recap = (
+                    487 - titre_chantier_hauteur - 18 - 40 - pages_recap[-1][1] if pages_recap else 0
+                )
+                fusionner_recap_details = bool(hauteurs) and budget_initial_avec_recap >= hauteurs[0]
+                budget_initial = budget_initial_avec_recap if fusionner_recap_details else budget_initial_sans_recap
                 budget_suite = 495 - 8 - 8
+                pages_details: list[tuple[str, str]] = []
                 for index_page, tranche in enumerate(decouper_lignes(hauteurs, budget_initial, budget_suite)):
                     contenu_page: list[str] = []
                     if index_page == 0:
@@ -367,7 +374,14 @@ class ServiceRapportPaie:
                     contenu_page.append(_table_entete(avec_equipe=avec_equipe, avec_entete=index_page == 0))
                     contenu_page.extend(lignes_html[i] for i in tranche)
                     contenu_page.append("</tbody></table>")
-                    pages.append((niveau_section, "".join(contenu_page)))
+                    pages_details.append((niveau_section, "".join(contenu_page)))
+                if fusionner_recap_details and pages_details and pages_recap:
+                    pages.extend((niveau_section, recap) for recap, _hauteur in pages_recap[:-1])
+                    pages.append((niveau_section, pages_recap[-1][0] + pages_details[0][1]))
+                    pages.extend(pages_details[1:])
+                else:
+                    pages.extend((niveau_section, recap) for recap, _hauteur in pages_recap)
+                    pages.extend(pages_details)
         for numero, (niveau, contenu_html) in enumerate(pages, start=1):
             lignes_niveau = min(compter_lignes(niveau, self.LARGEUR_NIVEAU_ENTETE, 9, True), 4)
             niveau = escape(niveau)
@@ -399,6 +413,14 @@ def _identite(label: str, valeur: str) -> str:
 
 def _rubrique(numero: int, titre: str) -> str:
     return f'<div class="titre-section rubrique-titre">{numero}. {escape(titre)}</div>'
+
+
+def _hauteur_svg(contenu: str) -> float:
+    dimension = re.search(r'<svg\b[^>]*\bwidth="([\d.]+)pt"[^>]*\bheight="([\d.]+)pt"', contenu)
+    if dimension is None:
+        raise ValueError("Le graphique du rapport doit exposer ses dimensions SVG en points")
+    largeur, hauteur = (float(valeur) for valeur in dimension.groups())
+    return 802 * hauteur / largeur
 
 
 def _romain(valeur: int) -> str:
@@ -524,7 +546,9 @@ def _graphique_materiel(chantier_code: str, equipe_code: str, nombres: dict[str,
     )
 
 
-def _recaps_fonctions(lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]) -> list[str]:
+def _recaps_fonctions(
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> list[tuple[str, float]]:
     par_fonction: dict[str, list[Paie]] = {}
     for paie, _, _, _, fonction in lignes:
         par_fonction.setdefault(fonction.libelle, []).append(paie)
@@ -538,30 +562,34 @@ def _recaps_fonctions(lignes: list[tuple[Paie, Employee, Chantier, Equipe | None
             f'<td class="stc-personnes">{_entier(mesures.stc)}</td>'
             f'<td class="stc-montant">{_montant(mesures.montant_stc)}</td></tr>'
         )
-    tranches: list[list[str]] = []
+    tranches: list[tuple[list[str], float]] = []
     tranche: list[str] = []
     hauteur_tranche = 34
     for ligne, (fonction, _bulletins) in zip(lignes_recaps, fonctions_triees, strict=True):
         hauteur_ligne = max(15, compter_lignes(fonction, 151, 9) * 11 + 1)
         if tranche and hauteur_tranche + hauteur_ligne > 487:
-            tranches.append(tranche)
+            tranches.append((tranche, hauteur_tranche))
             tranche = []
             hauteur_tranche = 34
         tranche.append(ligne)
         hauteur_tranche += hauteur_ligne
     if tranche:
-        tranches.append(tranche)
-    pages: list[str] = []
-    for index, tranche in enumerate(tranches):
+        tranches.append((tranche, hauteur_tranche))
+    pages: list[tuple[str, float]] = []
+    for index, (tranche, hauteur) in enumerate(tranches):
         titre = "Répartition par fonction" if index == 0 else "Répartition par fonction (suite)"
         pages.append(
-            '<div class="recap-row"><div class="recap-bloc derniere">'
-            f'<div class="titre-recap">{titre}</div>'
-            '<table class="recap fonction"><col class="libelle"><col class="effectif">'
-            '<col class="stc-personnes"><col class="stc-montant">'
-            "<thead><tr><th>FONCTION</th><th>BULLETINS</th><th>STC (PERS.)</th><th>STC (DH)</th></tr></thead><tbody>"
-            + "".join(tranche)
-            + "</tbody></table></div></div>"
+            (
+                '<div class="recap-row"><div class="recap-bloc derniere">'
+                f'<div class="titre-recap">{titre}</div>'
+                '<table class="recap fonction"><col class="libelle"><col class="effectif">'
+                '<col class="stc-personnes"><col class="stc-montant">'
+                "<thead><tr><th>FONCTION</th><th>BULLETINS</th>"
+                "<th>STC (PERS.)</th><th>STC (DH)</th></tr></thead><tbody>"
+                + "".join(tranche)
+                + "</tbody></table></div></div>",
+                hauteur,
+            )
         )
     return pages
 
