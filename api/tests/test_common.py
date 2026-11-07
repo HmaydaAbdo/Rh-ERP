@@ -150,3 +150,18 @@ def test_les_types_pydantic_frequents_sont_traduits_et_sans_anglais() -> None:
         assert detail["type"] == attendu and attendu in types_traduits()
         assert message_fr(detail) != detail["msg"]
     assert message_fr({"type": "inconnu", "msg": "original"}) == "original"
+
+
+def test_nombre_reste_decimal_en_python_et_devient_un_nombre_json() -> None:
+    """Jackson écrit un `BigDecimal` comme un nombre ; Pydantic écrit un `Decimal` en chaîne sans cette annotation."""
+    from decimal import Decimal
+
+    from staport.domains.common.schemas import ModeleApi, Nombre
+
+    class Montant(ModeleApi):
+        total: Nombre
+
+    montant = Montant(total=Decimal("600.50"))
+
+    assert montant.model_dump()["total"] == Decimal("600.50")
+    assert montant.model_dump(mode="json", by_alias=True) == {"total": 600.5}

@@ -1,25 +1,24 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, Page
+from staport.domains.common.schemas import ModeleApi, Nombre, Page
 
 from .periode import PeriodePaie
 
-DeuxDecimales = Annotated[Decimal, Field(ge=0, max_digits=10, decimal_places=2)]
+DeuxDecimales = Annotated[Nombre, Field(ge=0, max_digits=10, decimal_places=2)]
 
 
 class PaieChampsBulletin(ModeleApi):
     fonction_id: int
     chantier_id: int
     equipe_id: int | None = None
-    nombre_jours_travailles: Annotated[Decimal, Field(ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_ouvrable: Annotated[Decimal | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_dimanche: Annotated[Decimal | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
+    nombre_jours_travailles: Annotated[Nombre, Field(ge=0, max_digits=5, decimal_places=2)]
+    jours_recuperation_ouvrable: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
+    jours_recuperation_dimanche: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
     salaire_mensuel: DeuxDecimales
     prime_roulage_ordinaire: DeuxDecimales | None = None
     prime_roulage_dimanche: DeuxDecimales | None = None
@@ -92,13 +91,13 @@ class PaieReponse(ModeleApi):
     fonction: PaieFonctionResume
     chantier: PaieChantierResume
     equipe: PaieEquipeResume | None
-    nombre_jours_travailles: Decimal
-    jours_recuperation_ouvrable: Decimal | None
-    jours_recuperation_dimanche: Decimal | None
-    salaire_mensuel: Decimal
-    prime_roulage_ordinaire: Decimal | None
-    prime_roulage_dimanche: Decimal | None
-    salaire_total: Decimal
+    nombre_jours_travailles: Nombre
+    jours_recuperation_ouvrable: Nombre | None
+    jours_recuperation_dimanche: Nombre | None
+    salaire_mensuel: Nombre
+    prime_roulage_ordinaire: Nombre | None
+    prime_roulage_dimanche: Nombre | None
+    salaire_total: Nombre
     observation: str | None
 
 
@@ -109,17 +108,17 @@ class PaiePeriodeResume(ModeleApi):
     periode: PeriodePaie
     nombre_bulletins: int
     nombre_chantiers: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaiePeriodeComparaison(ModeleApi):
     periode: PeriodePaie
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieEquipePeriode(ModeleApi):
@@ -127,9 +126,9 @@ class PaieEquipePeriode(ModeleApi):
     code: str
     libelle: str
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
     mois_precedent: PaiePeriodeComparaison | None
 
 
@@ -138,9 +137,9 @@ class PaieChantierPeriode(ModeleApi):
     code: str
     libelle: str | None
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
     mois_precedent: PaiePeriodeComparaison | None
     sans_equipe_mois_precedent: PaiePeriodeComparaison | None
     equipes: list[PaieEquipePeriode]
@@ -154,55 +153,55 @@ class PaieMaterielTableau(ModeleApi):
 
 
 class PaieKpi(ModeleApi):
-    masse: Decimal
+    masse: Nombre
     effectif: int
-    cout_moyen: Decimal | None
+    cout_moyen: Nombre | None
     nombre_chantiers: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieChantierMasse(ModeleApi):
     id: int
     code: str
     libelle: str | None
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieEquipeMasse(ModeleApi):
     id: int | None
     code: str | None
     libelle: str | None
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieFonctionMasse(ModeleApi):
     id: int
     libelle: str
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieTranche(ModeleApi):
-    min: Decimal
-    max: Decimal | None
+    min: Nombre
+    max: Nombre | None
     effectif: int
 
 
 class PaieEvolution(ModeleApi):
     periode: PeriodePaie
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieQualite(ModeleApi):
@@ -264,9 +263,9 @@ class PaieParcoursMois(ModeleApi):
     fonction_id: int
     chantier_id: int
     equipe_id: int | None
-    nombre_jours_travailles: Decimal
-    salaire_mensuel: Decimal
-    salaire_total: Decimal
+    nombre_jours_travailles: Nombre
+    salaire_mensuel: Nombre
+    salaire_total: Nombre
     observation: str | None
 
 
@@ -281,8 +280,8 @@ class PaieParcoursEvenement(ModeleApi):
 class PaieParcoursReponse(ModeleApi):
     employe_id: int
     mois_payes: int
-    total_percu: Decimal
-    jours_travailles: Decimal
+    total_percu: Nombre
+    jours_travailles: Nombre
     premier_mois: PeriodePaie | None
     dernier_mois: PeriodePaie | None
     mois: list[PaieParcoursMois]
@@ -393,7 +392,7 @@ class PaieImportCinInconnu(ModeleApi):
     fonction: str | None
     chantier: str | None
     equipe: str | None
-    salaire: Decimal | None
+    salaire: Nombre | None
 
 
 class PaieImportChamp(ModeleApi):
