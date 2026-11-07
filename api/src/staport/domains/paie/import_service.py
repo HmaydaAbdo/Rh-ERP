@@ -33,7 +33,10 @@ from .schemas import (
 
 
 def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
-    classeur = load_workbook(BytesIO(contenu), read_only=True, data_only=True)
+    try:
+        classeur = load_workbook(BytesIO(contenu), read_only=True, data_only=True)
+    except Exception as erreur:  # openpyxl lève des types variés (BadZipFile, InvalidFileException…)
+        raise ErreurImportPaie(f"Fichier Excel illisible : {erreur}") from erreur
     try:
         if not classeur.worksheets:
             return []
@@ -116,10 +119,18 @@ class ServiceImportPaie:
         sortie.seek(0)
         return sortie
 
+    @staticmethod
+    def _verifier_mois(dernier: int | None, periode: int) -> None:
+        """`verifierMois` de Spring : seul le mois suivant le dernier importé est accepté, avant lecture du fichier."""
+        if dernier is not None and periode != mois_suivant(dernier):
+            raise ErreurImportPaie(
+                f"Seul le mois {afficher_periode(mois_suivant(dernier))} peut être importé : la paie s'importe mois "
+                f"après mois et le dernier mois importé est {afficher_periode(dernier)}."
+            )
+
     async def analyser(self, session: AsyncSession, contenu: bytes, periode: int) -> PaieImportAnalyse:
         erreurs: list[PaieImportErreur] = []
         avertissements: list[PaieImportErreur] = []
-        lignes = lire_lignes_paie(contenu)
         cins_vus: set[str] = set()
         clotures: dict[int, PaieImportChantierCloture] = {}
         cin_inconnus: list[PaieImportCinInconnu] = []
@@ -139,7 +150,8 @@ class ServiceImportPaie:
             fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
             chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
-        periode_invalide = dernier_mois is not None and periode != mois_suivant(dernier_mois)
+        self._verifier_mois(dernier_mois, periode)
+        lignes = lire_lignes_paie(contenu)
         for numero, ligne in lignes:
             nom = str(ligne[0]).strip() if len(ligne) > 0 and ligne[0] is not None else None
             fonction = str(ligne[1]).strip() if len(ligne) > 1 and ligne[1] is not None else None
@@ -160,11 +172,14 @@ class ServiceImportPaie:
                         )
                     )
             if cin is None or cin.upper() not in employees:
-                erreurs.append(
-                    PaieImportErreur(
-                        numero_ligne=numero, cin=cin, nom_prenom=nom, champ="cin", valeur=cin, raison="CIN inconnu"
+                if (
+                    not cin
+                ):  # un CIN renseigné mais inconnu n'est pas une erreur : il rejoint `cinInconnus` (comme Spring)
+                    erreurs.append(
+                        PaieImportErreur(
+                            numero_ligne=numero, cin=cin, nom_prenom=nom, champ="cin", valeur=cin, raison="CIN inconnu"
+                        )
                     )
-                )
                 if cin:
                     salaire_brut = ligne[6] if len(ligne) > 6 else None
                     try:
@@ -339,7 +354,9 @@ class ServiceImportPaie:
                     salaire_fichier = None
                 if salaire_fichier is not None and employe.salaire != salaire_fichier:
                     champs.append(
-                        PaieImportChamp(champ="salaire", base=str(employe.salaire), fichier=str(salaire_fichier))
+                        PaieImportChamp(
+                            champ="salaire", base=str(employe.salaire), fichier=str(float(salaire_fichier))
+                        )  # Spring : Double.toString
                     )
                 if champs:
                     ecarts.append(
@@ -479,11 +496,6 @@ class ServiceImportPaie:
                                 type_salaire_propose="JOURNALIER" if nombre <= 500 else "MENSUEL",
                             )
                         )
-        if periode_invalide and dernier_mois is not None and not any(erreur.champ == "bulletin" for erreur in erreurs):
-            raise ErreurImportPaie(
-                f"Seul le mois {afficher_periode(mois_suivant(dernier_mois))} peut être importé : "
-                f"le dernier mois de paie est {afficher_periode(dernier_mois)}."
-            )
         departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
         return PaieImportAnalyse(
             periode=periode,
@@ -517,14 +529,14 @@ class ServiceImportPaie:
                 or (avertissement.code_avertissement == "EQUIPE_VIDE" and avertissement.employe_id in decisions)
             )
         ]
-        if (
-            analyse.erreurs
-            or analyse.ecarts
-            or analyse.cin_inconnus
-            or analyse.chantiers_clotures
-            or avertissements_non_confirmes
-        ):
-            raise ErreurImportPaie("L'analyse n'est pas prête : corrigez les erreurs et confirmez les avertissements.")
+        if analyse.erreurs or analyse.ecarts or analyse.cin_inconnus or analyse.chantiers_clotures:
+            raise ErreurImportPaie(
+                f"Le fichier n'est pas prêt : {len(analyse.erreurs)} erreur(s), {len(analyse.chantiers_clotures)} "
+                f"chantier(s) clôturé(s), {len(analyse.cin_inconnus)} CIN inconnu(s), {len(analyse.ecarts)} "
+                "écart(s) avec les fiches. Réanalysez-le."
+            )
+        if avertissements_non_confirmes:
+            raise ErreurImportPaie("L'analyse n'est pas prête : confirmez les avertissements.")
         proposes = {depart.employe_id for depart in analyse.departs}
         for depart in departs_confirmes.departs:
             if depart.employe_id not in proposes:
@@ -539,6 +551,7 @@ class ServiceImportPaie:
             chantiers = {x.code.strip().upper(): x.id for x in (await session.execute(select(Chantier))).scalars()}
             equipes = {x.code.strip().upper(): x.id for x in (await session.execute(select(Equipe))).scalars()}
             employes_mis_a_jour = 0
+            retours_cins = {retour.cin.strip().upper() for retour in analyse.retours}
             for _, ligne in lignes:
                 cin = str(ligne[2]).strip().upper()
                 employe = employees[cin]
@@ -554,6 +567,13 @@ class ServiceImportPaie:
                 chantier_id = chantiers[str(ligne[11]).strip().upper()]
                 nom = str(ligne[0]).strip() if ligne[0] is not None else ""
                 changement = False
+                if cin in retours_cins:  # statut et affectations changent sans requête intercalée (contrainte V33)
+                    if employe.type_salaire is None:
+                        raise ErreurImportPaie(
+                            f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
+                        )
+                    employe.salaire = Decimal(str(ligne[6] or 0))
+                    employe.statut = EmployeeStatut.ACTIF
                 if nom and employe.nom_prenom != nom:
                     employe.nom_prenom = nom
                     changement = True
@@ -596,16 +616,6 @@ class ServiceImportPaie:
                         observation=str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
                     )
                 )
-            lignes_par_cin = {str(ligne[2]).strip().upper(): ligne for _, ligne in lignes}
-            for retour in analyse.retours:
-                employe = employees[retour.cin.strip().upper()]
-                if employe.type_salaire is None:
-                    raise ErreurImportPaie(
-                        f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
-                    )
-                ligne = lignes_par_cin[retour.cin.strip().upper()]
-                employe.salaire = Decimal(str(ligne[6] or 0))
-                employe.statut = EmployeeStatut.ACTIF
             par_id = {x.id: x for x in employees.values()}
             for depart in departs_confirmes.departs:
                 employe = par_id[depart.employe_id]

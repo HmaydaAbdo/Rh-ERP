@@ -95,7 +95,7 @@ async def _verifier_referentiels(url: str) -> None:
                 ("chantier", "chantier introuvable"),
                 ("equipe", "équipe introuvable"),
             }
-            with pytest.raises(ErreurImportPaie, match="L'analyse n'est pas prête"):
+            with pytest.raises(ErreurImportPaie, match="Le fichier n'est pas prêt"):
                 await service.importer(
                     session, _fichier("ABSENTE", "INCONNU", "XYZ"), 202611, False, PaieImportDeparts()
                 )
@@ -111,7 +111,7 @@ async def _verifier_referentiels(url: str) -> None:
             )
             assert corrigee.pret
             assert (await service.importer(session, valide, 202611, False, PaieImportDeparts())).crees == 1
-            with pytest.raises(ErreurImportPaie, match="L'analyse n'est pas prête"):
+            with pytest.raises(ErreurImportPaie, match="Seul le mois 2026-12"):
                 await service.importer(session, valide, 202611, False, PaieImportDeparts())
 
         async with sessions() as session:

@@ -525,8 +525,8 @@ class PaieImportCreationCorrection(ModeleApi):
 
 
 class PaieImportCorrections(ModeleApi):
-    aligner: list[PaieImportAlignement]
-    creer: list[PaieImportCreationCorrection]
+    aligner: list[PaieImportAlignement] = Field(default_factory=list)
+    creer: list[PaieImportCreationCorrection] = Field(default_factory=list)
 
 
 class PaieImportResult(ModeleApi):
