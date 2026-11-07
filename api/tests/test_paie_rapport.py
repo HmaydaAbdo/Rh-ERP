@@ -75,6 +75,10 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<div class="graphique">' in html and "<svg" in html
     assert "Masse salariale (DH)" in html
     assert "Masse salariale par équipe (DH)" in html
+    assert "1. Masse salariale et montants des STC (DH)" in html
+    assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
+    assert "3. Répartition par chantier" in html
+    assert "4. Liste des employés" in html
     assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
@@ -95,7 +99,27 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "Masse salariale par fonction (DH)" in html_equipe
     assert "STC (PERS.)" in html_equipe
+    assert "3. Répartition par fonction" in html_equipe
+    assert "4. Liste des employés" in html_equipe
     assert "Page 10 / 10" in html_equipe
+    chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
+    lignes_materiel = [
+        (paie, employe, chantier_materiel, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
+    ]
+    html_materiel = rendre(
+        PaieRapportRequete(
+            periode="2026-10",
+            equipes_par_chantier={"C168": ["CH"]},
+            materiel={"CAMION CITERNE": 4},
+        ),
+        lignes_materiel,
+        [],
+        None,
+        {1: [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
+        {(1, 1): [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
+    )
+    assert "4. Parc matériel — CAMION" in html_materiel
+    assert "5. Liste des employés" in html_materiel
     chantier_long = SimpleNamespace(id=1, code="CH01", nom="Chantier avec un libellé très long " * 5)
     lignes_longues = [
         (paie, employe, chantier_long, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
