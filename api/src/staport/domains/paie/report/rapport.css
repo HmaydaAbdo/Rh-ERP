@@ -52,6 +52,11 @@ html, body {
     line-height: 14pt;
 }
 
+.graphique svg {
+    width: 100%;
+    height: auto;
+}
+
 /* ================================ PAGE : structure commune ================================ */
 
 .page {

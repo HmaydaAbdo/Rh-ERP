@@ -4,8 +4,9 @@ from decimal import Decimal
 from html import escape
 from io import BytesIO
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
+from matplotlib.figure import Figure
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,12 +110,14 @@ class ServiceRapportPaie:
                 )
             )
         if not requete.sans_vue_ensemble:
+            repartition = _graphique_repartition(par_chantier)
             pages.append(
                 (
                     "GLOBAL",
                     '<div class="titre-chapitre">Synthèse de la paie</div>'
                     f'<div class="perimetre-ligne">Bulletins : {total.effectif} — '
-                    f"Masse salariale : {total.masse:,.2f} DH — STC : {total.stc}</div>",
+                    f"Masse salariale : {total.masse:,.2f} DH — STC : {total.stc}</div>"
+                    f'<div class="graphique">{repartition}</div>',
                 )
             )
         for code, lignes_chantier in sorted(
@@ -211,6 +214,38 @@ def _identite(label: str, valeur: str) -> str:
         '<div class="bloc-identite">'
         f'<div class="label">{escape(label)}</div><div class="valeur">{escape(valeur)}</div></div>'
     )
+
+
+def _graphique_repartition(
+    par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]],
+) -> str:
+    """Rend la répartition de la masse par chantier avec le backend SVG officiel Matplotlib."""
+    elements = sorted(
+        (
+            (lignes[0][2].nom or code, sum((ligne[0].salaire_total for ligne in lignes), Decimal(0)))
+            for code, lignes in par_chantier.items()
+        ),
+        key=lambda element: element[1],
+    )
+    hauteur = max(1.8, 0.34 * len(elements))
+    figure = Figure(figsize=(10.5, hauteur), layout="constrained")
+    axes = cast(Any, figure.subplots())
+    libelles = [libelle for libelle, _ in elements]
+    valeurs = [float(masse) for _, masse in elements]
+    axes.barh(libelles, valeurs, color="#2563EB")
+    axes.set_xlabel("Masse salariale (DH)")
+    axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
+    axes.set_axisbelow(True)
+    for bordure in axes.spines.values():
+        bordure.set_visible(False)
+    axes.tick_params(axis="both", length=0)
+    figure.set_facecolor("white")
+    axes.set_facecolor("white")
+    sortie = BytesIO()
+    cast(Any, figure).savefig(
+        sortie, format="svg", metadata={"Title": "Répartition de la masse salariale par chantier"}
+    )
+    return sortie.getvalue().decode("utf-8")
 
 
 def _filtres_actifs(

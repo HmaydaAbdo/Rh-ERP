@@ -26,6 +26,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "weasyprint==70.0",
     "pillow>=13.0.0",
+    "matplotlib==3.11.2",
 ]
 
 [tool.uv.sources]
