@@ -80,6 +80,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
     assert "3. Répartition par chantier" in html
     assert "4. Liste des employés" in html
+    assert "Masse mois précédent" in html
+    assert '<div class="valeur montant">500 DH</div>' in html
     pages_rapport = html.split('<div class="page">')[1:]
     assert any('table class="recap fonction"' in page and "4. Liste des employés" in page for page in pages_rapport)
     assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
@@ -104,6 +106,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "STC (PERS.)" in html_equipe
     assert "3. Répartition par fonction" in html_equipe
     assert "4. Liste des employés" in html_equipe
+    assert '<div class="label">Masse mois précédent</div><div class="valeur montant"></div>' in html_equipe
     assert "Page 8 / 8" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
