@@ -59,6 +59,7 @@ class ServiceRapportPaie:
         q_evolution_chantier = (
             select(
                 Paie.chantier_id,
+                Paie.equipe_id,
                 Paie.periode,
                 func.coalesce(func.sum(Paie.salaire_total), Decimal(0)),
                 func.count(Paie.id),
@@ -67,8 +68,8 @@ class ServiceRapportPaie:
             )
             .join(Employee, Employee.id == Paie.employee_id)
             .where(*conditions_evolution)
-            .group_by(Paie.chantier_id, Paie.periode)
-            .order_by(Paie.chantier_id, Paie.periode)
+            .group_by(Paie.chantier_id, Paie.equipe_id, Paie.periode)
+            .order_by(Paie.chantier_id, Paie.equipe_id, Paie.periode)
         )
         async with session.begin():
             lignes = cast(
@@ -76,7 +77,7 @@ class ServiceRapportPaie:
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
             evolution_chantiers_brute = cast(
-                list[tuple[int, int, Decimal, int, int, Decimal]],
+                list[tuple[int, int | None, int, Decimal, int, int, Decimal]],
                 [tuple(row) for row in (await session.execute(q_evolution_chantier)).all()],
             )
         lignes_courantes = [ligne for ligne in lignes if ligne[0].periode == int(requete.periode.replace("-", ""))]
@@ -84,21 +85,22 @@ class ServiceRapportPaie:
         if not lignes_courantes:
             raise AucunePaiePeriode(requete.periode)
         cumul_global: dict[int, PointEvolution] = {}
+        cumul_chantiers: dict[tuple[int, int], PointEvolution] = {}
         evolution_chantiers: dict[int, list[PointEvolution]] = {}
-        for chantier_id, periode, masse, effectif, stc, montant_stc in evolution_chantiers_brute:
-            evolution_chantiers.setdefault(chantier_id, []).append(
-                PointEvolution(periode, masse, effectif, stc, montant_stc)
-            )
-            precedent = cumul_global.get(periode)
-            cumul_global[periode] = PointEvolution(
-                periode,
-                masse + (precedent.masse if precedent else Decimal(0)),
-                effectif + (precedent.effectif if precedent else 0),
-                stc + (precedent.stc if precedent else 0),
-                montant_stc + (precedent.montant_stc if precedent else Decimal(0)),
-            )
+        evolution_equipes: dict[tuple[int, int], list[PointEvolution]] = {}
+        for chantier_id, equipe_id, periode, masse, effectif, stc, montant_stc in evolution_chantiers_brute:
+            point = PointEvolution(periode, masse, effectif, stc, montant_stc)
+            if equipe_id is not None:
+                evolution_equipes.setdefault((chantier_id, equipe_id), []).append(point)
+            cle_chantier = chantier_id, periode
+            cumul_chantiers[cle_chantier] = _additionner_points(cumul_chantiers.get(cle_chantier), point)
+            cumul_global[periode] = _additionner_points(cumul_global.get(periode), point)
+        for (chantier_id, _periode), point in sorted(cumul_chantiers.items()):
+            evolution_chantiers.setdefault(chantier_id, []).append(point)
         evolution = [cumul_global[periode] for periode in sorted(cumul_global)]
-        html = self._html(requete, lignes_courantes, lignes_precedentes, evolution, evolution_chantiers)
+        html = self._html(
+            requete, lignes_courantes, lignes_precedentes, evolution, evolution_chantiers, evolution_equipes
+        )
         return BytesIO(await rendre_pdf(html, self._ressources))
 
     def _html(
@@ -108,6 +110,7 @@ class ServiceRapportPaie:
         lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]] | None = None,
         evolution: list[PointEvolution] | None = None,
         evolution_chantiers: dict[int, list[PointEvolution]] | None = None,
+        evolution_equipes: dict[tuple[int, int], list[PointEvolution]] | None = None,
     ) -> str:
         css = (self._ressources / "rapport.css").read_text(encoding="utf-8")
         par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
@@ -196,6 +199,31 @@ class ServiceRapportPaie:
             for index_section, (libelle, section, est_regroupe) in enumerate(sections):
                 titre = f"ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
                 avec_equipe = libelle is None or est_regroupe
+                if libelle is not None and evolution_equipes is not None:
+                    identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
+                    lignes_section_precedentes = [
+                        ligne for ligne in lignes_chantier_precedentes if ligne[0].equipe_id in identifiants_equipes
+                    ]
+                    points_section: dict[int, PointEvolution] = {}
+                    for equipe_id in identifiants_equipes:
+                        if equipe_id is not None:
+                            for point in evolution_equipes.get((chantier.id, equipe_id), []):
+                                points_section[point.periode] = _additionner_points(
+                                    points_section.get(point.periode), point
+                                )
+                    graphique_section = _graphique_evolution([points_section[p] for p in sorted(points_section)])
+                    pages.append(
+                        (
+                            f"CHANTIER : {identifiant}",
+                            f'<div class="titre-chapitre">{escape(titre)}</div>'
+                            + _cartes_kpi(
+                                [detail.valeurs for detail in section],
+                                lignes_section_precedentes,
+                                inclure_chantiers=False,
+                            )
+                            + f'<div class="graphique">{graphique_section}</div>',
+                        )
+                    )
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -355,6 +383,18 @@ def _graphique_evolution(points: list[PointEvolution]) -> str:
     sortie = BytesIO()
     cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": "Évolution de la paie sur douze mois"})
     return sortie.getvalue().decode("utf-8")
+
+
+def _additionner_points(precedent: PointEvolution | None, point: PointEvolution) -> PointEvolution:
+    if precedent is None:
+        return point
+    return PointEvolution(
+        point.periode,
+        precedent.masse + point.masse,
+        precedent.effectif + point.effectif,
+        precedent.stc + point.stc,
+        precedent.montant_stc + point.montant_stc,
+    )
 
 
 def _conditions(periodes: Sequence[str | int], requete: PaieRapportRequete) -> list[ColumnElement[bool]]:

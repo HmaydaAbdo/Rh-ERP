@@ -98,8 +98,8 @@ avec 65 lignes présentes dans le modèle HTML.
 Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
 virgule décimale, tiret pour les valeurs numériques absentes).
 Le prototype contient les cinq KPI globaux (masse, bulletins, chantiers, nombre et montant des STC), leurs comparaisons au mois précédent,
-deux courbes d'évolution globale et par chantier sur les périodes réellement disponibles des douze derniers mois, ainsi que quatre KPI par chantier et une répartition de sa masse salariale par équipe.
-Une seule requête historique groupe les bulletins par chantier et par mois en base, conserve les filtres du rapport et fournit les courbes globales par totalisation des chantiers. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
+deux courbes d'évolution globale, par chantier et par équipe sélectionnée sur les périodes réellement disponibles des douze derniers mois, ainsi que quatre KPI à ces niveaux et une répartition de la masse salariale par équipe.
+Une seule requête historique groupe les bulletins par chantier, équipe et mois en base, conserve les filtres du rapport et fournit les courbes globales et par chantier par totalisation. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
