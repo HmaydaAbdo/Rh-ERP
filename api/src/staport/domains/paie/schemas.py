@@ -251,7 +251,7 @@ class PaieEffectifMois(ModeleApi):
     effectif: int
     effectif_mois_precedent: int | None
     variation: int | None
-    entrees: int
+    entrees: int | None
     plus_payes: int | None
     sorties: int
     mutations: int | None
@@ -260,9 +260,9 @@ class PaieEffectifMois(ModeleApi):
 class PaieParcoursMois(ModeleApi):
     bulletin_id: int
     periode: PeriodePaie
-    fonction_id: int
-    chantier_id: int
-    equipe_id: int | None
+    fonction: str
+    chantier: str
+    equipe: str | None
     nombre_jours_travailles: Nombre
     salaire_mensuel: Nombre
     salaire_total: Nombre
