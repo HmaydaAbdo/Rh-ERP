@@ -80,12 +80,14 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
     assert "3. Répartition par chantier" in html
     assert "4. Liste des employés" in html
+    pages_rapport = html.split('<div class="page">')[1:]
+    assert any('table class="recap fonction"' in page and "4. Liste des employés" in page for page in pages_rapport)
     assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
-    assert "Page 1 / 8" in html and "Page 8 / 8" in html
+    assert "Page 1 / 6" in html and "Page 6 / 6" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "STC (PERS.)" in html
     html_equipe = rendre(
@@ -102,7 +104,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "STC (PERS.)" in html_equipe
     assert "3. Répartition par fonction" in html_equipe
     assert "4. Liste des employés" in html_equipe
-    assert "Page 10 / 10" in html_equipe
+    assert "Page 8 / 8" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
         (paie, employe, chantier_materiel, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -121,6 +123,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     )
     assert "4. Parc matériel — CAMION" in html_materiel
     assert "5. Liste des employés" in html_materiel
+    pages_materiel = html_materiel.split('<div class="page">')[1:]
+    assert any("3. Répartition par fonction" in page and "4. Parc matériel — CAMION" in page for page in pages_materiel)
     chantier_long = SimpleNamespace(id=1, code="CH01", nom="Chantier avec un libellé très long " * 5)
     lignes_longues = [
         (paie, employe, chantier_long, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -136,7 +140,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "I — Vue d'ensemble" not in html_filtre
     assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
-    assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
+    assert "Page 1 / 4" in html_filtre and "Page 4 / 4" in html_filtre
 
     # Le contrat Spring découpe les critères longs avant de générer les pages physiques.
     rapport = cast(Any, report)
@@ -160,7 +164,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     ]
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
-    assert "Page 8 / 8" in html_nombreux
+    assert "Page 7 / 7" in html_nombreux
     assert html_nombreux.count("<thead><tr>") == 2
     assert html_nombreux.count('<table class="recap fonction">') == 1
 
@@ -287,8 +291,8 @@ def test_recap_fonctions_decoupe_selon_la_hauteur_des_libelles() -> None:
     ]
     pages = rapport._recaps_fonctions(lignes)
     assert len(pages) > 1
-    assert sum(page.count("<tr>") - 1 for page in pages) == 45
-    assert "Répartition par fonction (suite)" in pages[1]
+    assert sum(page[0].count("<tr>") - 1 for page in pages) == 45
+    assert "Répartition par fonction (suite)" in pages[1][0]
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
