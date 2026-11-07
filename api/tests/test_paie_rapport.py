@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur
 from staport.domains.employee.models import Employee, EmployeeStatut
+from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 from staport.domains.paie import report
 from staport.domains.paie.models import Paie
@@ -36,9 +37,10 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
     fonction = SimpleNamespace(libelle="Conducteur")
     lignes: list[tuple[Any, Any, Any, Any, Any]] = []
-    for nom, equipe in (("Alice", "CH"), ("Bob", "OP"), ("Claire", "Autre")):
+    for equipe_id, (nom, equipe) in enumerate((("Alice", "CH"), ("Bob", "OP"), ("Claire", "Autre")), start=1):
         paie = SimpleNamespace(
             chantier_id=1,
+            equipe_id=equipe_id,
             salaire_total=Decimal("1000.00"),
             salaire_mensuel=Decimal("1000.00"),
             observation=None,
@@ -49,7 +51,13 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
             prime_roulage_dimanche=None,
         )
         lignes.append(
-            (paie, SimpleNamespace(nom_prenom=nom, cin=nom), chantier, SimpleNamespace(libelle=equipe), fonction)
+            (
+                paie,
+                SimpleNamespace(nom_prenom=nom, cin=nom),
+                chantier,
+                SimpleNamespace(id=equipe_id, libelle=equipe),
+                fonction,
+            )
         )
     requete = PaieRapportRequete(periode="2026-10", regroupements_equipes_par_chantier={"CH01": [["CH", "OP"]]})
     ligne_precedente = (
@@ -73,6 +81,16 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
     assert "Page 1 / 4" in html and "Page 4 / 4" in html
+    html_equipe = rendre(
+        PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
+        lignes,
+        [],
+        None,
+        None,
+        {(1, 1): [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
+    )
+    assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
+    assert "Page 5 / 5" in html_equipe
     filtre = PaieRapportRequete(periode="2026-10", nom_prenom="Ali%", sans_vue_ensemble=True)
     html_filtre = rendre(filtre, lignes)
     assert "Périmètre du rapport" in html_filtre
@@ -126,6 +144,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
     suffixe = uuid4().hex[:10]
     fonction = Fonction(libelle=f"Rapport {suffixe}")
     chantier = Chantier(code=f"R{suffixe}", nom="Chantier rapport")
+    equipe = Equipe(code=f"E{suffixe}", libelle=f"Équipe {suffixe}")
     employe = Employee(
         nom_prenom="Employé rapport",
         cin=f"Q{suffixe}",
@@ -134,10 +153,10 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         fonction_id=0,
         statut=EmployeeStatut.ACTIF,
     )
-    ids: tuple[int, int, int] | None = None
+    ids: tuple[int, int, int, int] | None = None
     try:
         with Session(plateforme.moteur) as session, session.begin():
-            session.add_all([fonction, chantier])
+            session.add_all([fonction, chantier, equipe])
             session.flush()
             employe.fonction_id = fonction.id
             employe.chantier_id = chantier.id
@@ -153,7 +172,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
                         periode=periode,
                         fonction_id=fonction.id,
                         chantier_id=chantier.id,
-                        equipe_id=None,
+                        equipe_id=equipe.id,
                         nombre_jours_travailles=Decimal("1"),
                         salaire_mensuel=salaire,
                         salaire_total=salaire,
@@ -161,7 +180,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
                     )
                 )
             session.flush()
-            ids = fonction.id, chantier.id, employe.id
+            ids = fonction.id, chantier.id, employe.id, equipe.id
 
         assert ids is not None
         htmls: list[str] = []
@@ -185,6 +204,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
                                 nom_prenom="Employé rapport",
                                 cin=f"Q{suffixe}",
                                 chantier_id=ids[1],
+                                equipes_par_chantier={f"R{suffixe}": [f"Équipe {suffixe}"]},
                             ),
                         )
                     ).read()
@@ -194,7 +214,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
         assert len(htmls) == 1
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
-        assert htmls[0].count("12/2025") == 2
+        assert htmls[0].count("12/2025") == 3
         assert "1/2026" not in htmls[0]
         assert "STC / sorties" in htmls[0] and "200" in htmls[0]
     finally:
@@ -202,5 +222,6 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
             with plateforme.moteur.begin() as connection:
                 connection.execute(delete(Paie).where(Paie.employee_id == ids[2]))
                 connection.execute(delete(Employee).where(Employee.id == ids[2]))
+                connection.execute(delete(Equipe).where(Equipe.id == ids[3]))
                 connection.execute(delete(Chantier).where(Chantier.id == ids[1]))
                 connection.execute(delete(Fonction).where(Fonction.id == ids[0]))
