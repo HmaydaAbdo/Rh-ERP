@@ -80,7 +80,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
-    assert "Page 1 / 7" in html and "Page 7 / 7" in html
+    assert "Page 1 / 8" in html and "Page 8 / 8" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "STC (PERS.)" in html
     html_equipe = rendre(
@@ -94,7 +94,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "Masse salariale par fonction (DH)" in html_equipe
-    assert "Page 9 / 9" in html_equipe
+    assert "STC (PERS.)" in html_equipe
+    assert "Page 10 / 10" in html_equipe
     chantier_long = SimpleNamespace(id=1, code="CH01", nom="Chantier avec un libellé très long " * 5)
     lignes_longues = [
         (paie, employe, chantier_long, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -215,6 +216,24 @@ def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
     rapport = cast(Any, report)
     cartes = [("Indicateur", "1", "Écart indisponible " * 30, "compte")]
     assert rapport._hauteur_cartes_kpi(cartes) > 54
+
+
+def test_recap_fonctions_decoupe_selon_la_hauteur_des_libelles() -> None:
+    rapport = cast(Any, report)
+    lignes = [
+        (
+            SimpleNamespace(salaire_total=Decimal("0"), observation=None, chantier_id=1),
+            None,
+            None,
+            None,
+            SimpleNamespace(libelle=f"Fonction métier spécialisée numéro {index:02} " * 2),
+        )
+        for index in range(45)
+    ]
+    pages = rapport._recaps_fonctions(lignes)
+    assert len(pages) > 1
+    assert sum(page.count("<tr>") - 1 for page in pages) == 45
+    assert "Répartition par fonction (suite)" in pages[1]
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
