@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Authentifie, Contexte, exiger
@@ -75,6 +76,15 @@ async def regroupements(
 @employees.post("/sorties-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def sorties_mois(periode: int, session: Session, contexte: Contexte) -> EmployeeSortiesMoisReponse:
     return await contexte.employees.sorties_mois(session, periode)
+
+
+@employees.get("/import/modele", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])
+async def modele_import(contexte: Contexte) -> StreamingResponse:
+    return StreamingResponse(
+        contexte.employees.modele_import(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=Modele_Import_Employes.xlsx"},
+    )
 
 
 @employees.post("/import", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])
