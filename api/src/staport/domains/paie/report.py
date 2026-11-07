@@ -44,6 +44,15 @@ class PointEvolution:
     montant_stc: Decimal
 
 
+@dataclass(frozen=True)
+class PointRepartition:
+    libelle: str
+    masse: Decimal
+    bulletins: int
+    stc: int
+    montant_stc: Decimal
+
+
 class ServiceRapportPaie:
     """Premier pipeline PDF natif Python, avec CSS et polices du rapport Spring embarqués."""
 
@@ -182,7 +191,8 @@ class ServiceRapportPaie:
                     + points_evolution,
                 )
             )
-            for index_graphique, graphique in enumerate(_graphiques_repartition_chantiers(par_chantier)):
+            graphiques_globaux = _graphiques_repartition_chantiers(par_chantier)
+            for index_graphique, graphique in enumerate(graphiques_globaux):
                 titre_repartition = (
                     "Répartition par chantier" if index_graphique == 0 else "Répartition par chantier (suite)"
                 )
@@ -419,17 +429,19 @@ def _romain(valeur: int) -> str:
 def _graphiques_repartition_chantiers(
     par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]],
 ) -> list[str]:
-    elements = sorted(
-        (
-            ((lignes[0][2].nom or code).strip() or code, sum((ligne[0].salaire_total for ligne in lignes), Decimal(0)))
-            for code, lignes in par_chantier.items()
-        ),
-        key=lambda element: element[1],
-        reverse=True,
-    )
+    elements = [
+        _point_repartition((lignes[0][2].nom or code).strip() or code, lignes) for code, lignes in par_chantier.items()
+    ]
+    elements.sort(key=lambda element: element.masse, reverse=True)
+    tranches = _repartir_graphiques(elements, maximum=16)
     return [
-        _graphique_barres(tranche, "Masse salariale par chantier (DH)")
-        for tranche in _repartir_graphiques(elements, maximum=16)
+        _graphique_distribution(
+            tranche,
+            "Masse salariale par chantier (DH)",
+            echelle=elements,
+            part_du_total=True,
+        )
+        for tranche in tranches
     ]
 
 
@@ -450,28 +462,50 @@ def _repartir_graphiques[T](elements: list[T], *, maximum: int) -> list[list[T]]
 def _graphique_equipes(
     lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
 ) -> str:
-    montants: dict[str, Decimal] = {}
-    for paie, _, _, equipe, _ in lignes:
+    par_equipe: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
+    for ligne in lignes:
+        equipe = ligne[3]
         libelle = equipe.libelle.strip() if equipe and equipe.libelle.strip() else "Sans équipe"
-        montants[libelle] = montants.get(libelle, Decimal(0)) + paie.salaire_total
-    elements = sorted(montants.items(), key=lambda element: element[1], reverse=True)
+        par_equipe.setdefault(libelle, []).append(ligne)
+    elements = [_point_repartition(libelle, groupe) for libelle, groupe in par_equipe.items()]
+    elements.sort(key=lambda element: element.masse, reverse=True)
     if len(elements) > 15:
-        elements = [*elements[:15], ("Autres", sum((montant for _, montant in elements[15:]), Decimal(0)))]
-        elements.sort(key=lambda element: element[1], reverse=True)
-    return _graphique_barres(elements, "Masse salariale par équipe (DH)")
+        autres = elements[15:]
+        elements = [
+            *elements[:15],
+            PointRepartition(
+                "Autres",
+                sum((point.masse for point in autres), Decimal(0)),
+                sum(point.bulletins for point in autres),
+                sum(point.stc for point in autres),
+                sum((point.montant_stc for point in autres), Decimal(0)),
+            ),
+        ]
+        elements.sort(key=lambda element: element.masse, reverse=True)
+    return _graphique_distribution(elements, "Masse salariale par équipe (DH)")
 
 
 def _graphiques_fonctions(
     lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
 ) -> list[str]:
-    montants: dict[str, Decimal] = {}
-    for paie, _, _, _, fonction in lignes:
-        montants[fonction.libelle] = montants.get(fonction.libelle, Decimal(0)) + paie.salaire_total
-    elements = sorted(montants.items(), key=lambda element: (-element[1], element[0].casefold()))
+    par_fonction: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
+    for ligne in lignes:
+        par_fonction.setdefault(ligne[4].libelle, []).append(ligne)
+    elements = [_point_repartition(libelle, groupe) for libelle, groupe in par_fonction.items()]
+    elements.sort(key=lambda element: (-element.masse, element.libelle.casefold()))
+    tranches = _repartir_graphiques(elements, maximum=15)
     return [
-        _graphique_barres(tranche, "Masse salariale par fonction (DH)")
-        for tranche in _repartir_graphiques(elements, maximum=15)
+        _graphique_distribution(tranche, "Masse salariale par fonction (DH)", echelle=elements) for tranche in tranches
     ]
+
+
+def _point_repartition(
+    libelle: str,
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> PointRepartition:
+    bulletins = cast(list[BulletinRapport], [ligne[0] for ligne in lignes])
+    mesures = mesurer(bulletins)
+    return PointRepartition(libelle, mesures.masse, mesures.effectif, mesures.stc, mesures.montant_stc)
 
 
 def _graphique_materiel(chantier_code: str, equipe_code: str, nombres: dict[str, int]) -> str | None:
@@ -731,6 +765,81 @@ def _ecart_montant(actuel: Decimal, precedent: Decimal | None) -> str:
     pourcentage = (ecart * Decimal(100) / precedent).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
     signe_pourcentage = "+" if pourcentage > 0 else "\u2212" if pourcentage < 0 else ""
     return f"Écart : {montant} ({signe_pourcentage}{abs(pourcentage):.1f} %)".replace(".", ",")
+
+
+def _graphique_distribution(
+    elements: list[PointRepartition],
+    titre: str,
+    *,
+    echelle: list[PointRepartition] | None = None,
+    part_du_total: bool = False,
+) -> str:
+    series = (
+        ("Masse (DH)", "#2563EB", "masse"),
+        ("Bulletins", "#D97706", "bulletins"),
+        ("STC bul.", "#B91C1C", "stc"),
+        ("STC (DH)", "#0F766E", "montant_stc"),
+    )
+    visibles = [element for element in elements if element.bulletins > 0]
+    points_echelle = echelle or elements
+    hauteur = max(1.8, 0.34 * len(visibles))
+    figure = Figure(figsize=(10.5, hauteur), layout="constrained")
+    axes = cast(Any, figure.subplots())
+    libelles = ["\n".join(decouper(element.libelle, 180, 9.5, True)) for element in visibles]
+    axes.set_yticks(list(range(len(visibles))), labels=libelles)
+    maximum_par_serie: list[Decimal | int] = []
+    for _, _, attribut in series:
+        valeurs = [getattr(point, attribut) for point in points_echelle]
+        if part_du_total:
+            maximum_par_serie.append(sum(valeurs, Decimal(0)))
+        else:
+            maximum_par_serie.append(max(valeurs, default=Decimal(0)))
+    decalages = (-0.30, -0.10, 0.10, 0.30)
+    colonnes_valeurs = (1.13, 1.48, 1.83, 2.22)
+    for numero_serie, (libelle_serie, couleur, attribut) in enumerate(series):
+        denominateur = maximum_par_serie[numero_serie]
+        largeurs: list[float] = []
+        positions: list[float] = []
+        valeurs_affichees: list[str] = []
+        for index, element in enumerate(visibles):
+            valeur = getattr(element, attribut)
+            largeur = float(valeur / denominateur) if denominateur > 0 else 0.0
+            largeurs.append(largeur * 0.8)
+            positions.append(index + decalages[numero_serie])
+            valeurs_affichees.append(_montant(valeur) if "DH" in libelle_serie else _entier(valeur))
+        axes.barh(
+            positions,
+            largeurs,
+            height=0.16,
+            color=couleur,
+            label=libelle_serie,
+        )
+        for position, valeur_affichee in zip(positions, valeurs_affichees, strict=True):
+            axes.text(colonnes_valeurs[numero_serie], position, valeur_affichee, ha="right", va="center", fontsize=7)
+        axes.text(
+            colonnes_valeurs[numero_serie],
+            -0.75,
+            libelle_serie,
+            ha="right",
+            va="center",
+            fontsize=7,
+            fontweight="bold",
+        )
+    axes.set_xlim(0, 2.35)
+    axes.set_ylim(len(visibles) - 0.5, -1.1)
+    axes.set_xticks([])
+    axes.set_title(titre)
+    axes.grid(axis="x", color="#E5E7EB", linewidth=0.6)
+    axes.set_axisbelow(True)
+    for bordure in axes.spines.values():
+        bordure.set_visible(False)
+    axes.tick_params(axis="both", length=0)
+    axes.legend(ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.08), fontsize=7, frameon=False)
+    figure.set_facecolor("white")
+    axes.set_facecolor("white")
+    sortie = BytesIO()
+    cast(Any, figure).savefig(sortie, format="svg", metadata={"Title": titre})
+    return sortie.getvalue().decode("utf-8")
 
 
 def _filtres_actifs(
