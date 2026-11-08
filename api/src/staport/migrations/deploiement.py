@@ -1,27 +1,18 @@
-"""Bascule Flyway V44 vers Alembic, après ``flyway validate`` dans Compose (KAN-219).
+"""Bascule Flyway V44 vers Alembic (KAN-219, KAN-237).
 
-La validation des noms, types et checksums appartient à Flyway. Ce garde empêche
-un ``stamp`` sur une base partielle ou étrangère ; Alembic exécute ensuite les
-migrations et recalcule les droits avec le compte propriétaire du schéma.
+Flyway n'est plus exécuté. Ce garde vérifie lui-même l'historique Flyway (versions, types, succès et sommes de
+contrôle des scripts V1 à V44, voir ``historique_flyway``) et refuse un ``stamp`` sur une base partielle, étrangère ou
+modifiée ; Alembic exécute ensuite les migrations et recalcule les droits avec le compte propriétaire du schéma.
 """
 
 from alembic import command
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Connection, create_engine, text
+from sqlalchemy import create_engine, text
 
+from staport.migrations.historique_flyway import historique_complet
 from staport.platform.configuration import ConfigurationMigration
-
-
-def _historique_flyway_complet(connexion: Connection) -> bool:
-    lignes = connexion.execute(
-        text("SELECT version, type, success FROM flyway_schema_history ORDER BY installed_rank")
-    ).all()
-    return len(lignes) == 44 and all(
-        ligne.version == str(numero) and ligne.type == "SQL" and ligne.success
-        for numero, ligne in enumerate(lignes, start=1)
-    )
 
 
 def _preparer(config: Config, parametres: ConfigurationMigration) -> str:
@@ -38,8 +29,8 @@ def _preparer(config: Config, parametres: ConfigurationMigration) -> str:
                     raise RuntimeError("Historique Alembic vide : restauration requise avant la bascule")
                 return f"Alembic déjà initialisé : {revision}"
             if flyway:
-                if not _historique_flyway_complet(connexion):
-                    raise RuntimeError("Historique Flyway incomplet ou inattendu : stamp refusé")
+                if not historique_complet(connexion):
+                    raise RuntimeError("Historique Flyway incomplet, inattendu ou modifié : stamp refusé")
             else:
                 tables = connexion.execute(
                     text("SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")
