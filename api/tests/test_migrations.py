@@ -20,7 +20,54 @@ from staport.migrations.historique_flyway import sommes_attendues
 RACINE = Path(__file__).resolve().parent.parent
 SCRIPTS_V44 = list((RACINE / "src" / "staport" / "migrations" / "flyway_v44").glob("V*.sql"))
 # Sommes de contrôle enregistrées par Flyway sur la base d'origine (flyway_schema_history, V1 à V3).
-SOMMES_FLYWAY_REELLES = [-238928879, 1637160539, 164349915]
+# Sommes de contrôle enregistrées par Flyway sur la base d'origine (V1 à V44) : un script figé modifié, même d'un
+# commentaire, change sa somme et fait refuser l'estampillage (KAN-240 : V20 modifié par un renommage en bloc).
+SOMMES_FLYWAY_REELLES = [
+    -238928879,
+    1637160539,
+    164349915,
+    678096492,
+    -1103216252,
+    553115352,
+    -1537015298,
+    -445241616,
+    -1558136517,
+    267216204,
+    1662625209,
+    -830745142,
+    127936828,
+    674522724,
+    -780372567,
+    -2133275086,
+    -1290831328,
+    980775875,
+    -1515690794,
+    166664622,
+    -1405659830,
+    -1383921563,
+    -1813513043,
+    -1218458979,
+    584603305,
+    -1514755796,
+    -258836298,
+    -1911377105,
+    -876943342,
+    928037331,
+    -1715496099,
+    1958199860,
+    -312618611,
+    -1263165067,
+    1102136949,
+    673368266,
+    -404778051,
+    -939074117,
+    1740814084,
+    65875110,
+    202456886,
+    668838032,
+    853069696,
+    1351203021,
+]
 COMPTE_APP = "staport_app"
 MOT_DE_PASSE_APP = "mdp-app-essai"
 
@@ -237,10 +284,10 @@ def test_deploiement_refuse_un_script_flyway_modifie(
 
 
 def test_les_sommes_de_controle_reprennent_l_algorithme_de_flyway() -> None:
-    """Sommes réellement enregistrées par Flyway sur la base d'origine (V1 à V3) : l'algorithme est celui de Flyway."""
+    """Sommes réellement enregistrées par Flyway sur la base d'origine (V1 à V44) : scripts figés et algorithme."""
     sommes = sommes_attendues()
     assert len(sommes) == 44
-    assert [sommes[n] for n in range(1, 4)] == SOMMES_FLYWAY_REELLES[:3]
+    assert [sommes[n] for n in range(1, 45)] == SOMMES_FLYWAY_REELLES
 
 
 def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_base: Callable[[str], str]) -> None:

@@ -1,6 +1,6 @@
 -- Le développement et les tests gardent l'image PostgreSQL standard. La production active cette migration
--- explicitement après avoir démarré l'image Staport Intelligence PostgreSQL qui précharge pgAudit. Le réglage ALTER DATABASE
--- limite volontairement pgAudit à la base Staport Intelligence ; il ne s'applique pas aux autres bases du cluster.
+-- explicitement après avoir démarré l'image ERP-RH PostgreSQL qui précharge pgAudit. Le réglage ALTER DATABASE
+-- limite volontairement pgAudit à la base ERP-RH ; il ne s'applique pas aux autres bases du cluster.
 DO $$
 BEGIN
     IF ${pgaudit_enabled} THEN
