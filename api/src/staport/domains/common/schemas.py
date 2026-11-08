@@ -5,9 +5,11 @@ from decimal import Decimal
 from math import ceil
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, PlainSerializer
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, PlainSerializer
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
+
+from .montant import arrondir_si_nombre
 
 _COURRIEL = re.compile(r"^[^@\s]+@[^@\s]+$")
 
@@ -38,6 +40,9 @@ Courriel = Annotated[str, AfterValidator(_non_vide), AfterValidator(_courriel)]
 
 Nombre = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
 """Décimal exact en Python, nombre JSON sur HTTP comme Jackson (Pydantic sérialise `Decimal` en chaîne par défaut)."""
+
+Montant = Annotated[Nombre, BeforeValidator(arrondir_si_nombre)]
+"""Montant d'argent : arrondi automatiquement à deux décimales (`common/montant.py`) avant les contraintes."""
 
 
 class ModeleApi(BaseModel):
