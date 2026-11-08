@@ -1,4 +1,5 @@
-"""Outils métier d'ERP-RH, uniquement par MCP et avec le jeton agent de l'utilisateur (site/docs/ia, § 5 et T10).
+"""Outils métier de Staport Intelligence, uniquement par MCP et avec le jeton agent de l'utilisateur
+(site/docs/ia, § 5 et T10).
 
 Les outils viennent du support MCP intégré à LangChain (``langchain.mcp``, client FastMCP) : chaque outil MCP de
 l'API ERP devient un outil LangChain pour ``create_deep_agent``. Seule la délégation d'identité reste à nous : l'API

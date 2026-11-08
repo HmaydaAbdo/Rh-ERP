@@ -1,4 +1,4 @@
-# Image erp-rh-phoenix : traces OpenTelemetry et observabilité de l'IA (site/docs/ia, T18). Arize Phoenix officiel,
+# Image staport-intelligence-phoenix : traces OpenTelemetry et observabilité de l'IA (site/docs/ia, T18). Arize Phoenix officiel,
 # épinglé par version et digest ; un seul conteneur, traces dans la base `phoenix` du PostgreSQL de l'ERP (sauvegardée avec lui).
 FROM arizephoenix/phoenix:version-20.26.1@sha256:623813cbf1bbd4811456bb4936f21666ae50a1fbf862cf59ea0e3ca824b6b114
 # Aucune télémétrie vers Arize ; /data ne sert qu'aux exports. Conservation SANS LIMITE (0 = aucune purge automatique) :

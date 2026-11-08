@@ -1,5 +1,5 @@
 ---
-title: "Architecture de rh-erp"
+title: "Architecture de Staport Intelligence"
 sidebar_position: 2
 ---
 

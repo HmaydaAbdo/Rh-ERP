@@ -40,7 +40,7 @@ function flux(): string {
   // Surface telle que l'agent la produit : catalogue de l'ERP, données dans le modèle de la surface (`{ path }`).
   const surface = {
     a2ui_operations: [
-      { version: 'v0.9', createSurface: { surfaceId: 's1', catalogId: 'erp-rh://a2ui/catalogue-erp' } },
+      { version: 'v0.9', createSurface: { surfaceId: 's1', catalogId: 'staport-intelligence://a2ui/catalogue-erp' } },
       {
         version: 'v0.9',
         updateComponents: {

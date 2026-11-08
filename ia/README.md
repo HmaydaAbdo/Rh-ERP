@@ -1,6 +1,6 @@
-# Service IA — image `erp-rh-ia`
+# Service IA — image `staport-intelligence-ia`
 
-Service Python d'ERP-RH, construit uniquement sur les composants officiels (règle « frameworks d'abord ») : agent
+Service Python de Staport Intelligence, construit uniquement sur les composants officiels (règle « frameworks d'abord ») : agent
 `create_agent` de LangChain sur LangGraph (T10), flux AG-UI par CopilotKit et `ag-ui-langgraph` (T11), outils MCP par
 le MCP intégré à LangChain, modèles par `ChatLiteLLM` et la passerelle [LiteLLM](../litellm/README.md).
 Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
@@ -9,7 +9,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 
 - Santé : `GET /health` (processus vivant) et `GET /health/ready` (IA désactivée, ou passerelle
   LiteLLM joignable ; sinon `503`).
-- Configuration typée (`src/erp_rh_ia/config.py`) ; le service refuse de démarrer sans
+- Configuration typée (`src/staport_ia/config.py`) ; le service refuse de démarrer sans
   `IA_ENABLED`, `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` (8 caractères au moins) ou `IA_ERP_API_URL`.
 - **AG-UI** — `agui.py`, `POST /agui` (SSE) : `LangGraphAGUIAgent` (CopilotKit, sur `ag-ui-langgraph`).
   Entrée : `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton
@@ -47,8 +47,8 @@ abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
 Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui remplace `EvaluationAgentIaTest` du backend Java retiré
-en E2 : il démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory erp_rh_ia.app:creer_app`)
-puis `python -m erp_rh_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
+en E2 : il démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory staport_ia.app:creer_app`)
+puis `python -m staport_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
 s'active avec `IA_EVALUATION=1`.
 
 ## Développer
@@ -65,7 +65,7 @@ uv run pytest -q
 ```
 
 `tests/integration/` appelle la **vraie** route `/mcp` de l'application (FastMCP, API Python) avec un jeton agent
-RS256 ; il est ignoré sans `MCP_ERP_RH_URL` et lancé, avec le client TypeScript du SDK MCP, par l'API
+RS256 ; il est ignoré sans `MCP_STAPORT_URL` et lancé, avec le client TypeScript du SDK MCP, par l'API
 (application complète et base de test) :
 
 ```bash
@@ -87,4 +87,4 @@ modes exigent la passerelle LiteLLM ; sans elle ils sont ignorés. Le client Typ
 - Service Compose `ia` démarré par défaut (sans profil) après la tâche `litellm-cles`, système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
 - Variables dans le `.env` racine unique : `IA_ENABLED`, `IA_LITELLM_API_KEY` (clé virtuelle
-  ERP-RH, cinq groupes de production uniquement) ; les URL de la passerelle et du backend sont fixées par Compose.
+  Staport Intelligence, cinq groupes de production uniquement) ; les URL de la passerelle et du backend sont fixées par Compose.

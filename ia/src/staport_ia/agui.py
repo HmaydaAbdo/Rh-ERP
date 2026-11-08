@@ -26,8 +26,8 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
-from erp_rh_ia.memoire import espace_conversation, sujet
-from erp_rh_ia.outils import jeton_agent, outils_erp
+from staport_ia.memoire import espace_conversation, sujet
+from staport_ia.outils import jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
 

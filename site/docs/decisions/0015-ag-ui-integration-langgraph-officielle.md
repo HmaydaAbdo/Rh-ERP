@@ -18,7 +18,7 @@ de production. Le propriétaire veut s'appuyer sur l'intégration officielle dè
 
 1. Le flux AG-UI est produit par `ag-ui-langgraph` 0.0.47, version exacte figée par `ia/uv.lock` ; le client du
    navigateur est le client officiel `@ag-ui/client`.
-2. Le module `ia/src/erp_rh_ia/agui.py` garde ce que l'intégration ne fait pas : identité (jeton de connexion échangé
+2. Le module `ia/src/staport_ia/agui.py` garde ce que l'intégration ne fait pas : identité (jeton de connexion échangé
    auprès de Spring, refus HTTP avant tout flux), session MCP par run et frontière de sécurité sur les événements :
    - `emit_raw_events=False`, événements `RAW` et copies `rawEvent` retirés (ils porteraient l'état interne) ;
    - `RUN_ERROR` remplacé par un message générique (l'intégration recopie le texte de l'exception) et journal de

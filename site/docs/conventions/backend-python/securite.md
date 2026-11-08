@@ -23,7 +23,7 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
   paramètres (temps, mémoire) modifiés, le nouveau hachage est enregistré dans la même transaction que la connexion. Un hachage inconnu lève `UnknownHashError`, traité comme
   un échec d'authentification (jamais une erreur 500 ni un message distinct).
 * Comparaison à temps constant et hachage factice quand le compte n'existe pas, pour ne pas révéler l'existence d'un compte (technique de la documentation FastAPI).
-* Limite d'essais et blocage de compte (cinq échecs en quinze minutes) : règle ERP-RH inchangée, journalisée dans la catégorie `SECURITE` sans mot de passe.
+* Limite d'essais et blocage de compte (cinq échecs en quinze minutes) : règle Staport Intelligence inchangée, journalisée dans la catégorie `SECURITE` sans mot de passe.
 
 ## Autorisation par permissions
 

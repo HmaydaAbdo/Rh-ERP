@@ -15,12 +15,12 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel
 
-from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
-from erp_rh_ia.config import Settings, get_settings
-from erp_rh_ia.memoire import ouvrir_memoire
-from erp_rh_ia.modeles import Tache, modele
-from erp_rh_ia.routage import Routeur
+from staport_ia.agent import creer_agent
+from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
+from staport_ia.config import Settings, get_settings
+from staport_ia.memoire import ouvrir_memoire
+from staport_ia.modeles import Tache, modele
+from staport_ia.routage import Routeur
 
 
 class Sante(BaseModel):
@@ -114,7 +114,7 @@ def creer_app(
     config = settings or get_settings()
 
     app = FastAPI(
-        title="ERP-RH IA",
+        title="Staport Intelligence IA",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,

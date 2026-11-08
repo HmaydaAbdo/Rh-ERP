@@ -4,7 +4,7 @@ L'application complète écoute sur un port loopback éphémère (uvicorn, base 
 officiels l'appellent avec un jeton agent RS256 émis par `POST /auth/jetons/agent` :
 
 - le client TypeScript du SDK MCP (le même SDK que le runtime Node CopilotKit), `scripts/ia/mcp-compatibility` ;
-- le client Python officiel du service IA, `ia/tests/integration/test_mcp_erp_rh.py`.
+- le client Python officiel du service IA, `ia/tests/integration/test_mcp_staport.py`.
 
 Les deux sont ignorés si Node, npm ou uv sont absents ; la CI doit les fournir.
 """
@@ -70,9 +70,9 @@ def environnement_mcp(
     assert reponse.status_code == 200, reponse.text
     return {
         **os.environ,
-        "MCP_ERP_RH_URL": f"{serveur_loopback}/mcp",
-        "MCP_ERP_RH_JETON": reponse.json()["jeton"],
-        "MCP_ERP_RH_UTILISATEUR": nom,
+        "MCP_STAPORT_URL": f"{serveur_loopback}/mcp",
+        "MCP_STAPORT_JETON": reponse.json()["jeton"],
+        "MCP_STAPORT_UTILISATEUR": nom,
     }
 
 
@@ -98,7 +98,7 @@ def test_le_client_python_officiel_du_service_ia_appelle_le_serveur_python_avec_
     environnement_mcp: dict[str, str],
 ) -> None:
     _lancer(
-        ["uv", "run", "--locked", "pytest", "tests/integration/test_mcp_erp_rh.py", "-q", "-p", "no:cacheprovider"],
+        ["uv", "run", "--locked", "pytest", "tests/integration/test_mcp_staport.py", "-q", "-p", "no:cacheprovider"],
         SERVICE_IA,
         environnement_mcp,
     )

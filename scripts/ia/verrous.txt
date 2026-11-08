@@ -1,5 +1,5 @@
-# Verrous de versions et seuils de l'IA ERP-RH, vérifiés en CI par scripts/ia/check-docs-code.mjs contre
-# ia/uv.lock, les package-lock.json, ia/src/erp_rh_ia/agent.py et les @McpTool du backend.
+# Verrous de versions et seuils de l'IA Staport Intelligence, vérifiés en CI par scripts/ia/check-docs-code.mjs contre
+# ia/uv.lock, les package-lock.json, ia/src/staport_ia/agent.py et les @McpTool du backend.
 # Mettre ce fichier à jour dans le même commit que le code : le contrôle échoue sinon. Les lignes « # » sont des
 # limites connues (cause, état) ; la tâche qui lève une limite est suivie dans Jira (projet KAN).
 #

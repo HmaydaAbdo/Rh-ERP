@@ -5,7 +5,7 @@ from typing import Any
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 
-from erp_rh_ia.juge import Verdict, juger
+from staport_ia.juge import Verdict, juger
 
 
 class ModeleSimule(GenericFakeChatModel):

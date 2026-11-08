@@ -1,4 +1,4 @@
-# Image erp-rh-ia : service IA Python. Bases épinglées par version et digest.
+# Image staport-intelligence-ia : service IA Python. Bases épinglées par version et digest.
 FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
 
 FROM python:3.14-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966 AS build
@@ -13,7 +13,7 @@ RUN uv sync --locked --no-dev --no-editable
 # Modèle d'embeddings du routage des compétences (site/docs/ia, T32), gratuit et local : téléchargé à la construction,
 # jamais au démarrage ni pendant une requête.
 ENV FASTEMBED_CACHE_PATH=/app/modeles
-RUN /app/.venv/bin/python -c "from erp_rh_ia.routage import MODELE_EMBEDDINGS; from fastembed import TextEmbedding; TextEmbedding(MODELE_EMBEDDINGS)"
+RUN /app/.venv/bin/python -c "from staport_ia.routage import MODELE_EMBEDDINGS; from fastembed import TextEmbedding; TextEmbedding(MODELE_EMBEDDINGS)"
 # Le service tourne sans droits (uid 10001) : le modèle doit être lisible par lui.
 RUN chmod -R a+rX /app/modeles
 
@@ -32,4 +32,4 @@ EXPOSE 8000
 # ralentir les autres démarrages : un essai toutes les 3 s, sain dès la première réponse.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=180s --start-interval=3s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
-ENTRYPOINT ["opentelemetry-instrument", "python", "-m", "erp_rh_ia"]
+ENTRYPOINT ["opentelemetry-instrument", "python", "-m", "staport_ia"]

@@ -14,7 +14,7 @@
 
 services:
   postgres:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     command:
       - postgres
       - -c
@@ -62,7 +62,7 @@ services:
       retries: 10
 
   backup:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG est obligatoire}
     # Démarré par défaut, comme tous les services : `docker compose pull && docker compose up -d` suffit.
     restart: unless-stopped
     depends_on:
@@ -94,14 +94,14 @@ services:
     networks:
       - db-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h \"$${PGHOST}\" -p \"$${PGPORT}\" -U \"$${PGUSER}\" -d \"$${PGDATABASE}\" && test -w \"$${BACKUP_DIR}\" && find \"$${BACKUP_DIR}\" -maxdepth 1 -type f -name 'rh-erp-*.tar.gz.age' -mmin -1440 -print -quit | grep -q ."]
+      test: ["CMD-SHELL", "pg_isready -h \"$${PGHOST}\" -p \"$${PGPORT}\" -U \"$${PGUSER}\" -d \"$${PGDATABASE}\" && test -w \"$${BACKUP_DIR}\" && find \"$${BACKUP_DIR}\" -maxdepth 1 -type f \\( -name 'staport-intelligence-*.tar.gz.age' -o -name 'rh-erp-*.tar.gz.age' \\) -mmin -1440 -print -quit | grep -q ."]
       interval: 1m
       timeout: 10s
       start_period: 1h
       retries: 3
 
   postgres-log-retention:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     # Rétention des journaux pgAudit, démarrée par défaut avec la sauvegarde.
     restart: unless-stopped
     user: postgres
@@ -125,7 +125,7 @@ services:
 
   # Une seule exécution, avec le propriétaire du schéma ; le serveur API ne reçoit pas ses identifiants.
   api-migrate:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: "no"
     depends_on:
       postgres:
@@ -150,7 +150,7 @@ services:
       - db-net
 
   api:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
@@ -188,7 +188,7 @@ services:
       LOGGING_FORMAT: json
       LOGGING_FILE_PATH: /app/logs
       OTEL_SDK_DISABLED: "false"
-      OTEL_SERVICE_NAME: erp-rh-api
+      OTEL_SERVICE_NAME: staport-intelligence-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire}
     read_only: true
@@ -214,7 +214,7 @@ services:
       - "127.0.0.1:${API_PORT}:8080"
 
   frontend:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     depends_on:
       api:
@@ -243,7 +243,7 @@ services:
 
   # Documentation (site statique Docusaurus, voir site/). Aucune dépendance : ni base ni backend.
   docs:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-docs:${DOCS_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-docs:${DOCS_IMAGE_TAG:-latest}
     restart: unless-stopped
     networks:
       - web-net
@@ -263,7 +263,7 @@ services:
   litellm-db:
     # Même image PostgreSQL que l'ERP, instance et volume séparés : clés virtuelles, budgets et
     # journaux de dépense de LiteLLM uniquement, aucune donnée métier.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     environment:
       POSTGRES_DB: litellm
@@ -282,7 +282,7 @@ services:
   ia-db:
     # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, site/docs/ia T19) : instance et volume
     # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ia
@@ -299,7 +299,7 @@ services:
       retries: 10
 
   litellm:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       litellm-db:
@@ -333,12 +333,12 @@ services:
   litellm-cles:
     # Tâche ponctuelle : enregistre les clés virtuelles du .env dans une base LiteLLM neuve (litellm/enregistrer_cles.py),
     # puis s'arrête. Les groupes autorisés des clés connues sont synchronisés ; `up -d` suffit, sans script à lancer à la main.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-litellm:${LITELLM_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: "no"
     depends_on:
       litellm:
         condition: service_healthy
-    entrypoint: ["python3", "/usr/local/bin/erp-rh-enregistrer-cles"]
+    entrypoint: ["python3", "/usr/local/bin/staport-intelligence-enregistrer-cles"]
     command: []
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
@@ -353,7 +353,7 @@ services:
       - ia-net
 
   ia:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-ia:${IA_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-ia:${IA_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       litellm-cles:
@@ -379,7 +379,7 @@ services:
       IA_ERP_API_URL: http://api:8080
       # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
-      OTEL_SERVICE_NAME: erp-rh-ia
+      OTEL_SERVICE_NAME: staport-intelligence-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
       # Contenus conservés en clair dans Phoenix (décision du propriétaire, 2026-11-04) : conversations, arguments et résultats
@@ -405,7 +405,7 @@ services:
   # Runtime CopilotKit officiel (site/docs/ia, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
   # nginx). Il applique le middleware A2UI et relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur.
   copilot-runtime:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       ia:
@@ -421,7 +421,7 @@ services:
       ERP_API_URL: http://api:8080
       # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
-      OTEL_SERVICE_NAME: erp-rh-copilot-runtime
+      OTEL_SERVICE_NAME: staport-intelligence-copilot-runtime
       OTEL_METRICS_EXPORTER: none
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
@@ -445,7 +445,7 @@ services:
   # Crée une fois, de façon idempotente, le compte et la base `phoenix` dans le PostgreSQL de l'ERP (installation neuve ou
   # existante), puis s'arrête. Phoenix y écrit ses traces : la sauvegarde chiffrée quotidienne les couvre avec la base.
   phoenix-db-init:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     restart: "no"
     depends_on:
       postgres:
@@ -473,7 +473,7 @@ services:
   # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (site/docs/ia, T18). Un seul conteneur, traces
   # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-phoenix:${PHOENIX_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       phoenix-db-init:

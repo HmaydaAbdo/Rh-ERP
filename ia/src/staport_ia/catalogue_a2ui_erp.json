@@ -1,7 +1,7 @@
 {
-  "title": "Composants A2UI d'ERP-RH",
+  "title": "Composants A2UI de Staport Intelligence",
   "description": "Composants de présentation propres à l'ERP, ajoutés au catalogue de base A2UI v0.9 (createAngularCatalog avec includeBasicCatalog côté Angular). Même nom et mêmes propriétés que les définitions zod de frontend/src/app/core/assistant/catalogue/catalogue-erp.ts.",
-  "catalogId": "erp-rh://a2ui/catalogue-erp",
+  "catalogId": "staport-intelligence://a2ui/catalogue-erp",
   "components": {
     "DataTable": {
       "type": "object",

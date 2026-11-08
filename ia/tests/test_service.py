@@ -3,9 +3,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from erp_rh_ia.app import creer_app, fabrique_reelle
-from erp_rh_ia.config import Settings
-from erp_rh_ia.modeles import Tache, modele
+from staport_ia.app import creer_app, fabrique_reelle
+from staport_ia.config import Settings
+from staport_ia.modeles import Tache, modele
 
 
 def _settings(enabled: bool = True, base_url: str = "http://litellm:4000/v1") -> Settings:
@@ -69,8 +69,8 @@ def test_la_fabrique_n_utilise_plus_de_modele_de_selection_d_outils(monkeypatch:
         agents.append(kwargs)
         return object()
 
-    monkeypatch.setattr("erp_rh_ia.app.modele", modele_factice)
-    monkeypatch.setattr("erp_rh_ia.app.creer_agent", creer_agent_factice)
+    monkeypatch.setattr("staport_ia.app.modele", modele_factice)
+    monkeypatch.setattr("staport_ia.app.creer_agent", creer_agent_factice)
     fabrique = fabrique_reelle(_settings())
 
     fabrique([], None, "u1")  # type: ignore[arg-type]

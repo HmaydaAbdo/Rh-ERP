@@ -6,7 +6,7 @@ décrit les contrats et les responsabilités, pas une dépendance obligatoire à
 serveur. Chaque application documente ses versions, son catalogue de composants, ses adaptateurs et
 ses parcours dans le site de documentation (`site/docs/`).
 
-Pour ERP-RH, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
+Pour Staport Intelligence, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
 capacités métier MCP côté Spring ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier
 parcours rend messages, sources et états avec les composants Staport et **pilote les vues partagées
 existantes** (voir « Pilotage des vues existantes »). A2UI, une mascotte Rive ou une vue immersive
@@ -127,7 +127,7 @@ serveur.
    ignore proprement une extension inconnue sans perdre le traitement des événements standards.
 7. Ne jamais exposer au navigateur les prompts système, secrets ou données qui ne sont pas destinées
    à l'utilisateur. Masquer les données personnelles dans les traces. Le raisonnement du modèle peut
-   être affiché (décision ERP-RH du 2026-10-26), par les événements `REASONING_*` officiels, dans un
+   être affiché (décision Staport Intelligence du 2026-10-26), par les événements `REASONING_*` officiels, dans un
    bloc distinct et repliable, présenté comme une réflexion et non comme un résultat vérifié.
 
 AG-UI et A2UI ne sont pas interchangeables. AG-UI peut porter du texte, des états et des cartes
@@ -139,7 +139,7 @@ des résultats et des demandes de confirmation. Il ne publie ni prompts internes
 brutes ; le raisonnement du modèle suit la règle 7 ci-dessus. Les erreurs présentées indiquent une correction possible sans
 révéler de contenu sensible.
 
-Pour ERP-RH, confirmer par un prototype qu'un client Angular (CopilotKit Angular ou client AG-UI
+Pour Staport Intelligence, confirmer par un prototype qu'un client Angular (CopilotKit Angular ou client AG-UI
 officiel) dialogue directement avec le point d'entrée AG-UI du service Python, avec les versions
 réelles de l'application ; ne pas ajouter de runtime intermédiaire sans besoin prouvé. L'existence
 d'un SDK serveur ne prouve pas la disponibilité d'un composant Angular compatible. Ne pas ajouter React ou PrimeNG par défaut,
@@ -154,7 +154,7 @@ laisser croire que des événements perdus ont été rejoués si le serveur ne l
 
 ## Pilotage des vues existantes
 
-> **ERP-RH :** pilotage retiré le 2026-10-26 (décision du propriétaire) au profit des surfaces A2UI composées
+> **Staport Intelligence :** pilotage retiré le 2026-10-26 (décision du propriétaire) au profit des surfaces A2UI composées
 > dans la discussion. Les règles ci-dessous restent la référence si le pilotage des vues est un jour réintroduit.
 
 Le mode contrôlé de référence ne génère pas d'écran : l'agent propose une **description de vue**
@@ -165,7 +165,7 @@ permissions, puis affiche la vue partagée habituelle. Une description invalide 
 ignorée avec un message ; elle n'accorde aucun droit et ne déclenche aucune action métier.
 
 Une application peut laisser l'assistant **ouvrir lui-même** la vue de sa réponse, filtres appliqués,
-plutôt que de proposer un bouton (choix d'ERP-RH validé le 2026-10-25). Conditions :
+plutôt que de proposer un bouton (choix de Staport Intelligence validé le 2026-10-25). Conditions :
 
 * la description passe par une liste blanche côté client (modules, vues, paramètres et leur format) ;
   tout élément inconnu ou mal formé annule l'ouverture ;
@@ -180,7 +180,7 @@ plutôt que de proposer un bouton (choix d'ERP-RH validé le 2026-10-25). Condit
 ## Catalogue borné et composants du design system
 
 Toute proposition d'interface passe par un catalogue versionné côté client, qu'elle utilise des
-cartes typées ou A2UI. Le pilote proposé ERP-RH réutilise les composants Staport et les vues métier accessibles
+cartes typées ou A2UI. Le pilote proposé Staport Intelligence réutilise les composants Staport et les vues métier accessibles
 existantes ; une action peut renvoyer vers une route connue avec des paramètres validés. Aucun
 modèle ne compose un template Angular, une expression ou un composant arbitraire à l'exécution.
 
@@ -304,12 +304,12 @@ Ces principes s'appliquent à tout mode, du panneau à l'espace immersif :
 
 ## UX de référence et interruption
 
-L'expérience proposée pour ERP-RH est un accès discret à un panneau contextuel latéral, adapté au
+L'expérience proposée pour Staport Intelligence est un accès discret à un panneau contextuel latéral, adapté au
 téléphone et sans masquer une action métier en cours. La maquette, les règles de focus et le
 parcours sont validés avant réalisation. Les citations et les liens permettent de revenir aux
 sources autorisées. Une mascotte ou une surface A2UI peut compléter ce parcours si son adoption est
 validée. Une vue immersive nécessite un besoin distinct ; elle n'est pas créée par anticipation.
-Pour ERP-RH, ce besoin est validé (2026-10-25) : barre de commande au repos (`Ctrl K`), discussion
+Pour Staport Intelligence, ce besoin est validé (2026-10-25) : barre de commande au repos (`Ctrl K`), discussion
 ancrée sur le côté, étapes et outils de chaque réponse dans un bloc repliable (déplié pendant le
 travail), réponse vérifiée, ouverture de la vue et mise en évidence des valeurs citées ; plein écran
 sur téléphone. Les surfaces A2UI et la mascotte Rive restent des extensions à valider (J4).

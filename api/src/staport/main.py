@@ -52,7 +52,7 @@ from staport.platform.requete import EN_TETE_REQUEST_ID, EN_TETES_SECURITE, enre
 from staport.platform.sante import sante
 
 if TYPE_CHECKING:
-    from erp_rh_ia.config import Settings as SettingsIA
+    from staport_ia.config import Settings as SettingsIA
 
 
 TAILLE_MAX_TELEVERSEMENT = 20 * 1024 * 1024
@@ -134,7 +134,7 @@ def creer_app(
     if application_mcp is not None:
         vie = combine_lifespans(vie, application_mcp.lifespan)
     if configuration_ia is not None:
-        from erp_rh_ia.app import cycle_ia
+        from staport_ia.app import cycle_ia
 
         vie = combine_lifespans(vie, cycle_ia(configuration_ia))
     if configuration_ is not None:
@@ -161,7 +161,7 @@ def creer_app(
         return Response(exporter(registre), media_type=TYPE_CONTENU)
 
     if configuration_ia is not None:
-        from erp_rh_ia.app import routeur_ia
+        from staport_ia.app import routeur_ia
 
         app.include_router(routeur_ia(app, configuration_ia))
     if configuration_ is not None:
@@ -233,6 +233,6 @@ def application() -> FastAPI:
     sys.setswitchinterval(INTERVALLE_BASCULE_FILS)
     if "IA_ENABLED" not in os.environ:
         return creer_app(configuration())
-    from erp_rh_ia.config import get_settings
+    from staport_ia.config import get_settings
 
     return creer_app(configuration(), configuration_ia=get_settings())

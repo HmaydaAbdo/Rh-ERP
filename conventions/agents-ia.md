@@ -5,7 +5,7 @@ contribuent à leur développement. Elle fixe les règles communes ; chaque appl
 cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans le site de documentation (`site/docs/`) et ses
 ADR.
 
-Pour ERP-RH, les décisions, l'architecture, la feuille de route et l'état du chantier sont tenus
+Pour Staport Intelligence, les décisions, l'architecture, la feuille de route et l'état du chantier sont tenus
 dans un document unique, [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le métier reste dans Spring ; l'orchestration
 IA est un service Python distinct. Ce document ne déclare aucun composant implémenté ni déployé ;
 l'état réel est celui de `site/docs/ia`.
@@ -170,15 +170,15 @@ ils ne peuvent pas modifier les permissions, les instructions de sécurité ou l
 
 ## Frontière entre métier Java et orchestration IA
 
-Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. ERP-RH conserve son
+Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. Staport Intelligence conserve son
 monolithe modulaire Spring Boot, ses services, transactions, API REST, permissions et audits. Le
 backend expose seulement des capacités métier ciblées par des adaptateurs MCP ; il n'héberge pas
-les appels de modèles ni les graphes d'agents. Dans ERP-RH (décision du 2026-10-26), le serveur MCP
+les appels de modèles ni les graphes d'agents. Dans Staport Intelligence (décision du 2026-10-26), le serveur MCP
 du backend utilise le module serveur MCP de **Spring AI** (outils déclarés par annotations) et le
 jeton agent est émis par **Spring Authorization Server** (échange de jetons OAuth2, RFC 8693) ; aucun
 client de modèle, ni LangChain4j, ni LangGraph4j n'entre dans le monolithe.
 
-L'orientation ERP-RH est un **service IA Python** distinct, avec **LangGraph** pour les workflows à
+L'orientation Staport Intelligence est un **service IA Python** distinct, avec **LangGraph** pour les workflows à
 état explicite et un point d'entrée **AG-UI** pour l'interface. Python est retenu parce que
 l'orchestration, l'apprentissage statistique, l'extraction de documents, la voix et l'évaluation y
 ont leur écosystème de référence : un seul runtime IA couvre ainsi les besoins futurs. Angular reste
@@ -193,7 +193,7 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
 
 * Les nœuds du graphe orchestrent des outils MCP autorisés, la recherche documentaire et les appels
   de modèles via la passerelle. Ils ne dupliquent pas les règles métier et n'accèdent pas aux tables
-  transactionnelles ERP-RH.
+  transactionnelles Staport Intelligence.
 * Le runtime possède uniquement ses données techniques autorisées : exécutions, checkpoints et
   conversations. Chaque corpus et projection documentaire a un propriétaire et une frontière
   d'accès définis dans l'ADR ; le runtime ne s'attribue pas un accès direct à son stockage.
@@ -233,7 +233,7 @@ sa page officielle ; à l'entrée de chaque épopée (tâche Jira « E*n*.R »),
 (§ 3 de [decisions.md](../site/docs/ia/principes-et-decisions.md)). Une limite de version imposée par une dépendance est consignée dans
 [`scripts/ia/verrous.txt`](../scripts/ia/verrous.txt).
 
-Dans ERP-RH (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
+Dans Staport Intelligence (décision du 2026-10-26), toute capacité IA s'appuie sur ce que proposent officiellement
 LangChain, LangGraph, Deep Agents, l'intégration AG-UI et leurs paquets : aucune implémentation
 maison d'une capacité qu'un de ces frameworks fournit. Avant d'écrire du code IA, chercher le
 composant officiel dans les paquets installés et leur documentation ; s'il manque, le signaler au
@@ -428,7 +428,7 @@ avant l'adoption.
 ### Agents de domaine
 
 Un agent de domaine (« micro-agent ») possède un périmètre métier explicite et ne travaille que sur
-ses outils, ses skills (guide agent de `site/docs/domaines/<domaine>/`) et son contexte. Dans ERP-RH, sa définition reste
+ses outils, ses skills (guide agent de `site/docs/domaines/<domaine>/`) et son contexte. Dans Staport Intelligence, sa définition reste
 dans le service IA, organisée par domaine ; les règles métier et les adaptateurs MCP restent
 dans leurs domaines Spring propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
 modèle et son budget. Un besoin d'un autre domaine passe par une délégation explicite du superviseur
@@ -450,7 +450,7 @@ Le modèle de collaboration de référence est le **superviseur** (orchestrateur
 La chorégraphie pair-à-pair (agents qui s'appellent librement ou réagissent à des événements entre eux)
 n'est pas retenue : elle rend les boucles, les coûts et la responsabilité d'une action difficiles à
 contrôler et à auditer. Un workflow à état explicite, avec reprises, branches ou validation humaine,
-peut utiliser LangGraph dans le service IA d'ERP-RH, sous les mêmes règles.
+peut utiliser LangGraph dans le service IA de Staport Intelligence, sous les mêmes règles.
 
 ### Règles communes à toute délégation
 
@@ -509,7 +509,7 @@ MCP expose des **outils** et des ressources (voir [`mcp.md`](mcp.md)). Pour qu'u
 application délègue une tâche à l'agent d'une autre application, **A2A** (Agent2Agent) est une option à
 évaluer si un cycle de tâche inter-applications est effectivement nécessaire. Il ne remplace ni
 l'authentification ni la revérification des permissions par l'application qui exécute la tâche. A2A
-externe ne fait pas partie du MVP ERP-RH. Dans le runtime IA d'une même application, une délégation
+externe ne fait pas partie du MVP Staport Intelligence. Dans le runtime IA d'une même application, une délégation
 reste un appel local typé ou une transition du graphe ; ne pas ajouter un protocole réseau interne
 pour simuler une équipe d'agents. Le choix entre appel d'outil, tâche déléguée et autres transports
 suit [`integrations.md`](integrations.md).
@@ -677,7 +677,7 @@ transferts multi-agents, sous-agents et compétences de Deep Agents (dont les ou
 2. **Filtre d'accès d'abord, dans le résolveur.** Le résolveur de `SkillsMiddleware` lit l'identité dans `runtime.context` et ne renvoie que les outils que cette identité peut appeler.
    Un outil non autorisé n'est jamais exposé, même si sa compétence est épinglée ou lue. Le contrôle du serveur à chaque appel reste l'autorité (règle de [`mcp.md`](mcp.md)).
 3. **Routage hors modèle.** L'application choisit les compétences à épingler avant l'invocation, en quelques millisecondes (5,9 ms au p50 mesuré), par similarité entre la question et la
-   description de chaque outil du catalogue de l'utilisateur (embeddings MiniLM locaux, `ia/src/erp_rh_ia/routage.py`) : les domaines des 7 meilleurs outils sont épinglés, **sans plafond de domaines** (décision du propriétaire, 2026-11-03 ; 7 est le seuil de classement des outils, non une limite de capacité). **Aucun appel de modèle de langage.**
+   description de chaque outil du catalogue de l'utilisateur (embeddings MiniLM locaux, `ia/src/staport_ia/routage.py`) : les domaines des 7 meilleurs outils sont épinglés, **sans plafond de domaines** (décision du propriétaire, 2026-11-03 ; 7 est le seuil de classement des outils, non une limite de capacité). **Aucun appel de modèle de langage.**
 4. **Repli.** Si le routage se trompe, le modèle lit lui-même le `SKILL.md` du bon domaine (divulgation progressive officielle). Il n'y a donc pas d'outil `request_broader_tools`
    maison : le mécanisme documenté le remplace. Coût : un tour, seulement dans ce cas.
 5. **Élagage.** L'épinglage est recalculé à chaque invocation : un domaine qui ne sert plus n'est pas réépinglé. Le comportement des compétences lues lors de tours précédents n'est pas
@@ -868,7 +868,7 @@ attendu.
 À terme, une application IA d'entreprise distincte pourra orchestrer des cas d'usage entre les
 applications des différents départements. Cette cible est une orientation, pas un chantier
 d'implémentation immédiat : la priorité est de terminer et valider les conventions et les capacités
-de chaque application, en commençant par ERP-RH.
+de chaque application, en commençant par Staport Intelligence.
 
 Lorsqu'elle sera engagée, l'application IA globale consommera les outils MCP authentifiés publiés
 par les applications. Elle ne se connectera pas directement à leurs bases OLTP, ne remplacera pas
@@ -930,7 +930,7 @@ Un domaine n'est livré à l'agent qu'après ces étapes, qui reprennent les dé
    instables ou refusés sont lus dans leurs traces ; la correction vise l'outil, la description ou le
    contrôle déterministe avant le prompt.
 4. **Protections déterministes.** Fuite de prompt, noms d'outils et valeurs interdites sont contrôlés
-   hors du modèle ; une règle de prompt ne suffit jamais seule. `ia/src/erp_rh_ia/garde_sortie.py` est le
+   hors du modèle ; une règle de prompt ne suffit jamais seule. `ia/src/staport_ia/garde_sortie.py` est le
    `after_agent` officiel de LangChain qui remplace une réponse finale reproduisant le message système ou nommant
    un outil ; le texte est déjà diffusé en flux à ce moment, la garde protège l'historique conservé et les sorties
    non diffusées. Un nouveau domaine n'a rien à ajouter : la garde lit le catalogue d'outils de l'utilisateur.

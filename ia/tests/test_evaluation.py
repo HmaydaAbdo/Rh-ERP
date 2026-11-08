@@ -5,7 +5,7 @@ import json
 import re
 from typing import Any, cast
 
-from erp_rh_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, synthese
+from staport_ia.evaluation import JEU, Reponse, cite, extraire, juger, remplir, synthese
 
 MARQUEURS = {
     "periode_a", "periode_b", "chantier_a_id", "chantier_a_code", "equipe_a_id", "equipe_a_code", "employe_a_id",
@@ -110,8 +110,8 @@ def test_le_jugement_distingue_reponse_abstention_et_refus() -> None:
 
 
 def test_une_limite_expliquee_est_reconnue_comme_abstention() -> None:
-    from erp_rh_ia.criteres import sans_accents
-    from erp_rh_ia.evaluation import _ABSTENTION  # pyright: ignore[reportPrivateUsage]
+    from staport_ia.criteres import sans_accents
+    from staport_ia.evaluation import _ABSTENTION  # pyright: ignore[reportPrivateUsage]
 
     reponses = (
         "Je ne peux donc pas vous donner cette valeur.",
@@ -123,7 +123,7 @@ def test_une_limite_expliquee_est_reconnue_comme_abstention() -> None:
 
 
 def test_la_synthese_calcule_exactitude_et_latences() -> None:
-    from erp_rh_ia.evaluation import ResultatCas
+    from staport_ia.evaluation import ResultatCas
 
     bilan = synthese([ResultatCas("a", "reponse", True, "ok", 2.0), ResultatCas("b", "reponse", False, "ko", 4.0)])
     assert bilan["exactitude"] == 0.5
@@ -135,8 +135,8 @@ def test_la_synthese_calcule_exactitude_et_latences() -> None:
 async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) -> None:
     from langchain_core.messages import AIMessage
 
-    from erp_rh_ia import evaluation
-    from erp_rh_ia.config import Settings
+    from staport_ia import evaluation
+    from staport_ia.config import Settings
 
     config = Settings(
         enabled=True,
@@ -172,7 +172,7 @@ def test_la_trajectoire_attendue_est_controlee_par_agentevals() -> None:
 
     from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-    from erp_rh_ia.evaluation import _TRAJECTOIRE  # pyright: ignore[reportPrivateUsage]
+    from staport_ia.evaluation import _TRAJECTOIRE  # pyright: ignore[reportPrivateUsage]
 
     messages = [
         HumanMessage(content="Masse ?"),

@@ -1,4 +1,4 @@
-# Image erp-rh-api : API unique FastAPI (ADR 0016), qui porte aussi le serveur MCP de l'assistant (/mcp). Bases épinglées
+# Image staport-intelligence-api : API unique FastAPI (ADR 0016), qui porte aussi le serveur MCP de l'assistant (/mcp). Bases épinglées
 # par version et digest, comme l'image du service IA.
 FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
 

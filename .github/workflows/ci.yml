@@ -129,10 +129,10 @@ jobs:
       - name: Build IA images
         run: |
           set -euo pipefail
-          docker build --tag erp-rh-litellm:ci litellm
-          docker build --tag erp-rh-ia:ci ia
-          docker build --tag erp-rh-copilot-runtime:ci copilot-runtime
-          docker build --tag erp-rh-phoenix:ci phoenix
+          docker build --tag staport-intelligence-litellm:ci litellm
+          docker build --tag staport-intelligence-ia:ci ia
+          docker build --tag staport-intelligence-copilot-runtime:ci copilot-runtime
+          docker build --tag staport-intelligence-phoenix:ci phoenix
 
   frontend:
     runs-on: ubuntu-latest
@@ -276,9 +276,9 @@ jobs:
         working-directory: api
         run: |
           export MCP_JWT_PRIVATE_KEY="$(uv run --no-sync python -c 'import base64; from cryptography.hazmat.primitives import serialization as s; from cryptography.hazmat.primitives.asymmetric import rsa; k = rsa.generate_private_key(public_exponent=65537, key_size=3072); print(base64.b64encode(k.private_bytes(s.Encoding.DER, s.PrivateFormat.PKCS8, s.NoEncryption())).decode())')"
-          nohup uv run --no-sync uvicorn staport.main:application --factory --host 0.0.0.0 --port 8080 > "$RUNNER_TEMP/erp-rh-api.log" 2>&1 &
+          nohup uv run --no-sync uvicorn staport.main:application --factory --host 0.0.0.0 --port 8080 > "$RUNNER_TEMP/staport-intelligence-api.log" 2>&1 &
           for i in {1..60}; do curl --fail --silent http://localhost:8080/health && exit 0; sleep 2; done
-          cat "$RUNNER_TEMP/erp-rh-api.log"
+          cat "$RUNNER_TEMP/staport-intelligence-api.log"
           exit 1
         env:
           DB_HOST: localhost
@@ -323,7 +323,7 @@ jobs:
           path: |
             frontend/playwright-report
             frontend/test-results
-            ${{ runner.temp }}/erp-rh-api.log
+            ${{ runner.temp }}/staport-intelligence-api.log
           if-no-files-found: warn
           retention-days: 7
 
@@ -379,21 +379,21 @@ jobs:
       - name: Build all images locally
         run: |
           set -euo pipefail
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-postgres:$GITHUB_SHA" database
-          docker build --file api/Dockerfile --tag "$DOCKERHUB_USERNAME/erp-rh-api:$GITHUB_SHA" .
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-frontend:$GITHUB_SHA" frontend
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-backup:$GITHUB_SHA" backup
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-litellm:$GITHUB_SHA" litellm
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-ia:$GITHUB_SHA" ia
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-copilot-runtime:$GITHUB_SHA" copilot-runtime
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-phoenix:$GITHUB_SHA" phoenix
-          docker build --tag "$DOCKERHUB_USERNAME/erp-rh-docs:$GITHUB_SHA" site
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-postgres:$GITHUB_SHA" database
+          docker build --file api/Dockerfile --tag "$DOCKERHUB_USERNAME/staport-intelligence-api:$GITHUB_SHA" .
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-frontend:$GITHUB_SHA" frontend
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-backup:$GITHUB_SHA" backup
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-litellm:$GITHUB_SHA" litellm
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-ia:$GITHUB_SHA" ia
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-copilot-runtime:$GITHUB_SHA" copilot-runtime
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-phoenix:$GITHUB_SHA" phoenix
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-docs:$GITHUB_SHA" site
 
       - name: Add release aliases
         run: |
           set -euo pipefail
           for image in postgres api frontend backup litellm ia copilot-runtime phoenix docs; do
-            repository="$DOCKERHUB_USERNAME/erp-rh-$image"
+            repository="$DOCKERHUB_USERNAME/staport-intelligence-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
               docker tag "$source" "$repository:latest"
@@ -414,7 +414,7 @@ jobs:
         run: |
           set -euo pipefail
           for image in postgres api frontend backup litellm ia copilot-runtime phoenix docs; do
-            repository="$DOCKERHUB_USERNAME/erp-rh-$image"
+            repository="$DOCKERHUB_USERNAME/staport-intelligence-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
               docker push "$repository:latest"
