@@ -22,7 +22,7 @@ hypothèses : elles sont **mesurées avant et après**, pas supposées.
 
 La migration contredit trois décisions en vigueur, qu'elle remplace explicitement :
 
-1. « Spring reste l'autorité » (`docs/ia.md`, `conventions/mcp.md`, `conventions/architecture.md`) ;
+1. « Spring reste l'autorité » (`site/docs/ia`, `conventions/mcp.md`, `conventions/architecture.md`) ;
 2. le serveur MCP en Spring AI (`conventions/mcp.md`, ADR 0015 pour le périmètre IA) ;
 3. les migrations Flyway (`conventions/database.md`).
 

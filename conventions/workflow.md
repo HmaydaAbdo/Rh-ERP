@@ -29,7 +29,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
 
 0. Consulter Jira (projet `KAN`, source de vérité des tâches : statut, preuve, historique) pour la tâche reprise ou à
    créer. Une tâche termine en Jira avec sa preuve en commentaire, jamais sans.
-1. Lire [`docs/developpement-local.md`](../docs/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
+1. Lire [`site/docs/exploitation/developpement-local.md`](../site/docs/exploitation/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
    commises et règle qui les évite), puis les conventions applicables et `docs/README.md`.
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
    Lire [`ingenierie-agentique.md`](ingenierie-agentique.md) et chercher dans son registre la ligne du cas d'usage de la
@@ -98,7 +98,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   domaines consommateurs modifiés. Une brique d'interface locale n'est pas justifiée par sa seule
   spécificité métier : toute exception temporaire suit les preuves et l'accord préalable prévus dans
   [frontend.md](frontend.md) et figure à l'inventaire avec son plan de sortie.
-* Respecter les services et ports du propriétaire décrits dans [developpement-local.md](../docs/developpement-local.md). Utiliser `localhost`
+* Respecter les services et ports du propriétaire décrits dans [developpement-local.md](../site/docs/exploitation/developpement-local.md). Utiliser `localhost`
   pour la revue locale lorsqu'il est demandé ; les serveurs de test utilisent leur environnement
   dédié. Déclarer les contrôles impossibles ou interrompus et leur cause.
 

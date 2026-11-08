@@ -1,7 +1,10 @@
-# PV N°1 — Cadrage et évolutions d’ERP-RH
+---
+title: "PV N°1 — Cadrage et évolutions d’Staport Intelligence"
+sidebar_position: 20
+---
 
 **Date de préparation :** 22 octobre 2026  
-**Objet :** trajectoire de stabilisation de toute l’application ERP-RH  
+**Objet :** trajectoire de stabilisation de toute l’application Staport Intelligence  
 **Domaines décrits :** Équipe, Fonction, Chantier, Employé, Paie, Rapport, Auth, Paramètres et Audit
 
 **Version stable visée :** `1.0.0` pour le frontend et le backend  
@@ -11,7 +14,7 @@
 
 ## 1. Objet du PV
 
-Ce PV définit le cadre commun pour faire évoluer ERP-RH de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
+Ce PV définit le cadre commun pour faire évoluer Staport Intelligence de sa version actuelle vers une application stable, compréhensible et vérifiable par ses utilisateurs et ses responsables métier.
 
 Le présent PV décrit les domaines Équipe, Fonction, Chantier, Employé, Paie, Rapport, Auth, Paramètres et Audit.
 Chaque bloc expose leurs règles, liens, écrans, accès et preuves de contrôle. Leur présence dans le document ne
@@ -35,7 +38,7 @@ Les principes suivants forment le cadre proposé pour tous les futurs blocs :
 ## 3. Premier bloc — domaine Équipe
 
 Le domaine Équipe est le premier domaine examiné. Son rôle, les règles, les vues, les liens Employé/Paie,
-les API, les droits et les scénarios de test sont centralisés dans le [dossier Équipe](../equipe/README.md),
+les API, les droits et les scénarios de test sont centralisés dans le [dossier Équipe](../domaines/equipe/index.md),
 qui évolue avec le comportement de l'application.
 
 La base ne conserve plus l'équipe combinée `CH+OP`. Ses bulletins historiques et ses fiches encore actives
@@ -43,7 +46,7 @@ sont répartis selon leur fonction : `CH.` et `COURSIER` vers `CH`, `OP.` vers `
 vers `EE`. Les fiches inactives n'ont aucune équipe courante; leurs bulletins conservent le reclassement
 de leur historique mensuel. Une fonction non classée bloque la migration et les opérations sont auditées.
 
-Les règles et scénarios actuellement appliqués sont centralisés dans le [README Équipe](../equipe/README.md) :
+Les règles et scénarios actuellement appliqués sont centralisés dans le [README Équipe](../domaines/equipe/index.md) :
 le code modifié est affiché dans les bulletins historiques qui référencent l'équipe; la suppression d'une équipe référencée
 par Paie ou Employé est bloquée; le rattachement d'équipe reste facultatif sur les bulletins.
 La fiche Employé représente son état courant dérivé du dernier mois de paie enregistré. Une fiche active a un chantier;
@@ -72,7 +75,7 @@ n’apparaît ni dans le Tabulaire ni dans Cartes. Les règles détaillées sont
 ## 5. Source des preuves Équipe
 
 La description métier, les règles confirmées et les scénarios de contrôle Équipe sont regroupés dans
-le [README Équipe](../equipe/README.md). Le PV global conserve uniquement le cadre commun et les
+le [README Équipe](../domaines/equipe/index.md). Le PV global conserve uniquement le cadre commun et les
 décisions qui concernent plusieurs domaines.
 ## 6. Traitement d’une exception
 
@@ -90,7 +93,7 @@ Une exception ne sera pas cachée dans une note, un test désactivé ou une form
 ## 7. Décisions et accords des intervenants
 
 Les décisions de cadrage communes restent dans le présent PV. Les règles confirmées propres à Équipe
-sont décrites dans son [README](../equipe/README.md). La signification et le libellé des codes provisoires
+sont décrites dans son [README](../domaines/equipe/index.md). La signification et le libellé des codes provisoires
 `A`, `LABO`, `ASPHALET` et `8` restent suivis dans la tâche Jira « Qualité des données » (KAN-160).
 
 ## 8. Compte rendu de signature
@@ -99,7 +102,7 @@ Le compte rendu collectif et les avis des intervenants seront ajoutés au prése
 commune. Il n'y a pas de formulaire de validation technique distinct par domaine.
 ## 9. Deuxième bloc — domaine Fonction
 
-**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Fonction](../function/README.md). Ce bloc applique le cadre commun des sections 2 et 6.
+**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Fonction](../domaines/function/index.md). Ce bloc applique le cadre commun des sections 2 et 6.
 
 ### 9.1 Rôle du domaine et liens avec l’application
 
@@ -160,7 +163,7 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 
 ## 10. Troisième bloc — domaine Chantier
 
-**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Chantier](../chantier/README.md). Ce bloc applique le cadre commun des sections 2 et 6.
+**État du bloc :** implémenté avec les composants partagés décrits dans le dossier du domaine. Les contrôles et la description métier restent centralisés dans le [README Chantier](../domaines/chantier/index.md). Ce bloc applique le cadre commun des sections 2 et 6.
 
 ### 10.1 Rôle du domaine et liens avec l’application
 
@@ -188,7 +191,7 @@ La qualification géographique ajoute les règles confirmées : six natures dist
 obligatoires en saisie manuelle, lien ou paire de coordonnées explicites, affichage conditionné à une qualification
 complète. Les chantiers ERP et les anciens chantiers non qualifiés restent hors carte. La position est conservée
 lorsque l'affichage est désactivé. Le détail du contrat et des scénarios figure dans le
-[README Chantier](../chantier/README.md#règles-métier) ; la carte utilise son droit `CARTE_READ`, sans accès à la paie.
+[README Chantier](../domaines/chantier/index.md#règles-métier) ; la carte utilise son droit `CARTE_READ`, sans accès à la paie.
 
 - le code et la désignation sont obligatoires à la création manuelle; le code est unique sans tenir compte de la casse ni des espaces extérieurs;
 - la synchronisation avec l’ERP n’ajoute que les chantiers manquants : elle ne modifie, ne clôture ni ne supprime jamais un chantier existant;
@@ -225,7 +228,7 @@ Les signatures de ce bloc seront recueillies sur le modèle de la section 8.
 La fiche Employé conserve l’identité et la situation courante de la personne : fonction, chantier, équipe, statut et,
 pour les lecteurs autorisés, salaire et type de salaire. Elle représente le dernier état de paie enregistré. Les
 bulletins gardent leurs propres affectations mensuelles; les changements de fiche ne réécrivent pas les mois passés.
-Les règles, contrats et scénarios détaillés sont centralisés dans le [dossier Employé](../employee/README.md).
+Les règles, contrats et scénarios détaillés sont centralisés dans le [dossier Employé](../domaines/employee/index.md).
 
 ### 11.2. Parcours et indicateurs
 
@@ -310,7 +313,7 @@ de lecture. L'analyse d'import exige `PAIE_IMPORT` et `PAIE_READ`; les correctio
 
 Les résultats de compilation, de tests, de navigateur et de livraison restent dans leurs rapports techniques;
 ils ne remplacent pas l'accord des intervenants. Les règles détaillées, contrats et scénarios sont centralisés dans
-[le dossier Paie](../paie/README.md).
+[le dossier Paie](../domaines/paie/index.md).
 
 ## 13. Sixième bloc — domaine Rapport
 
@@ -349,7 +352,7 @@ pour lire les mois, marchés et tableaux de matériel. Aucune donnée n'est expo
 | Parcours d'assistant, chargement et erreurs | Specs de l'assistant et de ses étapes; revue navigateur | À recueillir |
 
 Le PDF et l'Excel gardent chacun leur contrat de sélection documenté. Les exports de graphique ou tableau isolé
-complètent ces documents. Les règles, DTO et scénarios sont centralisés dans [le dossier Rapport](../report/README.md).
+complètent ces documents. Les règles, DTO et scénarios sont centralisés dans [le dossier Rapport](../domaines/rapport/index.md).
 Le propriétaire relit ce bloc avant diffusion; les accords, réserves et signatures suivent la section 8.
 
 ## 14. Domaine Auth — comptes, rôles et sessions
@@ -358,7 +361,7 @@ Le propriétaire relit ce bloc avant diffusion; les accords, réserves et signat
 
 Auth gère les identités de connexion, leurs sessions et leurs droits. Un compte peut être lié à un employé,
 mais ce lien reste facultatif : gérer un compte n'est pas créer une fiche Employé. Les règles, le modèle,
-les DTO et les scénarios sont centralisés dans [le dossier Auth](../auth/README.md).
+les DTO et les scénarios sont centralisés dans [le dossier Auth](../domaines/auth/index.md).
 
 ### 14.2 Parcours et règles appliquées
 
@@ -409,7 +412,7 @@ réserves, rejets et signatures suivent le modèle de la section 8.
 Paramètres gère les valeurs de fonctionnement que les personnes autorisées peuvent ajuster depuis le portail.
 Le catalogue des clés, types et bornes est fixe ; seules les valeurs courantes se modifient. Les consommateurs
 sont l'authentification, l'analytique Paie et la synchronisation des chantiers. Le
-[dossier Paramètres](../parametre/README.md) centralise le catalogue, le modèle, les DTO et les scénarios.
+[dossier Paramètres](../domaines/parametre/index.md) centralise le catalogue, le modèle, les DTO et les scénarios.
 
 ### 15.2 Parcours et règles appliquées
 
@@ -447,7 +450,7 @@ rejets et signatures suivent le modèle de la section 8.
 
 Audit permet d'établir qui a fait quoi, quand, depuis quelle origine, avec quel résultat et sur quel périmètre.
 Il distingue les instantanés de données, le journal d'actions et les garde-fous d'intégrité. Le
-[dossier Audit](../audit/README.md) centralise leurs règles, modèle, contrats de consultation et scénarios.
+[dossier Audit](../domaines/audit/index.md) centralise leurs règles, modèle, contrats de consultation et scénarios.
 
 ### 16.2 Parcours et règles appliquées
 

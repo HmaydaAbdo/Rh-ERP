@@ -140,7 +140,7 @@ Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimist
 
 Les relations, statut et date d’embauche sont indexés. Les contraintes de base protègent les
 références, le CIN et l’absence d’affectation des fiches sorties. Le modèle transverse est dans
-le modèle de données (`docs/data-model.md`).
+le modèle de données ([architecture/modele-de-donnees](../../architecture/modele-de-donnees.md)).
 
 Table `employe_sortie`, entité `EmployeeSortie`, auditée :
 
@@ -314,7 +314,7 @@ partagées de présentation et d’export sont dans Vues de périmètre (`docs/f
 | Formulaire, fiche, chargement/erreur/réessai et permissions | Specs `employee-form`, `employee-detail`, `employee-list` |
 | URL et recherches tardives, passage entre trois vues | Specs filtres/coque/liste/module et E2E Employé |
 
-Les suites et commandes transverses sont décrites dans Tests (`docs/testing.md`). Le Pointage et les
+Les suites et commandes transverses sont décrites dans Tests ([exploitation/tests](../../exploitation/tests.md)). Le Pointage et les
 évolutions de qualité de données non arbitrées sont suivis dans Jira (KAN-171, KAN-177).
 
 ## Guide agent

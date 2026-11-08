@@ -649,7 +649,7 @@ les résultats des filtres courants. Les quantités et montants sont affichés a
 | Autorisations et refus | `EndpointSecurityTest`, specs des actions et routes |
 | Documents et périmètres d'export | [Scénarios Rapport](../rapport/index.md#mise-en-œuvre-et-scénarios) |
 
-Les décisions et accords à recueillir sont dans le PV global (`docs/handoff/pv-n1-erp-rh.md`).
+Les décisions et accords à recueillir sont dans le PV global ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)).
 
 ## Guide agent
 

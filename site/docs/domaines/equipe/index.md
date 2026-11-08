@@ -327,7 +327,7 @@ reste un modèle d'import, pas un export.
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
 | Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
 
-Les commandes et prérequis des suites sont décrits dans la documentation des tests (`docs/testing.md`).
+Les commandes et prérequis des suites sont décrits dans la documentation des tests ([exploitation/tests](../../exploitation/tests.md)).
 
 ## Points à valider avec le propriétaire
 
@@ -339,7 +339,7 @@ Constats issus de la relecture du code pour clôturer le domaine. Chacun est un 
 | 1 | La suppression est refusée par la clé étrangère ; le message dit « bulletin de paie ou employé » sans dire lequel ni combien | Préciser le message (nombre d'employés et de bulletins) ? |
 | 2 | Quatre équipes d'origine (`A`, `LABO`, `ASPHALET`, `8`) ont été créées avec **libellé = code** en attendant le vrai libellé de la RH | Les libellés réels sont-ils renseignés ? |
 | 3 | L'import ne fait que **créer** : aucun moyen de corriger des équipes en masse | Un import de mise à jour est-il utile ? |
-| 4 | L'équipe est facultative sur la fiche et le bulletin (le PV N°1 (`docs/handoff/pv-n1-erp-rh.md`) propose de la rendre obligatoire) | Décision métier sur le caractère obligatoire ? |
+| 4 | L'équipe est facultative sur la fiche et le bulletin (le PV N°1 ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)) propose de la rendre obligatoire) | Décision métier sur le caractère obligatoire ? |
 | 5 | Aucun état actif/inactif : une équipe qui n'existe plus ne peut qu'être supprimée si rien ne la référence | Faut-il pouvoir « archiver » une équipe ? |
 | 6 | L'assistant lit les équipes et la paie par équipe, sans périmètre par fiche de poste | Qui doit voir quelles équipes (jalon J2) ? |
 
@@ -347,7 +347,7 @@ Constats issus de la relecture du code pour clôturer le domaine. Chacun est un 
 
 - [Domaine Employé](../employee/index.md) — équipe courante de la fiche.
 - [Domaine Paie](../paie/index.md) — équipe portée par le bulletin du mois.
-- PV N°1 — proposition d'évolution (`docs/handoff/pv-n1-erp-rh.md`) — proposition de rendre l'équipe obligatoire sur un bulletin. Le comportement actuel reste facultatif.
+- PV N°1 — proposition d'évolution ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)) — proposition de rendre l'équipe obligatoire sur un bulletin. Le comportement actuel reste facultatif.
 
 ## Guide agent
 

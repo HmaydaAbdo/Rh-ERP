@@ -42,7 +42,7 @@ final, restaurer dans un volume neuf et exécuter les migrations Flyway manquant
 du dépôt. Contrôler les données, les extensions, les droits et le démarrage applicatif avant de
 rouvrir le trafic. Garder l'ancien volume intact comme retour arrière ; après reprise des écritures
 sur la nouvelle majeure, un retour arrière exige une réconciliation des nouvelles écritures. Voir
-`conventions/deployment.md` et la procédure propre au projet dans `docs/deployment.md`.
+`conventions/deployment.md` et la procédure propre au projet dans `site/docs/exploitation/deploiement.md`.
 
 Utiliser un type décimal exact pour les quantités monétaires ou les mesures décimales qui exigent
 une précision déterministe ; ne pas représenter ces valeurs par des nombres flottants. Stocker les
