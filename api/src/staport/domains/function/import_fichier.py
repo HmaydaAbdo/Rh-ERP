@@ -43,7 +43,9 @@ def _libelles_du_fichier(contenu: bytes) -> list[tuple[int, str]]:
         finally:
             classeur.close()
     except Exception as erreur:
-        raise ErreurImportFonction(f"Fichier Excel illisible : {erreur}") from erreur
+        raise ErreurImportFonction(
+            "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+        ) from erreur
     return [(numero, libelle) for numero, libelle in lignes if libelle]
 
 

@@ -92,7 +92,9 @@ def lire(nom: str | None, contenu: bytes) -> Fichier:
     try:
         classeur = load_workbook(BytesIO(contenu), data_only=True)
     except Exception as erreur:
-        raise HeuresSuppInvalide(f"Fichier Excel illisible : {erreur}") from erreur
+        raise HeuresSuppInvalide(
+            "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+        ) from erreur
     try:
         if not classeur.worksheets:
             raise HeuresSuppInvalide("Le classeur ne contient aucune feuille.")
