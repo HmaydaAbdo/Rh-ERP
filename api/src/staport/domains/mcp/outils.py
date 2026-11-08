@@ -24,12 +24,13 @@ from staport.domains.audit.schemas import CategorieAudit, RechercheJournal, Resu
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.auth.schemas import RoleRecherche
 from staport.domains.auth.securite import SCOPE_LECTURE
-from staport.domains.chantier import repository as repository_chantier
+from staport.domains.chantier.exceptions import ChantierIntrouvable
 from staport.domains.chantier.schemas import ChantierRecherche
 from staport.domains.common.pagination import Pagination
-from staport.domains.equipe import repository as repository_equipe
+from staport.domains.equipe.exceptions import EquipeIntrouvable
 from staport.domains.equipe.schemas import EquipeRecherche
-from staport.domains.function import repository as repository_fonction
+from staport.domains.function.exceptions import FonctionIntrouvable
+from staport.domains.function.schemas import FonctionRecherche
 from staport.domains.mcp.formats import (
     LECTURE_SEULE,
     Page,
@@ -234,9 +235,12 @@ def enregistrer(
         page: Page = 0,
     ) -> dict[str, Any]:
         async with fabrique()() as session:
-            lignes, total = await repository_fonction.rechercher(
-                session, texte(recherche), Pagination(page, limite, (("libelle", ascendant(sens, SensTri.ASC)),))
+            resultat = await contexte().fonctions.rechercher(
+                session,
+                FonctionRecherche(libelle=texte(recherche)),
+                Pagination(page, limite, (("libelle", ascendant(sens, SensTri.ASC)),)),
             )
+        lignes, total = resultat.content, resultat.page.total_elements
         parametres = {"libelle": cherche} if (cherche := texte(recherche)) else {}
         return {
             "total": total,
@@ -262,10 +266,11 @@ def enregistrer(
             Field(gt=0, description="Identifiant de la fonction (entier positif), rendu par `fonction_rechercher`."),
         ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            fonction = await repository_fonction.par_id(session, id)
-        if fonction is None:
-            raise ToolError(f"Fonction introuvable avec l'id : {id}")
+        try:
+            async with fabrique()() as session:
+                fonction = await contexte().fonctions.lire(session, id)
+        except FonctionIntrouvable as cause:
+            raise ToolError(f"Fonction introuvable avec l'id : {id}") from cause
         return {
             "fonction": {"id": fonction.id, "libelle": fonction.libelle},
             "vue": vue("functions", "fiche", {"id": str(fonction.id)}),
@@ -299,11 +304,12 @@ def enregistrer(
     ) -> dict[str, Any]:
         critere = (tri or TriEquipe.CODE).value.lower()
         async with fabrique()() as session:
-            lignes, total = await repository_equipe.rechercher(
+            resultat = await contexte().equipes.rechercher(
                 session,
                 EquipeRecherche(recherche=texte(recherche)),
                 Pagination(page, limite, ((critere, ascendant(sens, SensTri.ASC)),)),
             )
+        lignes, total = resultat.content, resultat.page.total_elements
         parametres = {"code": cherche} if (cherche := texte(recherche)) else {}
         return {
             "total": total,
@@ -328,10 +334,11 @@ def enregistrer(
             int, Field(gt=0, description="Identifiant de l'équipe (entier positif), rendu par `equipe_rechercher`.")
         ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            equipe = await repository_equipe.par_id(session, id)
-        if equipe is None:
-            raise ToolError(f"Équipe introuvable avec l'id : {id}")
+        try:
+            async with fabrique()() as session:
+                equipe = await contexte().equipes.lire(session, id)
+        except EquipeIntrouvable as cause:
+            raise ToolError(f"Équipe introuvable avec l'id : {id}") from cause
         return {
             "equipe": {"id": equipe.id, "code": equipe.code, "libelle": equipe.libelle},
             "vue": vue("equipes", "fiche", {"id": str(equipe.id)}),
@@ -377,11 +384,12 @@ def enregistrer(
         actif = None if statut is None else statut is StatutChantier.EN_COURS
         critere = (tri or TriChantier.CODE).value.lower()
         async with fabrique()() as session:
-            lignes, total = await repository_chantier.rechercher(
+            resultat = await contexte().chantiers.rechercher(
                 session,
                 ChantierRecherche(recherche=texte(recherche), actif=actif),
                 Pagination(page, limite, ((critere, ascendant(sens, SensTri.ASC)),)),
             )
+        lignes, total = resultat.content, resultat.page.total_elements
         parametres: dict[str, str] = {"code": lignes[0].code} if len(lignes) == 1 else {}
         if actif is not None:
             parametres["actif"] = "true" if actif else "false"
@@ -409,10 +417,11 @@ def enregistrer(
             int, Field(gt=0, description="Identifiant du chantier (entier positif), rendu par `chantier_rechercher`.")
         ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            chantier = await repository_chantier.par_id(session, id)
-        if chantier is None:
-            raise ToolError(f"Chantier introuvable avec l'id : {id}")
+        try:
+            async with fabrique()() as session:
+                chantier = await contexte().chantiers.lire(session, id)
+        except ChantierIntrouvable as cause:
+            raise ToolError(f"Chantier introuvable avec l'id : {id}") from cause
         return {"chantier": _chantier(chantier), "vue": vue("chantiers", "fiche", {"id": str(chantier.id)})}
 
     @serveur.tool(

@@ -1,11 +1,11 @@
 """Accueil personnalisé (parité de `AccueilService`) : le choix et l'ordre des indicateurs de chaque utilisateur."""
 
+from collections.abc import Awaitable, Callable
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from staport.domains.auth import repository as repository_auth
-from staport.domains.auth.exceptions import UtilisateurIntrouvable
 from staport.domains.auth.mappage import permissions_effectives
 from staport.domains.auth.models import Utilisateur
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
@@ -50,8 +50,12 @@ def _reponse(utilisateur: Utilisateur, preference: PreferenceAccueil | None) -> 
 
 
 class ServiceAccueil:
-    def __init__(self, auditeur: Auditeur) -> None:
+    def __init__(
+        self, auditeur: Auditeur, charger_utilisateur: Callable[[AsyncSession, int], Awaitable[Utilisateur]]
+    ) -> None:
+        # Fourni par le domaine « auth » (service d'utilisateurs) à la composition : l'accueil n'atteint pas son dépôt.
         self._auditeur = auditeur
+        self._charger_utilisateur = charger_utilisateur
 
     async def lire(self, session: AsyncSession, utilisateur_id: int) -> AccueilReponse:
         async with session.begin():
@@ -100,12 +104,8 @@ class ServiceAccueil:
                 await session.flush()
             return _reponse(utilisateur, None)
 
-    @staticmethod
-    async def _utilisateur(session: AsyncSession, utilisateur_id: int) -> Utilisateur:
-        utilisateur = await repository_auth.utilisateur_par_id(session, utilisateur_id)
-        if utilisateur is None:
-            raise UtilisateurIntrouvable(utilisateur_id)
-        return utilisateur
+    async def _utilisateur(self, session: AsyncSession, utilisateur_id: int) -> Utilisateur:
+        return await self._charger_utilisateur(session, utilisateur_id)
 
     @staticmethod
     async def _preference(session: AsyncSession, utilisateur_id: int) -> PreferenceAccueil | None:

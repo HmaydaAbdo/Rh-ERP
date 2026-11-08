@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -265,7 +266,8 @@ class ServiceImportPaie:
             fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
             chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
-        lignes = lire_lignes_paie(contenu)
+        # La lecture du classeur occupe le processeur : dans un fil, la boucle d'événements reste libre (KAN-233).
+        lignes = await asyncio.to_thread(lire_lignes_paie, contenu)
         for numero, ligne in lignes:
             nom = str(ligne[0]).strip() if len(ligne) > 0 and ligne[0] is not None else None
             fonction = str(ligne[1]).strip() if len(ligne) > 1 and ligne[1] is not None else None
@@ -670,7 +672,8 @@ class ServiceImportPaie:
                     f"Le départ de l'employé {depart.employe_id} demande un motif"
                     + (" ou la confirmation explicite « sans motif »." if propose.motif is None else ".")
                 )
-        lignes = lire_lignes_paie(contenu)
+        # La lecture du classeur occupe le processeur : dans un fil, la boucle d'événements reste libre (KAN-233).
+        lignes = await asyncio.to_thread(lire_lignes_paie, contenu)
         action = self._auditeur.auditer(session, "PAIE_IMPORT", TypeOperation.CREATE, "Paie")
         async with session.begin(), action as audit_import:
             employees = {x.cin.strip().upper(): x for x in (await session.execute(select(Employee))).scalars()}
@@ -774,7 +777,8 @@ class ServiceImportPaie:
     ) -> PaieImportAnalyse:
         """Aligne les fiches citées par le fichier joint, puis recalcule l'analyse."""
         analyse = await self.analyser(session, contenu, periode)
-        lignes = lire_lignes_paie(contenu)
+        # La lecture du classeur occupe le processeur : dans un fil, la boucle d'événements reste libre (KAN-233).
+        lignes = await asyncio.to_thread(lire_lignes_paie, contenu)
         par_cin = {
             str(ligne[2]).strip().upper(): ligne
             for _, ligne in lignes

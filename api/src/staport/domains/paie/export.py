@@ -1,4 +1,6 @@
+import asyncio
 import re
+from copy import copy
 from decimal import Decimal
 from io import BytesIO
 from typing import cast
@@ -6,6 +8,7 @@ from typing import cast
 from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.styles.cell_style import StyleArray
 from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,69 +56,77 @@ class ServiceExportPaie:
                 list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
                 list((await session.execute(precedent)).all()),
             )
-        groupes = _groupes(requete.regroupements_equipes)
-        if requete.chantiers:
-            codes = {code.strip().upper() for code in requete.chantiers}
-            lignes = [x for x in lignes if x[2].code.strip().upper() in codes]
-            lignes_precedentes = [x for x in lignes_precedentes if x[2].code.strip().upper() in codes]
-        workbook = Workbook()
-        actif = workbook.active
-        if actif is not None:
-            workbook.remove(actif)
-        global_sheet = workbook.create_sheet("GLB")
-        _ecrire(global_sheet, "GLOBAL", requete.periode, lignes, groupes, None, lignes_precedentes)
-        for code in sorted({chantier.code for _, _, chantier, _, _ in lignes}):
-            feuille = workbook.create_sheet(_nom_feuille_valide(code))
-            chantier_lignes = [x for x in lignes if x[2].code == code]
-            exclusions = set((requete.equipes_exclues_feuille_chantier or {}).get(code, []))
-            _ecrire(
-                feuille,
-                _titre_chantier(code, chantier_lignes),
-                requete.periode,
-                [x for x in chantier_lignes if not x[3] or x[3].libelle not in exclusions],
-                groupes,
-                None,
-                [x for x in lignes_precedentes if x[2].code == code and (not x[3] or x[3].libelle not in exclusions)],
-            )
-            equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
-            for ligne in chantier_lignes:
-                if ligne[3] is None:  # Spring : pas de feuille pour les bulletins sans équipe
-                    continue
-                equipes.setdefault(groupes.get(ligne[3].code, ligne[3].code), []).append(ligne)
-            if requete.feuilles_equipe_mode == "AUCUNE":
+        # Construire un classeur de plusieurs milliers de lignes occupe le processeur : dans un fil, pour que la boucle
+        # d'événements continue de servir les autres requêtes (profil de performance, KAN-233).
+        return await asyncio.to_thread(_construire_classeur, requete, lignes, lignes_precedentes)
+
+
+def _construire_classeur(
+    requete: PaieExportRequete,
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+    lignes_precedentes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> BytesIO:
+    groupes = _groupes(requete.regroupements_equipes)
+    if requete.chantiers:
+        codes = {code.strip().upper() for code in requete.chantiers}
+        lignes = [x for x in lignes if x[2].code.strip().upper() in codes]
+        lignes_precedentes = [x for x in lignes_precedentes if x[2].code.strip().upper() in codes]
+    workbook = Workbook()
+    actif = workbook.active
+    if actif is not None:
+        workbook.remove(actif)
+    global_sheet = workbook.create_sheet("GLB")
+    _ecrire(global_sheet, "GLOBAL", requete.periode, lignes, groupes, None, lignes_precedentes)
+    for code in sorted({chantier.code for _, _, chantier, _, _ in lignes}):
+        feuille = workbook.create_sheet(_nom_feuille_valide(code))
+        chantier_lignes = [x for x in lignes if x[2].code == code]
+        exclusions = set((requete.equipes_exclues_feuille_chantier or {}).get(code, []))
+        _ecrire(
+            feuille,
+            _titre_chantier(code, chantier_lignes),
+            requete.periode,
+            [x for x in chantier_lignes if not x[3] or x[3].libelle not in exclusions],
+            groupes,
+            None,
+            [x for x in lignes_precedentes if x[2].code == code and (not x[3] or x[3].libelle not in exclusions)],
+        )
+        equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
+        for ligne in chantier_lignes:
+            if ligne[3] is None:  # Spring : pas de feuille pour les bulletins sans équipe
                 continue
-            selection = None
-            if requete.feuilles_equipe_mode == "PERSONNALISE":
-                selection = set((requete.equipes_par_chantier or {}).get(code, []))
-            for equipe, equipe_lignes in sorted(equipes.items()):
-                if selection is not None and not any(
-                    ligne[3] and ligne[3].libelle in selection for ligne in equipe_lignes
-                ):
-                    continue  # PERSONNALISE : la requête cite des libellés d'équipe, jamais des codes
-                nom = _nom_feuille_valide(f"{code}_{equipe}")
-                feuille_equipe = workbook.create_sheet(nom)
-                tableau = next(
-                    (t for t in tableaux_materiel() if t.chantier_code == code and t.equipe_code == equipe), None
-                )
-                _ecrire(
-                    feuille_equipe,
-                    f"{_titre_chantier(code, equipe_lignes)} - Equipe: {cast(Equipe, equipe_lignes[0][3]).libelle}",
-                    requete.periode,
-                    equipe_lignes,
-                    groupes,
-                    (tableau.titre, tableau.libelles, requete.materiel or {}) if tableau else None,
-                    [
-                        x
-                        for x in lignes_precedentes
-                        if x[2].code == code and x[3] and groupes.get(x[3].code, x[3].code) == equipe
-                    ],
-                )
-        sortie = BytesIO()
-        workbook.calculation.fullCalcOnLoad = True
-        workbook.calculation.forceFullCalc = True
-        workbook.save(sortie)
-        sortie.seek(0)
-        return sortie
+            equipes.setdefault(groupes.get(ligne[3].code, ligne[3].code), []).append(ligne)
+        if requete.feuilles_equipe_mode == "AUCUNE":
+            continue
+        selection = None
+        if requete.feuilles_equipe_mode == "PERSONNALISE":
+            selection = set((requete.equipes_par_chantier or {}).get(code, []))
+        for equipe, equipe_lignes in sorted(equipes.items()):
+            if selection is not None and not any(ligne[3] and ligne[3].libelle in selection for ligne in equipe_lignes):
+                continue  # PERSONNALISE : la requête cite des libellés d'équipe, jamais des codes
+            nom = _nom_feuille_valide(f"{code}_{equipe}")
+            feuille_equipe = workbook.create_sheet(nom)
+            tableau = next(
+                (t for t in tableaux_materiel() if t.chantier_code == code and t.equipe_code == equipe), None
+            )
+            _ecrire(
+                feuille_equipe,
+                f"{_titre_chantier(code, equipe_lignes)} - Equipe: {cast(Equipe, equipe_lignes[0][3]).libelle}",
+                requete.periode,
+                equipe_lignes,
+                groupes,
+                (tableau.titre, tableau.libelles, requete.materiel or {}) if tableau else None,
+                [
+                    x
+                    for x in lignes_precedentes
+                    if x[2].code == code and x[3] and groupes.get(x[3].code, x[3].code) == equipe
+                ],
+            )
+    sortie = BytesIO()
+    workbook.calculation.fullCalcOnLoad = True
+    workbook.calculation.forceFullCalc = True
+    workbook.save(sortie)
+    sortie.seek(0)
+    return sortie
 
 
 def _groupes(configuration: dict[str, list[str]]) -> dict[str, str]:
@@ -189,8 +200,15 @@ def _ecrire(
                 groupes.get(code_equipe, code_equipe),
             ]
         )
+    # Le style d'une colonne est calculé une fois puis recopié : l'affecter cellule par cellule (bordure, alignement,
+    # format) fait dédoublonner chaque style par openpyxl et dominait le temps d'un export (profil de performance).
+    modeles: dict[int, StyleArray] = {}
     for ligne in feuille.iter_rows(min_row=5, max_row=4 + len(ordonnees), max_col=13):
         for cellule in ligne:
+            modele = modeles.get(cellule.column)
+            if modele is not None:
+                cellule._style = copy(modele)  # pyright: ignore[reportPrivateUsage]
+                continue
             cellule.border = bordure
             alignement = (
                 "left" if cellule.column in (1, 2) else "right" if cellule.column in (7, 8, 9, 10) else "center"
@@ -198,6 +216,7 @@ def _ecrire(
             cellule.alignment = Alignment(horizontal=alignement, vertical="center")
             if cellule.column in (7, 8, 9, 10):
                 cellule.number_format = "#,##0.00"
+            modeles[cellule.column] = copy(cellule._style)  # pyright: ignore[reportPrivateUsage]
     total_ligne = 5 + len(ordonnees)
     precedent_ligne = total_ligne + 1
     for index, libelle in ((total_ligne, "TOTAL GENERAL"), (precedent_ligne, "TOTAL GENERAL MOIS PRECEDENT")):

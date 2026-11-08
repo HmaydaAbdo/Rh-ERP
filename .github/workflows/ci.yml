@@ -327,8 +327,45 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # Profil de performance (KAN-233) : 1 000 employés sur 60 mois, 600 recherches à 10 req/s pendant des analyses d'import,
+  # exports Excel et rapports PDF de 1 000 lignes. Les objectifs sont dans api/tests/test_performance_profil.py et
+  # site/docs/exploitation/tests.md ; le rendu PDF est obligatoire (Pango installé), jamais omis en silence.
+  performance-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        run: pipx install uv==0.12.2
+
+      - name: Install PDF rendering libraries
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0
+
+      - name: Install locked dependencies
+        working-directory: api
+        run: uv sync --locked
+
+      - name: Run the performance profile
+        working-directory: api
+        env:
+          PERFORMANCE_PROFILE: "1"
+          PERFORMANCE_PDF_REQUIS: "1"
+        run: uv run pytest tests/test_performance_profil.py -s -p no:cacheprovider
+
+      - name: Upload performance profile
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Performance profile
+          path: |
+            api/target/performance-profile.json
+            api/target/performance-api.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
   publish-images:
-    needs: [api, ia, frontend, full-stack]
+    needs: [api, ia, frontend, full-stack, performance-profile]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:

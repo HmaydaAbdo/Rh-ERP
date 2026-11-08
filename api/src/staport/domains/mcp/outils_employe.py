@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.common.pagination import Pagination
-from staport.domains.employee import repository as repository_employee
 from staport.domains.employee.models import EmployeeStatut
 from staport.domains.employee.schemas import (
     DimensionEmployes,
@@ -244,8 +243,7 @@ def enregistrer(
         voit_paie = voit_la_paie()
         async with fabrique()() as session:
             employe = await contexte().employees.lire(session, id, voit_paie)
-            async with session.begin():
-                departs = await repository_employee.sorties(session, id)
+            departs = await contexte().employees.departs(session, id)
         return {
             "employe": _fiche(employe, voit_paie),
             "departs": [{"periode": afficher_periode(p), "motif": m.strip() or "NON_PRECISE"} for _, p, m in departs],

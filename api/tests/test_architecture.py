@@ -81,31 +81,9 @@ def test_un_modele_de_persistance_ne_depend_ni_de_l_api_ni_des_services() -> Non
     )
 
 
-# Dette connue (suivie dans Jira) : accès directs à un dépôt d'un autre domaine, à remplacer par la façade de service.
-# La liste ne doit que diminuer : un nouvel écart fait échouer le test.
-DEPENDANCES_CROISEES_CONNUES = frozenset(
-    {
-        r"accueil\service.py importe staport.domains.auth.repository",
-        r"mcp\outils.py importe staport.domains.chantier.repository",
-        r"mcp\outils.py importe staport.domains.equipe.repository",
-        r"mcp\outils.py importe staport.domains.function.repository",
-        r"mcp\outils_employe.py importe staport.domains.employee.repository",
-    }
-)
-
-
 def test_un_domaine_n_utilise_ni_le_depot_ni_le_routeur_d_un_autre() -> None:
     ecarts = _ecarts(lambda domaine, _f, autre, cible: autre != domaine and cible in ("repository", "router"))
-    nouveaux = [
-        e
-        for e in ecarts
-        if e.split(":", 1)[0] + " importe " + e.split(" importe ")[1] not in DEPENDANCES_CROISEES_CONNUES
-    ]
-    assert not nouveaux, nouveaux
-    resolus = DEPENDANCES_CROISEES_CONNUES - {
-        e.split(":", 1)[0] + " importe " + e.split(" importe ")[1] for e in ecarts
-    }
-    assert not resolus, f"dette remboursée : retirer {sorted(resolus)} de la liste"
+    assert not ecarts, ecarts
 
 
 def test_aucune_sortie_standard() -> None:

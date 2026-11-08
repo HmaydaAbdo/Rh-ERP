@@ -86,7 +86,6 @@ def creer_contexte(
     emetteur = EmetteurJetons(cles)
     publication = audit or Audit()
     service_parametre = ServiceParametre(publication)
-    service_accueil = ServiceAccueil(publication)
     service_fonction = ServiceFonction(publication)
     service_equipe = ServiceEquipe(publication)
     service_chantier = ServiceChantier(publication)
@@ -95,9 +94,11 @@ def creer_contexte(
     params = parametres or service_parametre
     courriel = ServiceCourriel(configuration)
     service_auth = ServiceAuth(hacheur, emetteur, params, publication, courriel)
+    service_utilisateur = ServiceUtilisateur(hacheur, params, publication, service_auth)
+    service_accueil = ServiceAccueil(publication, service_utilisateur.charger)
     return ContexteAuth(
         auth=service_auth,
-        utilisateurs=ServiceUtilisateur(hacheur, params, publication, service_auth),
+        utilisateurs=service_utilisateur,
         roles=ServiceRole(publication),
         agent=ServiceAgent(cles if configuration.mcp_enabled else None, publication),
         parametres=service_parametre,
