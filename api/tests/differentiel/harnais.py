@@ -158,7 +158,10 @@ class Backend:
             en_tetes_reponse["set-cookie"] = " | ".join(cookies)
         rep = Reponse(r.status_code, en_tetes_reponse, corps, r.content)
         for nom, chemin_json in (e.capture or {}).items():
-            self.captures[nom] = _extraire(corps, chemin_json)
+            try:
+                self.captures[nom] = _extraire(corps, chemin_json)
+            except KeyError, IndexError, TypeError, StopIteration:  # réponse d'erreur : la valeur reste absente
+                self.captures.setdefault(nom, 0)
         return rep
 
 
