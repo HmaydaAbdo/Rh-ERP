@@ -1,7 +1,7 @@
 // Contrôle des contrastes des jetons de design (charte « standard de la catégorie », conventions/design-system.md).
 // Compile frontend/src/styles/_tokens.scss, résout les jetons des thèmes clair et sombre, mesure chaque couple texte / surface
 // et bordure / surface selon la formule de contraste de WCAG 2.2 (luminance relative, critère 1.4.3), puis écrit le rapport
-// docs/frontend/contraste-jetons.md. Échoue (code 1) si un couple requis passe sous son seuil ou si un jeton de l'ancienne
+// site/docs/frontend/contraste-jetons.md. Échoue (code 1) si un couple requis passe sous son seuil ou si un jeton de l'ancienne
 // identité (échelle de marque, cuivre, Graphite) subsiste dans frontend/src. Les couples « informatifs » (palette des
 // graphiques) sont signalés sans faire échouer le contrôle : les graphiques sont repris en E0.4.
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -131,7 +131,7 @@ parcourir(join(frontend, 'src'));
 // ---- Rapport ----
 const ligne = (r) =>
   `| ${r.libelle} | \`${r.fg}\` ${r.a} | \`${r.bg}\` ${r.b} | ${r.ratio.toFixed(2).replace('.', ',')}:1 | ${String(r.seuil).replace('.', ',')}:1 | ${r.ok ? 'OK' : r.requis ? '**ÉCHEC**' : 'sous le seuil, informatif'} |`;
-let md = `# Contrastes des jetons de design\n\n` +
+let md = `---\ntitle: Contrastes des jetons de design\nsidebar_position: 5\n---\n\n` +
   `Rapport généré par \`npm run check:contraste\` (script \`scripts/check-contraste-jetons.mjs\`) à partir de \`frontend/src/styles/_tokens.scss\`. ` +
   `Formule de contraste de WCAG 2.2 (critère 1.4.3). Seuils : texte courant 7:1 (AAA), texte secondaire, libellés de boutons et liens 4,5:1 (AA), ` +
   `bordures franches, anneau de focus, composants et éléments graphiques 3:1 (1.4.11), séparateur de ligne de tableau 2,18:1 (charte). ` +
@@ -140,11 +140,11 @@ for (const [theme, titre] of [['clair', 'Thème clair'], ['sombre', 'Thème somb
   md += `## ${titre}\n\n| Couple | Premier plan | Arrière-plan | Contraste | Seuil | Résultat |\n|---|---|---|---|---|---|\n${resultats[theme].map(ligne).join('\n')}\n\n`;
 }
 md += `## Bilan\n\n- Couples requis en échec : ${echecs}\n- Couples informatifs sous le seuil : ${avertissements}\n- Jetons de l'ancienne identité restants dans \`frontend/src\` : ${trouves.length}\n`;
-const sortie = join(racine, 'docs/frontend/contraste-jetons.md');
+const sortie = join(racine, 'site/docs/frontend/contraste-jetons.md');
 mkdirSync(dirname(sortie), { recursive: true });
 writeFileSync(sortie, md);
 
 for (const t of trouves) console.error(`Ancienne identité : ${t}`);
 for (const [theme, liste] of Object.entries(resultats)) for (const r of liste) if (!r.ok && r.requis) console.error(`ÉCHEC (${theme}) ${r.libelle} : ${r.ratio}:1 < ${r.seuil}:1`);
-console.log(`Contraste : ${echecs} échec(s) requis, ${avertissements} avertissement(s) informatif(s), ${trouves.length} jeton(s) de l'ancienne identité. Rapport : docs/frontend/contraste-jetons.md`);
+console.log(`Contraste : ${echecs} échec(s) requis, ${avertissements} avertissement(s) informatif(s), ${trouves.length} jeton(s) de l'ancienne identité. Rapport : site/docs/frontend/contraste-jetons.md`);
 process.exit(echecs > 0 || trouves.length > 0 ? 1 : 0);

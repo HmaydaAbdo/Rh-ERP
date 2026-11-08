@@ -159,7 +159,7 @@ du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
 
 ## Frontend
 
-Voir frontend/README.md (`docs/frontend/README.md`) : structure, routes, guards par permission, composants
+Voir frontend/README.md ([frontend/index](../frontend/index.md)) : structure, routes, guards par permission, composants
 partagés (sélecteur à chargement différé, tableaux configurables), conventions d'interface.
 
 ---

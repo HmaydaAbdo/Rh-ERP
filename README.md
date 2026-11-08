@@ -133,7 +133,7 @@ Index complet et glossaire : [`docs/README.md`](docs/README.md).
 | Imports Excel (règles communes) | [`site/docs/domaines/imports.md`](site/docs/domaines/imports.md) |
 | Authentification, comptes, rôles | [`site/docs/domaines/auth/index.md`](site/docs/domaines/auth/index.md) |
 | Permissions par endpoint et par écran | [`site/docs/domaines/rbac/index.md`](site/docs/domaines/rbac/index.md) |
-| Interface (routes, guards, composants, tableaux) | [`docs/frontend/README.md`](docs/frontend/README.md) |
+| Interface (routes, guards, composants, tableaux) | [`site/docs/frontend/index.md`](site/docs/frontend/index.md) |
 | Tests | [`site/docs/exploitation/tests.md`](site/docs/exploitation/tests.md) |
 | Déploiement (Docker, nginx, CI, backup) | [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md) |
 

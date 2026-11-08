@@ -109,7 +109,7 @@ décrite ici de bout en bout pour pouvoir être relue et commentée séparément
 ### Couche analytique
 
 Les vues Cartes et Analytique ne sont pas propres à Fonction : ce sont des composants partagés (`portail/perimetre/`,
-référence technique (`docs/frontend/vues-perimetre.md`)) que le module configure dans `function-module.ts`.
+référence technique ([frontend/vues-perimetre](../../frontend/vues-perimetre.md))) que le module configure dans `function-module.ts`.
 
 | Réglage du module | Valeur pour Fonction | Effet |
 |---|---|---|
@@ -292,7 +292,7 @@ Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell`,
 recherche serveur (libellé contenant le texte, sans tenir compte de la casse). Le PDF du Tabulaire contient toutes les fonctions filtrées, pas seulement la page courante, et suit les colonnes visibles. Les composants Cartes et Analytique proposent chacun leur export PDF avec le périmètre et les filtres affichés. L'import Excel et la création vivent dans
 l'en-tête commun (`FunctionActionsComponent`) : un import réussi recrée la vue affichée pour qu'elle recharge ses données. Cartes et Analytique suivent le même comportement qu'Équipe : elles restent sur la Paie la plus récente et n'affichent pas de filtre de période ni de raccourci « Voir la liste ». Dans Cartes, l'accès à la liste Employé est une icône avec infobulle à droite du titre du niveau; elle conserve le périmètre courant et nécessite `EMPLOYEE_READ`. Les onglets de la coque assurent le changement de vue.
 
-**Tabulaire, Cartes, Analytique et leur coque sont des composants partagés configurés par module** (Vues Cartes et Analytique partagées (`docs/frontend/vues-perimetre.md`), ADR 0011, 0012 et 0014) : `FunctionCartesComponent` et
+**Tabulaire, Cartes, Analytique et leur coque sont des composants partagés configurés par module** (Vues Cartes et Analytique partagées ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)), ADR 0011, 0012 et 0014) : `FunctionCartesComponent` et
 `FunctionAnalytiqueComponent` sont des hôtes minces ; `function-module.ts` configure le référentiel, le filtre libellé, la hiérarchie Fonction → Chantier → Équipe, la source Paie seule et l'ordre des cartes. La logique commune et la présentation des cartes restent dans `CartesPerimetreComponent`. Les données passent par les services existants, sans endpoint propre :
 
 - l'effectif payé, la masse salariale, les STC et les comparaisons mensuelles viennent de l'analyse Paie (`POST /paie/analytique`, dont `parFonction` porte `stc` et `stcMontant`) avec `PAIE_READ` ;
