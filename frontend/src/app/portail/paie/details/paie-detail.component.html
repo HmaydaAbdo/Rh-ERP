@@ -40,15 +40,15 @@
       </div>
       <div>
         <dt>Salaire mensuel</dt>
-        <dd>{{ paie.salaireMensuel | number: '1.2-2' }}</dd>
+        <dd>{{ paie.salaireMensuel | number: '1.0-0' }}</dd>
       </div>
       <div>
         <dt>Prime roulage ordinaire / dimanche</dt>
-        <dd>{{ paie.primeRoulageOrdinaire ?? 0 | number: '1.2-2' }} / {{ paie.primeRoulageDimanche ?? 0 | number: '1.2-2' }}</dd>
+        <dd>{{ paie.primeRoulageOrdinaire ?? 0 | number: '1.0-0' }} / {{ paie.primeRoulageDimanche ?? 0 | number: '1.0-0' }}</dd>
       </div>
       <div>
         <dt>Salaire total</dt>
-        <dd>{{ paie.salaireTotal | number: '1.2-2' }}</dd>
+        <dd>{{ paie.salaireTotal | number: '1.0-0' }}</dd>
       </div>
       <div>
         <dt>Observation</dt>

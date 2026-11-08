@@ -70,8 +70,8 @@ s'appuyant **uniquement sur la documentation officielle** de chaque composant, j
   lectures). Hibernate Envers est remplacé par un écouteur de session SQLAlchemy (`before_flush`, documenté) et par un décorateur
   d'action auditée équivalent à `@AuditableAction`. Une bibliothèque tierce de versionnage n'est retenue que si le prototype
   KAN-47 prouve qu'elle reproduit exactement les colonnes actuelles ; sinon écouteur maison, petit et testé.
-- Les calculs monétaires restent en `Decimal` avec les mêmes règles d'arrondi (S/H et montants des heures
-  supplémentaires, `NUMERIC` en base ; ils étaient entiers `HALF_DOWN` et sont passés à deux décimales par la révision `0003`, KAN-239). Chaque règle est reproduite par un test de parité (mêmes entrées, mêmes sorties que Java).
+- Les calculs monétaires restent en `Decimal` avec les mêmes règles d'arrondi (S/H, montants entiers `HALF_DOWN` des heures
+  supplémentaires, `NUMERIC` en base). Chaque règle est reproduite par un test de parité (mêmes entrées, mêmes sorties que Java).
 
 ### 3. Migrations : Flyway figé dans la branche de migration, Alembic dès la tranche transversale
 

@@ -103,7 +103,10 @@ export class NumberInputComponent implements FormValueControl<number | null> {
     }
     const min = this.min();
     const max = this.max();
-    const auMoins = min === undefined ? value : Math.max(min, value);
+    // En quittant le champ, une valeur est arrondie à sa précision d'affichage (demi supérieur) : les montants sont des entiers.
+    const decimales = this.maxFractionDigits();
+    const arrondi = decimales === null ? value : Math.round((value + Number.EPSILON) * 10 ** decimales) / 10 ** decimales;
+    const auMoins = min === undefined ? arrondi : Math.max(min, arrondi);
     return max === undefined ? auMoins : Math.min(max, auMoins);
   }
 

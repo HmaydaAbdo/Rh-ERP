@@ -96,25 +96,25 @@
 
     <div class="field">
       <label for="salaireMensuel">Salaire mensuel <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-number-input inputId="salaireMensuel" [formField]="form.salaireMensuel" [minFractionDigits]="2" />
+      <stp-number-input inputId="salaireMensuel" [formField]="form.salaireMensuel" [maxFractionDigits]="0" />
       <stp-field-error [field]="form.salaireMensuel" />
     </div>
 
     <div class="field">
       <label for="primeRoulageOrdinaire">Prime roulage ordinaire (facultative)</label>
-      <stp-number-input inputId="primeRoulageOrdinaire" [formField]="form.primeRoulageOrdinaire" [minFractionDigits]="2" />
+      <stp-number-input inputId="primeRoulageOrdinaire" [formField]="form.primeRoulageOrdinaire" [maxFractionDigits]="0" />
       <stp-field-error [field]="form.primeRoulageOrdinaire" />
     </div>
 
     <div class="field">
       <label for="primeRoulageDimanche">Prime roulage dimanche (facultative)</label>
-      <stp-number-input inputId="primeRoulageDimanche" [formField]="form.primeRoulageDimanche" [minFractionDigits]="2" />
+      <stp-number-input inputId="primeRoulageDimanche" [formField]="form.primeRoulageDimanche" [maxFractionDigits]="0" />
       <stp-field-error [field]="form.primeRoulageDimanche" />
     </div>
 
     <div class="field">
       <label for="salaireTotal">Salaire total <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-number-input inputId="salaireTotal" [formField]="form.salaireTotal" [minFractionDigits]="2" />
+      <stp-number-input inputId="salaireTotal" [formField]="form.salaireTotal" [maxFractionDigits]="0" />
       <stp-field-error [field]="form.salaireTotal" />
     </div>
 

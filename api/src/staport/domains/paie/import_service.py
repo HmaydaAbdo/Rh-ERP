@@ -64,7 +64,7 @@ PERIODES_COMPAREES = 3
 
 
 def montant_ligne(ligne: list[Any], index: int) -> Decimal | None:
-    """Montant d'une cellule, arrondi à deux décimales (règle commune des montants) ; `None` si vide ou illisible."""
+    """Montant d'une cellule, arrondi à l'entier (règle commune des montants) ; `None` si vide ou illisible."""
     valeur = ligne[index] if len(ligne) > index else None
     if valeur is None:
         return None
@@ -559,11 +559,11 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="montant attendu entre 0 et 99 999 999,99",
+                            raison="montant attendu entre 0 et 9 999 999 999",
                         )
                     )
                     continue
-                nombre = arrondir_montant(nombre)  # règle commune : deux décimales, arrondi automatique
+                nombre = arrondir_montant(nombre)  # règle commune : entier de dirham, arrondi automatique
                 connu = employees.get(cin.upper()) if cin else None
                 if champ == "salaireMensuel" and nombre == 0 and not (connu and connu.salaire != 0):
                     avertissements.append(

@@ -19,7 +19,7 @@ Le transverse d'abord, puis le métier du moins couplé au plus couplé. Les tai
 | 2 | `function`, `equipe` | 726 / 806 | 7 / 7 | Petits référentiels, peu de règles : premiers domaines métier de bout en bout |
 | 3 | `chantier`, `accueil` | 1 230 / 472 | 8 / 6 | Synchronisation externe (chantiers), préférences |
 | 4 | `employee` | 1 970 | 9 | Dépend de `function`, `equipe`, `chantier` ; import Excel |
-| 5 | `heuresupp` | 2 321 | 14 | Montants à deux décimales (KAN-239), PDF |
+| 5 | `heuresupp` | 2 321 | 14 | Montants entiers (`HALF_DOWN`), PDF |
 | 6 | `paie` | 8 299 | 23 | Le plus gros et le plus risqué : calculs, 7 modèles de rapport PDF ; en dernier |
 | 7 | Retrait de Spring (KAN-50) | — | — | Seulement quand chaque ligne de l'inventaire a sa preuve |
 

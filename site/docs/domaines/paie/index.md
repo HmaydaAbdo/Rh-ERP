@@ -177,10 +177,10 @@ Table `paie` :
 | `nombre_jours_travailles` | `NUMERIC(5,2)` | `NOT NULL` | Jours travaillés, jusqu'à deux décimales |
 | `jours_recuperation_ouvrable` | `DECIMAL(5,2)` | nullable | Jours de récupération (jour ouvrable) |
 | `jours_recuperation_dimanche` | `DECIMAL(5,2)` | nullable | Jours de récupération (dimanche) |
-| `salaire_mensuel` | `DECIMAL(10,2)` | `NOT NULL` | Salaire de base |
-| `prime_roulage_ordinaire` | `DECIMAL(10,2)` | nullable | Prime de roulage (ordinaire) |
-| `prime_roulage_dimanche` | `DECIMAL(10,2)` | nullable | Prime de roulage (dimanche) |
-| `salaire_total` | `DECIMAL(10,2)` | `NOT NULL` | **Saisi (ou importé) tel quel, jamais recalculé** par le serveur — voir « Règles métier » |
+| `salaire_mensuel` | `DECIMAL(10,0)` | `NOT NULL` | Salaire de base |
+| `prime_roulage_ordinaire` | `DECIMAL(10,0)` | nullable | Prime de roulage (ordinaire) |
+| `prime_roulage_dimanche` | `DECIMAL(10,0)` | nullable | Prime de roulage (dimanche) |
+| `salaire_total` | `DECIMAL(10,0)` | `NOT NULL` | **Saisi (ou importé) tel quel, jamais recalculé** par le serveur — voir « Règles métier » |
 | `observation` | `VARCHAR(255)` | nullable | Note libre |
 
 **Contrainte unique** : `uk_paie_employee_periode` (`employee_id`, `periode`) — un employé a au plus
@@ -228,7 +228,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   reste modifiable. La paie est prise telle que saisie (formulaire) ou importée (Excel).
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
   les jours travaillés et de récupération acceptent de 0 à 999,99; les salaires et primes de 0 à
-  99 999 999,99. **Les montants sont arrondis automatiquement à deux décimales** (demi supérieur : 769,230769 → 769,23), à la
+  9 999 999 999. **Les montants sont arrondis automatiquement à l'entier de dirham** (demi supérieur : 769,5 → 770), à la
   saisie comme à l'import, puis contrôlés ; une valeur négative ou dépassant la borne reste refusée. Les jours, eux, n'ont
   jamais plus de deux décimales (jamais arrondis). `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
@@ -589,7 +589,7 @@ dans un canvas et ne lit pas le CSS : les couleurs, la police et les infobulles 
 (`shared/ui/chart/chart-theme.ts`, mesures de la paie dans `paie-chart-theme.ts`), et **chaque graphique dépend du thème courant** : à la bascule clair / sombre il est redessiné aux
 couleurs du nouveau thème, sans recharger la page. **La couleur suit la mesure, pas le rang** : la masse est toujours bleue
 **Les valeurs de l'évolution sont inscrites au-dessus de chaque point** ; l'infobulle et le tableau de données restent
-disponibles pour une lecture détaillée. Les montants gardent deux décimales et les effectifs sont affichés comme des entiers.
+disponibles pour une lecture détaillée. Les montants sont des entiers de dirham et les effectifs sont affichés comme des entiers.
 (`--chart-1`), les bulletins toujours orange (`--chart-2`) ; la paie reste dans une palette limitée aux cinq premiers jetons `--chart-1` à `--chart-5`, dans tous les graphiques. Marques fines (barres de 18 px au bout
 arrondi), grille discrète, infobulle au survol de toute la ligne, aucune légende pour une série unique. **Alternative
 accessible** : chaque graphique a un bouton « Afficher les données » qui déplie son tableau (mois et niveau de répartition,
@@ -694,7 +694,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 - Tout export ou suppression respecte l'audit ; ne pas inclure de données personnelles réelles dans
   les tests ou prompts IA.
 - Garder la parité API/formulaire/import : jours sur 5 chiffres dont 2 décimales, montants sur 10
-  chiffres dont 2 décimales. Refuser une cellule numérique invalide plutôt que la remplacer par une
+  chiffres entiers. Refuser une cellule numérique invalide plutôt que la remplacer par une
   absence; les numéros de ligne d'erreur sont ceux d'Excel.
 - Les mouvements et les agrégats utilisent les mêmes filtres de nom, CIN et rattachements. Ne pas
   mélanger l'affectation historique du bulletin et l'état courant de la fiche.

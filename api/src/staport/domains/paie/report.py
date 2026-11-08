@@ -938,7 +938,7 @@ def _ecart_compte(actuel: int, precedent: int | None, singulier: str, pluriel: s
 
 
 def _ecart_montant(actuel: Decimal, precedent: Decimal | None, *, decimales: bool = False) -> str:
-    """La masse s'écrit à l'unité, le STC en DH garde ses deux décimales (comme Spring)."""
+    """Écart de montant, à l'entier de dirham (règle commune des montants)."""
     if precedent is None:
         return "Écart indisponible"
     ecart = actuel - precedent
@@ -1048,8 +1048,8 @@ def _filtres_actifs(
 
 
 def _montant(valeur: Decimal | None) -> str:
-    """Même séparateur et deux décimales que PaieReportNumberFormat.montant (Spring)."""
-    return "-" if valeur is None else format(valeur, ",.2f").replace(",", "\u00a0").replace(".", ",")
+    """Montant à l'entier de dirham, séparateur de milliers insécable (règle commune des montants)."""
+    return "-" if valeur is None else format(valeur, ",.0f").replace(",", "\u00a0")
 
 
 def _quantite(valeur: Decimal | None) -> str:

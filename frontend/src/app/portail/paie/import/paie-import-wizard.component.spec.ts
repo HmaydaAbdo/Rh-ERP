@@ -82,7 +82,7 @@ describe('PaieImportWizardComponent', () => {
     expect(dialogue().querySelector('button[aria-label="Rouvrir le chantier C059"]')).not.toBeNull();
     expect(texte).toContain('NOUVEAU');
     expect(Array.from(dialogue().querySelectorAll('.app-controle__ecarts dd')).map((dd) => dd.textContent?.replace(/\s+/g, ' ').trim()))
-      .toEqual(['C059 devient C168', '4 000,00 devient 4 500,00']);
+      .toEqual(['C059 devient C168', '4 000 devient 4 500']);
     const continuer = Array.from(dialogue().querySelectorAll('button')).find((b) => b.textContent?.includes('Continuer')) as HTMLButtonElement;
     expect(continuer.disabled).toBe(true);
 

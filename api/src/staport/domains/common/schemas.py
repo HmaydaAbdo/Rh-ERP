@@ -42,7 +42,7 @@ Nombre = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used=
 """Décimal exact en Python, nombre JSON sur HTTP comme Jackson (Pydantic sérialise `Decimal` en chaîne par défaut)."""
 
 Montant = Annotated[Nombre, BeforeValidator(arrondir_si_nombre)]
-"""Montant d'argent : arrondi automatiquement à deux décimales (`common/montant.py`) avant les contraintes."""
+"""Montant d'argent : arrondi automatiquement à l'entier de dirham (`common/montant.py`) avant les contraintes."""
 
 
 class ModeleApi(BaseModel):

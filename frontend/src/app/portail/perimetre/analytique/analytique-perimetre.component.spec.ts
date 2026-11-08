@@ -302,7 +302,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const tuiles = Array.from(page.querySelectorAll('.app-kpi')).map((t) => t.textContent ?? '');
 
     expect(page.textContent).toContain('Paie · août 2026');
-    expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500,00\sDH\s*\+12,5 % sur le mois précédent/);
+    expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500\sDH\s*\+12,5 % sur le mois précédent/);
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
@@ -388,7 +388,7 @@ describe('AnalytiquePerimetreComponent', () => {
       .find((details) => details.textContent?.includes('données des'))!;
 
     expect(tableau.textContent).toContain('Orphelins');
-    expect(tableau.textContent).toContain('8 500,00');
+    expect(tableau.textContent).toContain('8 500');
 
     const champEquipe = page.querySelector('input[aria-label="Équipe"]') as HTMLInputElement;
     await choisirOption(champEquipe, 'Orphelins');
@@ -476,7 +476,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(paie.analyser.mock.calls.length).toBe(appelsPaie);
     expect(page.textContent).toContain('Répartition par fonction');
     await attendreGrille(harness.fixture);
-    expect(lignesGrille(page).map((ligne) => ligne.textContent.replace(/\s+/g, ' ')).join(' | ')).toMatch(/MACON.*1 · 1 000,00 DH/);
+    expect(lignesGrille(page).map((ligne) => ligne.textContent.replace(/\s+/g, ' ')).join(' | ')).toMatch(/MACON.*1 · 1 000 DH/);
     expect(employes.regrouper).toHaveBeenLastCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'FONCTION');
   });
 

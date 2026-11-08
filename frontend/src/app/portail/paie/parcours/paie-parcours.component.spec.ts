@@ -50,7 +50,7 @@ describe('PaieParcoursComponent', () => {
     const appel = afficher(PARCOURS);
 
     expect(appel).toHaveBeenCalledWith(9);
-    expect(texte('.app-kpi strong')).toEqual(['3', '13 200,00', '78', 'septembre 2026']);
+    expect(texte('.app-kpi strong')).toEqual(['3', '13 200', '78', 'septembre 2026']);
     expect(texte('.app-kpi small')[0]).toBe('juillet 2026 → septembre 2026');
   });
 
@@ -59,7 +59,7 @@ describe('PaieParcoursComponent', () => {
 
     expect(texte('.app-timeline__date')).toEqual(['septembre 2026', 'août 2026', 'juillet 2026']);
     expect(texte('.app-timeline__event')).toEqual([
-      'Salaire : 4 000,00 → 4 500,00',
+      'Salaire : 4 000 → 4 500',
       'Équipe : OP → sans équipe',
       'Fonction : OPERATEUR → CHAUFFEUR',
       'Chantier : C059 → C168',

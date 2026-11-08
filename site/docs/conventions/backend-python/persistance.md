@@ -15,7 +15,7 @@ PostgreSQL reste le moteur de référence. Le schéma reste la source de vérit�
   `selectinload` (ou équivalent) dans la requête. Aucun accès à une relation non chargée n'est permis dans un routeur ou un schéma de réponse.
 * Cascades limitées aux relations de composition ; collections jamais `None` ; côté propriétaire et côté inverse explicites.
 * Montants et mesures exactes : `Decimal` en mémoire, `NUMERIC` en base, jamais `float`. L'arrondi est toujours explicite (`quantize` avec un mode d'arrondi
-  nommé : les montants passent par `arrondir_montant`, deux décimales, `ROUND_HALF_UP`) et chaque règle est couverte par un test.
+  nommé, par exemple `ROUND_HALF_DOWN` pour les montants entiers des heures supplémentaires) et chaque règle est couverte par un test de parité avec le calcul Java.
 * Instants en UTC avec fuseau (`TIMESTAMPTZ`), conversion à l'affichage uniquement.
 
 ## Verrouillage optimiste
@@ -51,6 +51,8 @@ de l'`UPDATE` et lève `StaleDataError` quand aucune ligne ne correspond. Règle
 ## Migrations (Alembic)
 
 Flyway n'est plus exécuté (KAN-237) : ses 44 scripts (V1 à V44) restent figés dans `api/src/staport/migrations/flyway_v44` et sont rejoués par la révision `0001_base_v44` ; Alembic gère tout le schéma (ADR 0016, § 3).
+
+La révision `0003_montants_entiers` (KAN-239) passe tous les montants à `NUMERIC(10,0)` (salaire de l'employé, bulletin de paie, salaire de référence des heures supplémentaires, tables d'audit comprises) : PostgreSQL arrondit les lignes existantes à l'entier le plus proche, les centimes sont perdus et le retour arrière ne les restitue pas ; faire une sauvegarde avant de la jouer en production.
 
 1. Créer une révision par évolution cohérente, avec un message en minuscules ; **une migration déjà appliquée sur un environnement partagé n'est jamais modifiée** :
    toute correction est une nouvelle révision.

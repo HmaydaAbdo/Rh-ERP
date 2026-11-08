@@ -106,7 +106,7 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Sp
   référence inconnue est refusée. `equipeId: null` signifie sans équipe; le formulaire convertit le
   choix synthétique « Orphelins (sans équipe) » en `null`, jamais en identifiant `0`.
 - Salaire et type de salaire se renseignent ensemble ou restent tous deux vides. Le salaire est
-  positif ou nul, arrondi automatiquement à deux décimales. La saisie et la lecture exigent `PAIE_READ` en plus du
+  positif ou nul, arrondi automatiquement à l'entier de dirham. La saisie et la lecture exigent `PAIE_READ` en plus du
   droit de l’opération Employé. Sans ce droit, les réponses masquent les deux champs, une écriture
   conserve le salaire existant et le tri sur ces champs est retiré.
   Cette règle appartient à `ProjectionPaieEmployee`, réutilisée par l’API REST et les outils MCP de
@@ -135,7 +135,7 @@ Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimist
 | `fonction_id` | `BIGINT` | FK obligatoire vers `fonction` |
 | `chantier_id` | `BIGINT` | FK vers `chantier`; obligatoire en poste, vide après sortie |
 | `equipe_id` | `BIGINT` | FK vers `equipe`; facultative en poste, vide après sortie |
-| `salaire` | `NUMERIC(10,2)` | Facultatif; montant mensuel ou tarif d’une journée |
+| `salaire` | `NUMERIC(10,0)` | Facultatif; montant mensuel ou tarif d’une journée |
 | `type_salaire` | `VARCHAR(20)` | Facultatif; `MENSUEL` ou `JOURNALIER`, conjoint au salaire |
 | `statut` | `VARCHAR(20)` | Obligatoire; `ACTIF` à la création, ou `INACTIF` |
 
@@ -173,7 +173,7 @@ Java `Long`, représentés comme nombres JSON. Les montants sont des `BigDecimal
 | `fonctionId` | `Long` / entier | Obligatoire; référence existante |
 | `chantierId` | `Long` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
 | `equipeId` | `Long` / entier ou `null` | Facultatif; `null` si sorti |
-| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à deux décimales; avec son type |
+| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à l'entier; avec son type |
 | `typeSalaire` | `TypeSalaire` / chaîne ou `null` | `MENSUEL` ou `JOURNALIER`; avec le salaire |
 
 La modification ajoute `version` (`Long`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :

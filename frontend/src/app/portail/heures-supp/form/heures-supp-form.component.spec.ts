@@ -82,8 +82,8 @@ describe('HeuresSuppFormComponent', () => {
     await afficher('1');
     expect(service['get']).toHaveBeenCalledWith(1);
     expect(fixture.nativeElement.textContent).toContain('AB123');
-    expect(fixture.nativeElement.textContent).toContain('15.00 DH/h');
-    expect(fixture.nativeElement.textContent).toContain('4,000.00 DH');
+    expect(fixture.nativeElement.textContent).toContain('15 DH/h');
+    expect(fixture.nativeElement.textContent).toContain('4,000 DH');
     const form = formulaire();
     form.heuresSupplementaires().value.set(3);
     await stabiliser();

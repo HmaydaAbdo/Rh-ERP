@@ -159,7 +159,7 @@ def test_les_evenements_du_parcours_suivent_spring_entree_changements_depart_ret
     assert evenements == [
         ("2098-02", "RETOUR", None, None, None),
         ("2097-12", "DEPART", None, None, "STC"),
-        ("2097-12", "CHANGEMENT_SALAIRE", "100.00", "150.00", None),
+        ("2097-12", "CHANGEMENT_SALAIRE", "100", "150", None),
         ("2097-12", "CHANGEMENT_EQUIPE", scenario.code_equipe, None, None),
         ("2097-12", "CHANGEMENT_FONCTION", f0, f1, None),
         ("2097-12", "CHANGEMENT_CHANTIER", c0, c1, None),
