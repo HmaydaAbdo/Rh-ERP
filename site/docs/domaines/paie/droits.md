@@ -31,6 +31,7 @@ sidebar_position: 3
 | `POST /paie/chantiers/search` | `PAIE_READ` |
 | `GET /paie/chantiers` | `PAIE_READ` |
 | `GET /paie/materiel` | `PAIE_READ` |
+| `GET /paie/materiel/valeurs` | `PAIE_EXPORT` |
 | `POST /paie/export` | `PAIE_EXPORT` |
 | `POST /paie/report/pdf` | `PAIE_EXPORT` |
 

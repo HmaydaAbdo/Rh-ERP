@@ -98,6 +98,14 @@ de regroupement, le résultat reste strictement celui du Spring.
 La requête accepte aussi `materiel: {libelle: quantité}` pour reproduire les lignes matériel du
 classeur; une quantité absente reste vide et n'est jamais inventée.
 
+**Mémoire du parc matériel (KAN-229).** Chaque nombre explicitement fourni dans `materiel`, à l'export Excel comme au
+rapport PDF, est enregistré dans `paie_materiel` pour le mois de la requête (un nombre déjà enregistré pour ce mois est
+remplacé ; un `0` est un nombre). Une ligne absente ne crée rien et n'efface rien, une ligne inconnue du catalogue est
+ignorée. `GET /paie/materiel/valeurs?periode=AAAA-MM` (droit `PAIE_EXPORT`) renvoie, pour chaque ligne, le nombre du mois le
+plus récent qui ne dépasse pas le mois demandé : `[{libelle, quantite, periode}]`. L'assistant d'export propose ces
+nombres par défaut et indique pour chaque ligne s'il est repris, remplacé (ancien nombre et mois) ou nouveau, y compris
+dans le récapitulatif ; seule une saisie de l'utilisateur remplace un nombre. Le fichier produit ne change pas.
+
 ## Assistant d’import
 
 ### Règle de synchronisation

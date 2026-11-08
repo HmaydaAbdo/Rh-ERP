@@ -72,6 +72,7 @@ const ROUTES = {
   'POST /paie/options/chantiers': () => pageDe(CHANTIERS),
   'POST /paie/options/equipes': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
   'GET /paie/materiel': () => [],
+  'GET /paie/materiel/valeurs': () => [],
   'POST /chantiers/search': () => pageDe(CHANTIERS),
   'POST /equipes/search': () => pageDe([]),
   'POST /functions/search': () => pageDe([]),

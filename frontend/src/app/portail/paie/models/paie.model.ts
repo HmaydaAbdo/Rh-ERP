@@ -74,6 +74,13 @@ export interface PaieMaterielTableau {
   libelles: string[];
 }
 
+/** Dernier nombre saisi pour une ligne du parc matériel (GET /paie/materiel/valeurs), avec le mois (AAAA-MM) où il l'a été. */
+export interface PaieMaterielValeur {
+  libelle: string;
+  quantite: number;
+  periode: string;
+}
+
 export interface Paie {
   id: number;
   version: number;

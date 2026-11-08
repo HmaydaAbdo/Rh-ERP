@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
-import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
+import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaieMaterielValeur, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
 import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
@@ -12,6 +12,7 @@ export type Format = 'PDF' | 'EXCEL';
 export type EtapeId = 'periode' | 'format' | 'chantier' | 'equipes' | 'materiel' | 'recap';
 export type Etat = 'saisie' | 'generation' | 'termine';
 type Chargement = 'periodes' | 'chantiers' | 'materiel';
+type EtatLigneMateriel = 'conserve' | 'modifie' | 'nouveau';
 
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
@@ -41,7 +42,7 @@ export class PaieExportStore {
   private readonly paieService = inject(PaieService);
   private readonly messageService = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly requetes: Partial<Record<Chargement, Subscription>> = {};
+  private readonly requetes: Partial<Record<Chargement | 'memoire', Subscription>> = {};
   readonly erreursChargement = signal<Chargement[]>([]);
   readonly materielEnCours = signal(false);
   readonly chargementBloquant = computed(() => this.periodesEnCours() || this.chantiersEnCours()
@@ -81,6 +82,9 @@ export class PaieExportStore {
   readonly tableauxMateriel = signal<PaieMaterielTableau[]>([]);
   /** Libellé de la ligne -> nombre saisi, ou `null` (champ vide tant que l'utilisateur ne saisit rien). */
   readonly nombres = signal<Record<string, number | null>>({});
+  /** Derniers nombres mémorisés par ligne (KAN-229) : proposés par défaut, remplacés seulement par une saisie explicite. */
+  readonly memoire = signal<Record<string, PaieMaterielValeur>>({});
+  private readonly propose = new Set<string>();
   /** Titre du tableau -> l'utilisateur choisit de ne pas saisir de quantités pour ce tableau. */
   readonly laisseVide = signal<Record<string, boolean>>({});
 
@@ -146,6 +150,7 @@ export class PaieExportStore {
     this.requetes.chantiers?.unsubscribe();
     this.retirerErreurChargement('chantiers');
     this.periode.set(periode);
+    this.chargerMemoireMateriel(periode);
     this.erreur.set(null);
     this.chantiers.set([]);
     this.marchesChoisis.set([]);
@@ -320,6 +325,28 @@ export class PaieExportStore {
     return this.nombres()[libelle] ?? null;
   }
 
+  /** Une ligne dont le nombre vient de la mémoire est « conservée », « modifiée » si on l'a changée, « nouvelle » sinon. */
+  etatLigne(libelle: string): EtatLigneMateriel | null {
+    const valeur = this.nombre(libelle);
+    if (valeur === null) {
+      return null;
+    }
+    const memorise = this.memoire()[libelle];
+    if (!memorise) {
+      return 'nouveau';
+    }
+    return memorise.quantite === valeur ? 'conserve' : 'modifie';
+  }
+
+  texteMemoire(libelle: string): string | null {
+    const memorise = this.memoire()[libelle];
+    const etat = this.etatLigne(libelle);
+    if (!memorise || etat === null) {
+      return memorise ? `Dernier nombre : ${memorise.quantite} (${memorise.periode})` : null;
+    }
+    return etat === 'conserve' ? `Repris de ${memorise.periode}` : `Remplace ${memorise.quantite} (${memorise.periode})`;
+  }
+
   estVide(tableau: PaieMaterielTableau): boolean {
     return this.laisseVide()[tableau.titre] ?? false;
   }
@@ -331,6 +358,7 @@ export class PaieExportStore {
   saisirNombre(libelle: string, brut: string): void {
     this.erreur.set(null);
     if (brut.trim() === '') {
+      this.propose.delete(libelle);
       this.nombres.set({ ...this.nombres(), [libelle]: null });
       return;
     }
@@ -339,10 +367,12 @@ export class PaieExportStore {
       this.erreur.set(`Saisissez un nombre entier entre 0 et ${NOMBRE_MAX_MATERIEL}.`);
       return;
     }
+    this.propose.delete(libelle);
     this.nombres.set({ ...this.nombres(), [libelle]: valeur });
   }
 
   ajuster(libelle: string, delta: number): void {
+    this.propose.delete(libelle);
     const courant = this.nombre(libelle);
     const base = courant === null && delta < 0 ? 0 : (courant ?? 0) + delta;
     this.nombres.set({ ...this.nombres(), [libelle]: Math.max(0, Math.min(NOMBRE_MAX_MATERIEL, base)) });
@@ -384,7 +414,13 @@ export class PaieExportStore {
       return 'Colonne laissée vide, à remplir au stylo';
     }
     const n = this.renseignees(tableau);
-    return `${n} ligne${n > 1 ? 's' : ''} renseignée${n > 1 ? 's' : ''} sur ${tableau.libelles.length} · total ${this.total(tableau)}`;
+    const etats = tableau.libelles.map((l) => this.etatLigne(l));
+    const details = (['conserve', 'modifie', 'nouveau'] as const)
+      .map((etat) => ({ etat, nombre: etats.filter((e) => e === etat).length }))
+      .filter((x) => x.nombre > 0)
+      .map((x) => `${x.nombre} ${{ conserve: 'reprise', modifie: 'modifiée', nouveau: 'nouvelle' }[x.etat]}${x.nombre > 1 ? 's' : ''}`);
+    const suite = details.length > 0 ? ` (${details.join(', ')})` : '';
+    return `${n} ligne${n > 1 ? 's' : ''} renseignée${n > 1 ? 's' : ''} sur ${tableau.libelles.length}${suite} · total ${this.total(tableau)}`;
   }
 
   /** Refuse de continuer tant qu'un champ contient une valeur invalide (le message est déjà affiché). */
@@ -539,11 +575,8 @@ export class PaieExportStore {
     this.retirees.set({});
     this.laisseVide.set({});
     this.nombres.set({});
-    try {
-      localStorage.removeItem('paie.export.materiel');
-    } catch {
-      // La mémoire navigateur est facultative ; aucune valeur sauvegardée n'est relue par l'assistant.
-    }
+    this.memoire.set({});
+    this.propose.clear();
     this.dernierEnregistre.set(null);
     this.chargerPeriodes();
     this.chargerTableauxMateriel();
@@ -572,6 +605,33 @@ export class PaieExportStore {
       .subscribe({
         next: (tableaux) => { this.tableauxMateriel.set(tableaux); this.retirerErreurChargement('materiel'); },
         error: () => this.ajouterErreurChargement('materiel')
+      });
+  }
+
+  /** Facultatif : sans réponse, l'assistant reste utilisable avec des lignes vides. */
+  private chargerMemoireMateriel(periode: string): void {
+    this.requetes.memoire?.unsubscribe();
+    this.requetes.memoire = this.paieService.listerValeursMateriel(periode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (valeurs) => {
+          const nombres = { ...this.nombres() };
+          for (const ligne of Object.values(this.memoire())) {
+            if (this.propose.has(ligne.libelle)) {
+              delete nombres[ligne.libelle];
+              this.propose.delete(ligne.libelle);
+            }
+          }
+          for (const valeur of valeurs) {
+            if (nombres[valeur.libelle] === undefined || nombres[valeur.libelle] === null) {
+              nombres[valeur.libelle] = valeur.quantite;
+              this.propose.add(valeur.libelle);
+            }
+          }
+          this.memoire.set(Object.fromEntries(valeurs.map((v) => [v.libelle, v])));
+          this.nombres.set(nombres);
+        },
+        error: () => this.memoire.set({})
       });
   }
 

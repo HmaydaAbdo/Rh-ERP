@@ -24,6 +24,7 @@ from staport.domains.heuresupp.import_service import ServiceImportHeuresSupp
 from staport.domains.heuresupp.service import ServiceHeuresSupp
 from staport.domains.paie.export import ServiceExportPaie
 from staport.domains.paie.import_service import ServiceImportPaie
+from staport.domains.paie.materiel import ServiceMaterielPaie
 from staport.domains.paie.report import ServiceRapportPaie
 from staport.domains.paie.service import ServicePaie
 from staport.domains.parametre import audit as _historique_parametre  # noqa: F401  # pyright: ignore[reportUnusedImport]
@@ -53,6 +54,7 @@ class ContexteAuth:
     employees: ServiceEmployee
     paies: ServicePaie
     export_paie: ServiceExportPaie
+    materiel_paie: ServiceMaterielPaie
     import_paie: ServiceImportPaie
     rapport_paie: ServiceRapportPaie
 
@@ -117,6 +119,7 @@ def creer_contexte(
         employees=service_employee,
         paies=service_paie,
         export_paie=ServiceExportPaie(),
+        materiel_paie=ServiceMaterielPaie(),
         import_paie=ServiceImportPaie(publication),
         rapport_paie=ServiceRapportPaie(publication),
     )

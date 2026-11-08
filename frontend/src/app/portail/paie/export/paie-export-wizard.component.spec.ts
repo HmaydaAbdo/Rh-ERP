@@ -40,17 +40,18 @@ describe('PaieExportWizardComponent', () => {
     let service: MockedObject<PaieService>;
 
     beforeEach(() => {
-        localStorage.removeItem('paie.export.materiel');
         service = {
             listerPeriodes: vi.fn().mockName("PaieService.listerPeriodes"),
             listerChantiersDeLaPeriode: vi.fn().mockName("PaieService.listerChantiersDeLaPeriode"),
             listerTableauxMateriel: vi.fn().mockName("PaieService.listerTableauxMateriel"),
+            listerValeursMateriel: vi.fn().mockName("PaieService.listerValeursMateriel"),
             exporter: vi.fn().mockName("PaieService.exporter"),
             telechargerRapportPdf: vi.fn().mockName("PaieService.telechargerRapportPdf")
         } as unknown as MockedObject<PaieService>;
         service.listerPeriodes.mockReturnValue(of(PERIODES));
         service.listerChantiersDeLaPeriode.mockReturnValue(of(CHANTIERS));
         service.listerTableauxMateriel.mockReturnValue(of(TABLEAUX));
+        service.listerValeursMateriel.mockReturnValue(of([]));
         service.telechargerRapportPdf.mockReturnValue(of(new Blob(['%PDF-'])));
         service.exporter.mockReturnValue(of(new Blob(['xlsx'])));
 
@@ -242,6 +243,50 @@ describe('PaieExportWizardComponent', () => {
         expect(requete.periode).toBe('2026-09');
     });
 
+    describe('mémoire du parc matériel (KAN-229)', () => {
+        beforeEach(() => {
+            service.listerValeursMateriel.mockReturnValue(of([
+                { libelle: 'CAMION CITERNE', quantite: 4, periode: '2026-07' }
+            ]));
+            store.ouvrir();
+            store.choisirPeriode('2026-08');
+        });
+
+        it('propose le dernier nombre mémorisé pour une ligne déjà connue, laisse vide une nouvelle ligne', () => {
+            expect(service.listerValeursMateriel).toHaveBeenCalledWith('2026-08');
+            expect(store.nombre('CAMION CITERNE')).toBe(4);
+            expect(store.etatLigne('CAMION CITERNE')).toBe('conserve');
+            expect(store.texteMemoire('CAMION CITERNE')).toBe('Repris de 2026-07');
+            expect(store.nombre('PICK UP')).toBeNull();
+            expect(store.etatLigne('PICK UP')).toBeNull();
+        });
+
+        it('ne remplace la valeur que par une saisie explicite, visible avant confirmation', () => {
+            store.saisirNombre('CAMION CITERNE', '6');
+            store.saisirNombre('PICK UP', '2');
+            expect(store.etatLigne('CAMION CITERNE')).toBe('modifie');
+            expect(store.texteMemoire('CAMION CITERNE')).toBe('Remplace 4 (2026-07)');
+            expect(store.etatLigne('PICK UP')).toBe('nouveau');
+        });
+
+        it('change de mois sans écraser une saisie, et sans mémoire laisse les lignes vides', () => {
+            store.saisirNombre('CAMION CITERNE', '9');
+            service.listerValeursMateriel.mockReturnValue(of([
+                { libelle: 'CAMION CITERNE', quantite: 5, periode: '2026-08' }
+            ]));
+            store.choisirPeriode('2026-09');
+            expect(store.nombre('CAMION CITERNE')).toBe(9);
+            expect(store.etatLigne('CAMION CITERNE')).toBe('modifie');
+        });
+
+        it("reste utilisable quand la mémoire est indisponible", () => {
+            service.listerValeursMateriel.mockReturnValue(throwError(() => new Error('indisponible')));
+            store.choisirPeriode('2026-09');
+            expect(store.memoire()).toEqual({});
+            expect(store.erreursChargement()).toEqual([]);
+        });
+    });
+
     it('ne conserve pas les nombres matériels saisis pour le prochain export', () => {
         store.suivant();
         store.basculerEquipe('C168', 'Chauffeurs');
@@ -249,7 +294,6 @@ describe('PaieExportWizardComponent', () => {
         store.etape.set('recap');
         store.suivant();
 
-        expect(localStorage.getItem('paie.export.materiel')).toBeNull();
         store.ouvrir();
         expect(store.nombre('CAMION CITERNE')).toBeNull();
     });

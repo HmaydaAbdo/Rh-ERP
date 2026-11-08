@@ -56,7 +56,7 @@ describe('PaieExportEtapeRecapComponent', () => {
 
     const detail = lignes(racine).find((l) => l[0] === 'Détail par équipe');
     expect(detail?.[1]).toBe('C168 (1 équipe)');
-    expect(lignes(racine).at(-1)).toEqual(['Camions C168 (C168)', '1 ligne renseignée sur 2 · total 4']);
+    expect(lignes(racine).at(-1)).toEqual(['Camions C168 (C168)', '1 ligne renseignée sur 2 (1 nouvelle) · total 4']);
   });
 
   it('chaque ligne offre « Modifier » qui revient à l’étape correspondante', async () => {

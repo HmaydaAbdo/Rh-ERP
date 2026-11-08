@@ -16,6 +16,7 @@ import {
   PaieImportCorrections,
   PaieImportResult,
   PaieMaterielTableau,
+  PaieMaterielValeur,
   PaieParcours,
   PaiePeriodeResume,
   PaieSearchCriteria,
@@ -163,6 +164,11 @@ export class PaieService {
 
   listerTableauxMateriel(): Observable<PaieMaterielTableau[]> {
     return this.http.get<PaieMaterielTableau[]>(`${this.baseUrl}/materiel`);
+  }
+
+  /** Derniers nombres saisis pour chaque ligne du parc, au plus tard pour ce mois. */
+  listerValeursMateriel(periode: string): Observable<PaieMaterielValeur[]> {
+    return this.http.get<PaieMaterielValeur[]>(`${this.baseUrl}/materiel/valeurs`, { params: { periode } });
   }
 
   listerChantiersDeLaPeriode(periode: string): Observable<PaieChantierPeriode[]> {

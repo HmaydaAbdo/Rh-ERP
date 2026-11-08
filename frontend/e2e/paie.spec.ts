@@ -52,6 +52,7 @@ function routes() {
     'POST /paie/options/chantiers': () => pageDe([{ id: 3, code: 'C168', designation: 'Nador', actif: true }]),
     'POST /paie/options/equipes': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
     'GET /paie/materiel': () => [],
+    'GET /paie/materiel/valeurs': () => [],
     'POST /chantiers/search': () => pageDe([]),
     'POST /equipes/search': () => pageDe([]),
     'POST /functions/search': () => pageDe([])

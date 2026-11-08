@@ -142,6 +142,11 @@ describe('PaieService', () => {
     service.listerTableauxMateriel().subscribe();
     requete(http, 'GET', 'paie/materiel').flush([]);
 
+    service.listerValeursMateriel('2026-08').subscribe();
+    const valeurs = requete(http, 'GET', 'paie/materiel/valeurs');
+    valeurs.flush([]);
+    expect(valeurs.request.params.get('periode')).toBe('2026-08');
+
     service.listerChantiersDeLaPeriode('2026-08').subscribe();
     const chantiers = requete(http, 'GET', 'paie/chantiers');
     chantiers.flush([]);

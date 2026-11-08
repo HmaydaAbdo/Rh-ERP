@@ -45,6 +45,9 @@
               />
               <button type="button" [attr.aria-label]="'Augmenter ' + libelle" (click)="store.ajuster(libelle, 1)"><stp-icon name="plus" /></button>
             </div>
+            @if (store.texteMemoire(libelle); as memoire) {
+              <small class="app-wizard__memoire" [class.app-wizard__memoire--modifiee]="store.etatLigne(libelle) === 'modifie'">{{ memoire }}</small>
+            }
           </div>
         }
         <div class="app-wizard__tableau-pied">
@@ -54,6 +57,6 @@
       </div>
     }
   </div>
-  <p class="app-wizard__legende">Une ligne laissée vide s'imprime vide. Un 0 s'imprime 0. Les derniers nombres saisis sont rappelés au prochain export.</p>
+  <p class="app-wizard__legende">Une ligne laissée vide s'imprime vide. Un 0 s'imprime 0. Le dernier nombre saisi pour chaque ligne est proposé d'un mois à l'autre ; il n'est remplacé que par une saisie de votre part.</p>
   <p class="app-wizard__erreur" role="alert">{{ store.erreur() }}</p>
 </section>
