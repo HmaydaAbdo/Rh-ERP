@@ -43,7 +43,7 @@ def test_les_variables_de_spring_suffisent(monkeypatch: pytest.MonkeyPatch) -> N
     _poser(monkeypatch)
     c = Configuration()  # pyright: ignore[reportCallIssue]
     assert c.db_port == 5432 and c.cookie_secure is False and c.smtp_auth is False
-    assert c.springdoc_api_docs_enabled is False and c.springdoc_swagger_ui_enabled is False
+    assert c.api_docs_enabled is False and c.swagger_ui_enabled is False
     assert c.logging_format == "text"
 
 
