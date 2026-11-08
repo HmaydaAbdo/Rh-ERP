@@ -14,38 +14,26 @@ sidebar_position: 1
 
 | | |
 |---|---|
-| Backend historique | `backend/src/main/java/staport/rh/chantier/` |
-| API cible | `api/src/staport/domains/chantier/` (FastAPI, SQLAlchemy, RBAC, audit, MCP) |
+| API | `api/src/staport/domains/chantier/` (FastAPI, SQLAlchemy, RBAC, audit, MCP) |
 | Frontend | `frontend/src/app/portail/chantier/` |
 | Table | `chantier` |
 | Endpoints | `/chantiers`, `/chantiers/search`, `/chantiers/sync` |
 | Source externe | ERP Staport — `GET {CHANTIER_SYNC_BASE_URL}` |
 
 Le module suit l'architecture de référence du projet (`conventions/architecture.md`) :
-`entities → repositories → specifications → dtos → mappers → services → controller`, avec un
-sous-module `sync/` dédié à l'intégration ERP.
+`router → service → repository → models`, avec les modèles Pydantic de `schemas.py`, et deux fichiers dédiés à l'intégration ERP.
 
 ```text
 chantier/
-├── controller/ChantierController.java
-├── dtos/
-│   ├── request/ (Create, Update, SearchCriteria)
-│   └── response/ChantierResponseDto.java
-├── entities/Chantier.java
-├── exceptions/ (NotFound, AlreadyExists, ExceptionHandler)
-├── mappers/ChantierMapper.java
-├── repositories/ChantierRepository.java
-├── services/ (ChantierService + IChantierService)
-├── specifications/ChantierSpecification.java
-└── sync/
-    ├── ChantierErpDto.java                    ← forme brute de la réponse ERP
-    ├── ChantierSyncClient.java                ← appel HTTP à l'ERP
-    ├── ChantierSyncTransactionalOperations.java ← création si absent, une transaction par ligne
-    ├── ChantierSyncService.java                ← orchestration, logs, métriques
-    ├── ChantierSyncScheduler.java               ← déclenchement quotidien (@Scheduled)
-    ├── ChantierSyncController.java              ← déclenchement manuel (POST /chantiers/sync)
-    ├── ChantierSyncMetrics.java                 ← compteurs/timer Micrometer
-    └── ChantierSyncResultDto.java
+├── router.py            ← routes REST, dont le déclenchement manuel POST /chantiers/sync
+├── schemas.py           ← requêtes, réponses, critères, bilan de synchronisation
+├── models.py            ← modèle SQLAlchemy Chantier
+├── exceptions.py        ← introuvable, déjà existant, utilisé, localisation invalide, ERP indisponible
+├── repository.py        ← accès aux données
+├── service.py           ← règles métier + synchronisation (appel ERP, création par ligne, audit, mesures)
+├── planification.py     ← déclenchement quotidien lu dans le paramètre cron
+├── metriques.py         ← compteurs et durée de synchronisation
+└── audit.py             ← historique des entités
 ```
 
 ---
@@ -69,10 +57,9 @@ commentées séparément.
 `CHANTIER_WRITE`, `CHANTIER_DELETE`, `CHANTIER_SYNC` et `CARTE_READ`; les écritures passent par l'audit Python. Les
 outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les champs rendus et ne modifient rien.
 
-**Backend** (`backend/src/main/java/staport/rh/chantier/`)
+**Backend** (`api/src/staport/domains/chantier/`)
 
-- **Contrôleurs.** `ChantierController` (`/chantiers`) et `ChantierSyncController` (`POST /chantiers/sync`). Chaque route
-  porte `@PreAuthorize` sur sa permission : `CHANTIER_READ` (lecture, recherche), `CHANTIER_WRITE` (création,
+- **Routes.** `router.py` (`/chantiers`, dont `POST /chantiers/sync`). Chaque route exige sa permission (`exiger(...)`) : `CHANTIER_READ` (lecture, recherche), `CHANTIER_WRITE` (création,
   modification, clôture, réouverture), `CHANTIER_DELETE`, `CHANTIER_SYNC`.
 - **Service.** `ChantierService`, exposé aux autres domaines par la façade `IChantierService` (`findById`, `search`,
   `existsById`). À la création et à la modification il retire les espaces extérieurs du code, refuse un code déjà
@@ -91,11 +78,12 @@ outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les cham
   `PerimetreSynchronisationChantier` (une entrée pour l'ensemble, une révision par chantier créé), la planifiée étant
   attribuée à « Système » (origine `TACHE_PLANIFIEE`). Les lectures de l'assistant ont leurs propres entrées
   (`MCP_CHANTIER_*`).
-- **Synchronisation ERP** (`sync/`). `ChantierSyncClient` (délais 5 s de connexion, 30 s de lecture, sans nouvel essai),
-  `ChantierSyncService` (orchestration, journaux, métriques), `ChantierSyncTransactionalOperations` (une transaction par
-  ligne, pour qu'une violation d'intégrité reste isolée), `ChantierSyncScheduler` (tous les jours à 23 h),
-  `ChantierSyncMetrics` (`rh.chantier.sync.*`). Elle **ajoute seulement** les chantiers manquants ; elle ne modifie, ne
-  désactive et ne supprime jamais rien (détail dans [Synchronisation ERP](#synchronisation-erp)).
+- **Synchronisation ERP** (`service.py`, `planification.py`, `metriques.py`). Appel HTTP à l'ERP (délais 5 s de connexion,
+  30 s de lecture, sans nouvel essai), une création par ligne isolée par un point de sauvegarde (une violation d'intégrité
+  reste isolée), `PlanificationSynchronisation` (déclenchement quotidien lu dans le paramètre
+  `chantier.synchronisation.cron`, 23 h UTC par défaut) et `MetriquesSynchronisation` (`rh_chantier_sync_*`).
+  Elle **ajoute seulement** les chantiers manquants ; elle ne modifie, ne désactive et ne supprime jamais rien (détail dans
+  [Synchronisation ERP](#synchronisation-erp)).
 - **Base de données.** `V2` crée la table ; `V5` ajoute `nom` et `V6` le sème ; `V24` puis `V27` imposent l'unicité du
   code sans casse et sans espaces extérieurs ; `V28` crée la permission `CARTE_READ` ; `V31` (2026-10-19) puis `V35`
   (2026-10-24) ont clôturé, une seule fois, les chantiers absents des bulletins puis ceux absents de la **dernière paie**
@@ -319,49 +307,43 @@ Le détail par route et action est dans [../rbac/chantier.md](droits.md).
 
 ### Déclenchement
 
-- **Automatique** : tous les jours à 23h00 (`chantier.sync.cron` dans `application.yml`, cron
-  `"0 0 23 * * *"`, fuseau horaire du serveur), via `ChantierSyncScheduler` (`@Scheduled`,
-  `@EnableScheduling` activé dans `staport.rh.common.config.SchedulingConfig`).
+- **Automatique** : tous les jours à 23 h UTC par défaut, via `PlanificationSynchronisation`, démarrée avec l'API. La
+  planification est le paramètre administrable « Planification de la synchronisation des chantiers »
+  (`chantier.synchronisation.cron`, expression à six champs, secondes comprises) : elle est relue avant chaque calcul de la
+  prochaine exécution, donc un changement s'applique après l'exécution en attente, sans redémarrage. Les chantiers créés
+  sont attribués à « Système », d'origine `TACHE_PLANIFIEE`. Une erreur est journalisée et mesurée, jamais propagée : la
+  reprise est la prochaine exécution ou un déclenchement manuel.
 - **Manuel** : `POST /chantiers/sync` (bouton "Synchroniser maintenant" dans l'UI). Utile pour
   vérifier immédiatement sans attendre 23h.
 
-### Algorithme (`ChantierSyncService`)
+### Algorithme (`ServiceChantier.synchroniser`)
 
-1. Récupérer la liste complète via `ChantierSyncClient` (`GET {base-url}`, réponse JSON brute
-   désérialisée en `List<ChantierErpDto>`).
-2. Pour chaque ligne :
-   - `code` manquant/vide → ligne ignorée, `WARN` journalisé, compteur `ignores` incrémenté. C'est
-     le **seul** filtre appliqué avant création — `CodeErreur` (champ d'erreur de ligne côté ERP)
-     n'est **pas** utilisé : une ligne avec `CodeErreur != 0` est traitée exactement comme une ligne
-     à `0`.
-   - Sinon, `ChantierSyncTransactionalOperations.creerSiAbsent` est appelé (**une transaction par ligne**,
-     retourne `true` si le chantier a été créé : `crees`, sinon `dejaPresents`). Si la création lève une
-     `DataIntegrityViolationException` (ex. contrainte unique violée), la ligne est comptée dans
-     `ignores`.
-3. Journaliser un résumé (`INFO`, compteurs `totalRecus`/`crees`/`dejaPresents`/`ignores`) et enregistrer
-   les métriques.
+1. Récupérer la liste complète par `GET {CHANTIER_SYNC_BASE_URL}` (l'adresse complète du service `getChantiers`). Une
+   erreur réseau, un statut d'erreur, un corps illisible ou qui n'est pas une liste répond `503` (`ChantierErpIndisponible`)
+   et compte un échec.
+2. Dans **une seule transaction**, auditée (`CHANTIER_SYNCHRONISATION`, périmètre `recus`, `dejaPresents`, `ignores`, nombre
+   d'éléments = chantiers créés), pour chaque ligne :
+   - `code` manquant/vide → ligne ignorée, compteur `ignores` incrémenté. C'est le **seul** filtre appliqué avant
+     création — `CodeErreur` (champ d'erreur de ligne côté ERP) n'est **pas** utilisé.
+   - Sinon, le rapprochement se fait par `code`, sans tenir compte de la casse ni des espaces extérieurs : présent →
+     `dejaPresents` (rien n'est touché) ; absent → création (`source_erp = true`, `actif = true`) dans un point de
+     sauvegarde. Un conflit d'intégrité (création concurrente) compte la ligne dans `ignores` sans invalider le lot.
+3. Journaliser un résumé (`INFO`, `totalRecus`/`crees`/`dejaPresents`/`ignores`) et enregistrer les mesures.
 
 **Aucune désactivation automatique** : un chantier `source_erp = true` dont le `code` n'apparaît pas
-dans un import ERP (qu'il ait disparu de l'ERP, ou que sa ligne ait un `code` manquant) conserve
-simplement son état précédent — la synchronisation ne fait jamais que créer, jamais modifier ni
+dans un import ERP conserve simplement son état précédent — la synchronisation ne fait jamais que créer, jamais modifier ni
 désactiver.
 
-### Pourquoi une transaction par ligne ?
+### Mesures (Prometheus)
 
-Catcher une `DataIntegrityViolationException` au milieu d'une transaction JPA partagée peut laisser
-la session Hibernate dans un état inutilisable pour la suite du lot. `ChantierSyncTransactionalOperations`
-est donc un bean séparé dont la méthode `creerSiAbsent` est `@Transactional` indépendamment pour chaque
-appel, réalisé depuis `ChantierSyncService` (qui, lui, n'est pas transactionnel) — un échec sur une
-ligne reste isolé et n'affecte pas les lignes suivantes.
+Exposées par `GET /metrics` (voir [Supervision](../../architecture/vue-d-ensemble.md)).
 
-### Métriques (Micrometer)
-
-| Métrique | Type | Description |
+| Mesure | Type | Description |
 |---|---|---|
-| `rh.chantier.sync.success` | Counter | Synchronisations réussies |
-| `rh.chantier.sync.failure` | Counter | Synchronisations échouées (ex. ERP injoignable) |
-| `rh.chantier.sync.records.ignored` | Counter | Lignes ERP ignorées (code manquant ou conflit d'intégrité, cumulé) |
-| `rh.chantier.sync.duration` | Timer | Durée d'une synchronisation |
+| `rh_chantier_sync_success_total` | Compteur | Synchronisations réussies |
+| `rh_chantier_sync_failure_total` | Compteur | Synchronisations échouées (ex. ERP injoignable) |
+| `rh_chantier_sync_records_ignored_total` | Compteur | Lignes ERP ignorées (code manquant ou conflit d'intégrité, cumulé) |
+| `rh_chantier_sync_duration_seconds` | Histogramme | Durée d'une synchronisation |
 
 ### Configuration requise
 
@@ -373,8 +355,8 @@ CHANTIER_SYNC_BASE_URL=http://staport.dyndns.org/webServiceBS/getChantiers
 ```
 
 L'adaptateur impose un délai de connexion de 5 secondes et un délai de lecture de 30 secondes
-(`chantier.sync.connect-timeout` et `chantier.sync.read-timeout`). Une erreur réseau est remontée
-à la synchronisation, sans retry automatique : l'export complet sera repris par l'exécution planifiée
+(constantes `DELAI_CONNEXION_ERP` et `DELAI_LECTURE_ERP` de `service.py`). Une erreur réseau est remontée
+à la synchronisation (réponse `503`), sans retry automatique : l'export complet sera repris par l'exécution planifiée
 suivante ou par un déclenchement manuel, ce qui évite de rejouer partiellement une opération métier.
 
 Voir `backend/.env.example`.
@@ -453,8 +435,8 @@ Le suivi des évolutions est dans Jira (projet `KAN`) :
 - Audité (voir [../audit/README.md](../audit/index.md)) : chaque création, modification et suppression de chantier, et chaque
   synchronisation (une entrée pour l'ensemble, une révision par chantier créé), sont tracées ; la synchronisation planifiée
   est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.
-- Les métriques de synchronisation (`rh.chantier.sync.*`) sont exposées par `/actuator/prometheus` (voir
-  ../architecture.md ([architecture/vue-d-ensemble](../../architecture/vue-d-ensemble.md))).
+- Les mesures de synchronisation (`rh_chantier_sync_*`) sont exposées par `GET /metrics` (voir
+  [architecture/vue-d-ensemble](../../architecture/vue-d-ensemble.md)).
 
 
 ### Scénarios de qualification géographique
@@ -494,7 +476,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 | Couche | Ce qu'elle contient | À vérifier quand on la modifie |
 |---|---|---|
-| **Application** | `ChantierController`, `ChantierSyncController`, `ChantierService` / `IChantierService`, `ChantierSpecification`, synchronisation ERP (`sync/` : client, service, une transaction par ligne, planificateur de 23 h, métriques `rh.chantier.sync.*`), audit (`CHANTIER_*`, `PerimetreSynchronisationChantier`), migrations `V5`, `V24`, `V27`, `V28`, `V31`, `V35` ; côté Angular `portail/chantier/` (liste, formulaire, détail, actions, filtres, assistant d'import Paie « Rouvrir le chantier ») | Unicité du code sans casse ; statut `actif` modifié seulement à la main (jamais par la synchronisation) ; suppression refusée si référencé ; synchronisation qui n'**ajoute** que les chantiers manquants ; `CHANTIER_SYNC` pour le déclenchement manuel ; version optimiste ; entrée d'audit pour chaque écriture et chaque synchronisation |
+| **Application** | `router.py`, `service.py`, `repository.py`, synchronisation ERP (appel HTTP, une création par ligne en point de sauvegarde, `planification.py` à 23 h UTC par défaut, mesures `rh_chantier_sync_*`), audit (`CHANTIER_*`, `CHANTIER_SYNCHRONISATION`), migrations `V5`, `V24`, `V27`, `V28`, `V31`, `V35` ; côté Angular `portail/chantier/` (liste, formulaire, détail, actions, filtres, assistant d'import Paie « Rouvrir le chantier ») | Unicité du code sans casse ; statut `actif` modifié seulement à la main (jamais par la synchronisation) ; suppression refusée si référencé ; synchronisation qui n'**ajoute** que les chantiers manquants ; `CHANTIER_SYNC` pour le déclenchement manuel ; version optimiste ; entrée d'audit pour chaque écriture et chaque synchronisation |
 | **Analytique** | `chantier-module.ts` (dimension `CHANTIER`, parcours Chantier → Équipe → Fonction, source `PAIE`, tri masse puis effectif, pastille de statut), `POST /paie/analytique` (`parChantier`, `evolution`, `qualite`), carte géographique `/carte` (`CARTE_READ`, points qualifiés, source `GET /chantiers/carte`) | Chantier lu sur le **bulletin** du mois ; dernier mois de paie fixe ; un chantier clôturé garde sa carte ; état « Clôturé » pris sur la fiche, pas déduit de la paie ; comparaison indisponible plutôt que zéro ; sans `PAIE_READ` aucun appel |
 | **IA** | Outils MCP `chantier_rechercher` (filtre de statut), `chantier_fiche`, `paie_repartition` (`CHANTIER`), `paie_indicateurs` (`chantiers`), filtres `chantierIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/chantiers` | Lecture seule (jamais de synchronisation ni de clôture par l'assistant) ; permission `CHANTIER_READ` / `PAIE_READ` par outil ; description d'outil à jour ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
 

@@ -29,16 +29,6 @@ frontend/.env.*
 ~$*.xlsx
 ~$*.xls
 
-# --- Backend (Java / Maven) ---------------------------------------------
-backend/target/
-backend/**/target/
-!backend/**/src/main/**/target/
-!backend/**/src/test/**/target/
-*.class
-*.jar
-!.mvn/wrapper/maven-wrapper.jar
-.mvn/wrapper/maven-wrapper.jar
-
 # --- Frontend (Angular / Node) -------------------------------------------
 frontend/node_modules/
 frontend/dist/

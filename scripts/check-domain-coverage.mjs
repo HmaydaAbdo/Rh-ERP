@@ -1,22 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// Seuil de couverture par domaine (lignes et branches). Deux formats lus :
-// - rapport JSON de coverage.py (`pytest --cov --cov-branch --cov-report=json`) : l'API FastAPI, `api/src/staport/domains/<domaine>/` ;
-// - rapport XML JaCoCo : le backend Spring, retiré à la phase finale de la migration (avec cette branche du script).
+// Seuil de couverture par domaine (lignes et branches), lu dans le rapport JSON de coverage.py
+// (`pytest --cov --cov-branch --cov-report=json`) : l'API FastAPI, `api/src/staport/domains/<domaine>/`.
 const reportPath = resolve(process.argv[2] ?? 'api/coverage.json');
 const contenu = readFileSync(reportPath, 'utf8');
 const domains = {
-  auth: { java: 'staport/rh/auth/', python: 'auth', line: 70, branch: 50 },
-  employee: { java: 'staport/rh/employee/', python: 'employee', line: 70, branch: 50 },
-  function: { java: 'staport/rh/function/', python: 'function', line: 70, branch: 50 },
-  chantier: { java: 'staport/rh/chantier/', python: 'chantier', line: 70, branch: 25 },
-  equipe: { java: 'staport/rh/equipe/', python: 'equipe', line: 70, branch: 25 },
-  paie: { java: 'staport/rh/paie/', python: 'paie', line: 70, branch: 70 },
-  'heures-supp': { java: 'staport/rh/heuresupp/', python: 'heuresupp', line: 70, branch: 50 },
-  parametre: { java: 'staport/rh/parametre/', python: 'parametre', line: 70, branch: 70 },
-  audit: { java: 'staport/rh/audit/', python: 'audit', line: 70, branch: 60 },
-  mcp: { java: 'staport/rh/mcp/', python: 'mcp', line: 70, branch: 50 }
+  auth: { python: 'auth', line: 70, branch: 50 },
+  employee: { python: 'employee', line: 70, branch: 50 },
+  function: { python: 'function', line: 70, branch: 50 },
+  chantier: { python: 'chantier', line: 70, branch: 25 },
+  equipe: { python: 'equipe', line: 70, branch: 25 },
+  paie: { python: 'paie', line: 70, branch: 70 },
+  'heures-supp': { python: 'heuresupp', line: 70, branch: 50 },
+  parametre: { python: 'parametre', line: 70, branch: 70 },
+  audit: { python: 'audit', line: 70, branch: 60 },
+  mcp: { python: 'mcp', line: 70, branch: 50 }
 };
 
 /** Couverture d'un domaine : { lines: [couvertes, total], branches: [couvertes, total] }. */
@@ -35,28 +34,7 @@ function mesurerPython() {
   };
 }
 
-function mesurerJacoco() {
-  const packages = [...contenu.matchAll(/<package name="([^"]+)"[\s\S]*?<\/package>/g)].map((match) => match[0]);
-  const somme = (blocks, type, couvert) =>
-    blocks.reduce(
-      (sum, block) =>
-        sum +
-        [...block.matchAll(new RegExp(`<counter type="${type}" missed="(\\d+)" covered="(\\d+)"\\s*/>`, 'g'))].reduce(
-          (s, [, missed, covered]) => s + (couvert ? Number(covered) : Number(missed) + Number(covered)),
-          0
-        ),
-      0
-    );
-  return (domaine) => {
-    const blocks = packages.filter((block) => block.includes(`name="${domaine.java}`));
-    return {
-      lines: [somme(blocks, 'LINE', true), somme(blocks, 'LINE', false)],
-      branches: [somme(blocks, 'BRANCH', true), somme(blocks, 'BRANCH', false)]
-    };
-  };
-}
-
-const mesurer = reportPath.endsWith('.json') ? mesurerPython() : mesurerJacoco();
+const mesurer = mesurerPython();
 const pourcentage = ([couvert, total]) => (total ? (couvert * 100) / total : 0);
 
 const failures = [];

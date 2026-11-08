@@ -86,6 +86,10 @@ règles détaillées suivent dans les sections suivantes.
   équipe, fonction) : une mutation ultérieure ne réécrit pas l'historique.
 - **Import.** L'assistant analyse le fichier, signale les problèmes (chantiers clôturés avec « Rouvrir le chantier »,
   références Fonction/Chantier/Équipe inconnues, fiches à corriger, départs à confirmer), applique les corrections des fiches puis importe.
+  **Le mois se choisit librement** (le frontend propose le mois civil précédent : la RH importe en novembre la paie d'octobre).
+  Une période égale ou postérieure au mois civil en cours, ou un fichier dont au moins 90 % des bulletins sont identiques à ceux
+  d'un des trois derniers autres mois (même fichier importé deux fois), demande une **confirmation explicite** (`controlesPeriode`
+  dans l'analyse, champ `periode_confirmee` à l'import, vérifié aussi par le serveur).
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).
 - **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
   d'export, formulaire de bulletin, parcours d'un employé.
@@ -224,8 +228,9 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   reste modifiable. La paie est prise telle que saisie (formulaire) ou importée (Excel).
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
   les jours travaillés et de récupération acceptent de 0 à 999,99; les salaires et primes de 0 à
-  99 999 999,99. Tous acceptent au plus deux décimales; une valeur dépassant cette précision est refusée avant
-  l'enregistrement, sans arrondi silencieux. `observation` fait 255 caractères au plus.
+  99 999 999,99. **Les montants sont arrondis automatiquement à deux décimales** (demi supérieur : 769,230769 → 769,23), à la
+  saisie comme à l'import, puis contrôlés ; une valeur négative ou dépassant la borne reste refusée. Les jours, eux, n'ont
+  jamais plus de deux décimales (jamais arrondis). `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
   bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**
   (`POST /paie/suppression`) suit la même règle, avec les garde-fous décrits dans « Suppression en groupe ».

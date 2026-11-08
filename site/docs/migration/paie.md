@@ -57,7 +57,7 @@ Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel 
 après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
 L'analyse signale avant import un bulletin déjà présent pour l'employé et le mois, ainsi qu'un CIN
 en doublon dans le fichier ou un champ obligatoire absent. Elle nomme aussi le champ et la valeur
-si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides ; les longueurs du nom,
+si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides (les montants, eux, sont arrondis à deux décimales) ; les longueurs du nom,
 du CIN et de l'observation sont contrôlées. Lors de la création, le nom, la fonction,
 le chantier et l'équipe renseignée mettent à jour la fiche Employé dans la même transaction que les
 nouveaux bulletins. Une équipe vide sur la ligne reste vide sur le bulletin mais ne supprime pas
@@ -65,8 +65,11 @@ l'affectation de la fiche Employé.
 Fonction, Chantier et Équipe sont des référentiels préexistants : l'analyse signale toute référence
 introuvable et bloque l'import. La Paie n'en crée aucune.
 Un chantier présent mais clôturé est signalé séparément et doit être rouvert avant l'import.
-S'il existe déjà de la paie, seul le mois civil suivant le dernier mois importé est accepté ;
-le refus indique le mois attendu.
+Refonte par rapport à Spring (KAN-231) : le mois d'import est libre, la règle « dernier mois + 1 » est
+retirée. Une période égale ou postérieure au mois civil en cours, ou un fichier identique à 90 % à un des
+trois derniers autres mois, demande une confirmation explicite (`controlesPeriode`, `periode_confirmee`).
+Autres refontes : arrondi automatique des montants à deux décimales (KAN-228) et départ déduit de
+l'absence confirmable sans motif (KAN-230). Le banc différentiel les classe `REFONTE`.
 
 Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart/form-data` pour
 l'analyse et l'import final. La correction envoie en plus le texte JSON `corrections` avec les

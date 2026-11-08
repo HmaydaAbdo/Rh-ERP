@@ -28,3 +28,10 @@ class ChantierUtilise(ErreurMetier):
 
 class ChantierLocalisationInvalide(ErreurMetier):
     statut = HTTPStatus.BAD_REQUEST
+
+
+class ChantierErpIndisponible(ErreurMetier):
+    statut = HTTPStatus.SERVICE_UNAVAILABLE
+
+    def __init__(self) -> None:
+        super().__init__("L'ERP des chantiers est indisponible ou a renvoyé une réponse illisible.")

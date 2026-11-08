@@ -23,11 +23,12 @@ from starlette.routing import Route
 
 from staport.domains.accueil import router as routes_accueil
 from staport.domains.audit import router as routes_audit
-from staport.domains.audit.api import Audit, VerificationIntegrite
+from staport.domains.audit.api import Audit, MetriquesAudit, VerificationIntegrite
 from staport.domains.auth import router as routes_auth
 from staport.domains.auth.composition import ContexteAuth, creer_contexte
 from staport.domains.chantier import audit as _historique_chantier  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.chantier import router as routes_chantier
+from staport.domains.chantier.planification import PlanificationSynchronisation
 from staport.domains.common.audit_contexte import Origine, contexte_batch
 from staport.domains.employee import audit as _historique_employee  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.employee import router as routes_employee
@@ -44,6 +45,8 @@ from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
 from staport.platform.erreurs import enregistrer_gestionnaires, reponse
+from staport.platform.journalisation import configurer_journalisation
+from staport.platform.metriques import TYPE_CONTENU, creer_registre, exporter
 from staport.platform.requete import EN_TETE_REQUEST_ID, EN_TETES_SECURITE, enregistrer_identifiant_requete
 from staport.platform.sante import sante
 
@@ -77,6 +80,7 @@ def creer_app(
     contexte: ContexteAuth | None = None,
     amorcer_admin: bool = True,
     configuration_ia: SettingsIA | None = None,
+    planifier_synchronisation: bool = True,
 ) -> FastAPI:
     @asynccontextmanager
     async def cycle_de_vie(app: FastAPI) -> AsyncGenerator[None]:
@@ -86,8 +90,12 @@ def creer_app(
         moteur_ = moteur or creer_moteur(configuration_.url_application())
         fabrique = creer_fabrique_sessions(moteur_)
         app.state.fabrique_sessions = fabrique
+        app.state.configuration = configuration_
         app.state.auth = contexte or creer_contexte(configuration_)
         audit = app.state.auth.audit
+        app.state.registre_metriques = creer_registre(
+            audit.metriques if isinstance(audit, Audit) else MetriquesAudit(), app.state.auth.chantiers.metriques
+        )
         verification: VerificationIntegrite | None = None
         if isinstance(audit, Audit):
             audit.lier(fabrique)
@@ -98,9 +106,17 @@ def creer_app(
             await _amorcer_admin(app.state.auth, configuration_, fabrique)
         if verification is not None:
             await verification.demarrer()
+        planification: PlanificationSynchronisation | None = None
+        if planifier_synchronisation:
+            planification = PlanificationSynchronisation(
+                fabrique, app.state.auth.parametres, app.state.auth.chantiers, configuration_.chantier_sync_base_url
+            )
+            planification.demarrer()
         try:
             yield
         finally:
+            if planification is not None:
+                await planification.arreter()
             if verification is not None:
                 await verification.arreter()
             await app.state.auth.courriel.attendre_envois()
@@ -120,10 +136,31 @@ def creer_app(
         from erp_rh_ia.app import cycle_ia
 
         vie = combine_lifespans(vie, cycle_ia(configuration_ia))
-    app = FastAPI(title="Staport Intelligence", lifespan=vie)
+    if configuration_ is not None:
+        configurer_journalisation(configuration_.logging_format, configuration_.logging_file_path)
+    documentation_allumee = configuration_ is not None and configuration_.springdoc_api_docs_enabled
+    interface_allumee = (
+        documentation_allumee and configuration_ is not None and configuration_.springdoc_swagger_ui_enabled
+    )
+    app = FastAPI(
+        title="Staport Intelligence",
+        lifespan=vie,
+        openapi_url="/openapi.json" if documentation_allumee else None,
+        docs_url="/docs" if interface_allumee else None,
+        redoc_url=None,
+    )
     enregistrer_gestionnaires(app)
     enregistrer_identifiant_requete(app)
     app.include_router(sante)
+
+    @app.get("/metrics", include_in_schema=False)
+    async def metriques(requete: Request) -> Response:
+        """Mesures Prometheus ; non relayé par nginx, joignable depuis le serveur seulement."""
+        registre = getattr(requete.app.state, "registre_metriques", None)
+        if registre is None:
+            return Response(status_code=HTTPStatus.SERVICE_UNAVAILABLE)
+        return Response(exporter(registre), media_type=TYPE_CONTENU)
+
     if configuration_ia is not None:
         from erp_rh_ia.app import routeur_ia
 
