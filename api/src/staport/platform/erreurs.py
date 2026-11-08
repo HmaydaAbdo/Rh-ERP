@@ -96,7 +96,7 @@ def _periode_corps_illisible(requete: Request) -> bool:
     """Heures supp et paie (hors export/rapport) : un `YearMonth` mal formé rend le corps illisible côté Spring."""
     chemin = requete.url.path
     sortie = chemin in ("/paie/export", "/paie/report/pdf")
-    return (chemin.startswith("/heures-supp/") or (chemin.startswith("/paie") and not sortie)) and _corps_json(requete)
+    return (chemin.startswith("/heures-supp") or (chemin.startswith("/paie") and not sortie)) and _corps_json(requete)
 
 
 def _corps_json(requete: Request) -> bool:

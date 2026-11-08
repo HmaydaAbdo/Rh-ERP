@@ -35,6 +35,10 @@ def _import(nom: str, chemin: str, contenu: bytes, periode: str, chantier: str, 
     )
 
 
+def _get(nom: str, chemin: str) -> Etape:
+    return Etape(M, nom, "GET", chemin)
+
+
 def _imports() -> list[Etape]:
     ca_janvier = classeur_hs([["Amal Benali", "AB1001", 12.5], ["Éléonore Müller", "EF1003", 8]])
     cb_janvier = classeur_hs([["Omar Jour", "CD1002", 5.5], ["Stc Mois Deux", "KL1006", 3]])
@@ -81,8 +85,80 @@ def _sorties_pdf() -> list[Etape]:
     ]
 
 
+def _ecritures() -> list[Etape]:
+    base = {"employeeId": "{emp7}", "chantierId": "{c_168}", "periode": "2026-03", "heuresSupplementaires": 4.5}
+    modif = {"heuresSupplementaires": 6.5, "forfaitDh": 120}
+    return [
+        _post(
+            "lire-premiere",
+            "/heures-supp/search",
+            json={"periode": "2026-01"},
+            params={"sort": "id,asc"},
+            capture={"h_id": "content.0.id"},
+        ),
+        _get("lire", "/heures-supp/{h_id}"),
+        _get("lire-inconnue", "/heures-supp/999999"),
+        _post("creer", "/heures-supp", json=base, capture={"h_new": "id"}),
+        _post("creer-doublon", "/heures-supp", json=base),
+        _post("creer-employe-inconnu", "/heures-supp", json={**base, "employeeId": 999999, "periode": "2026-04"}),
+        _post("creer-chantier-inconnu", "/heures-supp", json={**base, "chantierId": 999999, "periode": "2026-04"}),
+        _post(
+            "creer-heures-negatives", "/heures-supp", json={**base, "periode": "2026-04", "heuresSupplementaires": -1}
+        ),
+        _post(
+            "creer-heures-trop-precises",
+            "/heures-supp",
+            json={**base, "periode": "2026-04", "heuresSupplementaires": 1.25},
+        ),
+        _post(
+            "creer-sans-heures-ni-forfait",
+            "/heures-supp",
+            json={k: v for k, v in base.items() if k != "heuresSupplementaires"},
+        ),
+        _post("creer-periode-invalide", "/heures-supp", json={**base, "periode": "2026-13"}),
+        Etape(M, "modifier", "PUT", "/heures-supp/{h_new}", json={**modif, "version": 0}),
+        Etape(M, "modifier-version-perimee", "PUT", "/heures-supp/{h_new}", json={**modif, "version": 0}),
+        Etape(M, "modifier-sans-version", "PUT", "/heures-supp/{h_new}", json=modif),
+        Etape(M, "modifier-inconnue", "PUT", "/heures-supp/999999", json={**modif, "version": 0}),
+        Etape(
+            M,
+            "modifier-heures-negatives",
+            "PUT",
+            "/heures-supp/{h_new}",
+            json={"heuresSupplementaires": -1, "version": 1},
+        ),
+        Etape(M, "supprimer", "DELETE", "/heures-supp/{h_new}"),
+        Etape(M, "supprimer-deja-supprimee", "DELETE", "/heures-supp/{h_new}"),
+        _post(
+            "suppression-mois-compte-faux",
+            "/heures-supp/suppression-mois",
+            json={"periode": "2026-02", "nombreAttendu": 99},
+        ),
+        _post(
+            "suppression-mois-sans-ligne",
+            "/heures-supp/suppression-mois",
+            json={"periode": "2025-01", "nombreAttendu": 0},
+        ),
+        _post("suppression-mois", "/heures-supp/suppression-mois", json={"periode": "2026-02", "nombreAttendu": 2}),
+        _post(
+            "suppression-mois-negatif",
+            "/heures-supp/suppression-mois",
+            json={"periode": "2026-02", "nombreAttendu": -1},
+        ),
+        _post(
+            "suppression-mois-periode-invalide",
+            "/heures-supp/suppression-mois",
+            json={"periode": "2026-13", "nombreAttendu": 0},
+        ),
+        _post("suppression-mois-sans-corps", "/heures-supp/suppression-mois"),
+        _post("periodes-apres-suppression", "/heures-supp/analytique", json={}),
+    ]
+
+
 def etapes() -> list[Etape]:
-    toutes = [*_donnees(), *_imports(), *_lectures(), *_sorties_pdf()]
+    toutes = [*_donnees(), *_imports(), *_lectures(), *_ecritures(), *_sorties_pdf()]
     for e in toutes:
         e.module = M
+        if e.nom == "creer-employe-inconnu":
+            e.question = "Employé inconnu : Spring répond 500 (erreur non gérée), Python 404 avec message."
     return toutes
