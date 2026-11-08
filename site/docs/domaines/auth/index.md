@@ -206,7 +206,7 @@ d'audit). Il n'existe **pas** de suppression de compte : on désactive.
 
 ### Écran Utilisateurs (`/admin/users`)
 
-Liste (tableau standard, voir ../frontend/README.md (`docs/frontend/README.md`)), formulaire de création et de
+Liste (tableau standard, voir ../frontend/README.md ([frontend/index](../../frontend/index.md))), formulaire de création et de
 modification : username, email, mot de passe (création), compte actif, employé lié (sélecteur à chargement
 différé), rôles, et — en modification seulement — les permissions refusées.
 
@@ -294,7 +294,7 @@ aux comptes ou aux rôles.
 | Écrans | `/login`, `/forgot-password`, `/reset-password`, `/acces-refuse` ; les écrans publics d'authentification partagent la carte `stp-auth-card` (`shared/ui/auth-card`), centrée sur le fond de page et qui suit le thème clair ou sombre de l'application, sans logo ni présentation des fonctions du produit. Le refus d'accès présente une explication claire et un retour à l'accueil |
 | Initialisation | `APP_INITIALIZER` tente la restauration de session **avant** les routes, pour qu'un F5 sur une page protégée ne renvoie pas à `/login` |
 
-Détail des guards et du menu : ../frontend/README.md (`docs/frontend/README.md`).
+Détail des guards et du menu : ../frontend/README.md ([frontend/index](../../frontend/index.md)).
 
 ---
 

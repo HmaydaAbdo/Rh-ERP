@@ -299,7 +299,7 @@ partagés, multiples, avec recherche serveur, pagination au défilement et navig
 Nom, CIN et dimensions s’appliquent aux données Paie et aux mouvements. Le statut courant reste
 propre aux fiches et ne filtre pas les mouvements historiques; un message le rappelle lorsqu’il
 est sélectionné. Les sources mensuelles et l’effectif courant restent distincts. Les règles
-partagées de présentation et d’export sont dans Vues de périmètre (`docs/frontend/vues-perimetre.md`).
+partagées de présentation et d’export sont dans Vues de périmètre ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)).
 
 ## Scénarios vérifiables
 

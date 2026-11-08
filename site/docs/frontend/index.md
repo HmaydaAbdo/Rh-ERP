@@ -1,4 +1,7 @@
-# Frontend
+---
+title: "Frontend"
+sidebar_position: 1
+---
 
 > Application Angular de rh-erp : structure, routes, protection par permission, composants partagés et
 > comportement des tableaux. Les règles d'écriture (composants standalone, `inject()`, formulaires
@@ -12,11 +15,11 @@
 | | |
 |---|---|
 | Emplacement | `frontend/` (code dans `frontend/src/app/`) |
-| Technologies | Angular 22.2.2, TypeScript 6.0.3, standalone, composants `OnPush`, Signals, zoneless (Zone.js retiré), Angular Aria + CDK, Lucide Angular, Tailwind CSS 4 (utilitaires), Chart.js (graphiques, chargé à la demande), MapLibre GL JS avec PMTiles et les styles Protomaps (carte des chantiers, chargée à la demande — voir [ADR 0007](../adr/0007-maplibre-protomaps-auto-heberge.md) et [ADR 0009](../adr/0009-carte-satellite-relief-3d.md)). AG Grid Community n'est pas utilisé : il n'est réservé qu'à une grille avancée au besoin mesuré |
+| Technologies | Angular 22.2.2, TypeScript 6.0.3, standalone, composants `OnPush`, Signals, zoneless (Zone.js retiré), Angular Aria + CDK, Lucide Angular, Tailwind CSS 4 (utilitaires), Chart.js (graphiques, chargé à la demande), MapLibre GL JS avec PMTiles et les styles Protomaps (carte des chantiers, chargée à la demande — voir [ADR 0007](../decisions/0007-maplibre-protomaps-auto-heberge.md) et [ADR 0009](../decisions/0009-carte-satellite-relief-3d.md)). AG Grid Community n'est pas utilisé : il n'est réservé qu'à une grille avancée au besoin mesuré |
 | Kit de composants | `src/app/shared/ui/` (« kit Staport ») : voir [Kit Staport](#kit-staport) |
 | Rendu | Application monopage (SPA) ; routes chargées à la demande (lazy loading) par domaine |
-| Tests | Vitest (runner Angular `@angular/build:unit-test`, Chromium réel) pour les unités et composants ; Playwright + axe pour les parcours E2E (voir [../testing.md](../testing.md)) |
-| Production | Image nginx qui sert les fichiers statiques et relaie l'API (`frontend/nginx.conf`, voir [../deployment.md](../deployment.md)) |
+| Tests | Vitest (runner Angular `@angular/build:unit-test`, Chromium réel) pour les unités et composants ; Playwright + axe pour les parcours E2E (voir [../testing.md](../exploitation/tests.md)) |
+| Production | Image nginx qui sert les fichiers statiques et relaie l'API (`frontend/nginx.conf`, voir [../deployment.md](../exploitation/deploiement.md)) |
 
 ### Commandes
 
@@ -152,7 +155,7 @@ nouveau reprend ces règles dès sa création.
 | Couleur de marque | Le bleu du logo (`--brand-700` en thème clair), décliné en échelle `--brand-50` … `--brand-950`. Le thème sombre suit **Graphite Staport** : canevas noir mat `#0D0D0D`, surface graphite `#151515`, action bleue `#168DFF`, focus bleu clair `#68AAFF`, texte net `#EDEDED`, accent cuivre rare `#C88E5C`. Le thème clair reste minéral avec son accent cuivre ; les statuts métier et graphiques gardent leurs couleurs sémantiques. |
 | Logo | Monogramme « S » : `src/assets/brand/monogramme.svg` (favicon uniquement) — dessin provisoire, à remplacer par une version vectorielle du logo. Aucun logo dans l'authentification ou le menu latéral |
 | Typographie | IBM Plex Sans (texte) et IBM Plex Mono (identifiants), **embarquées** (`@fontsource`, déclarées dans `angular.json`) — l'application fonctionne hors ligne ; `--text-page-title` pour les titres d'écran, `--text-display` réservé à l'accroche d'accueil |
-| Thème | Clair ou sombre : clair par défaut (décision du 2026-11-02) tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage. Graphite Staport et ses règles d'usage sont définis dans [design-system.md](../../conventions/design-system.md). |
+| Thème | Clair ou sombre : clair par défaut (décision du 2026-11-02) tant que l'utilisateur n'a pas choisi, puis son choix est mémorisé sur ce navigateur ; bouton lune/soleil au bas du menu latéral. Le script d'`index.html` pose `data-theme` avant le premier affichage. Graphite Staport et ses règles d'usage sont définis dans design-system.md (`conventions/design-system.md`). |
 | Menu latéral | Fond bleu très foncé en clair et graphite en sombre (`--color-sidebar-*`), repère cuivre discret. Chaque destination du menu a une icône dédiée, sans répétition. Sur grand écran, le menu reste iconique et compact ; Fonctions et Équipes sont deux entrées séparées. Sur `/carte`, le rail disparaît : un hamburger précède le filtre, et révèle par survol ou focus clavier un volet animé qui se replie à la sortie. L'animation est coupée avec `prefers-reduced-motion`. Sur **téléphone et tablette compacte**, le menu garde son tiroir piloté par la barre du haut. |
 | Authentification | Connexion, mot de passe oublié et réinitialisation partagent la carte `stp-auth-card` (`shared/ui/auth-card`) : une carte plate centrée sur le fond de page, qui suit le thème de l'application, même si une session est active ; aucun logo ni liste des fonctions du produit. La composition reste centrée sur téléphone et tablette. |
 
@@ -178,7 +181,7 @@ de rôle).
 | `/employees/new`, `/employees/:id/edit` | | `EMPLOYEE_WRITE` |
 | `/chantiers`, `/chantiers/cartes`, `/chantiers/analytique`, `/chantiers/:id` | Chantiers | `CHANTIER_READ` |
 | `/chantiers/new`, `/chantiers/:id/edit` | | `CHANTIER_WRITE` |
-| `/carte` | Carte des chantiers (le Maroc, sans donnée de chantier pour l'instant — voir [../chantier/carte.md](../chantier/carte.md)) | `CARTE_READ` |
+| `/carte` | Carte des chantiers (le Maroc, sans donnée de chantier pour l'instant — voir [../chantier/carte.md](../domaines/chantier/carte.md)) | `CARTE_READ` |
 | `/functions`, `/functions/:id` | Fonctions | `FUNCTION_READ` |
 | `/functions/new`, `/functions/:id/edit` | | `FUNCTION_WRITE` |
 | `/equipes`, `/equipes/:id` | Équipes | `EQUIPE_READ` |
@@ -213,7 +216,7 @@ Chaque bouton qui déclenche une action est conditionné par la permission corre
 `canWrite()`, `canDelete()`, `canImport()`, `canExport()`, `canSync()` des composants) : création et
 modification (`*_WRITE`), suppression (`*_DELETE`), import et modèle Excel (`*_IMPORT`), export Excel et PDF
 (`PAIE_EXPORT`), synchronisation des chantiers (`CHANTIER_SYNC`). Un utilisateur qui n'a que la lecture voit les
-données sans aucun bouton d'action. Le détail par écran est dans [../rbac/](../rbac/README.md).
+données sans aucun bouton d'action. Le détail par écran est dans [../rbac/](../domaines/rbac/index.md).
 
 > Le masquage côté interface est un confort : la sécurité réelle est portée par le backend (`@PreAuthorize`).
 
@@ -230,7 +233,7 @@ données sans aucun bouton d'action. Le détail par écran est dans [../rbac/](.
   requête est rejouée ; sinon la session est vidée et l'utilisateur renvoyé à `/login`.
 - Les appels `auth/*` envoient toujours les cookies (`withCredentials`).
 
-Détail : [../auth/README.md](../auth/README.md).
+Détail : [../auth/README.md](../domaines/auth/index.md).
 
 ---
 
@@ -258,7 +261,7 @@ La règle de réutilisation, le registre des éléments à présenter au catalog
 | `stp-field-error` | Première erreur Signal Forms annoncée (`role="alert"`) quand le champ touché est invalide | Signal Forms |
 | `stp-chart` | Graphique Chart.js (`role="img"`), navigation par flèches, Début/Fin et sélection par Entrée/Espace ; annonce du point courant, `dataSelect` au clic ou au clavier | Chart.js |
 
-Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles; ses parcours E2E couvrent axe en thème clair/sombre et les interactions clavier ciblées. Les exigences de contraste élevé et de vérification manuelle sont définies dans le [design system](../../conventions/design-system.md).
+Le catalogue `/catalogue` présente les composants partagés sans backend. Il sert à vérifier les variantes visuelles et les états utiles; ses parcours E2E couvrent axe en thème clair/sombre et les interactions clavier ciblées. Les exigences de contraste élevé et de vérification manuelle sont définies dans le design system (`conventions/design-system.md`).
 
 `app-lazy-select` fournit la recherche serveur et la pagination au défilement à `stp-select`. Les options
 Chantier montrent **code + nom** (désignation si le nom manque), les options Équipe **code + libellé**,
@@ -407,7 +410,7 @@ Aucun tableau, graphique ni carte n'exporte ses données depuis le navigateur (d
 - Les messages de succès passent par `NotificationService`; les erreurs HTTP sont publiées automatiquement par `errorInterceptor` avec le `message` renvoyé par l'API (sauf la restauration de session au démarrage, `auth/refresh`, silencieuse : un visiteur sans session n'a pas d'erreur à voir). L'hôte partagé présente ces notifications avec rôles ARIA et fermeture manuelle.
 - Les suppressions et sorties de formulaire modifié passent par `ConfirmDialogService`; son dialogue modal utilise CDK A11y (piège de focus, Échap, focus initial) et le design system Staport.
 - Les imports Excel affichent un résumé puis, en cas de rejet, le détail de chaque ligne en cause avec sa raison
-  (voir [../imports.md](../imports.md)).
+  (voir [../imports.md](../domaines/imports.md)).
 
 ## Gestion de l'état
 
@@ -428,4 +431,25 @@ autorisés, pas de NgRx).
    `stp-table`, `ColumnState`, `app-column-chooser`, `columns.visible`, tri, pagination et filtres en temps réel.
 6. Pour une liste déroulante : un adaptateur dans `shared/reference-data/` et `app-lazy-select` (sur `stp-select`).
 7. Ajouter le préfixe d'API à `proxy.conf.js` et `nginx.conf`.
-8. Mettre à jour [../rbac/](../rbac/README.md) et la documentation du domaine.
+8. Mettre à jour [../rbac/](../domaines/rbac/index.md) et la documentation du domaine.
+
+## Captures de référence
+
+Régénérées par `npm run e2e:references` (depuis `frontend/`) ; repère de revue, pas de comparaison pixel à pixel.
+
+![chantiers dark telephone](references/chantiers-dark-telephone.png)
+
+![chantiers light telephone](references/chantiers-light-telephone.png)
+
+![galerie dark ordinateur](references/galerie-dark-ordinateur.png)
+
+![galerie dark telephone](references/galerie-dark-telephone.png)
+
+![galerie light ordinateur](references/galerie-light-ordinateur.png)
+
+![galerie light telephone](references/galerie-light-telephone.png)
+
+![paie dark ordinateur](references/paie-dark-ordinateur.png)
+
+![paie light ordinateur](references/paie-light-ordinateur.png)
+

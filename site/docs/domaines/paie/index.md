@@ -511,7 +511,7 @@ filtre vide est ignoré).
 
 ### Vue Cartes
 
-`PaieCartesComponent` (`cartes/`) est l'hôte du composant **partagé par tous les modules** (Vues Cartes et Analytique partagées (`docs/frontend/vues-perimetre.md`), ADR 0014) ;
+`PaieCartesComponent` (`cartes/`) est l'hôte du composant **partagé par tous les modules** (Vues Cartes et Analytique partagées ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)), ADR 0014) ;
 `paie-module.ts` décrit le module Paie (pas de référentiel propre ; périmètre = barre commune : mois, nom, CIN, chantiers, équipes,
 fonctions ; la liste des mois en premier niveau). Lecture seule, sauf la suppression en groupe ci-dessous.
 
@@ -551,7 +551,7 @@ importé par erreur. Le bouton est fourni par `PaieCartesComponent` (gabarit `#a
 
 ### Vue Analytique
 
-`PaieAnalytiqueComponent` (`analytique/`) est l'hôte du composant **partagé par tous les modules** (Vues Cartes et Analytique partagées (`docs/frontend/vues-perimetre.md`), ADR 0014).
+`PaieAnalytiqueComponent` (`analytique/`) est l'hôte du composant **partagé par tous les modules** (Vues Cartes et Analytique partagées ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)), ADR 0014).
 **Lecture seule**, sur le périmètre de la barre commune. Sans mois, le plus récent est ouvert et inscrit dans la barre ; chaque
 changement de filtre relance l'analyse (une demande encore en cours est abandonnée).
 

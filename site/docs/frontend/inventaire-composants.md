@@ -1,4 +1,7 @@
-# Composants visuels hors `shared/ui/` (E0.2, terminé le 2026-11-01)
+---
+title: "Composants visuels hors `shared/ui/` (E0.2, terminé le 2026-11-01)"
+sidebar_position: 2
+---
 
 Mesure du 2026-10-31 par `npm run check:composants` (script `scripts/check-composants-partages.mjs`). Règle du propriétaire : tout écran
 est composé de composants de `shared/ui/` ; aucun composant visuel ne vit dans un dossier de domaine.

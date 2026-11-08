@@ -119,7 +119,7 @@ outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les cham
 ### Couche analytique
 
 Les vues Cartes et Analytique ne sont pas propres à Chantier : ce sont des composants partagés (`portail/perimetre/`,
-référence technique (`docs/frontend/vues-perimetre.md`)) que le module configure dans `chantier-module.ts`. La carte
+référence technique ([frontend/vues-perimetre](../../frontend/vues-perimetre.md))) que le module configure dans `chantier-module.ts`. La carte
 géographique est un écran distinct.
 
 | Réglage du module | Valeur pour Chantier | Effet |
@@ -387,7 +387,7 @@ Routes sous `/chantiers` (lazy loading, `chantier.routes.ts`) :
 
 | Route | Composant | Description |
 |---|---|---|
-| `/chantiers` | `ChantierVuesComponent` + `ChantierListComponent` | Coque commune (titre, onglets de vue, actions Synchroniser maintenant / Nouveau chantier, filtres code, désignation et statut dans l'URL), tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir ../frontend/README.md (`docs/frontend/README.md`)), clôture / réouverture et suppression |
+| `/chantiers` | `ChantierVuesComponent` + `ChantierListComponent` | Coque commune (titre, onglets de vue, actions Synchroniser maintenant / Nouveau chantier, filtres code, désignation et statut dans l'URL), tableau standard (tri, colonnes redimensionnables/réordonnables/masquables, pagination, voir ../frontend/README.md ([frontend/index](../../frontend/index.md))), clôture / réouverture et suppression |
 | `/chantiers/cartes` | `ChantierCartesComponent` | **Cartes hiérarchiques** : chantier → équipe → fonction, avec les indicateurs de la dernière paie disponible |
 | `/chantiers/analytique` | `ChantierAnalytiqueComponent` | **Analytique graphique** : répartition par chantier et évolution mensuelle de l'effectif payé, de la masse salariale et des STC ; qualité des rattachements |
 | `/chantiers/new` | `ChantierFormComponent` | Création |
@@ -400,7 +400,7 @@ Les trois vues (Tabulaire, Cartes, Analytique) utilisent `app-collection-shell` 
 l'en-tête commun (`ChantierActionsComponent`) : une synchronisation réussie recrée la vue affichée. La carte géographique
 (`/carte`, droit `CARTE_READ`) reste un écran séparé, décrit dans [carte.md](carte.md).
 
-**La coque, le Tabulaire, Cartes et Analytique reposent sur des composants partagés configurés par domaine** (Vues de collection partagées (`docs/frontend/vues-perimetre.md`), ADR 0011, 0012 et 0014) : `ChantierCartesComponent` et
+**La coque, le Tabulaire, Cartes et Analytique reposent sur des composants partagés configurés par domaine** (Vues de collection partagées ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)), ADR 0011, 0012 et 0014) : `ChantierCartesComponent` et
 `ChantierAnalytiqueComponent` ne sont que des hôtes minces ; `chantier-module.ts` décrit le module (référentiel de chantiers avec
 leur statut, filtres code, désignation et statut, ordre de descente chantier → équipe → fonction). Les liens avec les autres
 domaines passent par les services existants, sans endpoint propre. Cartes et Analytique utilisent la **paie du dernier mois enregistré** comme source commune :

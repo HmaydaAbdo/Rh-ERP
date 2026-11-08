@@ -48,7 +48,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   le catalogue et ses usages dans les domaines. Consigner dans le plan ou la revue la correspondance
   entre les besoins de l'écran et les composants retenus. Si une brique générique manque, proposer son
   ajout au socle et au catalogue avant de la coder dans un domaine ; ne pas contourner cette étape par
-  une copie locale. Consulter l'inventaire [composants partagés](../docs/frontend/audit-composants-partages.md)
+  une copie locale. Consulter l'inventaire [composants partagés](../site/docs/frontend/audit-composants-partages.md)
   pour les écarts connus et le mettre à jour lorsque le constat change.
 * Appliquer les principes de [`ingenierie-agentique.md`](ingenierie-agentique.md) : abstraction à sa place (second usage
   ou frontière nommé), bon framework (besoin en une phrase, couverture native vérifiée), bon outillage (contrôles locaux

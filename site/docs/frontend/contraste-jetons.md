@@ -1,4 +1,7 @@
-# Contrastes des jetons de design
+---
+title: Contrastes des jetons de design
+sidebar_position: 5
+---
 
 Rapport généré par `npm run check:contraste` (script `scripts/check-contraste-jetons.mjs`) à partir de `frontend/src/styles/_tokens.scss`. Formule de contraste de WCAG 2.2 (critère 1.4.3). Seuils : texte courant 7:1 (AAA), texte secondaire, libellés de boutons et liens 4,5:1 (AA), bordures franches, anneau de focus, composants et éléments graphiques 3:1 (1.4.11), séparateur de ligne de tableau 2,18:1 (charte). Les couples marqués « informatif » ne bloquent pas le contrôle.
 
@@ -33,11 +36,11 @@ Rapport généré par `npm run check:contraste` (script `scripts/check-contraste
 | Rail : texte | `--color-sidebar-text` #d1d5db | `--color-sidebar-bg` #111827 | 12,04:1 | 7:1 | OK |
 | Rail : texte au survol | `--color-sidebar-text` #d1d5db | `--color-sidebar-hover-bg` #1f2937 | 9,96:1 | 7:1 | OK |
 | Rail : élément actif | `--color-sidebar-active-text` #ffffff | `--color-sidebar-active-bg` #2a3447 | 12,50:1 | 7:1 | OK |
-| Carte : texte | `--map-ui-text` #111827 | `--map-ui-surface` #ffffff | 17,74:1 | 7:1 | OK |
-| Carte : texte secondaire | `--map-ui-text-muted` #4b5563 | `--map-ui-surface` #ffffff | 7,56:1 | 4,5:1 | OK |
-| Carte : icône | `--map-ui-icon` #1f2937 | `--map-ui-surface` #ffffff | 14,68:1 | 3:1 | OK |
-| Carte : bordure | `--map-ui-border` #6b7280 | `--map-ui-surface` #ffffff | 4,83:1 | 2,18:1 | OK |
-| Carte : infobulle | `--map-tooltip-text` #111827 | `--map-tooltip-surface` #ffffff | 17,74:1 | 7:1 | OK |
+| Carte : texte | `--map-ui-text` #f5f4ef | `--map-ui-surface` #2b2a28 | 13,02:1 | 7:1 | OK |
+| Carte : texte secondaire | `--map-ui-text-muted` #bdbab1 | `--map-ui-surface` #2b2a28 | 7,39:1 | 4,5:1 | OK |
+| Carte : icône | `--map-ui-icon` #eceae3 | `--map-ui-surface` #2b2a28 | 11,91:1 | 3:1 | OK |
+| Carte : bordure | `--map-ui-border` #6b6962 | `--map-ui-surface` #2b2a28 | 2,61:1 | 2,18:1 | OK |
+| Carte : infobulle | `--map-tooltip-text` #f5f4ef | `--map-tooltip-surface` #2b2a28 | 13,02:1 | 7:1 | OK |
 | Statut success sur son fond teinté | `--color-success` #14532d | `--color-success-bg` #dcfce7 | 8,30:1 | 7:1 | OK |
 | Statut success sur surface | `--color-success` #14532d | `--color-surface` #ffffff | 9,11:1 | 7:1 | OK |
 | Statut warning sur son fond teinté | `--color-warning` #78350f | `--color-warning-bg` #fef3c7 | 8,15:1 | 7:1 | OK |

@@ -117,7 +117,7 @@ une référence présente est appliquée automatiquement à la fiche Employé et
 Sur chaque écran concerné, le bouton fractionné « Importer » (dont le menu propose le modèle Excel) apparaît avec la permission
 `*_IMPORT`. « Importer » ouvre le sélecteur de fichier (Paie : choix de la période d'abord), envoie le fichier,
 affiche un résumé en notification, puis le détail des lignes rejetées dans une fenêtre défilante. Voir
-frontend/README.md (`docs/frontend/README.md`).
+frontend/README.md ([frontend/index](../frontend/index.md)).
 
 ---
 

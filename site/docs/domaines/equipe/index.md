@@ -81,7 +81,7 @@ en bout pour pouvoir être relue et commentée séparément.
 ### Couche analytique
 
 Les vues Cartes et Analytique ne sont pas propres à Équipe : ce sont des composants partagés (`portail/perimetre/`,
-référence technique (`docs/frontend/vues-perimetre.md`)) que le module configure dans `equipe-module.ts`.
+référence technique ([frontend/vues-perimetre](../../frontend/vues-perimetre.md))) que le module configure dans `equipe-module.ts`.
 
 | Réglage du module | Valeur pour Équipe | Effet |
 |---|---|---|
@@ -392,7 +392,7 @@ domaines Employé et Paie. Les tableaux de données restent repliés à l'écran
 Chaque graphique s'exporte séparément en PDF avec ses données complètes. Ne pas créer de version
 propre au domaine ni permettre de changer librement l'ordre du parcours; suivre la
 convention frontend (`conventions/frontend.md`) et la
-référence technique des vues partagées (`docs/frontend/vues-perimetre.md`).
+référence technique des vues partagées ([frontend/vues-perimetre](../../frontend/vues-perimetre.md)).
 
 Chaque carte affiche séparément Bulletins de paie, Masse salariale (DH), STC (bulletins) et STC (DH), avec
 le libellé et la valeur du dernier mois enregistré. La comparaison porte sur le mois calendaire précédent : écart

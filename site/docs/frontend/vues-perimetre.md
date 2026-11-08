@@ -1,9 +1,12 @@
-# Vues Cartes et Analytique partagées (`portail/perimetre/`)
+---
+title: "Vues Cartes et Analytique partagées (`portail/perimetre/`)"
+sidebar_position: 4
+---
 
 > Les vues **Cartes** et **Analytique** de tous les modules — Paie, Employés, Équipes, Fonctions, Chantiers et Heures supplémentaires — sont les deux
 > mêmes composants. Ce document est la référence technique ; la règle est dans
-> [`conventions/frontend.md`](../../conventions/frontend.md) (« Cartes par niveaux et Analytique graphique ») et les décisions
-> dans l'[ADR 0011](../adr/0011-vues-cartes-analytique-par-perimetre.md) et l'[ADR 0014](../adr/0014-vues-partagees-parcours-metier-configurables.md).
+> `conventions/frontend.md` (`conventions/frontend.md`) (« Cartes par niveaux et Analytique graphique ») et les décisions
+> dans l'[ADR 0011](../decisions/0011-vues-cartes-analytique-par-perimetre.md) et l'[ADR 0014](../decisions/0014-vues-partagees-parcours-metier-configurables.md).
 
 ---
 

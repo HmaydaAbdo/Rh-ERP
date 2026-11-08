@@ -1,4 +1,7 @@
-# Inventaire des composants d'interface partagés
+---
+title: "Inventaire des composants d'interface partagés"
+sidebar_position: 3
+---
 
 > État initial observé le 30 octobre 2026 dans `frontend/src/app/portail`, `frontend/src/app/shared` et le catalogue `/catalogue`.
 > Cet inventaire est un point de départ vérifiable, pas une autorisation de conserver des interfaces locales.
