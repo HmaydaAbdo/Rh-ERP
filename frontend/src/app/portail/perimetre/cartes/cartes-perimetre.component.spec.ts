@@ -252,11 +252,11 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].querySelectorAll('.app-entity__indicator')).toHaveLength(4);
     expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
     expect(cartes[0].textContent).toContain('+1 bulletin · vs juillet 2026');
-    expect(cartes[0].textContent?.replace(/\s/g, ' ')).toContain('+1 000,00 DH · vs juillet 2026');
-    expect(cartes[0].textContent).toMatch(/4\s500,00 DH/);
+    expect(cartes[0].textContent?.replace(/\s/g, ' ')).toContain('+1 000 DH · vs juillet 2026');
+    expect(cartes[0].textContent).toMatch(/4\s500 DH/);
     expect(cartes[0].textContent).toContain('+12,5 %');
     expect(cartes[1].textContent).toContain('Clôturé');
-    expect(cartes[1].textContent).toContain('0,00 DH');
+    expect(cartes[1].textContent).toContain('0 DH');
     expect(page.textContent).toContain('2 chantiers');
     expect(employes.regrouper).toHaveBeenCalledWith({ chantierIds: undefined, equipeIds: undefined, fonctionIds: undefined }, 'CHANTIER');
     expect(paie.analyser).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-08' }));
@@ -356,7 +356,7 @@ describe('CartesPerimetreComponent', () => {
 
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('fiches Employé sont indisponibles');
     expect(page.querySelectorAll('.app-entity')).toHaveLength(2);
-    expect(page.querySelector('.app-entity__metrics')?.textContent).toMatch(/4\s500,00 DH/);
+    expect(page.querySelector('.app-entity__metrics')?.textContent).toMatch(/4\s500 DH/);
     expect(page.querySelector('.app-muted')?.textContent).not.toContain('sur les fiches');
   });
 
@@ -377,7 +377,7 @@ describe('CartesPerimetreComponent', () => {
     harness.detectChanges();
 
     expect(page.querySelector('[role="alert"]')).toBeNull();
-    expect(page.querySelector('.app-entity__metrics')?.textContent).toMatch(/4\s500,00 DH/);
+    expect(page.querySelector('.app-entity__metrics')?.textContent).toMatch(/4\s500 DH/);
   });
 
   it('distingue l’échec de lecture des périodes d’une absence de paie et réessaie', async () => {
@@ -549,7 +549,7 @@ describe('CartesPerimetreComponent', () => {
 
     expect(page.querySelector('.app-muted')?.textContent).toContain('1 équipe');
     expect(page.querySelector('.app-muted')?.textContent).toContain('Effectif : 1 personnes');
-    expect(page.querySelector('.app-muted')?.textContent).toMatch(/Masse salariale : 50[.,]00 DH/);
+    expect(page.querySelector('.app-muted')?.textContent).toMatch(/Masse salariale : 50 DH/);
     expect(page.querySelector('.app-muted')?.textContent).not.toMatch(/employé|fiche|payé/i);
     expect(corps(page, 'Orphelins')).toBeNull();
     expect(page.textContent).not.toContain('Orphelins');

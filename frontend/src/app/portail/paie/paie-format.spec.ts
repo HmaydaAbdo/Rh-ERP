@@ -28,10 +28,10 @@ describe('paie-format', () => {
   });
 
   describe('formaterMontant', () => {
-    it('met deux décimales, la virgule et l’espace des milliers', () => {
-      expect(ordinaire(formaterMontant(5500))).toBe('5 500,00');
-      expect(ordinaire(formaterMontant(1234567.891))).toBe('1 234 567,89');
-      expect(formaterMontant(0)).toBe('0,00');
+    it('met des dirhams entiers, la virgule et l’espace des milliers', () => {
+      expect(ordinaire(formaterMontant(5500))).toBe('5 500');
+      expect(ordinaire(formaterMontant(1234567.891))).toBe('1 234 568');
+      expect(formaterMontant(0)).toBe('0');
     });
   });
 

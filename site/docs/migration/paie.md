@@ -57,7 +57,7 @@ Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel 
 après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
 L'analyse signale avant import un bulletin déjà présent pour l'employé et le mois, ainsi qu'un CIN
 en doublon dans le fichier ou un champ obligatoire absent. Elle nomme aussi le champ et la valeur
-si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides (les montants, eux, sont arrondis à deux décimales) ; les longueurs du nom,
+si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides (les montants, eux, sont arrondis à l'entier) ; les longueurs du nom,
 du CIN et de l'observation sont contrôlées. Lors de la création, le nom, la fonction,
 le chantier et l'équipe renseignée mettent à jour la fiche Employé dans la même transaction que les
 nouveaux bulletins. Une équipe vide sur la ligne reste vide sur le bulletin mais ne supprime pas
@@ -68,7 +68,7 @@ Un chantier présent mais clôturé est signalé séparément et doit être rouv
 Refonte par rapport à Spring (KAN-231) : le mois d'import est libre, la règle « dernier mois + 1 » est
 retirée. Une période égale ou postérieure au mois civil en cours, ou un fichier identique à 90 % à un des
 trois derniers autres mois, demande une confirmation explicite (`controlesPeriode`, `periode_confirmee`).
-Autres refontes : arrondi automatique des montants à deux décimales (KAN-228) et départ déduit de
+Autres refontes : arrondi automatique des montants (KAN-228, à l'entier depuis KAN-239) et départ déduit de
 l'absence confirmable sans motif (KAN-230). Elles sont fixées par des tests de régression Python (`test_paie_import_http.py`, KAN-238).
 
 Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart/form-data` pour

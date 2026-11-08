@@ -78,7 +78,7 @@
     @if (voitLaPaie()) {
       <div class="field">
         <label for="salaire">Salaire</label>
-        <stp-number-input inputId="salaire" [formField]="form.salaire" [minFractionDigits]="2" />
+        <stp-number-input inputId="salaire" [formField]="form.salaire" [maxFractionDigits]="0" />
         <stp-field-error [field]="form.salaire" />
       </div>
 

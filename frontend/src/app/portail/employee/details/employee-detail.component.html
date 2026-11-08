@@ -53,7 +53,7 @@
             <dt>Salaire</dt>
             <dd>
               @if (employee.salaire !== null) {
-                {{ employee.salaire | number: '1.2-2' }} {{ employee.typeSalaire === 'JOURNALIER' ? 'par jour' : 'par mois' }}
+                {{ employee.salaire | number: '1.0-0' }} {{ employee.typeSalaire === 'JOURNALIER' ? 'par jour' : 'par mois' }}
               } @else {
                 Non renseigné
               }

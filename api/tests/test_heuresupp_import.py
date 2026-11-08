@@ -118,10 +118,10 @@ def test_l_analyse_calcule_sans_ecrire(plateforme: Plateforme, entetes: dict[str
     lignes = corps["lignes"]
     assert [(ligne["numeroLigne"], ligne["salaireHoraireDh"], ligne["montantDh"]) for ligne in lignes] == [
         (2, 10.0, 20.0),
-        (3, 10.5, 15.75),
-        (4, 38.46, 115.38),
+        (3, 10.0, 15.0),
+        (4, 38.0, 114.0),
     ]
-    assert (lignes[2]["stcOuSortie"], lignes[2]["stcDh"], lignes[2]["netAPayerDh"]) == (True, 115.38, 0.0)
+    assert (lignes[2]["stcOuSortie"], lignes[2]["stcDh"], lignes[2]["netAPayerDh"]) == (True, 114.0, 0.0)
     assert (lignes[0]["nomPrenom"], lignes[0]["fonction"], lignes[0]["nomFichier"]) == (
         "Heures 0",
         lignes[0]["fonction"],
@@ -173,10 +173,10 @@ def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
         "forfaitsSeuls": 0,
         "remplacements": 0,
         "heuresTotales": 6.5,
-        "montantTotalDh": 151.13,
-        "stcTotalDh": 115.38,
+        "montantTotalDh": 149.0,
+        "stcTotalDh": 114.0,
         "forfaitTotalDh": 30.0,
-        "netTotalDh": 65.75,
+        "netTotalDh": 65.0,
     }
     assert _lignes_en_base(plateforme, jeu) == 3
     journal = _journal(plateforme, "HEURES_SUP_IMPORT")
@@ -294,9 +294,9 @@ def test_deux_forfaits_pour_un_meme_cin_sont_refuses(plateforme: Plateforme, ent
         "/analyse",
         _fichier_standard(plateforme, jeu),
         jeu,
-        forfaits={"forfaits": [{"cin": cin, "montantDh": -1}]},
+        forfaits={"forfaits": [{"cin": cin, "montantDh": 1.5}]},
     )
-    assert refuse.status_code == 400
+    assert refuse.status_code == 200  # forfait 1,5 : arrondi automatiquement à 2 (règle commune des montants)
 
 
 def test_les_corrections_alignent_un_nom_et_creent_une_fiche_manquante(

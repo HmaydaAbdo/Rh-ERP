@@ -184,6 +184,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleTranche = libelleTranche;
   protected readonly libelleTrancheTotal = libelleTrancheTotal;
   protected readonly formaterMontant = formaterMontant;
+  
   protected readonly hauteurPourLignes = hauteurPourLignes;
 
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && (this.module().sourcesAnalytique?.includes('PAIE') ?? true));

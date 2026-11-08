@@ -362,15 +362,15 @@ def test_un_fichier_identique_a_un_autre_mois_est_signale_comme_deja_importe() -
 @pytest.mark.parametrize(
     ("brut", "arrondi"),
     [
-        ("769.230769", "769.23"),
-        ("123.456", "123.46"),
-        ("0.005", "0.01"),
-        ("0.004", "0.00"),
-        ("1000", "1000.00"),
-        ("12.5", "12.50"),
+        ("769.230769", "769"),
+        ("123.456", "123"),
+        ("0.5", "1"),
+        ("0.4", "0"),
+        ("1000", "1000"),
+        ("12.5", "13"),
     ],
 )
-def test_les_montants_sont_arrondis_automatiquement_a_deux_decimales(brut: str, arrondi: str) -> None:
+def test_les_montants_sont_arrondis_automatiquement_a_l_entier(brut: str, arrondi: str) -> None:
     assert arrondir_montant(Decimal(brut)) == Decimal(arrondi)
     assert montant_ligne([None] * 6 + [brut], 6) == Decimal(arrondi)
 

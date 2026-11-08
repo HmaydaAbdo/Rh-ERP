@@ -1,5 +1,5 @@
 const LIBELLES_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-const FORMAT_MONTANT = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const FORMAT_MONTANT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
 /** `2026-08` -> `août 2026` (chaîne vide si la période est absente). */
 export function libellePeriode(periode: string | null): string {
@@ -39,7 +39,7 @@ export function formaterPart(part: number): string {
   return `${part.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
-/** Montant au format de l'application (`fr-FR`, deux décimales). */
+/** Montant au format de l'application (`fr-FR`, dirhams entiers). */
 export function formaterMontant(valeur: number): string {
   return FORMAT_MONTANT.format(valeur);
 }
@@ -51,7 +51,7 @@ export function formaterBulletins(nombre: number): string {
   return `${FORMAT_ENTIER_ECART.format(nombre)} ${Math.abs(nombre) === 1 ? 'bulletin' : 'bulletins'}`;
 }
 
-/** Un montant en dirhams : `1 234,50 DH`. */
+/** Un montant en dirhams : `1 235 DH`. */
 export function formaterDirhams(montant: number): string {
   return `${formaterMontant(montant)} DH`;
 }

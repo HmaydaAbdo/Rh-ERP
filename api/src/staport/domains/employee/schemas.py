@@ -17,7 +17,7 @@ class _EmployeeBase(ModeleApi):
     date_embauche: date
     fonction_id: int
     equipe_id: int | None = None
-    salaire: Montant | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    salaire: Montant | None = Field(default=None, ge=0, max_digits=10, decimal_places=0)
     type_salaire: TypeSalaire | None = None
 
     @model_validator(mode="after")

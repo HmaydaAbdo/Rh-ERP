@@ -1,18 +1,18 @@
-"""Règle commune des montants : deux décimales, arrondi « demi supérieur », appliqué automatiquement partout."""
+"""Règle commune des montants : entiers de dirham, arrondi « demi supérieur », appliqué automatiquement partout."""
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
-DEUX_DECIMALES = Decimal("0.01")
-# Au-delà, l'arrondi à deux décimales dépasse la capacité NUMERIC(10,2) : la valeur est laissée telle quelle et refusée.
-_SEUIL_ARRONDI = Decimal("99999999.995")
+UN = Decimal(1)
+# Au-delà, l'arrondi à l'entier dépasse la capacité NUMERIC(10,0) : la valeur est laissée telle quelle et refusée.
+_SEUIL_ARRONDI = Decimal("9999999999.5")
 
 
 def arrondir_montant(valeur: Decimal) -> Decimal:
-    """Arrondit à deux décimales (0,005 → 0,01) ; les valeurs non finies ou hors capacité restent intactes."""
+    """Arrondit à l'entier de dirham (0,5 → 1) ; les valeurs non finies ou hors capacité restent intactes."""
     if not valeur.is_finite() or abs(valeur) >= _SEUIL_ARRONDI:
         return valeur
-    return valeur.quantize(DEUX_DECIMALES, rounding=ROUND_HALF_UP)
+    return valeur.quantize(UN, rounding=ROUND_HALF_UP)
 
 
 def arrondir_si_nombre(valeur: Any) -> Any:

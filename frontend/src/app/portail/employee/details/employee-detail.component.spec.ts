@@ -108,7 +108,7 @@ describe('EmployeeDetailComponent', () => {
 
     TestBed.resetTestingModule();
     const avec = afficher(['EMPLOYEE_READ', 'PAIE_READ'], employe).page;
-    expect(valeurs(avec)[3]?.replace(/\s+/g, ' ')).toBe('120,00 par jour');
+    expect(valeurs(avec)[3]?.replace(/\s+/g, ' ')).toBe('120 par jour');
     expect(avec.querySelector('app-paie-parcours')).not.toBeNull();
     expect(paie.parcours).toHaveBeenCalledWith(9);
   });

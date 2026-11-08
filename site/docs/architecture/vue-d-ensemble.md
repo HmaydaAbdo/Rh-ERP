@@ -112,8 +112,8 @@ Les composants transverses qui produisent des événements d'audit dépendent du
 3. **Authentification** : l'API valide la signature RS256, l'émetteur, le destinataire et l'expiration du jeton, puis
    relit le compte et ses permissions.
 4. **`exiger("X")`** sur la route : refuse en `403` sans la permission.
-5. **Validation** des modèles Pydantic : `400` avec la liste `champ : message` ; les montants sont arrondis à deux
-   décimales par le type partagé `Montant` avant d'être contrôlés.
+5. **Validation** des modèles Pydantic : `400` avec la liste `champ : message` ; les montants sont arrondis à l'entier
+   de dirham par le type partagé `Montant` avant d'être contrôlés.
 6. **Service** : règles métier, vérification des doublons (`409`) et des références (`400`), transaction.
 7. **Réponse** : modèle de réponse (jamais une entité). Toute erreur a la forme
    `timestamp`, `status`, `error`, `message`, `path` (`staport/platform/erreurs.py`), affichée par l'intercepteur d'erreurs du

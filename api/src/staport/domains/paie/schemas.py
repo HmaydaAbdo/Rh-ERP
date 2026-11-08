@@ -10,7 +10,7 @@ from staport.domains.common.schemas import ModeleApi, Montant, Nombre, Page
 
 from .periode import PeriodePaie
 
-DeuxDecimales = Annotated[Montant, Field(ge=0, max_digits=10, decimal_places=2)]
+MontantEntier = Annotated[Montant, Field(ge=0, max_digits=10, decimal_places=0)]
 
 
 class PaieChampsBulletin(ModeleApi):
@@ -20,10 +20,10 @@ class PaieChampsBulletin(ModeleApi):
     nombre_jours_travailles: Annotated[Nombre, Field(ge=0, max_digits=5, decimal_places=2)]
     jours_recuperation_ouvrable: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
     jours_recuperation_dimanche: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
-    salaire_mensuel: DeuxDecimales
-    prime_roulage_ordinaire: DeuxDecimales | None = None
-    prime_roulage_dimanche: DeuxDecimales | None = None
-    salaire_total: DeuxDecimales
+    salaire_mensuel: MontantEntier
+    prime_roulage_ordinaire: MontantEntier | None = None
+    prime_roulage_dimanche: MontantEntier | None = None
+    salaire_total: MontantEntier
     observation: str | None = Field(default=None, max_length=255)
 
 

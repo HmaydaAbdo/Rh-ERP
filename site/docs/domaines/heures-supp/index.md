@@ -70,7 +70,7 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction. |
 | P/H | Nombre d'heures supplémentaires fourni, en heures décimales, avec au plus une décimale ; les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
-| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi automatiquement à deux décimales** (demi supérieur : 17,3077 → 17,31). La valeur arrondie est celle qui est conservée avec l'import. |
+| S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi à l'entier** (pas de virgule : fraction > 0,5 on monte, < 0,5 on descend, exactement 0,5 on descend, soit `HALF_DOWN`). La valeur arrondie est celle qui est conservée avec l'import. |
 | Marqueur STC/sortie | Observation du bulletin de Paie de l'employé pour le même mois. Le domaine réutilise la règle Paie `ObservationStc.estStcOuSortie`. |
 | Employé STC/sorti | « STC » et « sortie » sont traités de la même façon (le premier a quitté le poste avec démission, le second sans démission). Leurs heures supplémentaires sont **acceptées** (import, ajout, modification) : le Montant passe intégralement en STC (DH) et le Net à payer des heures est nul. Le **forfait** reste interdit. Le bulletin du mois doit exister, sinon la ligne est refusée. |
 | Forfait | Montant en DH saisi séparément des heures supplémentaires. Il peut concerner un employé absent du fichier d'heures, mais pas un employé marqué STC/sortie ce mois-là. |
@@ -81,11 +81,11 @@ Les montants sont produits par Spring ; l'assistant IA ne les recalcule pas.
 
 | Grandeur | Définition |
 |---|---|
-| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import, **à deux décimales** (demi supérieur : 17,3077 → 17,31 ; 17,305 → 17,31). La valeur arrondie est stockée (colonne `s_h` `NUMERIC(10,2)`, révision Alembic `0003`, KAN-239) et le Montant, STC et Net à payer en découlent. |
+| **S/H** | Salaire horaire issu du salaire et du type de salaire de la fiche Employé au moment de l'import, **entier de dirhams** (arrondi `HALF_DOWN` : 15,49 → 15 ; 15,50 → 15 ; 15,51 → 16). La valeur arrondie est stockée (colonne `s_h` `NUMERIC(10,0)`, migration V43) et le Montant, STC et Net à payer en découlent. |
 | **P/H** | Heures supplémentaires du mois, fournies en heures décimales entre 0 inclus et une décimale au plus. |
-| **Montant** | `S/H × P/H`, arrondi à **deux décimales** (demi supérieur, même règle que S/H : 17,31 × 7,5 = 129,825 → 129,83). |
+| **Montant** | `S/H × P/H`, arrondi à l'**entier** de dirhams (`HALF_DOWN`, même règle que S/H). |
 | **STC (DH)** | `Montant` (donc le Net à payer des heures est nul) si le bulletin du même mois est marqué exactement « STC » ou « sortie » (casse et espaces extérieurs ignorés) ; sinon `0 DH`. |
-| **Forfait** | Montant en DH à deux décimales (une saisie plus précise est arrondie automatiquement), indépendant du **Montant** des heures supplémentaires ; P/H et forfait peuvent coexister sur une même ligne (au moins l'un des deux est renseigné). Interdit si le bulletin de Paie du même mois est marqué STC/sortie. |
+| **Forfait** | Montant **entier** en DH, indépendant du **Montant** des heures supplémentaires ; P/H et forfait peuvent coexister sur une même ligne (au moins l'un des deux est renseigné). Interdit si le bulletin de Paie du même mois est marqué STC/sortie. |
 | **Net à payer** | `Montant − STC (DH) + Forfait`. |
 
 Une modification ultérieure du salaire ne recalcule pas un import d'heures supplémentaires déjà enregistré. Le taux S/H
@@ -125,7 +125,7 @@ une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia
 
 ## Scénarios couverts par les tests
 
-- `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à deux décimales (demi supérieur), Montant calculé sur le S/H arrondi et arrondi à deux décimales, STC et Net à deux décimales (`test_heuresupp.py`) ; recalcul des lignes existantes par la révision `0003` (`test_migrations.py`).
+- `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à l'entier (`HALF_DOWN`), STC et Net, tous entiers.
 - `LecteurFichierHeuresSuppTest` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
 - `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, arrondi du S/H aux frontières, employé STC/sorti (heures acceptées, Montant en STC, Net à payer nul), forfait STC et doublon de forfait.
 - `EcouteurPaieHeuresSuppTest` : recalcul STC/forfait/net à la modification d'une paie et refus de suppression d'un bulletin lié.
@@ -159,5 +159,5 @@ les scénarios exécutables du README et les portes de couverture backend/fronte
 outils MCP sont décrits dans [docs/ia.md](../../ia/vue-d-ensemble.md) ; ne pas ajouter de calcul IA ni d'accès direct aux repositories.
 
 Le domaine identifie les employés par CIN, exige une paie du même mois, importe par chantier, conserve les taux calculés
-à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H et les montants sont à deux décimales (arrondi demi supérieur, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser `ObservationStc.estStcOuSortie`. Ses capacités IA passent par MCP, avec définitions
+à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser `ObservationStc.estStcOuSortie`. Ses capacités IA passent par MCP, avec définitions
 et unités explicites ; Spring reste la source de tous les calculs.

@@ -64,7 +64,7 @@ describe('EmployeeListComponent', () => {
     const salaires = () => lignesGrille(racine()).map((tr) => tr.cells[5].textContent?.replace(/\s+/g, ' ').trim());
 
     expect(Array.from(racine().querySelectorAll('.ag-header-cell')).map((th) => th.textContent?.trim())).toContain('Salaire');
-    expect(salaires()).toEqual(['4 000,00 / mois', '120,00 / jour']);
+    expect(salaires()).toEqual(['4 000 / mois', '120 / jour']);
 
     TestBed.resetTestingModule();
     await afficher();

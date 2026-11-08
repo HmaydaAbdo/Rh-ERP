@@ -123,15 +123,18 @@ export class PaieFormComponent {
         chemin.salaireTotal
       ]) {
         min(montant, 0, { message: 'La valeur ne peut pas être négative.' });
-        validate(montant, ({ value }) => {
+      }
+      // Les jours gardent deux décimales ; les montants sont des entiers de dirham (règle commune des montants).
+      for (const [champ, decimales] of [[chemin.nombreJoursTravailles, 2], [chemin.joursRecuperationOuvrable, 2], [chemin.joursRecuperationDimanche, 2], [chemin.salaireMensuel, 0], [chemin.primeRoulageOrdinaire, 0], [chemin.primeRoulageDimanche, 0], [chemin.salaireTotal, 0]] as const) {
+        validate(champ, ({ value }) => {
           const nombre = value();
-          return nombre !== null && Number(nombre.toFixed(2)) !== nombre
-            ? { kind: 'precision', message: 'Saisissez au maximum deux décimales.' }
+          return nombre !== null && Number(nombre.toFixed(decimales)) !== nombre
+            ? { kind: 'precision', message: decimales === 0 ? 'Saisissez un montant entier en dirhams.' : 'Saisissez au maximum deux décimales.' }
             : undefined;
         });
       }
       for (const montant of [chemin.salaireMensuel, chemin.primeRoulageOrdinaire, chemin.primeRoulageDimanche, chemin.salaireTotal]) {
-        max(montant, 99999999.99, { message: 'Le maximum est de 99 999 999,99.' });
+        max(montant, 9999999999, { message: 'Le maximum est de 9 999 999 999.' });
       }
       maxLength(chemin.observation, 255, { message: 'L’observation est limitée à 255 caractères.' });
     },

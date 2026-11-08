@@ -88,8 +88,8 @@ def test_le_gabarit_echappe_les_donnees_et_totalise_le_perimetre() -> None:
     assert "Total · 2 lignes" in html
     assert "<td>—</td>" not in html  # les cellules vides portent la classe « num »
     assert '<td class="num">—</td>' in html
-    assert '<td class="num">150,00</td>' in html  # montant total
-    assert '<td class="num">550,00</td>' in html  # net total
+    assert '<td class="num">150</td>' in html  # montant total
+    assert '<td class="num">550</td>' in html  # net total
     assert 'class="emargement"' in html
 
 
