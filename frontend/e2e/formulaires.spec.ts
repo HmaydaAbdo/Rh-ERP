@@ -111,12 +111,12 @@ test.describe('Formulaires (Signal Forms)', () => {
       await page.getByLabel('Salaire mensuel').fill('4 000,50');
       await page.getByLabel('Salaire total').fill('4000,5');
       await page.getByLabel('Salaire total').blur();
-      await expect(page.getByLabel('Salaire total')).toHaveValue(/4\s001/);
+      await expect(page.getByLabel('Salaire total')).toHaveValue(/4\s000/);
       await page.getByRole('button', { name: 'Créer' }).click();
 
       await expect(page).toHaveURL(/\/paie\/40$/);
       const [corps] = mock.bodies['POST /paie'] as Record<string, unknown>[];
-      expect(corps).toMatchObject({ employeeId: 9, fonctionId: 1, chantierId: 2, nombreJoursTravailles: 26, salaireMensuel: 4001, salaireTotal: 4001 });
+      expect(corps).toMatchObject({ employeeId: 9, fonctionId: 1, chantierId: 2, nombreJoursTravailles: 26, salaireMensuel: 4000, salaireTotal: 4000 });
       expect(corps['periode']).toMatch(/^\d{4}-08$/);
     });
 

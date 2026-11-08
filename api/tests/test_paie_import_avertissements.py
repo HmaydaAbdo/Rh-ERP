@@ -364,10 +364,10 @@ def test_un_fichier_identique_a_un_autre_mois_est_signale_comme_deja_importe() -
     [
         ("769.230769", "769"),
         ("123.456", "123"),
-        ("0.5", "1"),
-        ("0.4", "0"),
+        ("0.5", "0"),
+        ("0.51", "1"),
         ("1000", "1000"),
-        ("12.5", "13"),
+        ("12.5", "12"),
     ],
 )
 def test_les_montants_sont_arrondis_automatiquement_a_l_entier(brut: str, arrondi: str) -> None:

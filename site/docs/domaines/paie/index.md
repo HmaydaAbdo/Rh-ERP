@@ -228,7 +228,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   reste modifiable. La paie est prise telle que saisie (formulaire) ou importée (Excel).
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
   les jours travaillés et de récupération acceptent de 0 à 999,99; les salaires et primes de 0 à
-  9 999 999 999. **Les montants sont arrondis automatiquement à l'entier de dirham** (demi supérieur : 769,5 → 770), à la
+  9 999 999 999. **Les montants sont arrondis automatiquement à l'entier de dirham** (0,5 inclus on descend, au-delà on monte : 769,5 → 769, 769,51 → 770), à la
   saisie comme à l'import, puis contrôlés ; une valeur négative ou dépassant la borne reste refusée. Les jours, eux, n'ont
   jamais plus de deux décimales (jamais arrondis). `observation` fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
