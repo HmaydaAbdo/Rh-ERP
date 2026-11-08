@@ -62,7 +62,7 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> Chanti
 
 
 @chantiers.post("/search", dependencies=[Depends(exiger("CHANTIER_READ"))])
-async def rechercher(corps: ChantierRecherche | None, page: PageChantiers, session: Session, contexte: Contexte):
+async def rechercher(page: PageChantiers, session: Session, contexte: Contexte, corps: ChantierRecherche | None = None):
     return await contexte.chantiers.rechercher(session, corps, page)
 
 

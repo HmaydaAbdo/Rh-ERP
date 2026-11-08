@@ -142,7 +142,10 @@ class Backend:
             kwargs["json"] = _formater(e.json, self.captures)
         elif e.donnees:
             kwargs["data"] = _formater(e.donnees, self.captures)
-        r = self.client.request(e.methode, chemin, **kwargs)
+        try:
+            r = self.client.request(e.methode, chemin, **kwargs)
+        except httpx.TransportError as erreur:  # connexion coupée par le serveur (corps trop gros, par exemple)
+            return Reponse(0, {"erreur": type(erreur).__name__}, None, b"")
         corps = None
         if "json" in r.headers.get("content-type", ""):
             try:

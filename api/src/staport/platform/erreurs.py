@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm.exc import StaleDataError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from staport.platform.requete import EN_TETES_SECURITE
 from staport.platform.validation_fr import message_fr
 
 journal = logging.getLogger(__name__)
@@ -172,6 +173,14 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
                     HTTPStatus.BAD_REQUEST,
                     f"Période invalide, format attendu aaaa-MM (ex. 2026-08) : {d.get('input', '')}",
                 )
+        for d in erreurs:  # `MissingServletRequestParameterException`
+            if d["loc"][:1] in (("query",), ("form",)) and d["type"] == "missing" and len(d["loc"]) > 1:
+                nom = str(d["loc"][1])
+                return reponse(
+                    requete,
+                    HTTPStatus.BAD_REQUEST,
+                    f"Paramètre obligatoire absent : {NOMS_PARAMETRES_SPRING.get(nom, nom)}.",
+                )
         # Paramètre de chemin ou de requête illisible : `MethodArgumentTypeMismatchException` côté Spring.
         for d in erreurs:
             if d["loc"][:1] in (("path",), ("query",)) and d["type"] in TYPES_PARAMETRE_ILLISIBLE:
@@ -197,4 +206,10 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def _imprevu(requete: Request, exc: Exception) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
         journal.error("Erreur inattendue lors d'une requête HTTP : méthode=%s", requete.method, exc_info=exc)
-        return reponse(requete, HTTPStatus.INTERNAL_SERVER_ERROR, MESSAGE_IMPREVU)
+        reponse_500 = reponse(requete, HTTPStatus.INTERNAL_SERVER_ERROR, MESSAGE_IMPREVU)
+        for (
+            nom,
+            valeur,
+        ) in EN_TETES_SECURITE.items():  # cette réponse sort avant le middleware : mêmes en-têtes que Spring
+            reponse_500.headers.setdefault(nom, valeur)
+        return reponse_500

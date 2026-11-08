@@ -5,6 +5,7 @@ from io import BytesIO
 from typing import Any, cast
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils.datetime import from_excel
 from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -126,6 +127,55 @@ async def reponse(s: AsyncSession, x: Employee) -> EmployeeReponse:
 
 
 ENTETES_IMPORT = ("Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance")
+
+
+def _texte(valeur: Any) -> str | None:
+    """`DataFormatter.formatCellValue` : le texte affiché de la cellule, `None` si elle est vide ou blanche."""
+    if valeur is None or isinstance(valeur, bool):
+        texte = None if valeur is None else str(valeur).upper()
+    elif isinstance(valeur, float) and valeur.is_integer():
+        texte = str(int(valeur))
+    elif isinstance(valeur, datetime | date):
+        texte = valeur.isoformat()
+    else:
+        texte = str(valeur)
+    return None if texte is None or not texte.strip() else texte
+
+
+def _date_cellule(valeur: Any) -> date | None:
+    """`getCellAsLocalDate` : seule une cellule numérique (date ou nombre de série) donne une date."""
+    if isinstance(valeur, datetime):
+        return valeur.date()
+    if isinstance(valeur, date):
+        return valeur
+    if isinstance(valeur, int | float) and not isinstance(valeur, bool):
+        try:
+            return from_excel(valeur).date()  # type: ignore[union-attr]
+        except ValueError, OverflowError, TypeError:
+            return None
+    return None
+
+
+def _raison_ligne(
+    nom: str | None, cin: str | None, naissance: date | None, embauche: date | None, fonction: str | None,
+    chantier: str | None,
+) -> str | None:  # fmt: skip
+    """`validerLigne` de Spring, dans le même ordre : champs, longueurs, date de naissance (les références ensuite)."""
+    manquants = [
+        libelle
+        for libelle, valeur in (
+            ("Nom & prénom", nom), ("CIN", cin), ("Date de naissance", naissance), ("Date d'embauche", embauche),
+            ("Fonction", fonction), ("Chantier", chantier),
+        )
+        if valeur is None
+    ]  # fmt: skip
+    if manquants:
+        return "Champs obligatoires manquants ou invalides : " + ", ".join(manquants)
+    if len((nom or "").strip()) > 150 or len((cin or "").strip()) > 30:
+        return "Nom/prénom ou CIN trop long"
+    if cast(date, naissance) >= date.today():
+        return "La date de naissance doit être antérieure à aujourd" + chr(0x2019) + "hui"
+    return None
 
 
 class ServiceEmployee:
@@ -358,48 +408,44 @@ class ServiceEmployee:
             }
             cins = {x.strip().upper() for x in (await s.execute(select(Employee.cin))).scalars()}
             vus: set[str] = set()
+            total = 0
             for numero, valeurs in enumerate(lignes[1:], 2):
+                if all(_texte(v) is None for v in valeurs):  # `estLigneVide` : une ligne sans valeur n'est pas comptée
+                    continue
+                total += 1
                 embauche, nom, cin, fonction, chantier, naissance = (
                     valeurs[i] if i < len(valeurs) else None for i in range(6)
                 )
-                cle = str(cin or "").strip().upper()
-                raison = None
-                if isinstance(naissance, datetime):
-                    naissance = naissance.date()
-                if isinstance(embauche, datetime):
-                    embauche = embauche.date()
-                if not nom or not cle or not fonction or not chantier or not naissance or not embauche:
-                    raison = "Champs obligatoires manquants"
-                elif not isinstance(naissance, date) or naissance >= date.today():
-                    raison = "La date de naissance doit être passée"
-                elif cle in cins or cle in vus:
-                    raison = "CIN déjà présent ou en doublon"
-                elif str(fonction).strip().upper() not in fonctions:
-                    raison = f"Fonction introuvable : {fonction}"
-                elif str(chantier).strip().upper() not in chantiers:
-                    raison = f"Chantier introuvable ou clôturé : {chantier}"
+                embauche, naissance = _date_cellule(embauche), _date_cellule(naissance)
+                nom, cin, fonction, chantier = _texte(nom), _texte(cin), _texte(fonction), _texte(chantier)
+                raison = _raison_ligne(nom, cin, naissance, embauche, fonction, chantier)
+                cle = (cin or "").strip().upper()
+                if raison is None and cle in vus:
+                    raison = "CIN en doublon dans le fichier"
+                elif raison is None and cle in cins:
+                    raison = "Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)"
+                elif raison is None and (fonction or "").strip().upper() not in fonctions:
+                    raison = f"Fonction introuvable : {(fonction or '').strip()}"
+                elif raison is None and (chantier or "").strip().upper() not in chantiers:
+                    raison = f"Chantier introuvable ou clôturé : {(chantier or '').strip()}"
                 if raison:
-                    erreurs.append(
-                        EmployeeLigneIgnoree(
-                            numero_ligne=numero, cin=cle or None, nom_prenom=str(nom) if nom else None, raison=raison
-                        )
-                    )
+                    erreurs.append(EmployeeLigneIgnoree(numero_ligne=numero, cin=cin, nom_prenom=nom, raison=raison))
                     continue
                 vus.add(cle)
                 nouveaux.append(
                     Employee(
-                        nom_prenom=str(nom).strip(),
-                        cin=cle,
-                        date_naissance=naissance,
-                        date_embauche=embauche,
-                        fonction_id=fonctions[str(fonction).strip().upper()],
-                        chantier_id=chantiers[str(chantier).strip().upper()],
+                        nom_prenom=(nom or "").strip(),
+                        cin=(cin or "").strip(),
+                        date_naissance=cast(date, naissance),
+                        date_embauche=cast(date, embauche),
+                        fonction_id=fonctions[(fonction or "").strip().upper()],
+                        chantier_id=chantiers[(chantier or "").strip().upper()],
                     )
                 )
             if not erreurs:
                 s.add_all(nouveaux)
         return EmployeeImportReponse(
-            total_lignes=len(lignes) - 1,
+            total_lignes=total,
             crees=len(nouveaux) if not erreurs else 0,
             ignores=len(erreurs),
             lignes_ignorees=erreurs,

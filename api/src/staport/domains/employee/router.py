@@ -64,21 +64,25 @@ async def lire(identifiant: int, session: Session, contexte: Contexte, acces: Au
 
 @employees.post("/search", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def rechercher(
-    corps: EmployeeRecherche | None, page: PageEmployees, session: Session, contexte: Contexte, acces: Authentifie
+    page: PageEmployees,
+    session: Session,
+    contexte: Contexte,
+    acces: Authentifie,
+    corps: EmployeeRecherche | None = None,
 ):
     return await contexte.employees.rechercher(session, corps, page, paie(acces))
 
 
 @employees.post("/analytique", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def analytique(
-    corps: EmployeeRecherche | None, session: Session, contexte: Contexte
+    session: Session, contexte: Contexte, corps: EmployeeRecherche | None = None
 ) -> EmployeeAnalytiqueReponse:
     return await contexte.employees.analytique(session, corps)
 
 
 @employees.post("/regroupements", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def regroupements(
-    dimension: DimensionEmployes, corps: EmployeeRecherche | None, session: Session, contexte: Contexte
+    dimension: DimensionEmployes, session: Session, contexte: Contexte, corps: EmployeeRecherche | None = None
 ) -> list[EmployeeRegroupementReponse]:
     return await contexte.employees.regrouper(session, corps, dimension)
 

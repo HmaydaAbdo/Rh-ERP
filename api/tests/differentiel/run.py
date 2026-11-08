@@ -18,6 +18,7 @@ SCENARIOS = [
     "scenarios_paie_lectures",
     "scenarios_admin",
     "scenarios_auth",
+    "scenarios_employes",
     "scenarios_heures_supp",
 ]
 

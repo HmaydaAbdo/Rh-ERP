@@ -40,7 +40,7 @@ LECTURE = (Depends(exiger("HEURES_SUP_READ")), Depends(exiger("PAIE_READ")))
 
 @heures_supp.post("/search", dependencies=list(LECTURE))
 async def rechercher(
-    corps: HeuresSuppRecherche | None, page: PageHeures, session: Session, contexte: Contexte
+    page: PageHeures, session: Session, contexte: Contexte, corps: HeuresSuppRecherche | None = None
 ) -> Page[HeureSuppReponse]:
     return await contexte.heures_supp.rechercher(session, corps, page)
 
@@ -56,7 +56,9 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> HeureS
 
 
 @heures_supp.post("/analytique", dependencies=list(LECTURE))
-async def analyser(corps: HeuresSuppRecherche | None, session: Session, contexte: Contexte) -> HeuresSuppAnalytique:
+async def analyser(
+    session: Session, contexte: Contexte, corps: HeuresSuppRecherche | None = None
+) -> HeuresSuppAnalytique:
     return await contexte.heures_supp.analyser(session, corps)
 
 

@@ -94,7 +94,9 @@ def _signer(
 def test_sans_jeton_la_requete_est_refusee_en_401_sans_corps(plateforme: Plateforme) -> None:
     reponse = plateforme.client.post("/users/search")
     assert reponse.status_code == 401 and reponse.content == b""
-    assert reponse.headers["www-authenticate"] == "Bearer"
+    assert reponse.headers["www-authenticate"] == (
+        'Bearer resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
     assert plateforme.journal.de(None, Action.ACCES_ANONYME_REFUSE)[-1].motif == "HTTP_401"
 
 
@@ -232,8 +234,8 @@ def test_le_rafraichissement_par_cookie_refuse_une_origine_non_autorisee_ou_abse
     plateforme.client.cookies.set("refresh_token", "x", path="/auth")
     sans_origine = plateforme.client.post("/auth/refresh")
     mauvaise = plateforme.client.post("/auth/refresh", headers={"Origin": "http://evil.example"})
-    assert sans_origine.status_code == 401 and mauvaise.status_code == 401
-    assert sans_origine.content == b"" and mauvaise.content == b""
+    assert sans_origine.status_code == 401 and sans_origine.content == b""
+    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # `DefaultCorsProcessor` de Spring
 
 
 def test_le_rafraichissement_accepte_une_origine_autorisee_jusqu_a_la_resolution_du_controleur(
@@ -281,6 +283,7 @@ PUBLIQUES = {
     ("POST", "/auth/reset-password"),
     ("GET", "/auth/password-policy"),
     ("GET", "/.well-known/jwks.json"),
+    ("GET", "/.well-known/oauth-protected-resource"),
 }
 AUTHENTIFIEES = {("POST", "/auth/logout"), ("GET", "/auth/me")}
 EXIGENCES: dict[tuple[str, str], set[str]] = {
@@ -346,7 +349,7 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/paie/options/chantiers"): {"PAIE_READ"},
     ("POST", "/paie/options/equipes"): {"PAIE_READ"},
     ("POST", "/paie/effectifs"): {"PAIE_READ"},
-    ("GET", "/paie/employes/{employee_id}/parcours"): {"PAIE_READ"},
+    ("GET", "/paie/employes/{id}/parcours"): {"PAIE_READ"},
     ("POST", "/paie/export"): {"PAIE_EXPORT"},
     ("POST", "/paie/report/pdf"): {"PAIE_EXPORT"},
     ("GET", "/paie/import/modele"): {"PAIE_IMPORT"},
@@ -395,7 +398,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 97
+    assert len(declarees) == 98
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

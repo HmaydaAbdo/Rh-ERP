@@ -38,7 +38,7 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> Foncti
 
 
 @fonctions.post("/search", dependencies=[Depends(exiger("FUNCTION_READ"))])
-async def rechercher(corps: FonctionRecherche | None, page: PageFonctions, session: Session, contexte: Contexte):
+async def rechercher(page: PageFonctions, session: Session, contexte: Contexte, corps: FonctionRecherche | None = None):
     return await contexte.fonctions.rechercher(session, corps, page)
 
 
