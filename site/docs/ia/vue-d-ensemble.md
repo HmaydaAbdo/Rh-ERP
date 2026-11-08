@@ -84,4 +84,4 @@ ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dép
 L'interface résout l'URL du runtime avec la base du document Angular : sous `/erp-rh/`, les appels passent par
 `/erp-rh/ia/copilotkit`. Les fils utilisent UUID v4 (`uuid`), également disponible en HTTP via `crypto.getRandomValues`.
 Le Nginx extérieur et le relais intérieur transmettent les événements SSE sans buffering avec un délai de lecture de
-300 secondes entre deux événements ; configuration du proxy extérieur dans deployment.md (`docs/deployment.md`).
+300 secondes entre deux événements ; configuration du proxy extérieur dans deployment.md ([exploitation/deploiement](../exploitation/deploiement.md)).

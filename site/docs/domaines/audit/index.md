@@ -5,7 +5,7 @@ sidebar_position: 1
 
 > Ce document décrit **ce qui existe** dans rh-erp. Les règles réutilisables d'un projet à l'autre (comment écrire une
 > entité, une migration, un service auditables) sont dans `conventions/audit.md` (`conventions/audit.md`) et font foi ;
-> la permission est décrite dans [rbac/audit.md](droits.md), les tables dans data-model.md (`docs/data-model.md`).
+> la permission est décrite dans [rbac/audit.md](droits.md), les tables dans data-model.md ([architecture/modele-de-donnees](../../architecture/modele-de-donnees.md)).
 
 L'audit répond à cinq questions : **qui** a fait **quoi**, **quand**, **depuis où**, avec **quel résultat** (tentatives
 refusées comprises) ; **à quoi ressemblaient les données avant** ; **sur quel périmètre** a porté une opération de masse ;
@@ -73,7 +73,7 @@ reçoit son propre identifiant d'exécution.
 
 **Adresse IP** : `X-Forwarded-For` posé par nginx, honoré par Tomcat uniquement de proxys internes
 (`server.forward-headers-strategy: native`) ; le backend n'est joignable que par nginx (voir
-deployment.md (`docs/deployment.md`)).
+deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md))).
 
 ---
 
@@ -368,7 +368,7 @@ Tous sur une vraie base PostgreSQL (`AuditIntegrationTestBase`) sauf l'architect
 `AuditRevisionTest` (socle), `AuditOperationTest` (S1 à S5, S11 à S17, 1 000 bulletins), `AuditImportTest`,
 `AuditSynchronisationTest`, `AuditSecurityEventsTest`, `AuditAccesTest`, `AuditDefaillanceTest`, `AuditMigrationGabaritTest`,
 `AuditIntegriteTest`, `AuditConsultationTest` ; côté frontend `journal.component.spec.ts`,
-`audit-historique.component.spec.ts`, `audit-champs.component.spec.ts`, `audit-format.spec.ts`. Voir testing.md (`docs/testing.md`).
+`audit-historique.component.spec.ts`, `audit-champs.component.spec.ts`, `audit-format.spec.ts`. Voir testing.md ([exploitation/tests](../../exploitation/tests.md)).
 Les specs du journal et de l'historique couvrent aussi la remise à zéro du paginateur, les réponses tardives,
 les erreurs de lecture et le réessai de la page en échec. Les événements de sécurité ne déclenchent pas une
 lecture inutile de différences Envers.
@@ -392,7 +392,7 @@ L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture
 
 - [README Audit](index.md)
 - [Permissions d'audit](droits.md)
-- Modèle de données (`docs/data-model.md`)
+- Modèle de données ([architecture/modele-de-donnees](../../architecture/modele-de-donnees.md))
 - `conventions/audit.md` et `conventions/database.md`
 
 ### Garde-fous

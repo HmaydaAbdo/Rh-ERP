@@ -153,7 +153,7 @@ La sélection des lignes ne dépend jamais de la pagination de l'écran.
 | Choix, données chargées, reprise après erreur et réponses obsolètes | Specs `paie-export-wizard` et de ses étapes |
 | Permission par route | `EndpointSecurityTest` |
 
-Les accords métier et la validation du document complet restent dans le PV global (`docs/handoff/pv-n1-erp-rh.md`).
+Les accords métier et la validation du document complet restent dans le PV global ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)).
 Les résultats d'une exécution locale ou CI ne constituent pas une preuve de déploiement en production.
 
 ## Guide agent

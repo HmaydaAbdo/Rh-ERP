@@ -7,7 +7,7 @@ propriétaire. Les conventions détaillées font autorité dans `conventions/`.
 Pour reprendre et mener une tâche :
 
 1. Consulter Jira (projet `KAN`) pour l'état, les tâches et leurs preuves ; lire
-   [`docs/developpement-local.md`](docs/developpement-local.md) et [`conventions/lecons.md`](conventions/lecons.md).
+   [`site/docs/exploitation/developpement-local.md`](site/docs/exploitation/developpement-local.md) et [`conventions/lecons.md`](conventions/lecons.md).
 2. Suivre la [routine commune](conventions/workflow.md), puis les conventions applicables dans
    l'ordre indiqué par `AGENTS.md`.
 3. Ouvrir [l'index de documentation](docs/README.md), puis le README, la skill et les permissions

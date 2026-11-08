@@ -1,6 +1,6 @@
 name: CI
 
-# CI uniquement pour l'instant (pas de CD — voir docs/deployment.md) : les contrôles requis passent
+# CI uniquement pour l'instant (pas de CD — voir site/docs/exploitation/deploiement.md) : les contrôles requis passent
 # avant la construction et la publication des images Docker Hub. Sur une pull request, seuls les
 # contrôles tournent (pas de publication — évite d'exposer les secrets Docker Hub à une PR non fiable).
 

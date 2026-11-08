@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Stratégie de bascule (KAN-46)
 
-Applique l'ADR 0016 (`docs/adr/0016-migration-backend-spring-vers-fastapi.md`), § 7 (amendé le 2026-11-03) : **une branche de travail, un
+Applique l'ADR 0016 ([decisions/0016-migration-backend-spring-vers-fastapi](../decisions/0016-migration-backend-spring-vers-fastapi.md)), § 7 (amendé le 2026-11-03) : **une branche de travail, un
 commit par ticket, une seule PR vers `main`, une seule mise en production**. La production reste sur Spring jusqu'à la bascule.
 
 ## Ordre des domaines

@@ -20,11 +20,11 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 |---|---|
 | Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (JWT), MapStruct |
 | Base de données | PostgreSQL 18 + pgvector + pgAudit (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
-| Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`docs/data-model.md`](docs/data-model.md) |
+| Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
 | Frontend | Angular 22.2.2 (standalone, OnPush, Signals, zoneless), kit Staport sur Angular Aria/CDK, Lucide, Tailwind CSS 4 ; tests Vitest et E2E Playwright |
 | Imports / exports | Apache POI (Excel), jsoup + openhtmltopdf + Batik (rapport PDF) |
 | Documentation API | springdoc-openapi (Swagger UI) |
-| Conteneurisation | Docker Compose de production (images publiées, pas de build local) — nginx inner sert le frontend et relaie les appels API au backend, voir [`docs/deployment.md`](docs/deployment.md) |
+| Conteneurisation | Docker Compose de production (images publiées, pas de build local) — nginx inner sert le frontend et relaie les appels API au backend, voir [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md) |
 
 ---
 
@@ -50,7 +50,7 @@ npm start                            # proxy vers http://localhost:8080 par déf
 
 Frontend sur http://localhost:4200, backend (API ; Swagger UI sur `/swagger-ui.html` si activé, voir
 `backend/.env.example`) sur http://localhost:8080. Toutes les variables d'environnement sont décrites dans
-[`docs/configuration.md`](docs/configuration.md).
+[`site/docs/exploitation/configuration.md`](site/docs/exploitation/configuration.md).
 
 ### Tests
 
@@ -61,7 +61,7 @@ cd frontend && npm run e2e                                          # parcours E
 cd frontend && npx ng build --configuration production              # le bundle de production compile
 ```
 
-Détail de ce qui est testé : [`docs/testing.md`](docs/testing.md).
+Détail de ce qui est testé : [`site/docs/exploitation/tests.md`](site/docs/exploitation/tests.md).
 
 ---
 
@@ -95,7 +95,7 @@ docker compose up -d
 
 Tous les ports publiés sont liés à `127.0.0.1` (jamais exposés directement à Internet, voir
 `conventions/security.md`) — accès via `http://localhost:${FRONTEND_PORT}`. Architecture complète
-(nginx inner/outer, réseaux, backup) : voir [`docs/deployment.md`](docs/deployment.md).
+(nginx inner/outer, réseaux, backup) : voir [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md).
 
 Arrêter la stack :
 
@@ -114,7 +114,7 @@ frontend/     Application Angular (migration vers Angular Aria/CDK + composants 
 conventions/  Conventions du projet — source de vérité, génériques et réutilisables entre projets
 docs/         Documentation propre à ce projet : architecture, modèle de données, domaines, RBAC, déploiement
 .github/workflows/  CI (tests + build + publication des images Docker)
-docker-compose.yml  Stack de production (images publiées uniquement, voir docs/deployment.md)
+docker-compose.yml  Stack de production (images publiées uniquement, voir site/docs/exploitation/deploiement.md)
 backend/Dockerfile, frontend/Dockerfile
 CLAUDE.md, AGENTS.md  Point d'entrée du projet et ordre de lecture des conventions (contenu identique)
 ```
@@ -127,15 +127,15 @@ Index complet et glossaire : [`docs/README.md`](docs/README.md).
 
 | Sujet | Document |
 |---|---|
-| Vue d'ensemble, dépendances entre domaines, flux d'une requête | [`docs/architecture.md`](docs/architecture.md) |
-| Schéma de base, contraintes, migrations | [`docs/data-model.md`](docs/data-model.md) |
-| Variables d'environnement et démarrage | [`docs/configuration.md`](docs/configuration.md) |
+| Vue d'ensemble, dépendances entre domaines, flux d'une requête | [`site/docs/architecture/vue-d-ensemble.md`](site/docs/architecture/vue-d-ensemble.md) |
+| Schéma de base, contraintes, migrations | [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
+| Variables d'environnement et démarrage | [`site/docs/exploitation/configuration.md`](site/docs/exploitation/configuration.md) |
 | Imports Excel (règles communes) | [`site/docs/domaines/imports.md`](site/docs/domaines/imports.md) |
 | Authentification, comptes, rôles | [`site/docs/domaines/auth/index.md`](site/docs/domaines/auth/index.md) |
 | Permissions par endpoint et par écran | [`site/docs/domaines/rbac/index.md`](site/docs/domaines/rbac/index.md) |
 | Interface (routes, guards, composants, tableaux) | [`docs/frontend/README.md`](docs/frontend/README.md) |
-| Tests | [`docs/testing.md`](docs/testing.md) |
-| Déploiement (Docker, nginx, CI, backup) | [`docs/deployment.md`](docs/deployment.md) |
+| Tests | [`site/docs/exploitation/tests.md`](site/docs/exploitation/tests.md) |
+| Déploiement (Docker, nginx, CI, backup) | [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md) |
 
 Par domaine : [fonctions](site/docs/domaines/function/index.md) · [chantiers](site/docs/domaines/chantier/index.md) ·
 [équipes](site/docs/domaines/equipe/index.md) · [employés](site/docs/domaines/employee/index.md) · [paie](site/docs/domaines/paie/index.md) ·
@@ -156,7 +156,7 @@ les variables attendues :
   Docker (connexion base, endpoint ERP).
 
 Copier chacun en `.env` (jamais commité, voir `.gitignore`) et renseigner de vraies valeurs. Catalogue
-complet : [`docs/configuration.md`](docs/configuration.md).
+complet : [`site/docs/exploitation/configuration.md`](site/docs/exploitation/configuration.md).
 
 ---
 
@@ -187,6 +187,6 @@ la première fois, puis changer le mot de passe via l'UI.
 - Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-177 et KAN-160.
 
 L'architecture de déploiement (Docker Compose de production, nginx inner/outer, CI) est en place —
-voir [`docs/deployment.md`](docs/deployment.md). Le service de backup PostgreSQL démarre par défaut
+voir [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md). Le service de backup PostgreSQL démarre par défaut
 avec le reste de la pile, sans profil Compose. Les éléments qui restent à préparer pour la mise en
 production sont suivis dans ce même document et dans Jira (KAN-161 à KAN-164).

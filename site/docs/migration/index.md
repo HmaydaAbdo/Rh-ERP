@@ -5,7 +5,7 @@ sidebar_position: 8
 
 # Migration du backend vers FastAPI (E2, KAN-19)
 
-Décision : ADR 0016 (`docs/adr/0016-migration-backend-spring-vers-fastapi.md`). Suivi : Jira (KAN-19 et ses tâches). Cette
+Décision : ADR 0016 ([decisions/0016-migration-backend-spring-vers-fastapi](../decisions/0016-migration-backend-spring-vers-fastapi.md)). Suivi : Jira (KAN-19 et ses tâches). Cette
 section garde la stratégie, l'inventaire de sortie, la parité de chaque domaine et les mesures ; l'avancement vit dans Jira.
 Toute la documentation de la migration vit ici, jamais dans un dossier `docs/` parallèle.
 

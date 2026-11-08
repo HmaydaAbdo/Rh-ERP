@@ -1,7 +1,7 @@
 # Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers le
 # backend), Spring Boot (backend), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
 # public) est géré séparément sur le serveur de déploiement, hors de ce fichier — voir
-# docs/deployment.md pour l'architecture complète et conventions/deployment.md pour le pattern
+# site/docs/exploitation/deploiement.md pour l'architecture complète et conventions/deployment.md pour le pattern
 # générique.
 #
 # Production uniquement : aucun `build:`, uniquement des `image:` déjà publiées sur Docker Hub
@@ -40,11 +40,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Persistance des données — voir docs/deployment.md pour la stratégie de backup (distincte
+      # Persistance des données — voir site/docs/exploitation/deploiement.md pour la stratégie de backup (distincte
       # de ce volume, qui ne protège que contre l'arrêt/la recréation du conteneur, pas contre la
       # perte du volume lui-même).
       # PostgreSQL 18 stocke ses données dans un sous-répertoire de ce point de montage ; voir
-      # docs/deployment.md pour la migration majeure et le volume PG17 conservé.
+      # site/docs/exploitation/deploiement.md pour la migration majeure et le volume PG17 conservé.
       - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
@@ -267,7 +267,7 @@ services:
     networks:
       - web-net
     ports:
-      # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (docs/deployment.md).
+      # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (site/docs/exploitation/deploiement.md).
       - "127.0.0.1:${DOCS_PORT:-5005}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health"]

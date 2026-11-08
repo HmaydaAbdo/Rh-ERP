@@ -1,4 +1,11 @@
-# Architecture de rh-erp
+---
+title: "Architecture de rh-erp"
+sidebar_position: 2
+---
+
+:::note Page reprise de l'ancien dossier docs
+Texte repris tel quel (état au 2026-11-08). Les mentions de Spring, Java et Flyway décrivent l'architecture avant la bascule vers FastAPI et Alembic : le comportement fait foi dans le code, le suivi dans Jira. À actualiser épopée par épopée.
+:::
 
 > Vue d'ensemble **concrète** du projet : ce qu'il contient, comment les domaines dépendent les uns des
 > autres, et le trajet d'une requête de bout en bout. Les principes généraux (couches, patterns,
@@ -26,12 +33,12 @@ Navigateur ── Angular (UI Staport) ──HTTP/JSON──▶ Spring Boot 4 (A
 | Base | PostgreSQL 18.6 avec pgvector ; usage vectoriel uniquement lorsqu'un cas RAG sera validé |
 | Migrations | Flyway ; Hibernate en `ddl-auto: validate` (il vérifie le schéma, ne le modifie jamais) |
 | Frontend | Angular 22.2.2 standalone, Signals, Angular Aria/CDK, Tailwind CSS 4, Lucide et composants Staport |
-| Tests | JUnit 5 + Mockito + AssertJ (backend), Vitest + Playwright/axe (frontend) — voir [testing.md](testing.md) |
-| Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](deployment.md) |
+| Tests | JUnit 5 + Mockito + AssertJ (backend), Vitest + Playwright/axe (frontend) — voir [testing.md](../exploitation/tests.md) |
+| Livraison | Images Docker publiées par la CI ; nginx « inner » sert le frontend et relaie l'API — voir [deployment.md](../exploitation/deploiement.md) |
 
 **État des environnements au 2026-10-10 :** le Docker local est sur PostgreSQL 18.6 avec les données
 migrées depuis PG17 ; le serveur de production reste sur PostgreSQL 17 jusqu'à l'exécution de la
-procédure contrôlée décrite dans [deployment.md](deployment.md). Le Compose de la branche ne doit donc
+procédure contrôlée décrite dans [deployment.md](../exploitation/deploiement.md). Le Compose de la branche ne doit donc
 pas encore être déployé tel quel en production.
 
 ---
@@ -129,10 +136,10 @@ du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
 
 | Élément | Détail |
 |---|---|
-| Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](chantier/README.md) |
-| Sauvegarde PostgreSQL | Service Docker dédié : exécution quotidienne à 02:00 UTC, rétention locale de 30 jours dans `./backups/` ; la destination locale seule est acceptée par décision du propriétaire. Restauration d'une archive réelle et alerte à organiser. Voir [deployment.md](deployment.md) |
-| Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](auth/README.md) |
-| Vérification de l'intégrité de l'audit | Au démarrage, signale si le compte de la base peut modifier une table d'audit. Voir [audit/README.md](audit/README.md) |
+| Synchronisation des chantiers | Tous les jours à 23 h (`chantier.sync.cron`), ou à la demande (`POST /chantiers/sync`) — ajoute les chantiers absents, ne modifie rien. Voir [chantier/README.md](../domaines/chantier/index.md) |
+| Sauvegarde PostgreSQL | Service Docker dédié : exécution quotidienne à 02:00 UTC, rétention locale de 30 jours dans `./backups/` ; la destination locale seule est acceptée par décision du propriétaire. Restauration d'une archive réelle et alerte à organiser. Voir [deployment.md](../exploitation/deploiement.md) |
+| Bootstrap administrateur | Au démarrage, crée le compte `SYSTEM_ADMIN` s'il n'en existe aucun. Voir [auth/README.md](../domaines/auth/index.md) |
+| Vérification de l'intégrité de l'audit | Au démarrage, signale si le compte de la base peut modifier une table d'audit. Voir [audit/README.md](../domaines/audit/index.md) |
 | Courriel | Envoi du lien « mot de passe oublié » (SMTP) |
 
 ---
@@ -145,14 +152,14 @@ du domaine Audit. La consultation reste exposée par `IAuditJournalService`.
 | Santé | `/actuator/health` (public — utilisé par les healthchecks Docker) ; l'état du serveur SMTP n'y est volontairement pas inclus |
 | Autres endpoints Actuator | Non exposés (seuls `health` et `prometheus` le sont, `management.endpoints.web.exposure.include`) ; la règle de sécurité les réserve à `SYSTEM_ADMIN` s'ils sont un jour exposés |
 | Métriques Prometheus | `/actuator/prometheus` (registre `micrometer-registry-prometheus`), public comme la santé (aucune donnée sensible) mais **joignable depuis le serveur seulement** : nginx inner ne relaie que `/actuator/health`, le port du backend est lié à `127.0.0.1`. Chaque série porte le tag `application` |
-| Métriques applicatives | Compteurs et jauges d'audit, compteurs et histogramme de durée de synchronisation ; inventaire dans [chantier/README.md](chantier/README.md), implémentation dans `AuditMetrics` / `ChantierSyncMetrics`, garde-fous dans `MetricsConformityTest` ; raccordement opérationnel suivi dans Jira (KAN-163) |
+| Métriques applicatives | Compteurs et jauges d'audit, compteurs et histogramme de durée de synchronisation ; inventaire dans [chantier/README.md](../domaines/chantier/index.md), implémentation dans `AuditMetrics` / `ChantierSyncMetrics`, garde-fous dans `MetricsConformityTest` ; raccordement opérationnel suivi dans Jira (KAN-163) |
 | Logs | SLF4J ; jamais de secret, identifiant de connexion, identité d'employé ni contenu métier/financier (voir `conventions/logging.md`). Format : texte en développement ; **JSON en production** (`LOGGING_FORMAT=json`) ; les événements sortent en temps réel sur la console et sont archivés chaque jour, compressés et gardés 30 jours UTC dans `./logs/`, à côté de `docker-compose.yml`. Seul `requestId` est ajouté au MDC et propagé aux tâches `@Async` ; l'acteur reste traçable dans l'audit à accès contrôlé |
 
 ---
 
 ## Frontend
 
-Voir [frontend/README.md](frontend/README.md) : structure, routes, guards par permission, composants
+Voir frontend/README.md (`docs/frontend/README.md`) : structure, routes, guards par permission, composants
 partagés (sélecteur à chargement différé, tableaux configurables), conventions d'interface.
 
 ---
@@ -166,10 +173,10 @@ partagés (sélecteur à chargement différé, tableaux configurables), conventi
 | JWT auto-émis en HS256 | Un seul service émet et valide les jetons ; une paire de clés ne se justifie que si un autre service doit les valider |
 | Jeton d'accès en mémoire, jeton de rafraîchissement en cookie `httpOnly` | Le jeton d'accès n'est jamais volable par du JavaScript injecté |
 | Imports Excel atomiques et en ajout seul | Un fichier invalide ne laisse rien d'à moitié importé ; aucune modification silencieuse par fichier |
-| Rapport PDF en HTML + openhtmltopdf, graphiques SVG | Pagination entièrement pilotée en Java (voir [report/README.md](report/README.md)) |
-| CORS restreint par environnement | `CORS_ALLOWED_ORIGINS` fournit des origines explicites sans wildcard ni chemin (voir [deployment.md](deployment.md)) |
+| Rapport PDF en HTML + openhtmltopdf, graphiques SVG | Pagination entièrement pilotée en Java (voir [report/README.md](../domaines/rapport/index.md)) |
+| CORS restreint par environnement | `CORS_ALLOWED_ORIGINS` fournit des origines explicites sans wildcard ni chemin (voir [deployment.md](../exploitation/deploiement.md)) |
 | Paie non calculée | Le total est repris tel que saisi ou importé (décision du 2026-10-03) |
-| Audit : Envers + journal unique + événements de sécurité + garde-fous | Envers seul a des angles morts (écritures en masse, cascades SQL, migrations, événements sans donnée modifiée) ; chacun est fermé et prouvé par un test — voir [audit/README.md](audit/README.md) |
+| Audit : Envers + journal unique + événements de sécurité + garde-fous | Envers seul a des angles morts (écritures en masse, cascades SQL, migrations, événements sans donnée modifiée) ; chacun est fermé et prouvé par un test — voir [audit/README.md](../domaines/audit/index.md) |
 | Aspect d'audit à l'intérieur de la transaction (ordre explicite) | L'entrée d'une opération réussie est validée ou annulée avec ses données ; un échec est tracé à part |
 | Deux comptes PostgreSQL | Sans séparation, l'application pourrait réécrire l'historique : un `REVOKE` serait cosmétique |
 
@@ -185,7 +192,7 @@ Staport restent les interfaces des écrans. Les jetons délégués par audience,
 données par fiche de poste, la projection du salaire et l'audit de chaque outil sont des prérequis :
 les protections des contrôleurs REST ne sont pas héritées par un appel direct aux services. Le RAG
 ne recopie ni les employés ni la paie. Seule une preuve MCP existe, en profil de test isolé.
-Décisions, feuille de route et état : [ia.md](ia.md).
+Décisions, feuille de route et état : [ia.md](../ia/pratiques-de-reference.md).
 
 ### Autres limites
 

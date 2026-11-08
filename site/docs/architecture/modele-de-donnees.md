@@ -1,4 +1,11 @@
-# Modèle de données
+---
+title: "Modèle de données"
+sidebar_position: 3
+---
+
+:::note Page reprise de l'ancien dossier docs
+Texte repris tel quel (état au 2026-11-08). Les mentions de Spring, Java et Flyway décrivent l'architecture avant la bascule vers FastAPI et Alembic : le comportement fait foi dans le code, le suivi dans Jira. À actualiser épopée par épopée.
+:::
 
 > Schéma PostgreSQL complet, tel que créé par les migrations Flyway (`api/src/staport/migrations/flyway_v44`).
 > Le détail colonne par colonne de chaque domaine métier est dans son README (`docs/<domaine>/README.md`) ;
@@ -42,15 +49,15 @@ singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`)
 |---|---|---|---|
 | `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
 | `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `nature` (30, nullable avant qualification), `localisation` (2048), `latitude`/`longitude` (`NUMERIC(11,8)`, paire nullable), `afficher_sur_carte` (booléen non nul, faux), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
-| `equipe` | Voir le [modèle du domaine Équipe](equipe/README.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
+| `equipe` | Voir le [modèle du domaine Équipe](../domaines/equipe/index.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
+| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC » ou saisi), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 | `heures_supp` | `(employee_id, periode, chantier_id)` | `periode` (`aaaaMM`), `salaire_reference`, `type_salaire_reference`, `s_h` (entier de dirhams, instantanés, nuls pour un forfait seul), `p_h` (heures, 1 décimale au plus), `montant`, `est_stc_ou_sortie`, `stc_dh`, `forfait`, `net_a_payer` (montants `NUMERIC(16,0)` : entiers de dirhams, migration V44), `version` | `employee_id`, `paie_id`, `fonction_id`, `chantier_id` (non nuls) |
 
-Détail et règles métier : [function](function/README.md), [chantier](chantier/README.md),
-[equipe](equipe/README.md), [employee](employee/README.md), [paie](paie/README.md),
-[heures supplémentaires](heures-supp/README.md).
+Détail et règles métier : [function](../domaines/function/index.md), [chantier](../domaines/chantier/index.md),
+[equipe](../domaines/equipe/index.md), [employee](../domaines/employee/index.md), [paie](../domaines/paie/index.md),
+[heures supplémentaires](../domaines/heures-supp/index.md).
 
 ## Tables d'authentification
 
@@ -62,23 +69,23 @@ Détail et règles métier : [function](function/README.md), [chantier](chantier
 | `utilisateur` | Compte de connexion : `username` et `email` uniques après trim et comparaison sans casse (V27), `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
 | `utilisateur_role` | Association utilisateur ↔ rôle (`ON DELETE RESTRICT` depuis `V13`) |
 | `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
-| `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille`, `version` (identifiant de session, voir [auth/README.md](auth/README.md)) |
+| `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille`, `version` (identifiant de session, voir [auth/README.md](../domaines/auth/index.md)) |
 | `reset_password_token` | Lien « mot de passe oublié » **haché**, `expire_le`, `utilise`, `version` |
-| `accueil_preference` | Choix des indicateurs de l'accueil d'un utilisateur : `utilisateur_id` unique (clé étrangère), codes séparés par des virgules dans l'ordre d'affichage, `version` ; détails dans [accueil/README.md](accueil/README.md) |
-| `parametre` | Catalogue de valeurs de fonctionnement administrables, clé fixe et valeur unique, `version` ; détails dans [parametre/README.md](parametre/README.md) |
+| `accueil_preference` | Choix des indicateurs de l'accueil d'un utilisateur : `utilisateur_id` unique (clé étrangère), codes séparés par des virgules dans l'ordre d'affichage, `version` ; détails dans [accueil/README.md](../domaines/accueil/index.md) |
+| `parametre` | Catalogue de valeurs de fonctionnement administrables, clé fixe et valeur unique, `version` ; détails dans [parametre/README.md](../domaines/parametre/index.md) |
 
 Toutes les entités persistées modifiables portent `version` (`@Version`, migration `V18`) ; le client la renvoie pour
 une modification. Une version périmée est refusée avec `409 Conflict`. Les instantanés Envers et le journal append-only
 restent immuables et ne portent pas de version.
 
-Détail : [auth/README.md](auth/README.md).
+Détail : [auth/README.md](../domaines/auth/index.md).
 
 ---
 
 ## Tables d'audit
 
 Écrites par Hibernate Envers et par l'aspect d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
-[`conventions/database.md`](../conventions/database.md)). Description fonctionnelle : [audit/README.md](audit/README.md).
+`conventions/database.md` (`conventions/database.md`)). Description fonctionnelle : [audit/README.md](../domaines/audit/index.md).
 
 | Table | Rôle |
 |---|---|
@@ -88,7 +95,7 @@ Détail : [auth/README.md](auth/README.md).
 | `audit_journal` | Le journal unique : `categorie` (`OPERATION`, `SECURITE`, `ACCES`), `action`, `type_operation`, `resultat` (`SUCCES`, `ECHEC`), identité et contexte, cible (`entite_type`, `entite_id`), `nombre_elements`, `perimetre` (`JSONB`), `motif`, `revision_id` (→ `audit_revision`), `hash_precedent` et `hash_entree` (chaîne SHA-256 locale). Index sur l'horodatage, l'utilisateur, la catégorie et l'action, la cible, l'identifiant de requête et la révision |
 
 Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMigrate.sql` ci-dessous et
-[audit/README.md](audit/README.md), « Intégrité »).
+[audit/README.md](../domaines/audit/index.md), « Intégrité »).
 
 ---
 
@@ -129,7 +136,7 @@ tâches « Qualité des données » (KAN-177 et KAN-160).
 ### Snapshot du bulletin
 
 `paie.fonction_id`, `paie.chantier_id` et `paie.equipe_id` figent la situation du **mois du bulletin**. Ils
-ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README.md](paie/README.md).
+ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README.md](../domaines/paie/index.md).
 
 ### Valeurs monétaires et périodes
 
@@ -167,7 +174,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V17` | Permission `PAIE_RESTORE`, attribuée à `SYSTEM_ADMIN` seul à l'installation et administrable ensuite depuis l'écran Rôles |
 | `V18` | Verrou optimiste `@Version` sur les entités persistées modifiables |
 | `V19` | Chaînage SHA-256 du journal d'audit |
-| `V20` | Activation conditionnelle de pgAudit pour la base ERP-RH en production |
+| `V20` | Activation conditionnelle de pgAudit pour la base Staport Intelligence en production |
 | `V21` | Compteur de tentatives et blocage temporaire après cinq échecs de connexion |
 | `V22` | Unicité du CIN sans tenir compte de la casse |
 | `V23` | Unicité du libellé de fonction sans tenir compte de la casse |
@@ -177,7 +184,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V27` | Unicité des identifiants textuels (CIN, libellé de fonction, code de chantier, nom d'utilisateur, e-mail, nom de rôle) après trim et sans casse, et refus des espaces extérieurs en base ; les prérequis sont contrôlés avant de remplacer les index |
 | `V28` | Permission `CARTE_READ` et rôle `DIRECTION`. `CARTE_READ` est attribuée à `SYSTEM_ADMIN` et à `DIRECTION`, pas à `PAIE_MANAGER` ; un rôle `DIRECTION` déjà existant est conservé. Écrit sa révision d'audit (une révision, deux entrées de journal) |
 | `V29` | `employe.equipe_id`, `employe.salaire`, `employe.type_salaire` (nullables) et table `employe_sortie` (départs), avec leurs tables `_aud` |
-| `V30` | **Reprise des employés depuis la paie** ([ADR 0010](adr/0010-employe-etat-du-dernier-mois-de-paie.md)) : fiche alignée sur le dernier bulletin, départs (STC, absence), statut, suppression des employés sans aucun bulletin (sauf ceux liés à un compte). Une révision d'audit et trois entrées de journal (`EMPLOYE_SORTIE`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`) ; sans aucune paie en base, ne fait rien |
+| `V30` | **Reprise des employés depuis la paie** ([ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md)) : fiche alignée sur le dernier bulletin, départs (STC, absence), statut, suppression des employés sans aucun bulletin (sauf ceux liés à un compte). Une révision d'audit et trois entrées de journal (`EMPLOYE_SORTIE`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`) ; sans aucune paie en base, ne fait rien |
 | `V31` | **Nettoyage des référentiels depuis la paie** (2026-10-19, joué une fois) : suppression des fonctions qu'aucun bulletin ni aucune fiche ne cite, **clôture** (`actif = false`) des chantiers qu'aucun bulletin ne cite (leur code perd aussi les espaces extérieurs hérités d'avant V27). Une révision d'audit et deux entrées de journal (`FONCTION_SUPPRESSION`, `CHANTIER_MODIFICATION`, origine `MIGRATION`) ; sans aucune paie en base, ne fait rien |
 | `V32` | Permission `EQUIPE_IMPORT`, attribuée aux rôles qui administrent déjà le référentiel avec `EQUIPE_WRITE` |
 | `V33` | `employe.chantier_id` devient nullable; les fiches INACTIF perdent leurs affectations courantes chantier/équipe, avec audit de données et contrainte assurant les affectations selon le statut; les bulletins historiques restent inchangés |
@@ -198,7 +205,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 - Les permissions se créent par migration (catalogue fixe) ; l'attribution aux rôles existants est faite dans
   la même migration.
 - **Depuis `V14`, une migration qui modifie des données d'une table auditée écrit aussi sa révision, ses lignes d'audit et son
-  entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](audit/README.md)). Une
+  entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](../domaines/audit/index.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
 - Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
   toute la chaîne de migrations est rejouée et validée contre les entités à chaque exécution.

@@ -73,7 +73,7 @@ Les permissions `EQUIPE_*` (migration V9) sont attribuées aux rôles qui portai
 Au démarrage, `AdminBootstrapRunner` crée un compte `SYSTEM_ADMIN` à partir de `ADMIN_USERNAME`,
 `ADMIN_EMAIL` et `ADMIN_PASSWORD` **s'il n'existe aucun compte portant ce rôle**. Ensuite, la variable est
 sans effet : changer le mot de passe se fait depuis l'interface. Ne jamais laisser le mot de passe d'exemple
-(voir ../configuration.md (`docs/configuration.md`)). La création est attribuée à « Système », d'origine `DEMARRAGE`, dans
+(voir ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md))). La création est attribuée à « Système », d'origine `DEMARRAGE`, dans
 l'audit (`UserService.creerAdminInitial`, appelé seulement quand `adminExiste()` est faux : un redémarrage ne laisse aucune trace).
 
 ---
@@ -129,7 +129,7 @@ Un jeton présenté par un **compte désactivé** est refusé (`401`) et consomm
    inconnu est refusé (`400`).
 
 `FRONTEND_URL` doit être l'URL publique complète de l'application, sinon le lien du courriel est invalide
-(voir ../deployment.md (`docs/deployment.md`)).
+(voir ../deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md))).
 
 L'envoi SMTP s'exécute sur le pool asynchrone dédié `mailTaskExecutor` : 2 travailleurs de base, 4 au
 maximum, file bornée à 100 tâches et conservation des travailleurs inactifs pendant 30 secondes.
@@ -307,9 +307,9 @@ Détail des guards et du menu : ../frontend/README.md (`docs/frontend/README.md`
   constitue une défense supplémentaire.
 - **CORS restreint par environnement** : `CORS_ALLOWED_ORIGINS` contient uniquement les origines
   `http(s)` autorisées, sans wildcard ni chemin ; les credentials ne sont renvoyés que pour ces origines.
-  Voir ../deployment.md (`docs/deployment.md`) et ../configuration.md (`docs/configuration.md`).
+  Voir ../deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md)) et ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md)).
 - Chemins publics : `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`,
-  `/actuator/health`, et Swagger **seulement en développement** (éteint par défaut, voir ../configuration.md (`docs/configuration.md`)). Tout le reste exige un jeton valide.
+  `/actuator/health`, et Swagger **seulement en développement** (éteint par défaut, voir ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md))). Tout le reste exige un jeton valide.
 
 ---
 
@@ -319,7 +319,7 @@ Détail des guards et du menu : ../frontend/README.md (`docs/frontend/README.md`
 JWT complète (signature HS256, `iss`, `aud`, dates et claims requis) ; `JwtSigningKeyTest` vérifie la taille minimale du
 secret. `AuthServiceTest` et `VerrouillageConnexionIntegrationTest` couvrent la connexion, le blocage après échecs,
 la rotation, le vol de jeton, la révocation et la réinitialisation. Voir
-../testing.md (`docs/testing.md`) et [../rbac/auth.md](droits.md).
+../testing.md ([exploitation/tests](../../exploitation/tests.md)) et [../rbac/auth.md](droits.md).
 
 `AuthRequestValidationTest` couvre les tailles, la normalisation avant validation et les identifiants de
 collections invalides. Les specs des listes et formulaires Utilisateurs/Rôles couvrent la saisie, les

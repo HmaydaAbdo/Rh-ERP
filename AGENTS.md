@@ -24,7 +24,7 @@ Après toute modification :
 - vérifier que le projet compile ;
 - supprimer le dead code ;
 - mettre à jour la documentation concernée (le README du domaine, `docs/rbac/` si une permission change,
-  `docs/data-model.md` si le schéma change, et Jira (projet `KAN`) si un sujet est traité ou découvert).
+  `site/docs/architecture/modele-de-donnees.md` si le schéma change, et Jira (projet `KAN`) si un sujet est traité ou découvert).
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
 
@@ -169,7 +169,7 @@ contourner les contrôles de protection. La livraison et la fusion suivent
 # Ordre de lecture
 
 Pour reprendre le travail en cours, consulter d'abord Jira (projet `KAN`) pour l'état et les tâches, puis
-[`docs/developpement-local.md`](docs/developpement-local.md) pour l'environnement local et les décisions durables du
+[`site/docs/exploitation/developpement-local.md`](site/docs/exploitation/developpement-local.md) pour l'environnement local et les décisions durables du
 propriétaire, et [`conventions/lecons.md`](conventions/lecons.md) pour les erreurs à ne pas répéter.
 
 Lire ensuite `conventions/workflow.md` pour la routine commune, puis les conventions applicables

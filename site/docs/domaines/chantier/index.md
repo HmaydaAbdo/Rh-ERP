@@ -454,7 +454,7 @@ Le suivi des évolutions est dans Jira (projet `KAN`) :
   synchronisation (une entrée pour l'ensemble, une révision par chantier créé), sont tracées ; la synchronisation planifiée
   est attribuée à « Système », d'origine `TACHE_PLANIFIEE`.
 - Les métriques de synchronisation (`rh.chantier.sync.*`) sont exposées par `/actuator/prometheus` (voir
-  ../architecture.md (`docs/architecture.md`)).
+  ../architecture.md ([architecture/vue-d-ensemble](../../architecture/vue-d-ensemble.md))).
 
 
 ### Scénarios de qualification géographique
