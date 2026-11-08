@@ -36,7 +36,9 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
     try:
         classeur = load_workbook(BytesIO(contenu), read_only=True, data_only=True)
     except Exception as erreur:  # openpyxl lève des types variés (BadZipFile, InvalidFileException…)
-        raise ErreurImportPaie(f"Fichier Excel illisible : {erreur}") from erreur
+        raise ErreurImportPaie(
+            "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+        ) from erreur
     try:
         if not classeur.worksheets:
             return []

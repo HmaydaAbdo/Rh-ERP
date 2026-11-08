@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
@@ -51,6 +51,27 @@ PageEquipes = Annotated[
     Pagination,
     Depends(pagination("libelle", frozenset({"libelle", "code"}), taille_defaut=30, tri_ignore_si_inconnu=True)),
 ]
+_PERIODE = TypeAdapter(PeriodePaie)
+
+
+def _periode_import(
+    periode_url: Annotated[str | None, Query(alias="periode")] = None,
+    periode_formulaire: Annotated[str | None, Form(alias="periode")] = None,
+) -> PeriodePaie:
+    """Mois d'un import, lu dans l'URL ou dans le formulaire comme `@RequestParam` de Spring."""
+    brute = periode_url if periode_url is not None else periode_formulaire
+    if brute is None:
+        raise RequestValidationError(
+            [{"type": "missing", "loc": ("query", "periode"), "msg": "Field required", "input": None}]
+        )
+    try:
+        return _PERIODE.validate_python(brute)
+    except ValidationError as erreur:
+        erreurs = [{**detail, "loc": ("body", "periode")} for detail in erreur.errors()]
+        raise RequestValidationError(erreurs) from erreur
+
+
+PeriodeImport = Annotated[PeriodePaie, Depends(_periode_import)]
 paies = APIRouter(prefix="/paie", tags=["Paie"])
 
 
@@ -150,7 +171,7 @@ async def modele_import(contexte: Contexte) -> StreamingResponse:
 
 @paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT")), Depends(exiger("PAIE_READ"))])
 async def analyser_import(
-    periode: Annotated[PeriodePaie, Form()],
+    periode: PeriodeImport,
     session: Session,
     contexte: Contexte,
     file: UploadFile = File(...),  # noqa: B008
@@ -160,7 +181,7 @@ async def analyser_import(
 
 @paies.post("/import", dependencies=[Depends(exiger("PAIE_IMPORT"))])
 async def importer(
-    periode: Annotated[PeriodePaie, Form()],
+    periode: PeriodeImport,
     session: Session,
     contexte: Contexte,
     ignorer_salaires_zero: Annotated[bool, Form()] = False,
@@ -183,7 +204,7 @@ async def importer(
     dependencies=[Depends(exiger("PAIE_IMPORT")), Depends(exiger("PAIE_READ")), Depends(exiger("EMPLOYEE_WRITE"))],
 )
 async def corriger_import(
-    periode: Annotated[PeriodePaie, Form()],
+    periode: PeriodeImport,
     corrections: Annotated[str, Form()],
     session: Session,
     contexte: Contexte,

@@ -387,7 +387,9 @@ class ServiceEmployee:
             feuille = load_workbook(BytesIO(contenu), read_only=True, data_only=True).active
             lignes = list(feuille.iter_rows(values_only=True)) if feuille is not None else []
         except Exception as exc:
-            raise ErreurImportEmployee(f"Fichier Excel illisible : {exc}") from exc
+            raise ErreurImportEmployee(
+                "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+            ) from exc
         if not lignes:
             raise ErreurImportEmployee("Fichier vide.")
         if len(lignes[0]) < len(ENTETES_IMPORT):

@@ -51,7 +51,9 @@ def _lire(contenu: bytes) -> list[tuple[int, Cellules]]:
     try:
         classeur = load_workbook(BytesIO(contenu), read_only=True, data_only=True)
     except Exception as erreur:
-        raise ErreurImportEquipe(f"Fichier Excel illisible ou invalide : {erreur}") from erreur
+        raise ErreurImportEquipe(
+            "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+        ) from erreur
     try:
         if not classeur.worksheets:
             raise ErreurImportEquipe("Le classeur ne contient aucune feuille.")
@@ -61,7 +63,9 @@ def _lire(contenu: bytes) -> list[tuple[int, Cellules]]:
                 for numero, cellules in enumerate(classeur.worksheets[0].iter_rows(values_only=True), start=1)
             ]
         except Exception as erreur:
-            raise ErreurImportEquipe(f"Fichier Excel illisible ou invalide : {erreur}") from erreur
+            raise ErreurImportEquipe(
+                "Fichier Excel illisible : le fichier n'est pas un classeur Excel (.xlsx) valide."
+            ) from erreur
     finally:
         classeur.close()
     entete: Cellules = lignes[0][1] if lignes else ()

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
@@ -102,6 +102,34 @@ ChantierId = Annotated[int, Query(alias="chantierId")]
 Fichier = Annotated[UploadFile, File()]
 
 
+class _Cible(NamedTuple):
+    periode: str
+    chantier_id: int
+
+
+def _manquant(nom: str) -> RequestValidationError:
+    return RequestValidationError([{"type": "missing", "loc": ("query", nom), "msg": "Field required", "input": None}])
+
+
+def _cible(
+    periode_url: Annotated[str | None, Query(alias="periode")] = None,
+    periode_formulaire: Annotated[str | None, Form(alias="periode")] = None,
+    chantier_url: Annotated[int | None, Query(alias="chantierId")] = None,
+    chantier_formulaire: Annotated[int | None, Form(alias="chantierId")] = None,
+) -> _Cible:
+    """Mois et chantier d'un import, lus dans l'URL ou dans le formulaire comme `@RequestParam` de Spring."""
+    periode = periode_url if periode_url is not None else periode_formulaire
+    chantier = chantier_url if chantier_url is not None else chantier_formulaire
+    if periode is None:
+        raise _manquant("periode")
+    if chantier is None:
+        raise _manquant("chantierId")
+    return _Cible(periode, chantier)
+
+
+Cible = Annotated[_Cible, Depends(_cible)]
+
+
 def _periode(valeur: str) -> int:
     try:
         return lire_periode(valeur)
@@ -132,14 +160,18 @@ async def prerequis(periode: str, chantier_id: ChantierId, session: Session, con
 )
 async def analyser_import(
     file: Fichier,
-    periode: str,
-    chantier_id: ChantierId,
+    cible: Cible,
     session: Session,
     contexte: Contexte,
     forfaits: Annotated[str | None, Form()] = None,
 ) -> ImportAnalyse:
     return await contexte.import_heures_supp.analyser(
-        session, file.filename, await file.read(), _periode(periode), chantier_id, _partie(ImportForfaits, forfaits)
+        session,
+        file.filename,
+        await file.read(),
+        _periode(cible.periode),
+        cible.chantier_id,
+        _partie(ImportForfaits, forfaits),
     )
 
 
@@ -154,8 +186,7 @@ async def analyser_import(
 )
 async def corriger(
     file: Fichier,
-    periode: str,
-    chantier_id: ChantierId,
+    cible: Cible,
     corrections: Annotated[str, Form()],
     session: Session,
     contexte: Contexte,
@@ -165,8 +196,8 @@ async def corriger(
         session,
         file.filename,
         await file.read(),
-        _periode(periode),
-        chantier_id,
+        _periode(cible.periode),
+        cible.chantier_id,
         _partie(ImportCorrections, corrections) or ImportCorrections(),
         _partie(ImportForfaits, forfaits),
     )
@@ -178,14 +209,18 @@ async def corriger(
 )
 async def importer(
     file: Fichier,
-    periode: str,
-    chantier_id: ChantierId,
+    cible: Cible,
     session: Session,
     contexte: Contexte,
     forfaits: Annotated[str | None, Form()] = None,
 ) -> ImportResultat:
     return await contexte.import_heures_supp.importer(
-        session, file.filename, await file.read(), _periode(periode), chantier_id, _partie(ImportForfaits, forfaits)
+        session,
+        file.filename,
+        await file.read(),
+        _periode(cible.periode),
+        cible.chantier_id,
+        _partie(ImportForfaits, forfaits),
     )
 
 
@@ -195,14 +230,18 @@ async def importer(
 )
 async def remplacer(
     file: Fichier,
-    periode: str,
-    chantier_id: ChantierId,
+    cible: Cible,
     session: Session,
     contexte: Contexte,
     forfaits: Annotated[str | None, Form()] = None,
 ) -> ImportResultat:
     return await contexte.import_heures_supp.remplacer(
-        session, file.filename, await file.read(), _periode(periode), chantier_id, _partie(ImportForfaits, forfaits)
+        session,
+        file.filename,
+        await file.read(),
+        _periode(cible.periode),
+        cible.chantier_id,
+        _partie(ImportForfaits, forfaits),
     )
 
 
