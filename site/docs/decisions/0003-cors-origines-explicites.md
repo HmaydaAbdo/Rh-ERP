@@ -1,4 +1,7 @@
-# ADR 0003 — Restreindre CORS aux origines de l’environnement
+---
+title: "ADR 0003 — Restreindre CORS aux origines de l’environnement"
+sidebar_position: 4
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-11

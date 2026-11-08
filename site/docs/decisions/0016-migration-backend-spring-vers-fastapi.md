@@ -1,4 +1,7 @@
-# ADR 0016 — Migration du backend de Spring vers FastAPI (un seul conteneur Python avec l'IA)
+---
+title: "ADR 0016 — Migration du backend de Spring vers FastAPI (un seul conteneur Python avec l'IA)"
+sidebar_position: 17
+---
 
 - **Statut** : accepté le 2026-11-03 par le propriétaire (preuve de terminé de KAN-43)
 - **Date** : 2026-11-02

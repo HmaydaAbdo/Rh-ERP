@@ -1,4 +1,7 @@
-# ADR 0004 — Déploiement manuel de production avec `latest`
+---
+title: "ADR 0004 — Déploiement manuel de production avec `latest`"
+sidebar_position: 5
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-16
@@ -38,4 +41,4 @@ docker compose up -d
 - Ne jamais exécuter `docker compose down -v` pendant cette procédure.
 
 Cette décision constitue une exception d'exploitation à la préférence normative pour des tags
-immuables décrite dans [`conventions/deployment.md`](../../conventions/deployment.md).
+immuables décrite dans `conventions/deployment.md` (`conventions/deployment.md`).

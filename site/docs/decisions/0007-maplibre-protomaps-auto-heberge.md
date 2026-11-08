@@ -1,4 +1,7 @@
-# ADR 0007 — MapLibre GL JS et fond de carte Protomaps auto-hébergé
+---
+title: "ADR 0007 — MapLibre GL JS et fond de carte Protomaps auto-hébergé"
+sidebar_position: 8
+---
 
 - **Statut** : accepté ; remplace l'[ADR 0006](0006-openlayers-carte-chantiers.md) ; amendé par l'[ADR 0009](0009-carte-satellite-relief-3d.md) (relief auto-hébergé, imagerie satellite d'Esri)
 - **Date** : 2026-10-17

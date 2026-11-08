@@ -1,4 +1,7 @@
-# ADR 0010 — La fiche employé porte l'état du dernier mois de paie
+---
+title: "ADR 0010 — La fiche employé porte l'état du dernier mois de paie"
+sidebar_position: 11
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-18

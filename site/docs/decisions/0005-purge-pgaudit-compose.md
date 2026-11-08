@@ -1,4 +1,7 @@
-# ADR 0005 — Purge planifiée des journaux pgAudit dans Compose
+---
+title: "ADR 0005 — Purge planifiée des journaux pgAudit dans Compose"
+sidebar_position: 6
+---
 
 - **Date** : 2026-10-16
 - **Statut** : acceptée
@@ -13,7 +16,7 @@ automatisé n'est souhaité. Le propriétaire a choisi un service planifié Comp
 ## Décision
 
 Ajouter `postgres-log-retention` au profil Compose `backup`, déjà activé en production. Le service
-utilise l'image PostgreSQL ERP-RH construite par la CI, s'exécute en tant que `postgres`, n'a pas
+utilise l'image PostgreSQL Staport Intelligence construite par la CI, s'exécute en tant que `postgres`, n'a pas
 d'accès réseau et monte le volume PostgreSQL. Il supprime uniquement les fichiers réguliers au
 premier niveau nommés `postgresql-*.csv*` et âgés de plus de 90 jours, au démarrage puis chaque jour
 à 03:00 UTC. `log_filename` ne porte plus l'extension `.csv`, ajoutée automatiquement par PostgreSQL

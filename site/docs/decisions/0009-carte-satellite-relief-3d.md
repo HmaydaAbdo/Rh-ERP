@@ -1,4 +1,7 @@
-# ADR 0009 — Carte : le monde entier, imagerie satellite, relief et 3D
+---
+title: "ADR 0009 — Carte : le monde entier, imagerie satellite, relief et 3D"
+sidebar_position: 10
+---
 
 - **Statut** : accepté ; amende l'[ADR 0007](0007-maplibre-protomaps-auto-heberge.md) (le fond couvre le monde ; l'imagerie
   satellite est le seul service tiers)
