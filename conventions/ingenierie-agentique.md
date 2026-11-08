@@ -60,7 +60,7 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 | Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | rejoueur et critères déterministes de `evaluation.py` (dette déclarée, KAN-208 puis E10) |
 | Traces et métriques | OpenTelemetry, Phoenix | configuration |
 | Droits, périmètre, audit | Spring Security, `@PreAuthorize`, `@AuditableAction` | règles métier (permanentes) |
-| Schéma de base de données | Flyway | aucune |
+| Schéma de base de données | Alembic | aucune |
 | Mapping objet ↔ DTO | MapStruct | aucune |
 | Tableaux de données (frontend) | AG Grid | coque partagée (configuration par domaine) |
 | Interface agentique (frontend) | CopilotKit + AG-UI ; Next.js (React) à l'épopée E3 | un seul outil côté navigateur à ce jour (KAN-210) |

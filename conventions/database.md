@@ -1,4 +1,4 @@
-# Base de données — PostgreSQL, migrations Flyway
+# Base de données — PostgreSQL, migrations Alembic
 
 > La base de données est vivante dès qu'elle contient des données réelles. Toute évolution du
 > schéma doit être versionnée, explicite, et ne jamais dépendre d'une génération automatique.
@@ -7,19 +7,20 @@
 
 ## Principe fondamental
 
-Le schéma est géré **exclusivement** par des migrations Flyway versionnées, dans le dossier de
-migrations configuré par le projet. `spring.jpa.hibernate.ddl-auto` est fixé à
-`validate` : Hibernate compare les entités JPA au schéma réel au démarrage et **échoue** s'il y a
-la moindre divergence, mais ne modifie jamais la base.
+Le schéma est géré **exclusivement** par des révisions Alembic versionnées (`api/src/staport/migrations/versions`).
+La base d'origine (V1 à V44) a été créée par Flyway, qui n'est plus exécuté : ses 44 scripts SQL sont conservés tels quels
+(`api/src/staport/migrations/flyway_v44`) et rejoués par la révision `0001_base_v44` sur une base neuve ; une base de
+production issue de Flyway est contrôlée (versions et sommes de contrôle) puis estampillée à cette révision, sans rejouer
+les données. Les modèles SQLAlchemy ne modifient jamais la base : un test de dérive compare les modèles au schéma
+réellement migré et **échoue** à la moindre divergence.
 
-Conséquence directe : **toute modification d'une entité JPA qui touche au schéma (nouvelle
-colonne, colonne renommée, type modifié, contrainte ajoutée, nouvelle table, etc.) doit
-s'accompagner d'un nouveau fichier de migration Flyway.** Une entité modifiée sans migration
-correspondante fait échouer le démarrage de l'application (`ddl-auto=validate`) — c'est le
-comportement voulu : il transforme un oubli de migration en échec immédiat et explicite plutôt
-qu'en dérive silencieuse.
+Conséquence directe : **toute modification d'un modèle qui touche au schéma (nouvelle colonne, colonne renommée, type
+modifié, contrainte ajoutée, nouvelle table, etc.) doit s'accompagner d'une nouvelle révision Alembic.** Un modèle
+modifié sans révision correspondante fait échouer le test de dérive : il transforme un oubli de migration en échec
+immédiat et explicite plutôt qu'en dérive silencieuse.
 
-Voir `conventions/deployment.md` pour la façon dont Flyway s'exécute (Docker Compose, local, tests).
+Voir `conventions/deployment.md` pour la façon dont les migrations s'exécutent (Docker Compose, local, tests) et
+`site/docs/conventions/backend-python/persistance.md` pour la pratique détaillée.
 
 PostgreSQL est le moteur relationnel de référence. Chaque projet verrouille une version prise en
 charge dans sa configuration de build et de déploiement, puis teste avec la même version majeure
@@ -38,7 +39,7 @@ Une mise à niveau de majeure ne réutilise jamais directement le volume de donn
 version. Préparer et répéter une migration logique sur PostgreSQL cible, avec les mêmes extensions,
 rôles, droits et versions applicatives que la production. Avant la fenêtre de maintenance, vérifier
 la restauration d'une sauvegarde ; pendant la bascule, suspendre les écritures, produire le dump
-final, restaurer dans un volume neuf et exécuter les migrations Flyway manquantes jusqu'à la version
+final, restaurer dans un volume neuf et exécuter les révisions Alembic manquantes jusqu'à la version
 du dépôt. Contrôler les données, les extensions, les droits et le démarrage applicatif avant de
 rouvrir le trafic. Garder l'ancien volume intact comme retour arrière ; après reprise des écritures
 sur la nouvelle majeure, un retour arrière exige une réconciliation des nouvelles écritures. Voir
@@ -58,33 +59,28 @@ backfill sûr et sa stratégie de déploiement.
 
 ## Ajouter une migration
 
-1. Créer un fichier dans le dossier Flyway du projet, nommé
-   `V<n>__description_en_minuscules_avec_underscores.sql`, où `<n>` est le numéro de version
-   suivant, strictement supérieur au dernier existant (voir les fichiers déjà présents pour
-   connaître le dernier numéro utilisé).
-2. Écrire du SQL PostgreSQL explicite — pas de génération automatique. Utiliser des noms de
-   contrainte/index explicites et lisibles (`fk_<table>_<cible>`, `uk_<table>_<colonnes>`,
-   `idx_<table>_<colonne>`…), jamais les noms générés par défaut par Hibernate.
-3. Modifier l'entité JPA en cohérence exacte avec la migration (mêmes colonnes, mêmes types,
+1. Créer une révision dans `api/src/staport/migrations/versions`, nommée
+   `<nnnn>_description_en_minuscules_avec_underscores.py`, dont `down_revision` est la révision
+   précédente (voir les fichiers présents pour connaître la dernière).
+2. Écrire des opérations explicites (`op.create_table`, `op.execute` pour le SQL) — l'autogénération ne
+   sert qu'à contrôler la dérive. Utiliser des noms de contrainte/index explicites et lisibles
+   (`fk_<table>_<cible>`, `uk_<table>_<colonnes>`, `idx_<table>_<colonne>`…).
+3. Modifier le modèle SQLAlchemy en cohérence exacte avec la révision (mêmes colonnes, mêmes types,
    mêmes contraintes `nullable`/`unique`).
-4. Vérifier localement que `ddl-auto=validate` passe : démarrer l'application (ou lancer les
-   tests) contre une base à jour — toute divergence fait échouer le démarrage avec un message
-   listant précisément la colonne/contrainte en cause.
+4. Vérifier localement que les tests de migration passent (`api/tests/test_migrations.py` : base vierge,
+   montée depuis la révision précédente, contrôle de dérive entre modèles et schéma).
 
 **Règles strictes :**
 
 - Un fichier de migration déjà appliqué sur un environnement partagé (donc a fortiori une fois
-  poussé sur la branche principale) **n'est jamais modifié ni renuméroté** — Flyway détecte toute
-  modification d'un fichier déjà appliqué (checksum) et refuse de démarrer. Toute correction se
-  fait par une nouvelle migration.
-- Un numéro de version n'est jamais réutilisé.
+  poussé sur la branche principale) **n'est jamais modifié ni renuméroté** — Alembic ne rejoue pas
+  une révision déjà appliquée : la modifier fait diverger les bases. Toute correction se fait par
+  une nouvelle révision. Les scripts `flyway_v44` sont figés : le garde de bascule en vérifie la somme de contrôle.
+- Un identifiant de révision n'est jamais réutilisé.
 - Une migration ne doit faire qu'une chose cohérente (une table, une évolution logique) — pas de
   fichier fourre-tout accumulant plusieurs changements sans rapport.
 
-Flyway exécute les migrations PostgreSQL via JDBC. Ne pas utiliser de méta-commandes propres à
-`psql` sans équivalent JDBC. Vérifier la documentation de la version Flyway retenue et ajouter le
-module de support PostgreSQL au classpath lorsqu'il n'est pas fourni par cette version. Aligner la
-version de ce module avec celle du moteur Flyway selon la gestion de dépendances retenue.
+Alembic exécute le SQL par le pilote SQLAlchemy : ne pas utiliser de méta-commandes propres à `psql`.
 
 Rendre une opération de données idempotente lorsqu'elle est conçue pour être relancée. Ne pas
 ajouter systématiquement `IF EXISTS` ou `IF NOT EXISTS` si cela pouvait masquer une dérive inattendue
@@ -130,7 +126,7 @@ verrouillage et de volume.
 | Données modifiées par la migration (backfill, correction, seed, fusion de doublons) sur une table auditée | Le gabarit d'audit — voir « Migrations qui modifient des données auditées » |
 
 Toute case marquée comme nécessitant un backfill ou une vérification de données existantes doit
-être traitée **dans la migration elle-même** (une migration Flyway est un fichier SQL classique :
+être traitée **dans la migration elle-même** (une révision Alembic est transactionnelle sur PostgreSQL :
 un `UPDATE` de backfill avant l'`ALTER` qui resserre la contrainte est parfaitement normal et
 s'exécute dans la même transaction que le reste de la migration).
 
@@ -185,7 +181,7 @@ Si des doublons existent, la résolution (fusion, suppression, renommage) est un
 ## Tables auditées
 
 Les tables d'audit et leurs relations suivent les règles de `conventions/audit.md`. La table métier
-et sa structure d'audit sont créées ou modifiées dans la même migration Flyway. Les contraintes
+et sa structure d'audit sont créées ou modifiées dans la même révision Alembic. Les contraintes
 spécifiques aux colonnes d'historique, aux suppressions et aux migrations qui modifient des lignes
 auditées sont définies dans cette convention d'audit.
 
@@ -193,7 +189,7 @@ auditées sont définies dans cette convention d'audit.
 
 ## Migrations qui modifient des données auditées
 
-Une migration Flyway qui modifie des lignes auditées doit écrire leurs instantanés et l'entrée de
+Une révision Alembic qui modifie des lignes auditées doit écrire leurs instantanés et l'entrée de
 journal de façon atomique avec ces changements. Appliquer le gabarit de `conventions/audit.md` ; une
 migration de schéma seule n'ajoute pas de lignes d'audit.
 
@@ -271,9 +267,9 @@ documentation officielle PostgreSQL (`SELECT * FROM pg_get_keywords()`).
 
 | Qui | Quoi |
 |---|---|
-| Développeur (IA) | Écrire la migration Flyway en même temps que le changement d'entité, jamais l'un sans l'autre |
+| Développeur (IA) | Écrire la révision Alembic en même temps que le changement de modèle, jamais l'un sans l'autre |
 | Développeur (IA) | Signaler toute migration nécessitant une décision métier (valeur de repli, fusion de doublons) avant de l'écrire |
-| Développeur (IA) | Vérifier que `ddl-auto=validate` passe avant de considérer la tâche terminée |
+| Développeur (IA) | Vérifier que le test de dérive passe avant de considérer la tâche terminée |
 | Développeur (IA) | Pour une entité auditée : table `_aud` dans la même migration ; pour une migration de données : le gabarit d'audit |
 | Développeur (humain) | Valider les décisions métier signalées |
 | Développeur (humain) | Exécuter/valider les migrations sur les environnements partagés au moment du déploiement |
@@ -282,9 +278,9 @@ documentation officielle PostgreSQL (`SELECT * FROM pg_get_keywords()`).
 
 ## Résumé
 
-* Le schéma vit uniquement dans les migrations Flyway configurées du projet — jamais généré
+* Le schéma vit uniquement dans les révisions Alembic du projet — jamais généré
   automatiquement.
-* `ddl-auto=validate` : toute divergence entité/schéma fait échouer le démarrage, par conception.
+* Test de dérive : toute divergence modèle/schéma fait échouer les tests, par conception.
 * Un fichier de migration déjà appliqué n'est jamais modifié ni renuméroté — toujours une nouvelle
   migration.
 * Toute contrainte resserrée sur des données existantes (`NOT NULL`, `UNIQUE`, `CHECK`) exige un
@@ -296,4 +292,4 @@ documentation officielle PostgreSQL (`SELECT * FROM pg_get_keywords()`).
 ## Références officielles
 
 * [Politique de versions et de support PostgreSQL](https://www.postgresql.org/support/versioning/)
-* [Support PostgreSQL dans Flyway](https://documentation.red-gate.com/flyway/reference/database-driver-reference/postgresql-database)
+* [Documentation Alembic](https://alembic.sqlalchemy.org/)

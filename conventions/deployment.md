@@ -89,12 +89,12 @@ fois une opération non idempotente.
 
 ## Base de données et migrations
 
-* Exécuter les migrations Flyway dans le cadre du déploiement, avant que la nouvelle version ne
+* Exécuter les migrations Alembic dans le cadre du déploiement, avant que la nouvelle version ne
   dépende du schéma modifié. Garantir qu'une seule tâche de migration opère à la fois. Toute
   migration est testée sur le moteur relationnel cible selon `conventions/database.md`.
 * Lors d'un changement de majeure PostgreSQL, ne jamais réutiliser le volume de données de l'ancienne
   majeure. Répéter l'export/restauration logique vers un volume neuf, suspendre les écritures pendant
-  la bascule, appliquer les migrations Flyway en attente et vérifier données, extensions, droits et
+  la bascule, appliquer les migrations Alembic en attente et vérifier données, extensions, droits et
   démarrage avant de rouvrir le trafic. Conserver intact l'ancien volume jusqu'à validation ; après
   reprise des écritures, le retour arrière nécessite leur réconciliation.
 * Le compte de migration est distinct du compte d'exécution lorsque le modèle de sécurité ou d'audit

@@ -19,7 +19,7 @@ audit, tests par couches, mesures avant optimisation, accord du propriétaire po
 | Interdiction d'Open Session in View | Changée → `expire_on_commit=False` + chargement explicite (`selectinload`) | En asynchrone, le chargement paresseux hors `await` est impossible ; même objectif (aucun accès aux données hors service) |
 | Hibernate Envers | Changée → écouteur de session `before_flush` + tables `*_aud` conservées | Envers n'existe pas en Python ; l'historique existant est préservé |
 | `@Version` | Changée → `version_id_col` ; `StaleDataError` → 409 | Même sémantique d'optimiste ; même code HTTP |
-| Flyway (V1 à V44, et suivants) | Changée → Alembic ; Flyway figé en référence, `alembic stamp` au niveau V44 | Outil de migration du nouveau langage ; schéma inchangé (ADR 0016, § 3) |
+| Flyway (V1 à V44, et suivants) | Changée → Alembic ; Flyway retiré (KAN-237), scripts V1 à V44 conservés, `alembic stamp` au niveau V44 après contrôle des sommes de contrôle | Outil de migration du nouveau langage ; schéma inchangé (ADR 0016, § 3) |
 | Migration au démarrage de l'application | Changée → étape de déploiement dédiée | Évite les migrations concurrentes entre instances et un démarrage lent |
 | `@RestControllerAdvice` | Changée → gestionnaires d'exceptions sur l'application | FastAPI ne porte pas de gestionnaire sur le routeur |
 | Springdoc / `@Operation` | Changée → OpenAPI généré par FastAPI, décrit par les modèles et `responses` | Même contrat externe, vérifié par test de parité |
