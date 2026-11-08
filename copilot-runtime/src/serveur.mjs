@@ -1,4 +1,4 @@
-// Runtime CopilotKit de l'assistant RH (docs/ia.md, T16) : l'architecture officielle de CopilotKit entre Angular et le
+// Runtime CopilotKit de l'assistant RH (site/docs/ia, T16) : l'architecture officielle de CopilotKit entre Angular et le
 // service IA Python. Le runtime relaie l'agent AG-UI du service IA et lui applique le middleware A2UI officiel, qui fait
 // offrir l'outil `generate_a2ui` et transforme son flux en surfaces affichées par Angular.
 //

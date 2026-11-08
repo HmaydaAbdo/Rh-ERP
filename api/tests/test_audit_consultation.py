@@ -252,7 +252,7 @@ def test_un_tri_inconnu_est_refuse_et_la_taille_est_plafonnee(plateforme: Platef
         plateforme.client.post("/logs/search", headers=admin, json={}, params={"sort": "perimetre"}).status_code == 400
     )
     page = plateforme.client.post("/logs/search", headers=admin, json={}, params={"size": 5000}).json()
-    assert page["page"]["size"] == 200
+    assert page["page"]["size"] == 2000
 
 
 def test_une_entree_se_lit_avec_son_perimetre_decode(plateforme: Plateforme, admin: dict[str, str]) -> None:

@@ -1,4 +1,4 @@
-// Traces OpenTelemetry du runtime (docs/ia.md, T18) : SDK officiel, exportateur OTLP/HTTP en protobuf (format que Phoenix exige) et instrumentations de `http`
+// Traces OpenTelemetry du runtime (site/docs/ia, T18) : SDK officiel, exportateur OTLP/HTTP en protobuf (format que Phoenix exige) et instrumentations de `http`
 // (requêtes entrantes) et d'`undici` (appels `fetch` vers le service IA, avec en-tête W3C `traceparent`). Chargé avant le
 // reste du serveur (`node --import`). Sans OTEL_EXPORTER_OTLP_ENDPOINT, rien n'est démarré.
 import { NodeSDK } from '@opentelemetry/sdk-node';

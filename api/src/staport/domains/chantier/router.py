@@ -1,36 +1,30 @@
-import os
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
 from staport.domains.common.pagination import Pagination, pagination
 from staport.platform.base_de_donnees import session_requete
 
+from .repository import TRIS_PUBLICS
 from .schemas import (
     ChantierCreationRequete,
     ChantierModificationRequete,
     ChantierRecherche,
     ChantierReponse,
     ChantierStatutRequete,
+    SynchronisationReponse,
 )
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
-PageChantiers = Annotated[
-    Pagination, Depends(pagination("code", frozenset({"code", "designation", "nom", "actif", "version"})))
-]
+PageChantiers = Annotated[Pagination, Depends(pagination("code", TRIS_PUBLICS))]
 chantiers = APIRouter(prefix="/chantiers", tags=["Chantiers"])
 
 
 @chantiers.post("/sync", dependencies=[Depends(exiger("CHANTIER_SYNC"))])
-async def synchroniser(session: Session, contexte: Contexte):
-    base_url = os.environ.get("CHANTIER_SYNC_BASE_URL")
-    if not base_url:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=503, detail="CHANTIER_SYNC_BASE_URL non configurée")
-    return await contexte.chantiers.synchroniser(session, base_url)
+async def synchroniser(requete: Request, session: Session, contexte: Contexte) -> SynchronisationReponse:
+    return await contexte.chantiers.synchroniser(session, requete.app.state.configuration.chantier_sync_base_url)
 
 
 @chantiers.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(exiger("CHANTIER_WRITE"))])
@@ -63,7 +57,7 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> Chanti
 
 
 @chantiers.post("/search", dependencies=[Depends(exiger("CHANTIER_READ"))])
-async def rechercher(corps: ChantierRecherche | None, page: PageChantiers, session: Session, contexte: Contexte):
+async def rechercher(page: PageChantiers, session: Session, contexte: Contexte, corps: ChantierRecherche | None = None):
     return await contexte.chantiers.rechercher(session, corps, page)
 
 

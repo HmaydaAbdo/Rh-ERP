@@ -36,12 +36,32 @@
           <li class="app-controle__carte">
             <strong>Ligne {{ avertissement.numeroLigne }} · {{ avertissement.nomPrenom ?? avertissement.cin }}</strong>
             <span>{{ avertissement.raison }}</span>
+            @if (avertissement.codeAvertissement === 'EQUIPE_VIDE' && avertissement.employeId !== null && avertissement.employeId !== undefined) {
+              <div class="app-controle__saisie">
+                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'CONSERVER'" (change)="store.decider(avertissement.employeId, 'CONSERVER')" /> Conserver l'équipe</label>
+                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'VIDER'" (change)="store.decider(avertissement.employeId, 'VIDER')" /> Vider l'équipe</label>
+              </div>
+            }
           </li>
         }
       </ul>
       @if (store.avertissementSalaireZero()) {
         <label><input type="checkbox" [checked]="store.confirmerSalaireZero()" (change)="confirmerZero($event)" /> Ignorer et conserver 0</label>
       }
+    }
+
+    @if (analyse.controlesPeriode.length > 0) {
+      <h3 class="app-wizard__titre"><stp-icon name="calendar" /> Période à confirmer <span class="app-wizard__nombre">{{ analyse.controlesPeriode.length }}</span></h3>
+      <ul class="app-controle__cartes">
+        @for (controle of analyse.controlesPeriode; track controle.code) {
+          <li class="app-controle__carte">
+            <div class="app-controle__qui">
+              <span>{{ controle.message }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+      <label><input type="checkbox" [checked]="store.periodeConfirmee()" (change)="confirmerPeriode($event)" /> Je confirme la période {{ store.libellePeriode(store.mois()) }}</label>
     }
 
     @if (analyse.chantiersClotures.length > 0) {

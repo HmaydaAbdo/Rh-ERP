@@ -14,8 +14,9 @@ from staport.domains.audit.ecouteur import installer_ecouteurs
 from staport.domains.common.audit_contexte import AuditeurJournal
 from staport.domains.employee import audit as _historique_employee  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.paie import audit as _historique_paie  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from staport.domains.paie.exceptions import ErreurImportPaie
 from staport.domains.paie.import_service import ServiceImportPaie
-from staport.domains.paie.schemas import PaieImportAlignement, PaieImportCorrections
+from staport.domains.paie.schemas import PaieImportAlignement, PaieImportCorrections, PaieImportDeparts
 
 
 def _fichier(fonction: str, chantier: str, equipe: str) -> bytes:
@@ -43,7 +44,7 @@ def test_import_refuse_les_referentiels_absents_et_met_a_jour_les_affectations_e
 async def _verifier_referentiels(url: str) -> None:
     moteur = create_async_engine(url)
     sessions = async_sessionmaker(moteur, expire_on_commit=False)
-    service = ServiceImportPaie(AuditeurJournal())
+    service = ServiceImportPaie(AuditeurJournal(), aujourd_hui=lambda: date(2027, 6, 1))
     try:
         async with sessions() as session, session.begin():
             ancienne_fonction = (
@@ -94,8 +95,10 @@ async def _verifier_referentiels(url: str) -> None:
                 ("chantier", "chantier introuvable"),
                 ("equipe", "équipe introuvable"),
             }
-            with pytest.raises(ValueError, match="L'analyse n'est pas prête"):
-                await service.importer(session, _fichier("ABSENTE", "INCONNU", "XYZ"), 202611, False)
+            with pytest.raises(ErreurImportPaie, match="Le fichier n'est pas prêt"):
+                await service.importer(
+                    session, _fichier("ABSENTE", "INCONNU", "XYZ"), 202611, False, PaieImportDeparts()
+                )
 
             valide = _fichier("Nouvelle", "NOUVEAU", "NEW")
             initiale = await service.analyser(session, valide, 202611)
@@ -107,9 +110,9 @@ async def _verifier_referentiels(url: str) -> None:
                 PaieImportCorrections(aligner=[PaieImportAlignement(employe_id=employe)], creer=[]),
             )
             assert corrigee.pret
-            assert await service.importer(session, valide, 202611, False) == 1
-            with pytest.raises(ValueError, match="L'analyse n'est pas prête"):
-                await service.importer(session, valide, 202611, False)
+            assert (await service.importer(session, valide, 202611, False, PaieImportDeparts())).crees == 1
+            with pytest.raises(ErreurImportPaie, match="Le fichier n'est pas prêt"):
+                await service.importer(session, valide, 202611, False, PaieImportDeparts())
 
         async with sessions() as session:
             etat = (

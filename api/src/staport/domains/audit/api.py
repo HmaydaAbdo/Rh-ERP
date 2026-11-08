@@ -1,5 +1,6 @@
 """Façade publique du domaine `audit` : seul module que les autres domaines importent (ADR 0016 § 1)."""
 
+from staport.domains.audit.consultation import instantanes_suppression
 from staport.domains.audit.integrite import VerificationIntegrite
 from staport.domains.audit.metriques import MetriquesAudit
 from staport.domains.audit.registre import (
@@ -19,5 +20,6 @@ __all__ = [
     "MetriquesAudit",
     "RelationAuditee",
     "VerificationIntegrite",
+    "instantanes_suppression",
     "registre",
 ]

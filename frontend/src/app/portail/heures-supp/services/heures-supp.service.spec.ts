@@ -82,7 +82,7 @@ describe('HeuresSuppService', () => {
     expect(analyse.request.method).toBe('POST');
     expect(analyse.request.params.get('periode')).toBe('2026-10');
     expect(analyse.request.body.get('file')).toBe(file);
-    expect(analyse.request.body.get('forfaits')).toBeInstanceOf(Blob);
+    expect(analyse.request.body.get('forfaits')).toBe(JSON.stringify({ forfaits }));
     analyse.flush({ pret: true });
   });
 
@@ -98,7 +98,7 @@ describe('HeuresSuppService', () => {
     const file = new File(['xlsx'], 'heures.xlsx');
     service.corrigerImport(file, '2026-10', 4, { aligner: [{ employeId: 7 }], creer: [] }).subscribe();
     const corrections = http.expectOne((req) => req.url.endsWith('/import/corrections'));
-    expect(corrections.request.body.get('corrections')).toBeInstanceOf(Blob);
+    expect(typeof corrections.request.body.get('corrections')).toBe('string');
     corrections.flush({ pret: true });
 
     service.importer(file, '2026-10', 4).subscribe();

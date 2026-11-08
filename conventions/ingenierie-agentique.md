@@ -94,7 +94,7 @@ L'outillage fait gagner du temps ou de la sûreté **avant** la CI, qui n'est la
   une commande locale et, pour les plus courts, s'exécuter avant chaque commit. Une erreur trouvée par la CI après un
   push est une erreur que l'outillage local aurait dû trouver.
   L'outil est `pre-commit` (`.pre-commit-config.yaml`, KAN-209) ; la commande est dans
-  [`docs/developpement-local.md`](../docs/developpement-local.md).
+  [`site/docs/exploitation/developpement-local.md`](../site/docs/exploitation/developpement-local.md).
 * **Un outil officiel par tâche** : formateur, linter, vérificateur de types, banc d'évaluation, trace ; chacun est celui
   que recommande l'éditeur du langage ou du framework (règle « Aucun choix arbitraire »).
 * **Mesurer plutôt qu'affirmer.** Tout comportement d'agent se prouve par le banc d'évaluation (résultat, pas chemin) et
@@ -190,8 +190,7 @@ Une épopée ne passe à « Terminé(e) » que si, dans la dernière PR de l'ép
 * la CI publie l'image `erp-rh-docs` (vérifié sur `main`) ;
 * le ticket de l'épopée porte, en commentaire, le lien de la page mise à jour.
 
-Cette exigence s'ajoute à la documentation du domaine (`docs/<domaine>/`) : la documentation du dépôt est la source, le
-site la présente.
+Cette exigence s'ajoute à la documentation du domaine (`site/docs/domaines/<domaine>/`) : le site de documentation du dépôt est la source.
 
 # 7. Contrôle en revue
 

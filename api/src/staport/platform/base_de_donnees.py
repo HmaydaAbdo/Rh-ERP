@@ -35,3 +35,11 @@ async def session_requete(requete: Request) -> AsyncIterator[AsyncSession]:
     """Dépendance FastAPI : une session par requête, issue de la fabrique de l'application (`app.state`)."""
     async for session in fournir_session(requete.app.state.fabrique_sessions):
         yield session
+
+
+def version_suivante(version: int | None) -> int:
+    """Compteur de version comme Hibernate (@Version) : 0 à l'insertion, puis +1 à chaque modification.
+
+    SQLAlchemy démarre à 1 par défaut (`(version or 0) + 1`) ; Spring renvoyait 0 à la création (KAN-226).
+    """
+    return 0 if version is None else version + 1

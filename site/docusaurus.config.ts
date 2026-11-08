@@ -22,13 +22,15 @@ const config: Config = {
     },
   },
 
-  // Site statique servi chez nous (nginx), jamais public : voir docs/exploitation.
+  // Site statique servi chez nous (nginx), jamais public : voir site/docs/exploitation.
   url: 'https://docs.staport.local',
   baseUrl: '/',
 
   onBrokenLinks: 'throw',
 
   markdown: {
+    // Les .md restent du Markdown standard (les < et { du texte repris ne sont pas du JSX) ; seuls les .mdx sont du MDX.
+    format: 'detect',
     mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'throw',

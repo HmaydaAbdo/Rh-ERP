@@ -74,6 +74,13 @@ export interface PaieMaterielTableau {
   libelles: string[];
 }
 
+/** Dernier nombre saisi pour une ligne du parc matériel (GET /paie/materiel/valeurs), avec le mois (AAAA-MM) où il l'a été. */
+export interface PaieMaterielValeur {
+  libelle: string;
+  quantite: number;
+  periode: string;
+}
+
 export interface Paie {
   id: number;
   version: number;
@@ -215,7 +222,7 @@ export interface PaieRestauration {
 
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
 
-/** Les équipes sont désignées par leur CODE (clé stable, voir docs/equipe/README.md) — les valeurs
+/** Les équipes sont désignées par leur CODE (clé stable, voir site/docs/domaines/equipe/index.md) — les valeurs
  * possibles par chantier viennent de PaieService.listerChantiersDeLaPeriode(). */
 export interface PaieExportRequest {
   periode: string;
@@ -239,7 +246,10 @@ export interface PaieImportErreur {
   valeur?: string | null;
   raison: string;
   avertissement?: boolean;
-  codeAvertissement?: 'SALAIRE_ZERO' | 'SALAIRE_DIFFERENT' | null;
+  codeAvertissement?: 'SALAIRE_ZERO' | 'SALAIRE_DIFFERENT' | 'EQUIPE_VIDE' | null;
+  employeId?: number | null;
+  /** Ancien salaire de la fiche, affiché avec l'avertissement `SALAIRE_DIFFERENT`. */
+  salaireActuel?: string | null;
   typeSalairePropose?: TypeSalaire | null;
 }
 
@@ -294,7 +304,15 @@ export interface PaieImportAnalyse {
   ecarts: PaieImportEcart[];
   departs: PaieImportDepart[];
   retours: { employeId: number; cin: string; nomPrenom: string }[];
+  /** Période du mois en cours ou à venir, ou fichier déjà importé sous un autre mois : à confirmer pour importer. */
+  controlesPeriode: PaieImportControlePeriode[];
   pret: boolean;
+}
+
+export interface PaieImportControlePeriode {
+  code: 'PERIODE_COURANTE_OU_FUTURE' | 'CONTENU_DEJA_IMPORTE';
+  message: string;
+  periodeReference: string | null;
 }
 
 /** Corrections des fiches depuis l'assistant (POST /paie/import/corrections). */
@@ -311,7 +329,7 @@ export interface PaieImportResult {
   retours: number;
 }
 
-/** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir docs/report/README.md), pas un export
+/** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir site/docs/domaines/rapport/index.md), pas un export
  * tabulaire (voir PaieExportRequest pour celui-ci). Le périmètre reprend exactement les filtres de
  * la page Paie (PaieSearchCriteria, sans pagination) : periode obligatoire, le reste optionnel.
  *

@@ -190,6 +190,10 @@ class ServiceUtilisateur:
         if employee_id is not None and not await repository.employe_existe(session, employee_id):
             raise ReferenceInvalide(f"Employé introuvable avec l'id : {employee_id}")
 
+    async def charger(self, session: AsyncSession, identifiant: int) -> Utilisateur:
+        """L'utilisateur avec ses rôles et permissions chargés (à lire dans une transaction ouverte par l'appelant)."""
+        return await self._obtenir(session, identifiant)
+
     async def _obtenir(self, session: AsyncSession, identifiant: int) -> Utilisateur:
         utilisateur = await repository.utilisateur_par_id(session, identifiant)
         if utilisateur is None:

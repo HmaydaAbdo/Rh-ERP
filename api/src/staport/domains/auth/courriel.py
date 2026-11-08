@@ -43,9 +43,9 @@ def composer_lien_reinitialisation(
     message["To"] = destinataire
     message["Subject"] = "Staport RH — Réinitialisation de votre mot de passe"
     message.set_content(
-        "Une demande de réinitialisation de mot de passe a été effectuée pour ce compte.\n"
+        "Une demande de réinitialisation de mot de passe a été effectuée pour ce compte.\n\n"
         f"Ce lien est valable {libelle_duree(validite)} et ne peut être utilisé qu'une seule fois :\n"
-        f"{lien}\n"
+        f"{lien}\n\n"
         "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n"
     )
     return message

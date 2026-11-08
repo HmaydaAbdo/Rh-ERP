@@ -751,8 +751,19 @@
     }
   }
 
+  &__memoire {
+    flex-basis: 100%;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+
+    &--modifiee {
+      color: var(--color-warning, var(--color-text));
+    }
+  }
+
   &__ligne {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);

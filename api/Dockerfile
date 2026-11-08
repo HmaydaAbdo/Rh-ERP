@@ -26,8 +26,8 @@ COPY --from=build --chown=root:root /app/api/.venv /app/api/.venv
 # Étape de migration du déploiement : `alembic upgrade head` avec le compte propriétaire (jamais dans le lifespan).
 COPY --chown=root:root api/alembic.ini /app/alembic.ini
 WORKDIR /app
-ENV PATH="/app/api/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/tmp
-# Traces OpenTelemetry (docs/ia.md, T18) : auto-instrumentation FastAPI et spans d'outils MCP.
+ENV PATH="/app/api/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib
+# Traces OpenTelemetry (site/docs/ia, T18) : auto-instrumentation FastAPI et spans d'outils MCP.
 # Les spans SQL utilisent l'instrumentation Psycopg 3 ; l'instrumentation SQLAlchemy 0.66b2 exclut SQLAlchemy 2.1.
 # Coupées tant que Compose ne les active pas. Les sondes de santé ne sont pas tracées.
 ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none \
@@ -36,4 +36,7 @@ USER 10001:10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
-ENTRYPOINT ["opentelemetry-instrument", "uvicorn", "staport.main:application", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+# L'adresse IP du client (audit) vient de `X-Forwarded-For`, posé par nginx et honoré des seuls proxys internes (réseaux
+# privés de Docker et boucle locale), comme `server.forward-headers-strategy: native` de l'ancien backend.
+ENTRYPOINT ["opentelemetry-instrument", "uvicorn", "staport.main:application", "--factory", "--host", "0.0.0.0", "--port", "8080", \
+  "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]

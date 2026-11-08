@@ -43,3 +43,14 @@ def test_crud_fonction_et_recherche_sont_proteges_et_audites(plateforme: Platefo
             ).scalars()
         )
     assert entites == {"staport.rh.function.entities.Function"}
+
+
+def test_la_version_demarre_a_zero_et_s_incremente_comme_hibernate(plateforme: Plateforme, connecter: Any) -> None:
+    """Écart trouvé par le banc différentiel (KAN-226) : SQLAlchemy démarrait à 1, Spring à 0."""
+    entete = _entete(connecter(*ADMIN))
+    creee = plateforme.client.post("/functions", headers=entete, json={"libelle": "Version zéro"}).json()
+    assert creee["version"] == 0
+    modifiee = plateforme.client.put(
+        f"/functions/{creee['id']}", headers=entete, json={"version": 0, "libelle": "Version un"}
+    )
+    assert modifiee.json()["version"] == 1

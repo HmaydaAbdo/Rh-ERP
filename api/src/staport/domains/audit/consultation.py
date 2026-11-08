@@ -14,7 +14,7 @@ from typing import Any, cast
 from sqlalchemy import ColumnElement, Select, Table, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from staport.domains.audit.exceptions import EntiteAuditeeInconnue, EntreeIntrouvable
+from staport.domains.audit.exceptions import EntiteAuditeeInconnue, EntreeIntrouvable, EntreeNonRestaurable
 from staport.domains.audit.models import EntreeJournal, RevisionAudit, audit_revision_entite
 from staport.domains.audit.registre import EntiteAuditee, registre
 from staport.domains.audit.schemas import (
@@ -128,6 +128,39 @@ async def _entree(session: AsyncSession, identifiant: int) -> Mapping[Any, Any]:
 
 async def lire(session: AsyncSession, identifiant: int) -> EntreeJournalReponse:
     return EntreeJournalReponse.model_validate(dict(await _entree(session, identifiant)))
+
+
+async def instantanes_suppression(
+    session: AsyncSession, identifiant: int, action: str, entite: str
+) -> list[dict[str, Any]]:
+    """Instantanés `*_aud` des éléments supprimés par l'entrée `identifiant` (parité `instantanesPaiePourRestauration`).
+
+    L'entrée doit être une suppression réussie de l'action et de l'entité attendues, avec une révision, et la révision
+    doit contenir exactement le nombre d'instantanés consigné : sinon la restauration serait partielle.
+    """
+    ligne = await _entree(session, identifiant)
+    auditee = registre.par_nom(entite)
+    nombre = ligne["nombre_elements"]
+    if (
+        auditee is None
+        or ligne["action"] != action
+        or ligne["categorie"] != CategorieAudit.OPERATION
+        or ligne["resultat"] != ResultatAudit.SUCCES
+        or ligne["type_operation"] != "DELETE"
+        or ligne["entite_type"] != entite
+        or ligne["revision_id"] is None
+        or nombre is None
+        or nombre <= 0
+    ):
+        raise EntreeNonRestaurable(identifiant)
+    aud = auditee.table_aud
+    requete = (
+        select(aud).where(aud.c.rev == ligne["revision_id"], aud.c.revtype == SUPPRESSION).order_by(aud.c.id.asc())
+    )
+    instantanes = [dict(x) for x in (await session.execute(requete)).mappings().all()]
+    if len(instantanes) != nombre:
+        raise EntreeNonRestaurable(identifiant)
+    return instantanes
 
 
 # --- Détail d'une opération ------------------------------------------------------------------------------
@@ -302,7 +335,11 @@ async def _champs(
         lignes = (
             await session.execute(
                 select(liaison.c.revtype, liaison.c[collection.colonne_element]).where(
-                    liaison.c.rev == apres["rev"], liaison.c[collection.colonne_proprietaire] == apres["id"]
+                    # Les liens modifiés dans une révision où l'entité elle-même n'a pas de version (un droit ajouté
+                    # par migration) sont rattachés à la version suivante, comme Spring.
+                    liaison.c.rev > (avant["rev"] if avant is not None else 0),
+                    liaison.c.rev <= apres["rev"],
+                    liaison.c[collection.colonne_proprietaire] == apres["id"],
                 )
             )
         ).all()

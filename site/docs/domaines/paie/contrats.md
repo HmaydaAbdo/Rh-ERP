@@ -1,0 +1,187 @@
+---
+title: "Contrats Paie"
+sidebar_position: 2
+---
+
+Les routes et règles d'utilisation sont dans [le README](index.md). Les contrats d'export PDF et
+Excel sont dans [Rapport](../rapport/index.md). Les types ci-dessous décrivent les corps JSON : les
+identifiants et versions sont des entiers sur 64 bits; les montants et quantités sont des nombres
+décimaux; une période est une chaîne `aaaa-MM`.
+
+## Saisie et réponse d’un bulletin
+
+| Champ | Type JSON et contrainte | Description |
+|---|---|---|
+| `employeeId` | `integer(int64)`, obligatoire en création | Employé existant. Ce champ est absent de la modification. |
+| `periode` | `string`, obligatoire en création, `aaaa-MM` | Mois du bulletin. Absent de la modification; unique avec l'employé. |
+| `version` | `integer(int64)`, obligatoire en modification | Version reçue à la lecture. Une version périmée entraîne `409`. Absent de la création. |
+| `fonctionId` | `integer(int64)`, obligatoire | Fonction existante du bulletin. |
+| `chantierId` | `integer(int64)`, obligatoire | Chantier existant du bulletin. |
+| `equipeId` | `integer(int64)|null` | Équipe existante; `null` signifie sans équipe. La valeur synthétique de filtre `0` n'est pas une référence. |
+| `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
+| `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
+| `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
+| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, arrondi automatiquement à deux décimales | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
+| `primeRoulageOrdinaire` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime ordinaire. |
+| `primeRoulageDimanche` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime dimanche. |
+| `salaireTotal` | `number`, obligatoire, mêmes bornes et même arrondi que le salaire | Total repris tel quel, jamais calculé par le backend. |
+| `observation` | `string|null`, 255 caractères au plus | Note du bulletin; `STC` et `sortie` identifient les lignes correspondantes dans les indicateurs. |
+
+Ces champs forment `PaieCreateRequestDto` et `PaieUpdateRequestDto`. Une validation invalide est
+refusée en `400`; les références inconnues suivent le même refus. Un doublon employé/mois est
+refusé en `409`.
+
+`PaieResponseDto` restitue `id`, `version`, `periode` et les mêmes champs décimaux/observation.
+Les références y sont développées :
+
+| Champ de réponse | Structure | Description |
+|---|---|---|
+| `employee` | `{ id: integer, nomPrenom: string, cin: string }` | Identité de l'employé. |
+| `fonction` | `{ id: integer, libelle: string }` | Fonction du bulletin. |
+| `chantier` | `{ id: integer, code: string, designation: string|null }` | Chantier du bulletin. |
+| `equipe` | `{ id: integer, code: string, libelle: string }|null` | Équipe du bulletin ou absence d'équipe. |
+
+## Recherche, options et suppression
+
+| Contrat | Champs, types et contraintes | Description |
+|---|---|---|
+| `PaieSearchCriteria` | `cin:string|null` ≤ 30; `nomPrenom:string|null` ≤ 150; `periode:string|null`; `fonctionIds`, `chantierIds`, `equipeIds:integer[]|null`, au plus 500 valeurs par liste | Critères combinés. Un filtre vide est ignoré; nom/CIN « contient » sans casse; `equipeIds` peut contenir `0` pour inclure les bulletins sans équipe. |
+| Page de recherche | `content:PaieResponseDto[]`, `page:{size:number,number:number,totalElements:number,totalPages:number}` | Pagination et tri demandés dans l'URL de `/search`. Les numéros de page commencent à zéro. |
+| `PaieOptionsChantierRequest` | `periode:string` obligatoire; `recherche:string|null` ≤ 100 | Recherche paginée des chantiers ayant des bulletins ce mois. |
+| Option chantier | `id:integer`, `code:string`, `nom:string|null`, `designation:string|null`, `actif:boolean` | Référence du filtre; le statut n'enlève pas l'historique des bulletins. |
+| `PaieOptionsEquipeRequest` | `periode:string` obligatoire; `chantierIds:integer[]` non vide, au plus 500 identifiants non nuls; `recherche:string|null` ≤ 100 | Recherche paginée des équipes des marchés et du mois choisis. |
+| Option équipe | `id:integer`, `code:string`, `libelle:string` | Référence du filtre. |
+| `PaieSuppressionGroupeRequestDto` | `criteres:PaieSearchCriteria` obligatoire avec période; `nombreAttendu:integer` obligatoire, positif ou nul | Supprime exactement le groupe confirmé, sinon `409` sans suppression. |
+| `PaieSuppressionDto` | `supprimes:integer` | Nombre effectivement supprimé. |
+| `PaieRestaurationDto` | `restaures:integer` | Nombre recréé depuis l'entrée d'audit; conflits : `409`, aucune écriture. |
+
+## Analytique et effectifs
+
+Les collections de mois et de marchés utilisent les résumés suivants :
+
+| Type | Champs et types | Description |
+|---|---|---|
+| `PaiePeriodeResumeDto` | `periode:string`, `nombreBulletins:integer`, `nombreChantiers:integer`, `masse:number`, `stc:integer`, `stcMontant:number` | Résumé du mois pour les Cartes et l'assistant d'export. |
+| `PaieChantierPeriodeDto` | `id:integer`, `code:string`, `libelle:string|null`, `effectif:integer`, `masse:number`, `stc:integer`, `stcMontant:number`, `moisPrecedent:Comparaison|null`, `sansEquipeMoisPrecedent:Comparaison|null`, `equipes:PaieEquipePeriodeDto[]` | Le total inclut les bulletins sans équipe, même s'ils n'ont pas d'entrée dans `equipes`. |
+| `PaieEquipePeriodeDto` | `id:integer`, `code:string`, `libelle:string`, `effectif:integer`, `masse:number`, `stc:integer`, `stcMontant:number`, `moisPrecedent:Comparaison|null` | Équipe du chantier et du mois retenus. |
+| `Comparaison` (`PaiePeriodeComparaisonDto`) | `periode:string`, `effectif:integer`, `masse:number`, `stc:integer`, `stcMontant:number` | Mois civil précédent sur le même périmètre. |
+| `PaieMaterielTableauDto` | `chantierCode:string`, `equipeCode:string`, `titre:string`, `libelles:string[]` | Tableau du catalogue matériel; aucune quantité métier n'est préremplie. |
+
+`PaieAnalytiqueDto` porte `periode:string`, `kpis:Kpi`, `moisPrecedent:Kpi|null`, `parChantier`,
+`parEquipe`, `parFonction`, `tranches`, `evolution` et `qualite`.
+
+| Type | Champs | Description |
+|---|---|---|
+| `Kpi` | `masse:number`, `effectif:integer`, `coutMoyen:number|null`, `nombreChantiers:integer`, `stc:integer`, `stcMontant:number` | Masse et STC en DH; effectifs en personnes; coût moyen absent sans bulletin. |
+| Répartition chantier/équipe | `id:integer|null`, `code:string|null`, `libelle:string|null`, `masse:number`, `effectif:integer`, `stc:integer`, `stcMontant:number` | Tous les groupes du mois; l'équipe absente possède une référence nulle. |
+| Répartition fonction | `id:integer`, `libelle:string`, `masse:number`, `effectif:integer`, `stc:integer`, `stcMontant:number` | Tous les groupes fonction du mois. |
+| `Tranche` | `min:number`, `max:number|null`, `effectif:integer` | Minimum inclus, maximum exclu; dernière tranche ouverte. |
+| `Evolution` | `periode:string`, `masse:number`, `effectif:integer`, `stc:integer`, `stcMontant:number` | Tous les mois disponibles du périmètre, du plus ancien au plus récent. |
+| `Qualite` | `sansEquipe:integer`, `sansObservation:integer` | Bulletins du mois auxquels manque une information facultative. |
+| `EffectifsCriteria` | `chantierIds`, `fonctionIds`, `equipeIds:integer[]|null` ≤ 500; `nomPrenom:string|null` ≤ 150; `cin:string|null` ≤ 30 | Même périmètre textuel et de rattachements que la recherche Paie. Aucun filtre de mois : tendance historique. |
+| `EffectifMoisDto` | `periode:string`, `effectif:integer`, `effectifMoisPrecedent:integer|null`, `variation:integer|null`, `entrees:integer|null`, `plusPayes:integer|null`, `sorties:integer`, `mutations:integer|null` | Indicateurs mensuels en personnes. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` lorsque le mois calendaire précédent est absent du périmètre. |
+| `PaieRepartitionDto` | `periode:string`, `dimension:CHANTIER\|EQUIPE\|FONCTION`, `nombreGroupes:integer`, `groupes:Groupe[]` | Répartition triée par l'API publique selon masse (défaut, décroissant), effectif, STC, montant STC, libellé ou code ; l'adaptateur MCP applique la limite de transport. |
+
+Sans bulletin sur le mois choisi : KPI à zéro, coût moyen absent et répartitions vides; l'historique
+`evolution` du périmètre reste disponible. Le mois précédent est `null` s'il ne contient aucun
+bulletin sur ce périmètre.
+
+## Export Excel et regroupement d'équipes
+
+L'export Python doit reproduire le classeur Spring à options identiques : feuille globale, feuilles
+par chantier, feuilles par équipe, totaux, mois précédent et tableaux matériel. Le regroupement est
+une option de présentation de l'export, jamais une modification de la base. Une configuration peut
+déclarer un libellé de groupe et plusieurs codes d'équipes sources, par exemple `CH+OP = [CH, OP]`.
+Toutes les lignes des équipes sources sont alors agrégées sous ce seul libellé dans chaque feuille,
+et tous les calculs (effectif, masse, totaux et comparaisons) utilisent le groupe agrégé. Sans option
+de regroupement, le résultat reste strictement celui du Spring.
+La requête accepte aussi `materiel: {libelle: quantité}` pour reproduire les lignes matériel du
+classeur; une quantité absente reste vide et n'est jamais inventée.
+
+**Mémoire du parc matériel (KAN-229).** Chaque nombre explicitement fourni dans `materiel`, à l'export Excel comme au
+rapport PDF, est enregistré dans `paie_materiel` pour le mois de la requête (un nombre déjà enregistré pour ce mois est
+remplacé ; un `0` est un nombre). Une ligne absente ne crée rien et n'efface rien, une ligne inconnue du catalogue est
+ignorée. `GET /paie/materiel/valeurs?periode=AAAA-MM` (droit `PAIE_EXPORT`) renvoie, pour chaque ligne, le nombre du mois le
+plus récent qui ne dépasse pas le mois demandé : `[{libelle, quantite, periode}]`. L'assistant d'export propose ces
+nombres par défaut et indique pour chaque ligne s'il est repris, remplacé (ancien nombre et mois) ou nouveau, y compris
+dans le récapitulatif ; seule une saisie de l'utilisateur remplace un nombre. Le fichier produit ne change pas.
+
+## Assistant d’import
+
+### Règle de synchronisation
+
+La création d'un bulletin et la mise à jour de la fiche Employé sont deux opérations distinctes.
+Pour un employé reconnu par son CIN, la ligne importée alimente le snapshot historique du bulletin
+(fonction, chantier, équipe et valeurs de la période). Si aucun bulletin n'existe pour le couple
+`employé + période`, le bulletin est créé sans écraser un autre bulletin.
+
+Le salaire n'est soumis au wizard que lorsqu'il diffère du salaire courant de la fiche Employé,
+lequel correspond normalement au salaire de la dernière paie. S'il est identique, l'import passe
+automatiquement. S'il diffère, le wizard propose la valeur et déduit le type : `salaire <= 500` →
+`JOURNALIER`, `salaire > 500` → `MENSUEL`; la fiche n'est alignée qu'après confirmation.
+
+Un bulletin déjà présent pour le même employé et la même période n'est jamais écrasé automatiquement.
+Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
+Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
+
+Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenche un avertissement
+bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
+0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
+`salaireMensuel`, `primeRoulageOrdinaire`,
+`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, sont arrondis automatiquement à deux
+décimales (règle commune des montants : 769,230769 devient 769,23, sans erreur) et ont une
+borne maximale de `99 999 999,99` contrôlée après arrondi ; un montant négatif reste refusé. Toute erreur de cellule doit identifier la ligne Excel, le nom
+exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
+salaires et primes n'est pas un contrat suffisant.
+
+Le mois d'import est choisi par l'utilisateur (le frontend propose le mois civil précédent) : le serveur
+n'impose plus « dernier mois + 1 ». Il signale en revanche, dans `controlesPeriode`, une période égale
+ou postérieure au mois civil en cours (`PERIODE_COURANTE_OU_FUTURE`) et un fichier qui reprend au moins
+90 % des bulletins identiques (jours, récupérations, salaire, primes, total, observation) d'un des trois
+derniers autres mois (`CONTENU_DEJA_IMPORTE`, avec le mois de référence). Tant qu'un contrôle n'est pas
+confirmé, l'analyse n'est pas `pret` et `POST /paie/import` refuse avec un `400` sauf si
+`periode_confirmee` vaut `true`. Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le
+serveur relit le fichier à chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
+refusée, même si sa colonne est facultative.
+
+Le contrat HTTP FastAPI du wizard utilise `multipart/form-data` sur les trois étapes : `file` et
+`periode` sont des champs du formulaire (`/import` ajoute `periode_confirmee`, `departs`, `equipes` et
+`ignorer_salaires_zero`, en texte JSON); `/import/corrections` reçoit également `corrections` comme
+texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, dateNaissance,
+dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
+identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
+de correction exige `PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`; l'analyse exige `PAIE_IMPORT` et
+`PAIE_READ`. Les contrôles de contrat et les preuves de parité restent consignés dans KAN-226.
+
+Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois lignes d'en-tête) :
+`Nom & prénom`, `Fonction`, `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`,
+`Total`, `Observation`, `Chantier`, `Équipe`.
+
+| Contrat | Champs et types | Description |
+|---|---|---|
+| `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `controlesPeriode:ControlePeriode[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu, écart et contrôle de période non confirmé. |
+| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|CONTENU_DEJA_IMPORTE`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
+| `Erreur` | `numeroLigne:integer`, `cin:string|null`, `nomPrenom:string|null`, `raison:string` | Numéro réel Excel et correction attendue. |
+| `ChantierCloture` | `chantierId:integer`, `code:string`, `designation:string|null`, `lignes:integer[]` | Marché cité à rouvrir ou à corriger dans le fichier. |
+| `CinInconnu` | `numeroLigne:integer`, `cin:string`, `nomPrenom:string|null`, `fonction:string`, `chantier:string`, `equipe:string|null`, `salaire:number` | Données disponibles pour créer une fiche. |
+| `Ecart` | `employeId:integer`, `numeroLigne:integer`, `cin:string`, `nomPrenom:string`, `champs:Champ[]`, `typeSalaire:MENSUEL|JOURNALIER|null` | Champs à aligner, avec type de salaire existant. |
+| `Champ` | `champ:string`, `base:string|null`, `fichier:string|null` | Nom du champ, valeur en fiche et valeur du fichier. |
+| `Depart` d'analyse | `employeId:integer`, `cin:string`, `nomPrenom:string`, `motif:string|null` | Départ proposé; `STC`/`Sortie` si le fichier l'indique, `null` si le salarié est seulement absent du fichier. |
+| `Retour` | `employeId:integer`, `cin:string`, `nomPrenom:string` | Employé sorti qui réapparaît dans le fichier. |
+| `PaieImportCorrectionsDto` | `aligner:Alignement[]`, `creer:Creation[]`; absents : listes vides | Corrections explicitement sélectionnées. |
+| `Alignement` | `employeId:integer` obligatoire; `typeSalaire:MENSUEL|JOURNALIER|null` | Fiche à aligner; type absent : conserver celui de la fiche s'il existe. |
+| `Creation` | `numeroLigne:integer`, `dateNaissance:string`, `dateEmbauche:string`, `typeSalaire:MENSUEL|JOURNALIER` | Dates ISO et type obligatoires pour une nouvelle fiche. |
+| `PaieImportDepartsDto` | `departs:{employeId:integer,motif:string,sansMotif:boolean}[]`; absente : liste vide | Motif non blanc de 255 caractères au plus, **sauf** pour un départ déduit de l'absence du salarié (`motif` nul dans l'analyse) confirmé explicitement par `sansMotif: true` : le motif enregistré est alors « Absent du fichier ». Un départ `STC` ou `Sortie` exige toujours un motif. Seuls les départs proposés peuvent être confirmés. |
+| `PaieImportResultDto` | `periode:string`, `crees:integer`, `departs:integer`, `retours:integer` | Bilan de la transaction d'import. |
+
+## Parcours de l’employé
+
+`ParcoursEmployeDto` porte `employeId:integer`, `indicateurs`, `mois` et `evenements`.
+
+| Partie | Champs et types | Description |
+|---|---|---|
+| `indicateurs` | `moisPayes:integer`, `totalPercu:number`, `joursTravailles:number`, `premierMois:string|null`, `dernierMois:string|null` | Premier et dernier mois absents si aucun bulletin. |
+| `mois[]` | `bulletinId:integer`, `periode:string`, `fonction:string`, `chantier:string`, `equipe:string|null`, `nombreJoursTravailles:number`, `salaireMensuel:number`, `salaireTotal:number`, `observation:string|null` | Valeurs historiques mensuelles, du plus récent au plus ancien. |
+| `evenements[]` | `periode:string`, `type:string`, `avant:string|null`, `apres:string|null`, `motif:string|null` | Entrée, changements de chantier/fonction/équipe/salaire, départ et retour. |
+
+Un employé inconnu entraîne `404`. Sans bulletin, les agrégats sont à zéro et les listes sont vides.

@@ -2,7 +2,7 @@
 
 Application Angular 22 (composants standalone `OnPush`, signaux, zoneless) avec le kit Staport (Angular Aria/CDK, Lucide, Tailwind 4). La documentation complète
 (structure, routes et permissions, session, composants partagés, tableaux) est dans
-[`docs/frontend/README.md`](../docs/frontend/README.md) ; les règles d'écriture sont dans
+[`site/docs/frontend/index.md`](../site/docs/frontend/index.md) ; les règles d'écriture sont dans
 [`conventions/frontend.md`](../conventions/frontend.md).
 
 ## Commandes

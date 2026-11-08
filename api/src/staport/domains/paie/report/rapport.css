@@ -1,3 +1,7 @@
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Regular.ttf"); font-weight: normal; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Italic.ttf"); font-weight: normal; font-style: italic; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-BoldItalic.ttf"); font-weight: bold; font-style: italic; }
 /* Feuille de style STATIQUE du rapport PDF de paie (voir PaieReportHtmlBuilder) — jamais chargée
    comme un template, jamais interpolée avec une donnée métier : son contenu est injecté tel quel
    (jsoup DataNode) dans le document généré. Aucune valeur ici ne doit jamais dépendre d'une donnée
@@ -23,7 +27,7 @@
    entièrement pré-découpé côté Java (RapportPageModelBuilder) — @page n'a donc qu'à fixer la
    taille du support PDF, sans marge (la marge de 20pt devient le padding interne de .page), et
    aucune règle CSS de pagination avancée (running headers, string-set, compteurs de page) n'est
-   utilisée : voir docs/report/README.md pour la justification de ce choix. */
+   utilisée : voir site/docs/domaines/rapport/index.md pour la justification de ce choix. */
 
 @page {
     size: 842pt 595pt;
@@ -46,6 +50,11 @@ html, body {
 .perimetre-ligne {
     font-size: 10.5pt;
     line-height: 14pt;
+}
+
+.graphique svg {
+    width: 100%;
+    height: auto;
 }
 
 /* ================================ PAGE : structure commune ================================ */

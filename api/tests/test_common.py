@@ -95,11 +95,18 @@ def test_erreur_imprevue_ne_fuite_aucun_detail(client: TestClient) -> None:
 
 
 def test_validation_donne_400_avec_champ_et_message(client: TestClient) -> None:
-    r = client.post("/saisie", json={"nom": "", "age": "x"})
+    r = client.post("/saisie", json={"nom": "", "age": 3})
     assert r.status_code == 400
     corps = r.json()
     assert corps["status"] == 400 and corps["error"] == "Bad Request"
-    assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)., age : Un nombre entier est attendu."
+    assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)."
+
+
+def test_type_json_impossible_a_lire_donne_le_message_du_corps_illisible_comme_spring(client: TestClient) -> None:
+    """Banc différentiel (KAN-226) : Jackson refuse le corps entier, sans détail de champ."""
+    r = client.post("/saisie", json={"nom": "", "age": "x"})
+    assert r.status_code == 400
+    assert r.json()["message"] == "Corps de la requête illisible."
 
 
 def test_corps_illisible_donne_400_message_spring(client: TestClient) -> None:
@@ -150,3 +157,29 @@ def test_les_types_pydantic_frequents_sont_traduits_et_sans_anglais() -> None:
         assert detail["type"] == attendu and attendu in types_traduits()
         assert message_fr(detail) != detail["msg"]
     assert message_fr({"type": "inconnu", "msg": "original"}) == "original"
+
+
+def test_nombre_reste_decimal_en_python_et_devient_un_nombre_json() -> None:
+    """Jackson écrit un `BigDecimal` comme un nombre ; Pydantic écrit un `Decimal` en chaîne sans cette annotation."""
+    from decimal import Decimal
+
+    from staport.domains.common.schemas import ModeleApi, Nombre
+
+    class Montant(ModeleApi):
+        total: Nombre
+
+    montant = Montant(total=Decimal("600.50"))
+
+    assert montant.model_dump()["total"] == Decimal("600.50")
+    assert montant.model_dump(mode="json", by_alias=True) == {"total": 600.5}
+
+
+def test_en_tetes_de_securite_comme_spring_security(client: TestClient) -> None:
+    """Écart trouvé par le banc différentiel (KAN-226) : Spring posait ces en-têtes sur chaque réponse."""
+    reponse = client.get("/refus")
+    assert reponse.headers["X-Content-Type-Options"] == "nosniff"
+    assert reponse.headers["X-Frame-Options"] == "DENY"
+    assert reponse.headers["X-XSS-Protection"] == "0"
+    assert reponse.headers["Cache-Control"] == "no-cache, no-store, max-age=0, must-revalidate"
+    assert reponse.headers["Pragma"] == "no-cache"
+    assert reponse.headers["Expires"] == "0"

@@ -16,6 +16,7 @@ import {
   PaieImportCorrections,
   PaieImportResult,
   PaieMaterielTableau,
+  PaieMaterielValeur,
   PaieParcours,
   PaiePeriodeResume,
   PaieSearchCriteria,
@@ -108,10 +109,14 @@ export class PaieService {
     return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/corrections`, this.formulaireImport(file, periode, { corrections }));
   }
 
-  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif). */
-  importer(file: File, periode: string, departs: { employeId: number; motif: string }[], ignorerSalairesZero: boolean): Observable<PaieImportResult> {
+  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif, ou explicitement sans motif). */
+  importer(
+    file: File, periode: string, departs: { employeId: number; motif: string; sansMotif?: boolean }[], ignorerSalairesZero: boolean,
+    decisionsEquipe: { employeId: number; action: 'CONSERVER' | 'VIDER' }[] = [], periodeConfirmee = false
+  ): Observable<PaieImportResult> {
     return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, this.formulaireImport(file, periode, {
-      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero
+      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero, equipes: { decisions: decisionsEquipe },
+      periode_confirmee: periodeConfirmee
     }));
   }
 
@@ -159,6 +164,11 @@ export class PaieService {
 
   listerTableauxMateriel(): Observable<PaieMaterielTableau[]> {
     return this.http.get<PaieMaterielTableau[]>(`${this.baseUrl}/materiel`);
+  }
+
+  /** Derniers nombres saisis pour chaque ligne du parc, au plus tard pour ce mois. */
+  listerValeursMateriel(periode: string): Observable<PaieMaterielValeur[]> {
+    return this.http.get<PaieMaterielValeur[]>(`${this.baseUrl}/materiel/valeurs`, { params: { periode } });
   }
 
   listerChantiersDeLaPeriode(periode: string): Observable<PaieChantierPeriode[]> {

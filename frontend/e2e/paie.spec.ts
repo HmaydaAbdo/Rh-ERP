@@ -52,6 +52,7 @@ function routes() {
     'POST /paie/options/chantiers': () => pageDe([{ id: 3, code: 'C168', designation: 'Nador', actif: true }]),
     'POST /paie/options/equipes': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
     'GET /paie/materiel': () => [],
+    'GET /paie/materiel/valeurs': () => [],
     'POST /chantiers/search': () => pageDe([]),
     'POST /equipes/search': () => pageDe([]),
     'POST /functions/search': () => pageDe([])
@@ -178,11 +179,12 @@ test.describe('Paie', () => {
 
     await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierIds: [3], sansVueEnsemble: true });
   });
-  test('importe la paie du mois suivant : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
+  test('importe la paie du mois écoulé : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00')); // le mois proposé est le mois civil précédent : septembre
     const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim', typeSalaire: 'MENSUEL',
       champs: [{ champ: 'chantier', base: 'C059', fichier: 'C168' }] };
     const analyse = { periode: '2026-09', totalLignes: 1, erreurs: [], avertissements: [], chantiersClotures: [], cinInconnus: [], ecarts: [ecart],
-      departs: [{ employeId: 7, cin: 'CD5678', nomPrenom: 'BENNANI Omar', motif: null }], retours: [], pret: false };
+      departs: [{ employeId: 7, cin: 'CD5678', nomPrenom: 'BENNANI Omar', motif: null }], retours: [], controlesPeriode: [], pret: false };
     const mock = await mockApi(page, { username: 'paie', permissions: [...DROITS, 'EMPLOYEE_WRITE'] }, {
       ...routes(),
       'POST /paie/import/analyse': () => analyse,
@@ -193,7 +195,7 @@ test.describe('Paie', () => {
 
     await page.getByRole('button', { name: 'Importer', exact: true }).click();
     const dialogue = page.getByRole('dialog', { name: 'Importer la paie' });
-    await expect(dialogue.getByText('septembre 2026')).toBeVisible();
+    await expect(dialogue.getByText('09/2026')).toBeVisible();
     await dialogue.locator('input[type="file"]').setInputFiles({ name: 'paie-09.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
 
     await expect(dialogue.getByText('Fiches différentes du fichier')).toBeVisible();
@@ -211,12 +213,12 @@ test.describe('Paie', () => {
 
     await expect(dialogue.getByText('Paie de septembre 2026 importée')).toBeVisible();
     expect(String(mock.bodies['POST /paie/import/corrections']?.[0])).toContain('{"aligner":[{"employeId":4,"typeSalaire":null}],"creer":[]}');
-    expect(String(mock.bodies['POST /paie/import']?.[0])).toContain('{"departs":[{"employeId":7,"motif":"Démission"}]}');
+    expect(String(mock.bodies['POST /paie/import']?.[0])).toContain('{"departs":[{"employeId":7,"motif":"Démission","sansMotif":false}]}');
   });
 
   test('rouvre un chantier clôturé depuis l’assistant, puis réanalyse le même fichier', async ({ page }) => {
     let rouvert = false;
-    const analyse = () => ({ periode: '2026-09', totalLignes: 2, erreurs: [], avertissements: [], cinInconnus: [], ecarts: [], departs: [], retours: [],
+    const analyse = () => ({ periode: '2026-09', totalLignes: 2, erreurs: [], avertissements: [], cinInconnus: [], ecarts: [], departs: [], retours: [], controlesPeriode: [],
       chantiersClotures: rouvert ? [] : [{ chantierId: 3, code: 'C168', designation: 'Nador', lignes: [4, 5] }], pret: rouvert });
     const mock = await mockApi(page, { username: 'paie', permissions: [...DROITS, 'CHANTIER_READ', 'CHANTIER_WRITE'] }, {
       ...routes(),
