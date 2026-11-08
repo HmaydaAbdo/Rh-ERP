@@ -3,7 +3,7 @@
 Service Python d'ERP-RH, construit uniquement sur les composants officiels (règle « frameworks d'abord ») : agent
 `create_agent` de LangChain sur LangGraph (T10), flux AG-UI par CopilotKit et `ag-ui-langgraph` (T11), outils MCP par
 le MCP intégré à LangChain, modèles par `ChatLiteLLM` et la passerelle [LiteLLM](../litellm/README.md).
-Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
+Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
 
 ## État actuel
 

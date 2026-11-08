@@ -1,4 +1,4 @@
-"""Modèles de chat LangChain servis par la passerelle LiteLLM (docs/ia.md, T10).
+"""Modèles de chat LangChain servis par la passerelle LiteLLM (site/docs/ia, T10).
 
 ``ChatLiteLLM`` (``langchain-litellm``) plutôt que ``ChatOpenAI`` : c'est le seul des deux qui transmet le raisonnement
 renvoyé par la passerelle (``reasoning_content``), que ``ag-ui-langgraph`` diffuse en événements ``REASONING_*``

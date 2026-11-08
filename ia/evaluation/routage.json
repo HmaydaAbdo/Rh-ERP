@@ -1,6 +1,6 @@
 {
  "version": 1,
- "description": "Jeu d'évaluation du routage des compétences (docs/ia.md, T32). Une demande est couverte quand toutes les compétences nécessaires sont épinglées ; sinon le modèle les obtient en lisant leur SKILL.md.",
+ "description": "Jeu d'évaluation du routage des compétences (site/docs/ia, T32). Une demande est couverte quand toutes les compétences nécessaires sont épinglées ; sinon le modèle les obtient en lisant leur SKILL.md.",
  "cas": [
   {
    "question": "combien coûte la masse salariale de septembre",

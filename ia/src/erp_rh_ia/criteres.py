@@ -1,4 +1,4 @@
-"""Critères déterministes de l'évaluation de l'agent (docs/ia.md, § 4 ; épopée KAN-205).
+"""Critères déterministes de l'évaluation de l'agent (site/docs/ia, § 4 ; épopée KAN-205).
 
 Aucun ne contraint le chemin de l'agent : ils jugent le résultat et le comportement observés dans la trace —
 fondement des chiffres, fuites, écritures, noms techniques, efficacité. Fonctions pures, testées sans réseau.

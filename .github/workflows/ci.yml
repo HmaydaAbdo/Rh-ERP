@@ -96,7 +96,7 @@ jobs:
           name: sbom-api
           path: api/bom.json
 
-  # Service IA Python et passerelle LiteLLM (docs/ia.md) : qualité du code et construction des images.
+  # Service IA Python et passerelle LiteLLM (site/docs/ia) : qualité du code et construction des images.
   ia:
     runs-on: ubuntu-latest
     timeout-minutes: 15

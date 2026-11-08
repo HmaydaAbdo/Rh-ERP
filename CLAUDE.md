@@ -45,11 +45,11 @@ durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 Les tâches se suivent dans Jira (projet `KAN`, cloudId `04f02d9f-c364-4998-ba63-8ea66be8ec2d`, épopées E0 à E19) :
 créer toute nouvelle tâche, tenir le statut et la preuve à jour (règle d'`AGENTS.md`). **Jira et le code sont les seules
 sources de suivi : ne créer aucun fichier markdown d'avancement.** Pour tout travail IA : avancer épopée par épopée,
-principes et décisions dans [`docs/ia/decisions.md`](docs/ia/decisions.md). Ne jamais supposer le comportement d'un
+principes et décisions dans [`site/docs/ia/principes-et-decisions.md`](site/docs/ia/principes-et-decisions.md). Ne jamais supposer le comportement d'un
 framework : lire sa documentation officielle en entier avant de l'affirmer (règle d'`AGENTS.md`), en passant d'abord par
 Context7 (`resolve-library-id` puis `query-docs`). Ne rien supprimer
 (fichier, branche, donnée) hors du périmètre de la tâche sans l'accord du propriétaire. Toute nouvelle erreur ou surprise
 coûteuse s'ajoute à [`conventions/lecons.md`](conventions/lecons.md).
 
 Tout nouveau domaine doit aussi être intégré à l'IA ERP-RH selon la règle d'`AGENTS.md` : cas d'usage et données
-documentés dans `docs/ia.md`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.
+documentés dans `site/docs/ia`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.

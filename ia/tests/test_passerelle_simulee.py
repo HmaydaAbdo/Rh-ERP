@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Évaluation hors ligne (docs/ia.md, T12) : le vrai client ``ChatLiteLLM`` et la vraie boucle Deep Agents face à
+"""Évaluation hors ligne (site/docs/ia, T12) : le vrai client ``ChatLiteLLM`` et la vraie boucle Deep Agents face à
 une passerelle simulée par CopilotKit ``aimock`` — aucun réseau, aucun quota, résultat déterministe.
 
 Chaque scénario scripte les appels successifs du modèle (``sequenceIndex``) et vérifie ce que l'agent en fait : réponse

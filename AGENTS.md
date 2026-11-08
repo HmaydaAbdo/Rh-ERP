@@ -77,13 +77,13 @@ Deux règles imposées par le propriétaire, sans exception :
   ou tags du compose, et les étapes de migration. S'il n'y a rien à changer, le dire explicitement (« aucun changement de
   compose ni de `.env` »). Tout nouveau paramètre est ajouté à `.env.example` avec son commentaire dans la même PR.
 - **Tout nouveau domaine est intégré à l'IA ERP-RH.** Dès sa conception, documenter ses cas d'usage IA et ses
-  données autorisées dans `docs/ia.md`, puis exposer par MCP les capacités métier pertinentes à travers les façades
+  données autorisées dans `site/docs/ia`, puis exposer par MCP les capacités métier pertinentes à travers les façades
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
 
 - **Deep Agents est le point d'entrée de tout agent (décision du 2026-11-03).** Tout agent se construit avec `create_deep_agent` et ses paramètres
   documentés (`tools`, `middleware`, `subagents`, `backend`, profils d'harnais) ; `create_agent` de LangChain n'est plus utilisé directement
-  pour un nouvel agent, et le service existant migre (tâche T33 de `docs/ia.md`). Les composants LangChain et LangGraph servent à travers lui.
+  pour un nouvel agent, et le service existant migre (tâche T33 de `site/docs/ia`). Les composants LangChain et LangGraph servent à travers lui.
 - **Catalogue d'outils : sélection juste-à-temps bornée, jamais de chargement global.** Aucun agent (Deep Agents, sous-agent,
   sous-graphe LangGraph) ne reçoit le catalogue MCP entier : 5 à 7 schémas métier hydratés par tour, choisis hors modèle après
   le filtre d'accès, sans tour de modèle supplémentaire pour le routage de base. Mécanisme officiel Deep Agents : outils de compétence
@@ -92,7 +92,7 @@ Deux règles imposées par le propriétaire, sans exception :
   ordre ni étape imposés** : le routage ne fait que rendre des outils visibles, l'agent choisit seul ses appels et leur enchaînement.
   L'espace de fichiers d'un agent est propre à l'identité de l'utilisateur (`backend_par_identite`), l'écriture ne s'ouvre que par l'épopée d'écriture.
   **Toute fonctionnalité et toute capacité de Deep Agents, LangGraph et LangChain s'utilise, strictement** (registre des capacités
-  dans `docs/ia.md`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
+  dans `site/docs/ia`, aucune écartée sans décision écrite du propriétaire ou interdiction de la documentation officielle), par ses primitives documentées (voir
   [`conventions/agents-ia.md`](conventions/agents-ia.md), « Catalogue d'outils à grande échelle ») ; tout changement d'outil,
   de catalogue, de graphe, de prompt ou de modèle déroule son protocole d'évaluation en quatre dimensions (contexte, latence,
   sûreté des schémas, visibilité du plan) avant le code. **L'évaluation juge le résultat, jamais le chemin** : aucun cas ne
@@ -106,7 +106,7 @@ Deux règles imposées par le propriétaire, sans exception :
   en ligne de commande (Spring, Angular, Next.js, FastAPI, LangChain, LangGraph, CopilotKit, AG Grid, Mintlify…), appeler le
   serveur MCP Context7 : `resolve-library-id` pour trouver la bibliothèque, puis `query-docs` pour lire la documentation à
   jour, avant d'écrire ou d'affirmer quoi que ce soit, même pour une bibliothèque connue. Les serveurs de documentation
-  dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `docs/ia/decisions.md`) complètent Context7 ; ils ne
+  dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `site/docs/ia/principes-et-decisions.md`) complètent Context7 ; ils ne
   le remplacent pas pour le reste.
 - **Aucun choix arbitraire : tout style, format, nom, structure ou réglage se justifie par la source officielle (décision du
   2026-11-03).** Style de code, format d'un fichier, forme d'une définition d'outil (nom, titre, description, schémas
@@ -123,7 +123,7 @@ Deux règles imposées par le propriétaire, sans exception :
   l'avancement** (plan, handoff, TODO d'état) : on n'en crée pas. Toute nouvelle tâche ou tout constat durable est créé
   dans Jira ; le statut passe À faire → En cours → Revue en cours → Terminé(e) avec la preuve en commentaire (test, trace,
   capture, lien de PR), jamais sans. L'état technique se lit dans le code, les tests et la CI. Les principes, décisions du
-  propriétaire et sources officielles de l'IA sont dans [`docs/ia/decisions.md`](docs/ia/decisions.md) ; les versions
+  propriétaire et sources officielles de l'IA sont dans [`site/docs/ia/principes-et-decisions.md`](site/docs/ia/principes-et-decisions.md) ; les versions
   verrouillées dans [`scripts/ia/verrous.txt`](scripts/ia/verrous.txt) (vérifiées en CI). Si le connecteur Jira est
   indisponible, le dire au propriétaire et reporter dans Jira dès son retour ; ne pas ouvrir de fichier de suivi.
 - **Une branche, une PR, une ou plusieurs tâches liées.** Une PR peut regrouper plusieurs tâches `KAN-n` d'un même lot
@@ -135,7 +135,7 @@ Deux règles imposées par le propriétaire, sans exception :
   commentaire. Tant qu'il n'est pas achevé, on n'ouvre ni autre branche ni autre PR ; pendant l'attente de la CI, seules
   la lecture et les mesures sans branche sont permises. Un ticket clos reste rouvrable si sa preuve est incomplète.
 - **Travail IA, épopée par épopée.** On avance dans l'ordre des épopées, on relit en entier la documentation officielle
-  concernée à l'entrée de chaque épopée (§ 3 de `docs/ia/decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
+  concernée à l'entrée de chaque épopée (§ 3 de `site/docs/ia/principes-et-decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
   en dehors du périmètre de la tâche en cours sans l'accord du propriétaire. Les versions IA suivent la dernière stable
   (veille : `scripts/ia/veille-versions.mjs`) ; une limite de version causée par une dépendance (par exemple `openai`
   bloqué par LiteLLM) est consignée dans `scripts/ia/verrous.txt`.
@@ -144,7 +144,7 @@ Deux règles imposées par le propriétaire, sans exception :
   règle qui les évite : la lire à l'ouverture d'une tâche, et y ajouter une ligne, dans le commit qui la corrige, pour toute
   nouvelle erreur ou surprise coûteuse.
 - **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
-  `docs/ia.md` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
+  `site/docs/ia` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
   recommandation en commentaire de la tâche Jira du mois (label `veille-ia`), pas dans un fichier. Une version
   compatible est adoptée ; un problème donne un ticket et un signalement chez l'éditeur. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
 

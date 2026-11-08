@@ -42,7 +42,7 @@ export class AppComponent {
   );
   readonly estRouteAuthentification = computed(() => estRouteAuthentification(this.routeCourante()));
   readonly navigationVisible = computed(() => this.isAuthenticated() && !this.estRouteAuthentification());
-  /** Staport Intelligence (docs/ia.md, T8) : réservé au droit IA_UTILISER ; l'application reste utilisable sans lui. */
+  /** Staport Intelligence (site/docs/ia, T8) : réservé au droit IA_UTILISER ; l'application reste utilisable sans lui. */
   readonly assistantVisible = computed(() => this.navigationVisible() && this.authService.hasPermission('IA_UTILISER'));
   readonly estCarte = computed(() => cheminSansRequete(this.routeCourante()) === '/carte');
 

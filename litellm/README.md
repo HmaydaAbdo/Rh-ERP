@@ -1,7 +1,7 @@
 # Passerelle LiteLLM — image `erp-rh-litellm`
 
 Passerelle unique, compatible OpenAI, entre le service IA d'ERP-RH et les fournisseurs de modèles.
-Décisions et état : [docs/ia.md](../docs/ia.md). Ce dossier ne contient **aucun secret** : la
+Décisions et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). Ce dossier ne contient **aucun secret** : la
 configuration ne référence que des variables `os.environ/…`, fournies par le `.env` racine unique.
 
 | Fichier | Rôle |
@@ -16,7 +16,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 
 - Cinq groupes de capacité : `ai-gateway-simple`, `ai-gateway-medium`, `ai-gateway-complex`, `ai-gateway-code`,
   `ai-gateway-ocr`. Le groupe `ai-gateway-tool-selection` a été retiré le 2026-11-03 : le service IA choisit ses outils hors
-  modèle (compétences de Deep Agents épinglées par similarité, `docs/ia.md` T32) et n'appelle plus de modèle pour cela.
+  modèle (compétences de Deep Agents épinglées par similarité, `site/docs/ia` T32) et n'appelle plus de modèle pour cela.
   Le client sélectionne le groupe avec le champ OpenAI `model`.
   Les tags restent des métadonnées d'observation ; `enable_tag_filtering` est désactivé.
 - `simple-shuffle` et `enable_weighted_failover` utilisent les composants officiels LiteLLM pour les groupes ordinaires ;
@@ -51,7 +51,7 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   épinglée sur LiteLLM v1.104.2 ; la reprise officielle d'un flux après émission partielle est une capacité distincte
   à valider avec une version stable et une sonde dédiée avant toute montée de version.
 - Les clés actuelles sont des **paliers gratuits**, qui peuvent utiliser les requêtes pour entraîner
-  leurs modèles ; les données réelles y sont admises par décision du propriétaire (docs/ia.md, § 2).
+  leurs modèles ; les données réelles y sont admises par décision du propriétaire (site/docs/ia, § 2).
 
 Pour une application, suivre les règles de [`conventions/agents-ia.md`](../conventions/agents-ia.md),
 section « Passerelle de modèles ».

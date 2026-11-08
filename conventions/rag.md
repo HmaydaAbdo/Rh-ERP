@@ -4,7 +4,7 @@ Le RAG peut aider à retrouver des sources pertinentes pour une réponse. Il ne 
 de vérité métier : les documents originaux, les services de domaine et les définitions officielles
 des indicateurs restent autoritaires.
 
-Le cadrage ERP-RH est dans [`docs/ia.md`](../docs/ia.md). Un corpus réglementaire (barèmes,
+Le cadrage ERP-RH est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Un corpus réglementaire (barèmes,
 taux, textes) porte la date d'effet de chaque version ; une réponse cite la version applicable à
 la période demandée.
 Le premier corpus, ses propriétaires et ses droits sont à valider avant ingestion. La présence de
