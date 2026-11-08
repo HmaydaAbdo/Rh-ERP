@@ -215,7 +215,7 @@ export interface PaieRestauration {
 
 export type FeuillesEquipeMode = 'AUCUNE' | 'TOUTES' | 'PERSONNALISE';
 
-/** Les équipes sont désignées par leur CODE (clé stable, voir docs/equipe/README.md) — les valeurs
+/** Les équipes sont désignées par leur CODE (clé stable, voir site/docs/domaines/equipe/index.md) — les valeurs
  * possibles par chantier viennent de PaieService.listerChantiersDeLaPeriode(). */
 export interface PaieExportRequest {
   periode: string;
@@ -314,7 +314,7 @@ export interface PaieImportResult {
   retours: number;
 }
 
-/** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir docs/report/README.md), pas un export
+/** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir site/docs/domaines/rapport/index.md), pas un export
  * tabulaire (voir PaieExportRequest pour celui-ci). Le périmètre reprend exactement les filtres de
  * la page Paie (PaieSearchCriteria, sans pagination) : periode obligatoire, le reste optionnel.
  *

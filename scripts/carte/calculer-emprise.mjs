@@ -2,7 +2,7 @@
 // vue du Maroc ») et écrit les deux fichiers que le reste du projet lit :
 //   - frontend/src/app/portail/chantier/carte/maroc.frontiere.json : la frontière (utilisée par les tests) ;
 //   - frontend/src/app/portail/chantier/carte/emprise-maroc.json      : le territoire et l'emprise de la carte.
-// Aucune valeur n'est saisie à la main. Voir docs/chantier/carte.md, « Emprise du Maroc ».
+// Aucune valeur n'est saisie à la main. Voir site/docs/domaines/chantier/carte.md, « Emprise du Maroc ».
 //
 // Usage : node scripts/carte/calculer-emprise.mjs <ne_10m_admin_0_countries_mar.geojson>
 //   Le fichier vient de https://github.com/nvkelso/natural-earth-vector (dossier geojson/).

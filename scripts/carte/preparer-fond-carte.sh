@@ -1,5 +1,5 @@
 #!/bin/sh
-# Prépare le fond auto-hébergé de la carte des chantiers (voir docs/chantier/carte.md) : le monde entier, le Maroc en détail.
+# Prépare le fond auto-hébergé de la carte des chantiers (voir site/docs/domaines/chantier/carte.md) : le monde entier, le Maroc en détail.
 #   - monde.pmtiles : plan du monde (build quotidien Protomaps, données OpenStreetMap, ODbL) jusqu'au zoom ZOOM_MONDE,
 #     complété par le Maroc jusqu'au zoom 15 (rues, bâtiments, commerces) ;
 #   - monde-relief.pmtiles : relief du monde (Mapterhorn, données ouvertes) jusqu'au zoom ZOOM_RELIEF_MONDE, complété par
@@ -9,7 +9,7 @@
 #
 # Usage : [ZOOM_MONDE=13] [ZOOM_RELIEF_MONDE=8] scripts/carte/preparer-fond-carte.sh <dossier-cible> [AAAAMMJJ]
 #   dossier-cible     : carte-fond, à côté de docker-compose.yml (CARTE_FOND_DIR par défaut), en production comme en
-#                       développement (frontend/carte-fond y renvoie, voir docs/chantier/carte.md).
+#                       développement (frontend/carte-fond y renvoie, voir site/docs/domaines/chantier/carte.md).
 #   AAAAMMJJ          : date du build Protomaps (liste sur https://maps.protomaps.com/builds), défaut : hier.
 #   ZOOM_MONDE        : détail du plan hors du Maroc. 10 = 3,8 Go, 11 = 8 Go, 12 = 18 Go, 13 = 36 Go (défaut : toutes les
 #                       rues du monde). Le monde complet au zoom 15 pèserait 139 Go.
