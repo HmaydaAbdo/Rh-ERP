@@ -33,8 +33,8 @@ function fichiers(dossier, motif) {
     return statSync(chemin).isDirectory() ? fichiers(chemin, motif) : motif.test(nom) ? [chemin] : [];
   });
 }
-const outilsMcp = fichiers(join(racine, 'backend/src/main/java'), /\.java$/).reduce(
-  (n, f) => n + (readFileSync(f, 'utf8').match(/^\s*@McpTool\(/gm) ?? []).length,
+const outilsMcp = fichiers(join(racine, 'api/src/staport/domains/mcp'), /\.py$/).reduce(
+  (n, f) => n + (readFileSync(f, 'utf8').match(/^\s*@serveur\.tool\(/gm) ?? []).length,
   0
 );
 const agent = lire('ia/src/erp_rh_ia/agent.py');
@@ -80,13 +80,13 @@ for (const doc of ['docs/ia/decisions.md', 'docs/ia.md', 'ia/README.md', 'AGENTS
   for (const [ligne, texte] of lire(doc).split(/\r?\n/).entries()) {
     if (/^\| \d{4}-\d{2}-\d{2} \|/.test(texte)) continue; // journal daté : état d'un jour donné
     for (const m of texte.matchAll(/\b(\d+) outils(?: de lecture| lecture| MCP)/g)) {
-      if (Number(m[1]) !== outilsMcp) erreurs.push(`${doc}:${ligne + 1} : « ${m[0]} », ${outilsMcp} outils @McpTool dans le backend`);
+      if (Number(m[1]) !== outilsMcp) erreurs.push(`${doc}:${ligne + 1} : « ${m[0]} », ${outilsMcp} outils @serveur.tool dans l'API`);
     }
   }
 }
 
-const attenteTest = lire('backend/src/test/java/staport/rh/mcp/McpOutilsLectureIntegrationTest.java').match(/noms\)\.hasSize\((\d+)\)/)?.[1];
-if (Number(attenteTest) !== outilsMcp) erreurs.push(`McpOutilsLectureIntegrationTest attend ${attenteTest} outils, ${outilsMcp} déclarés`);
+const attenteTest = lire('api/tests/test_mcp.py').match(/assert len\(outils\) == (\d+)/)?.[1];
+if (Number(attenteTest) !== outilsMcp) erreurs.push(`test_mcp.py attend ${attenteTest} outils, ${outilsMcp} déclarés`);
 
 if (erreurs.length) {
   console.error(`Documentation et code divergent (${erreurs.length}) :\n- ${erreurs.join('\n- ')}`);
