@@ -1,10 +1,11 @@
 """Vue analytique de la paie sur les instantanés des bulletins."""
 
 from collections import defaultdict
-from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_DOWN, Decimal
 from typing import cast
 
 from staport.domains.chantier.models import Chantier
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
@@ -30,9 +31,7 @@ def _kpi(lignes: list[Ligne]) -> PaieKpi:
     return PaieKpi(
         masse=mesure.masse,
         effectif=mesure.effectif,
-        cout_moyen=(mesure.masse / mesure.effectif).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if mesure.effectif
-        else None,
+        cout_moyen=arrondir_montant(mesure.masse / mesure.effectif) if mesure.effectif else None,
         nombre_chantiers=mesure.chantiers,
         stc=mesure.stc,
         stc_montant=mesure.montant_stc,

@@ -1,4 +1,4 @@
-"""Règle commune des montants : deux décimales, arrondi automatique (demi supérieur) dans tous les domaines."""
+"""Règle commune des montants : entiers de dirham, arrondi automatique (0,5 descend) dans tous les domaines."""
 
 from datetime import date
 from decimal import Decimal
@@ -29,19 +29,19 @@ def _bulletin(**montants: object) -> PaieCreationRequete:
 
 def test_un_bulletin_saisi_arrondit_salaire_primes_et_total() -> None:
     bulletin = _bulletin(
-        salaireMensuel=769.230769, primeRoulageOrdinaire="12.345", primeRoulageDimanche=0.004, salaireTotal=1000.999
+        salaireMensuel=769.5, primeRoulageOrdinaire="12.51", primeRoulageDimanche=0.004, salaireTotal=1000.999
     )
-    assert bulletin.salaire_mensuel == Decimal("769.23")
-    assert bulletin.prime_roulage_ordinaire == Decimal("12.35")
-    assert bulletin.prime_roulage_dimanche == Decimal("0.00")
-    assert bulletin.salaire_total == Decimal("1001.00")
+    assert bulletin.salaire_mensuel == Decimal("769")
+    assert bulletin.prime_roulage_ordinaire == Decimal("13")
+    assert bulletin.prime_roulage_dimanche == Decimal("0")
+    assert bulletin.salaire_total == Decimal("1001")
 
 
 def test_un_montant_negatif_ou_hors_capacite_reste_refuse() -> None:
     with pytest.raises(ValidationError):
         _bulletin(salaireMensuel=-1)
     with pytest.raises(ValidationError):
-        _bulletin(salaireTotal=100000000)
+        _bulletin(salaireTotal=10000000000)
 
 
 def test_le_salaire_d_une_fiche_employe_est_arrondi() -> None:
@@ -57,7 +57,7 @@ def test_le_salaire_d_une_fiche_employe_est_arrondi() -> None:
             "typeSalaire": "MENSUEL",
         }
     )
-    assert employe.salaire == Decimal("4500.56")
+    assert employe.salaire == Decimal("4501")
 
 
 def test_le_salaire_d_un_employe_cree_depuis_les_heures_supplementaires_est_arrondi() -> None:
@@ -69,4 +69,4 @@ def test_le_salaire_d_un_employe_cree_depuis_les_heures_supplementaires_est_arro
         salaire=Decimal("3000.126"),
         type_salaire=TypeSalaire.MENSUEL,
     )
-    assert creation.salaire == Decimal("3000.13")
+    assert creation.salaire == Decimal("3000")

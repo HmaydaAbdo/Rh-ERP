@@ -9,8 +9,8 @@ from typing import Any
 from doubles import modele, outil
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.contexte import ContexteErp
+from staport_ia.agent import creer_agent
+from staport_ia.contexte import ContexteErp
 
 PERIODES = {"nombreMois": 2, "periodes": [{"periode": "2026-09"}, {"periode": "2026-08"}]}
 

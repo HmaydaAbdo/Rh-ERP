@@ -24,7 +24,7 @@ class HeureSupp(Base):
     fonction_id: Mapped[int] = mapped_column(ForeignKey("fonction.id", name="fk_heures_supp_fonction"), nullable=False)
     chantier_id: Mapped[int] = mapped_column(ForeignKey("chantier.id", name="fk_heures_supp_chantier"), nullable=False)
     periode: Mapped[int] = mapped_column(Integer, nullable=False)
-    salaire_reference: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    salaire_reference: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
     type_salaire_reference: Mapped[str | None] = mapped_column(String(20))
     salaire_horaire: Mapped[Decimal | None] = mapped_column("s_h", Numeric(10, 0))
     heures: Mapped[Decimal | None] = mapped_column("p_h", Numeric(8, 1))

@@ -1,7 +1,7 @@
 """Preuve que l'IA et l'API utilisent la même application FastAPI."""
 
-from erp_rh_ia.config import Settings
 from fastapi.testclient import TestClient
+from staport_ia.config import Settings
 
 from staport.main import creer_app
 

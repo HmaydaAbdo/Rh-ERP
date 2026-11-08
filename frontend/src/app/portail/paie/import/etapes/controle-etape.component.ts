@@ -60,7 +60,7 @@ export class PaieImportEtapeControleComponent {
     if (valeur === null || valeur === '') {
       return '—';
     }
-    return champ === 'salaire' ? Number(valeur).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : valeur;
+    return champ === 'salaire' ? Number(valeur).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) : valeur;
   }
 
   protected salaireChange(champs: { champ: PaieImportChamp }[]): boolean {

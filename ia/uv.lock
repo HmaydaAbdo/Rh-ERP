@@ -614,7 +614,7 @@ wheels = [
 ]
 
 [[package]]
-name = "erp-rh-ia"
+name = "staport-intelligence-ia"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

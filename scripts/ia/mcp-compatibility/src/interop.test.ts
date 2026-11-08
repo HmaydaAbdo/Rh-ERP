@@ -6,13 +6,13 @@ import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 
 // Le serveur MCP est celui de l'API Python (FastMCP, route /mcp), démarré par `api/tests/test_mcp_clients_externes.py`
 // avec une base de test réelle ; le jeton est le jeton agent RS256 émis par `POST /auth/jetons/agent`.
-const endpoint = new URL(process.env.MCP_ERP_RH_URL ?? "http://invalid.invalid/");
-const jeton = process.env.MCP_ERP_RH_JETON ?? "";
-const utilisateur = process.env.MCP_ERP_RH_UTILISATEUR ?? "";
+const endpoint = new URL(process.env.MCP_STAPORT_URL ?? "http://invalid.invalid/");
+const jeton = process.env.MCP_STAPORT_JETON ?? "";
+const utilisateur = process.env.MCP_STAPORT_UTILISATEUR ?? "";
 assert.equal(endpoint.protocol, "http:");
 assert.equal(endpoint.hostname, "127.0.0.1", "Seul le serveur de test loopback est admis");
 assert.equal(endpoint.pathname, "/mcp");
-assert.ok(jeton, "MCP_ERP_RH_JETON absent");
+assert.ok(jeton, "MCP_STAPORT_JETON absent");
 assert.equal(jeton.split(".").length, 3, "Un jeton agent est un JWT compact");
 
 const timeout = { timeout: 10_000, maxTotalTimeout: 10_000 };

@@ -2,7 +2,7 @@
 `BancAssistantTest` du backend Spring retiré).
 
 L'application complète écoute sur un port loopback (base PostgreSQL réelle, données synthétiques) et le service IA
-(`uvicorn --factory erp_rh_ia.app:creer_app`) est lancé relié à elle :
+(`uvicorn --factory staport_ia.app:creer_app`) est lancé relié à elle :
 
 - le test de fumée (toujours joué si `uv` est présent) vérifie le démarrage du service, l'activation de l'IA et le refus
   d'un appel `POST /agui` sans jeton valide ; il n'appelle aucun modèle ;
@@ -149,7 +149,7 @@ def _service_ia(api: str, port: int, journal: Path) -> Generator[subprocess.Pope
         "IA_LITELLM_BASE_URL": os.environ.get("IA_LITELLM_BASE_URL", "http://127.0.0.1:9/v1"),
         "IA_LITELLM_API_KEY": os.environ.get("IA_LITELLM_API_KEY", "sk-test-cle"),
     }
-    commande = [str(UV), "run", "--locked", "uvicorn", "--factory", "erp_rh_ia.app:creer_app"]
+    commande = [str(UV), "run", "--locked", "uvicorn", "--factory", "staport_ia.app:creer_app"]
     commande += ["--host", "127.0.0.1", "--port", str(port)]
     with journal.open("wb") as sortie:
         # Commande fixe (uv) lancée avec des arguments littéraux et des ports locaux : aucune entrée non fiable.
@@ -307,7 +307,7 @@ def test_l_agent_est_evalue_sur_le_jeu_de_reference(
     SORTIE.mkdir(parents=True, exist_ok=True)
     rapport, journal = SORTIE / "evaluation-ia.json", SORTIE / "evaluation-ia.txt"
     rapport.unlink(missing_ok=True)
-    commande = [str(UV), "run", "--locked", "python", "-m", "erp_rh_ia.evaluation", "--rapport", str(rapport)]
+    commande = [str(UV), "run", "--locked", "python", "-m", "staport_ia.evaluation", "--rapport", str(rapport)]
     commande += ["--repetitions", os.environ.get("IA_EVALUATION_REPETITIONS", "1")]
     commande += ["--concurrence", os.environ.get("IA_EVALUATION_CONCURRENCE", "2")]
     if os.environ.get("IA_EVALUATION_CAS"):  # rejoue seulement ces cas (diagnostic)

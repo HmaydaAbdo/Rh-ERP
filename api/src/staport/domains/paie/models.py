@@ -20,10 +20,10 @@ class Paie(Base):
     nombre_jours_travailles: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     jours_recuperation_ouvrable: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     jours_recuperation_dimanche: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    salaire_mensuel: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    prime_roulage_ordinaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
-    prime_roulage_dimanche: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
-    salaire_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    salaire_mensuel: Mapped[Decimal] = mapped_column(Numeric(10, 0), nullable=False)
+    prime_roulage_ordinaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
+    prime_roulage_dimanche: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
+    salaire_total: Mapped[Decimal] = mapped_column(Numeric(10, 0), nullable=False)
     observation: Mapped[str | None] = mapped_column(String(255))
 
 

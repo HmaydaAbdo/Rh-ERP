@@ -24,9 +24,9 @@ from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.hashers.bcrypt import BcryptHasher
 
-EMETTEUR = "erp-rh"
-AUDIENCE_IA = "erp-rh-ia"
-AUDIENCE_MCP = "erp-rh-mcp"
+EMETTEUR = "staport-intelligence"
+AUDIENCE_IA = "staport-intelligence-ia"
+AUDIENCE_MCP = "staport-intelligence-mcp"
 SCOPE_LECTURE = "mcp:lecture"
 PERMISSION_IA = "IA_UTILISER"
 DUREE_JETON_AGENT = timedelta(minutes=5)

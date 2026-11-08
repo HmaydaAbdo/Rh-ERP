@@ -10,7 +10,7 @@
       <dl class="app-facts mb-4" aria-label="Informations conservées de la ligne">
         <div><dt>Employé</dt><dd>{{ actuelle.nomPrenom }}</dd></div><div><dt>CIN</dt><dd>{{ actuelle.cin }}</dd></div>
         <div><dt>Fonction</dt><dd>{{ actuelle.fonction }}</dd></div><div><dt>Chantier</dt><dd>{{ actuelle.codeChantier }} · {{ actuelle.chantier }}</dd></div>
-        <div><dt>Salaire de référence</dt><dd>{{ actuelle.salaireReferenceDh === null ? '—' : (actuelle.salaireReferenceDh | number:'1.2-2') + ' DH' }}</dd></div>
+        <div><dt>Salaire de référence</dt><dd>{{ actuelle.salaireReferenceDh === null ? '—' : (actuelle.salaireReferenceDh | number:'1.0-0') + ' DH' }}</dd></div>
         <div><dt>S/H</dt><dd>{{ actuelle.salaireHoraireDh === null ? '—' : (actuelle.salaireHoraireDh | number:'1.0-0') + ' DH/h' }}</dd></div>
         <div><dt>P/H actuel</dt><dd>{{ actuelle.heuresSupplementaires === null ? '—' : (actuelle.heuresSupplementaires | number:'1.0-1') + ' h' }}</dd></div>
         <div><dt>Montant actuel</dt><dd>{{ actuelle.montantDh | number:'1.0-0' }} DH</dd></div>

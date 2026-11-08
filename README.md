@@ -1,4 +1,4 @@
-# rh-erp
+# Staport Intelligence
 
 Système de gestion du personnel, pointage et paie de **Staport**, une entreprise du BTP (bâtiment
 et travaux publics).
@@ -20,7 +20,7 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 |---|---|
 | Backend | Python 3.14, FastAPI, Pydantic, SQLAlchemy 2 (asynchrone), Alembic, authentification par jetons JWT, serveur MCP FastMCP |
 | Base de données | PostgreSQL 18 + pgvector + pgAudit (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
-| Migrations | [Flyway](https://flywaydb.org/) (V1 à V44, `api/src/staport/migrations/flyway_v44`) et [Alembic](https://alembic.sqlalchemy.org/) pour la suite — voir `conventions/database.md` et [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
+| Migrations | [Alembic](https://alembic.sqlalchemy.org/) (base d'origine = scripts V1 à V44 conservés dans `api/src/staport/migrations/flyway_v44`, rejoués par la révision `0001_base_v44`) — voir `conventions/database.md` et [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
 | Frontend | Angular 22.2.2 (standalone, OnPush, Signals, zoneless), kit Staport sur Angular Aria/CDK, Lucide, Tailwind CSS 4 ; tests Vitest et E2E Playwright |
 | Imports / exports | openpyxl (Excel), WeasyPrint (rapport PDF) |
 | Documentation API | OpenAPI générée par FastAPI (Swagger UI) |
@@ -85,12 +85,12 @@ de production localement sans dépendre d'un registre), construire et tagger les
 avant `docker compose up -d` — `docker compose pull` échouera sinon :
 
 ```bash
-docker build -t $DOCKERHUB_USERNAME/erp-rh-backend:$BACKEND_IMAGE_TAG ./backend
-docker build -t $DOCKERHUB_USERNAME/erp-rh-frontend:$FRONTEND_IMAGE_TAG ./frontend
-docker build -t $DOCKERHUB_USERNAME/erp-rh-postgres:$POSTGRES_IMAGE_TAG ./database
-docker build -t $DOCKERHUB_USERNAME/erp-rh-backup:$BACKUP_IMAGE_TAG ./backup
-docker build -t $DOCKERHUB_USERNAME/erp-rh-litellm:$LITELLM_IMAGE_TAG ./litellm
-docker build -t $DOCKERHUB_USERNAME/erp-rh-ia:$IA_IMAGE_TAG ./ia
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-api:$BACKEND_IMAGE_TAG ./backend
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-frontend:$FRONTEND_IMAGE_TAG ./frontend
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-postgres:$POSTGRES_IMAGE_TAG ./database
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-backup:$BACKUP_IMAGE_TAG ./backup
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-litellm:$LITELLM_IMAGE_TAG ./litellm
+docker build -t $DOCKERHUB_USERNAME/staport-intelligence-ia:$IA_IMAGE_TAG ./ia
 docker compose up -d
 ```
 

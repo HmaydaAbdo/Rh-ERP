@@ -9,11 +9,11 @@ umask 077
 : "${BACKUP_DIR:=/backups}"
 
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-workdir=$(mktemp -d "${TMPDIR:-/tmp}/rh-erp-${timestamp}.XXXXXX")
+workdir=$(mktemp -d "${TMPDIR:-/tmp}/staport-intelligence-${timestamp}.XXXXXX")
 verification_dir=
 plaintext_archive="$workdir/backup.tar.gz"
-temporary_archive="$BACKUP_DIR/.rh-erp-${timestamp}.tar.gz.age"
-final_archive="$BACKUP_DIR/rh-erp-${timestamp}.tar.gz.age"
+temporary_archive="$BACKUP_DIR/.staport-intelligence-${timestamp}.tar.gz.age"
+final_archive="$BACKUP_DIR/staport-intelligence-${timestamp}.tar.gz.age"
 cleanup() {
   rm -rf "$workdir"
   if [ -n "$verification_dir" ]; then
@@ -48,7 +48,8 @@ test -s "$temporary_archive"
 mv "$temporary_archive" "$final_archive"
 
 cutoff=$(date -u -d "$BACKUP_RETENTION_DAYS days ago" +%s)
-for archive in "$BACKUP_DIR"/rh-erp-*.tar.gz.age; do
+# Les archives portant l'ancien préfixe « rh-erp- » restent soumises à la rétention.
+for archive in "$BACKUP_DIR"/staport-intelligence-*.tar.gz.age "$BACKUP_DIR"/rh-erp-*.tar.gz.age; do
   [ -f "$archive" ] || continue
   modified=$(stat -c %Y "$archive")
   if [ "$modified" -lt "$cutoff" ]; then

@@ -172,7 +172,7 @@ le transmet au service IA, qui le présente à la route `/mcp`. Décision et arc
 | Élément | Règle |
 |---|---|
 | Signature | RS256, clé RSA de 3072 bits au moins (`MCP_JWT_PRIVATE_KEY`, `MCP_JWT_KEY_ID`) ; jamais le `JWT_SECRET` |
-| Contenu | `iss`, `sub`, `uid`, `aud` = `erp-rh-ia` et `erp-rh-mcp`, `scope` = `mcp:lecture`, `jti`, dates ; **aucune permission** |
+| Contenu | `iss`, `sub`, `uid`, `aud` = `staport-intelligence-ia` et `staport-intelligence-mcp`, `scope` = `mcp:lecture`, `jti`, dates ; **aucune permission** |
 | Durée | 5 minutes ; Angular en redemande un à chaque question |
 | Cloisonnement | Refusé par toutes les routes REST ; le jeton d'accès REST est refusé par `/mcp` |
 | Contrôle à chaque appel MCP | Compte actif, identifiant cohérent avec `sub`, permissions effectives (refus individuels compris), `IA_UTILISER` et scope |

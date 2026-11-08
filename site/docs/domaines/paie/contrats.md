@@ -21,7 +21,7 @@ décimaux; une période est une chaîne `aaaa-MM`.
 | `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
 | `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
 | `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
-| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, arrondi automatiquement à deux décimales | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
+| `salaireMensuel` | `number`, obligatoire, 0 à 9 999 999 999, arrondi automatiquement à l'entier de dirham | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
 | `primeRoulageOrdinaire` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime ordinaire. |
 | `primeRoulageDimanche` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime dimanche. |
 | `salaireTotal` | `number`, obligatoire, mêmes bornes et même arrondi que le salaire | Total repris tel quel, jamais calculé par le backend. |
@@ -128,9 +128,9 @@ Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenc
 bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
 0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
 `salaireMensuel`, `primeRoulageOrdinaire`,
-`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, sont arrondis automatiquement à deux
-décimales (règle commune des montants : 769,230769 devient 769,23, sans erreur) et ont une
-borne maximale de `99 999 999,99` contrôlée après arrondi ; un montant négatif reste refusé. Toute erreur de cellule doit identifier la ligne Excel, le nom
+`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, sont arrondis automatiquement à l'entier
+de dirham (règle commune des montants : 769,5 devient 769 et 769,51 devient 770, sans erreur) et ont une
+borne maximale de `9 999 999 999` contrôlée après arrondi ; un montant négatif reste refusé. Toute erreur de cellule doit identifier la ligne Excel, le nom
 exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
 salaires et primes n'est pas un contrat suffisant.
 

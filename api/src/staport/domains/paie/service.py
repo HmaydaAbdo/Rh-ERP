@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from staport.domains.audit.api import instantanes_suppression
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
@@ -187,7 +188,7 @@ def _groupes_repartition(resultat: PaieAnalytiqueReponse, dimension: DimensionPa
 
 
 def _cout_moyen(masse: Decimal, effectif: int) -> Decimal | None:
-    return None if effectif == 0 else (masse / effectif).quantize(Decimal("0.01"), ROUND_HALF_UP)
+    return None if effectif == 0 else arrondir_montant(masse / effectif)
 
 
 def _pourcentage(variation: Decimal, reference: Decimal) -> Decimal:

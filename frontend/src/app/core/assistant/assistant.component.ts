@@ -55,7 +55,7 @@ export class AssistantComponent {
 
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.
     connectAgentContext(() => ({
-      description: 'Écran ouvert par l’utilisateur dans ERP-RH : son domaine et ses filtres (JSON).',
+      description: 'Écran ouvert par l’utilisateur dans Staport Intelligence : son domaine et ses filtres (JSON).',
       value: JSON.stringify(contexteEcran(this.url()))
     }));
 

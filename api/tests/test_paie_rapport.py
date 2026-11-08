@@ -176,7 +176,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
 
 def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
     rapport = cast(Any, report)
-    assert rapport._montant(Decimal("1234567.80")) == "1\u00a0234\u00a0567,80"
+    assert rapport._montant(Decimal("1234567.80")) == "1\u00a0234\u00a0568"
     assert rapport._montant(None) == "-"
     assert rapport._quantite(Decimal("23.50")) == "23,5"
     assert rapport._quantite(Decimal("0.00")) == "0"

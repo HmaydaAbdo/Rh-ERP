@@ -16,10 +16,10 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 from langgraph.store.memory import InMemoryStore
 
-from erp_rh_ia import agent as module_agent
-from erp_rh_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
-from erp_rh_ia.competences import OUTILS_MAX_PAR_COMPETENCE, OUTILS_PERMANENTS, charger, competence_de
-from erp_rh_ia.routage import Routeur
+from staport_ia import agent as module_agent
+from staport_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
+from staport_ia.competences import OUTILS_MAX_PAR_COMPETENCE, OUTILS_PERMANENTS, charger, competence_de
+from staport_ia.routage import Routeur
 
 EVALUATION = Path(__file__).resolve().parents[1] / "evaluation"
 #: Seuil décidé le 2026-11-03 (decisions.md, Q25) : part des demandes dont toutes les compétences nécessaires sont

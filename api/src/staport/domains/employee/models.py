@@ -31,7 +31,7 @@ class Employee(Base):
     fonction_id: Mapped[int] = mapped_column(ForeignKey("fonction.id"), nullable=False)
     chantier_id: Mapped[int | None] = mapped_column(ForeignKey("chantier.id"))
     equipe_id: Mapped[int | None] = mapped_column(ForeignKey("equipe.id"))
-    salaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    salaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
     type_salaire: Mapped[TypeSalaire | None] = mapped_column(String(20))
     statut: Mapped[EmployeeStatut] = mapped_column(String(20), nullable=False, default=EmployeeStatut.ACTIF)
 

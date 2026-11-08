@@ -25,9 +25,9 @@ def main(source: str, cible: str) -> None:
     config["model_list"] = [d for d in config.get("model_list", []) if not cle_absente(d)]
     for deploiement in retires:
         identifiant = (deploiement.get("model_info") or {}).get("id", deploiement.get("model_name"))
-        print(f"erp-rh-litellm : {identifiant} désactivé (clé absente)", file=sys.stderr)
+        print(f"staport-intelligence-litellm : {identifiant} désactivé (clé absente)", file=sys.stderr)
     if not config["model_list"]:
-        sys.exit("erp-rh-litellm : aucune clé de fournisseur renseignée")
+        sys.exit("staport-intelligence-litellm : aucune clé de fournisseur renseignée")
     with open(cible, "w", encoding="utf-8") as fichier:
         yaml.safe_dump(config, fichier, allow_unicode=True, sort_keys=False)
 

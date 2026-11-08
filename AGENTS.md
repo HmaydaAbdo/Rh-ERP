@@ -1,6 +1,6 @@
-# rh-erp
+# Staport Intelligence
 
-> rh-erp est le système de gestion du personelle poitange est paie de  **Staport**,
+> Staport Intelligence est le système de gestion du personelle poitange est paie de  **Staport**,
 > une entreprise du BTP (bâtiment et travaux publics).
 >
 > Ce document est la porte d'entrée du projet.
@@ -46,7 +46,7 @@ Deux règles imposées par le propriétaire, sans exception :
 - **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (FastAPI, Angular, **Deep Agents**,
   LangChain, LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
   réécrire ce qu'un framework fournit déjà, même partiellement, ni copier le comportement d'un de ses composants.
-  Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
+  Seuls restent écrits par nous les règles métier de Staport Intelligence, la configuration et le raccordement entre briques, chacun
   branché sur un point d'extension officiel. Si un besoin semble exiger du code maison, présenter d'abord au
   propriétaire l'option framework, ou l'absence d'option, avant d'écrire quoi que ce soit.
 - **Ingénierie agentique et objectif permanent de 0 % de code fait maison (décision du 2026-11-03).** Quatre principes
@@ -76,7 +76,7 @@ Deux règles imposées par le propriétaire, sans exception :
   **ajouter**, **modifier** ou **retirer** dans le `.env` de production, les changements de ports, volumes, réseaux, images
   ou tags du compose, et les étapes de migration. S'il n'y a rien à changer, le dire explicitement (« aucun changement de
   compose ni de `.env` »). Tout nouveau paramètre est ajouté à `.env.example` avec son commentaire dans la même PR.
-- **Tout nouveau domaine est intégré à l'IA ERP-RH.** Dès sa conception, documenter ses cas d'usage IA et ses
+- **Tout nouveau domaine est intégré à l'IA Staport Intelligence.** Dès sa conception, documenter ses cas d'usage IA et ses
   données autorisées dans `site/docs/ia`, puis exposer par MCP les capacités métier pertinentes à travers les façades
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
   pas d'accès direct aux repositories ni de CRUD générique. L'intégration et ses contrôles sont livrés avec le domaine.
@@ -143,7 +143,7 @@ Deux règles imposées par le propriétaire, sans exception :
 - **Apprendre de ses erreurs.** [`conventions/lecons.md`](conventions/lecons.md) liste les erreurs déjà commises et la
   règle qui les évite : la lire à l'ouverture d'une tâche, et y ajouter une ligne, dans le commit qui la corrige, pour toute
   nouvelle erreur ou surprise coûteuse.
-- **Veille mensuelle des modèles IA.** Pour toute tâche IA ERP-RH, Claude et Codex consultent la routine de
+- **Veille mensuelle des modèles IA.** Pour toute tâche IA Staport Intelligence, Claude et Codex consultent la routine de
   `site/docs/ia` § 4.1 ; si la revue mensuelle est échue, ils la réalisent et consignent les candidats, les sources et la
   recommandation en commentaire de la tâche Jira du mois (label `veille-ia`), pas dans un fichier. Une version
   compatible est adoptée ; un problème donne un ticket et un signalement chez l'éditeur. Aucun modèle ni configuration ne change sans confirmation humaine du propriétaire.
@@ -176,7 +176,7 @@ Lire ensuite `conventions/workflow.md` pour la routine commune, puis les convent
 dans l'ordre ci-dessous.
 
 0. Les conventions de référence résident dans `conventions/` à la racine. Elles constituent le
-   blueprint ERP-RH ; lire les documents applicables dans l'ordre ci-dessous.
+   blueprint Staport Intelligence ; lire les documents applicables dans l'ordre ci-dessous.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
@@ -215,7 +215,7 @@ En cas de conflit entre plusieurs conventions :
 - les conventions à la racine constituent la source normative et le blueprint de référence ;
 - la documentation du projet précise le métier et les choix d'implémentation sans affaiblir les
   exigences des conventions ;
-- `architecture.md` ERP-RH fait foi pour les choix d'architecture propres au projet ; toute
+- `architecture.md` Staport Intelligence fait foi pour les choix d'architecture propres au projet ; toute
   contradiction entre les deux niveaux est résolue par un ADR et une mise à jour des documents avant
   le changement concerné.
 

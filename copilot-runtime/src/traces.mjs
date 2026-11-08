@@ -8,7 +8,7 @@ import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 
 if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
   const sdk = new NodeSDK({
-    serviceName: process.env.OTEL_SERVICE_NAME ?? 'erp-rh-copilot-runtime',
+    serviceName: process.env.OTEL_SERVICE_NAME ?? 'staport-intelligence-copilot-runtime',
     // Endpoint, en-têtes (OTEL_EXPORTER_OTLP_HEADERS) et délais viennent des variables standard d'OpenTelemetry.
     traceExporter: new OTLPTraceExporter(),
     instrumentations: [

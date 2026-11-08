@@ -19,7 +19,7 @@ import numpy as np
 from fastembed import TextEmbedding
 from langchain_core.tools import BaseTool
 
-from erp_rh_ia.competences import OUTILS_PERMANENTS, competence_de
+from staport_ia.competences import OUTILS_PERMANENTS, competence_de
 
 MODELE_EMBEDDINGS = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 #: Outils les mieux classés dont on épingle le domaine ; c'est un seuil de classement, pas une limite d'accès.

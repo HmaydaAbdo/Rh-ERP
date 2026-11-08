@@ -26,7 +26,7 @@ from langchain_core.messages import AnyMessage, ToolMessage
 from langgraph.types import Command
 
 #: Identifiant du catalogue de l'ERP (catalogue de base A2UI + composants ERP), le même que côté Angular.
-CATALOGUE_ERP = "erp-rh://a2ui/catalogue-erp"
+CATALOGUE_ERP = "staport-intelligence://a2ui/catalogue-erp"
 SEUIL_LIGNES = 4
 #: Outil d'interface composée de CopilotKit : sa surface est composée par le modèle, jamais présentée deux fois.
 OUTIL_A2UI = "generate_a2ui"

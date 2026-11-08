@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Évaluation de l'agent sur le jeu de référence (site/docs/ia, § 4 et T12) : ``python -m erp_rh_ia.evaluation``.
+"""Évaluation de l'agent sur le jeu de référence (site/docs/ia, § 4 et T12) : ``python -m staport_ia.evaluation``.
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
 le vrai agent (``create_deep_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
@@ -10,8 +10,9 @@ signale le refus) quand le cas l'exige. Le chemin est libre : la trajectoire n'e
 (la documentation LangChain note qu'il existe souvent plusieurs chemins corrects) ; la comparaison ``agentevals`` à
 l'outil de référence est seulement rapportée (``trajectoire_attendue``) pour l'analyse.
 
-Variables : ``EVAL_API_URL`` (racine de l'API ERP-RH), ``EVAL_JETON_COMPLET`` et ``EVAL_JETON_RESTREINT`` (jetons de
-connexion REST, échangés contre un jeton agent à chaque question), ``EVAL_DONNEES`` (JSON des marqueurs),
+Variables : ``EVAL_API_URL`` (racine de l'API Staport Intelligence), ``EVAL_JETON_COMPLET`` et
+``EVAL_JETON_RESTREINT`` (jetons de connexion REST, échangés contre un jeton agent à chaque
+question), ``EVAL_DONNEES`` (JSON des marqueurs),
 ``IA_LITELLM_BASE_URL`` et ``IA_LITELLM_API_KEY``. Le rapport JSON n'écrit ni jeton ni clé. L'évaluation hors ligne,
 sans réseau, est dans ``tests/test_passerelle_simulee.py`` (CopilotKit ``aimock``).
 """
@@ -41,9 +42,9 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.memory import InMemorySaver
 
-from erp_rh_ia.app import fabrique_reelle
-from erp_rh_ia.config import Settings
-from erp_rh_ia.criteres import (
+from staport_ia.app import fabrique_reelle
+from staport_ia.config import Settings
+from staport_ia.criteres import (
     appels_hors_catalogue,
     chiffres_non_fondes,
     efficacite,
@@ -51,11 +52,11 @@ from erp_rh_ia.criteres import (
     noms_techniques,
     sans_accents,
 )
-from erp_rh_ia.juge import Verdict
-from erp_rh_ia.juge import juger as juger_llm
-from erp_rh_ia.modeles import Tache, modele
-from erp_rh_ia.outils import jeton_agent, outils_erp
-from erp_rh_ia.routage import Routeur
+from staport_ia.juge import Verdict
+from staport_ia.juge import juger as juger_llm
+from staport_ia.modeles import Tache, modele
+from staport_ia.outils import jeton_agent, outils_erp
+from staport_ia.routage import Routeur
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
 _MARQUEUR = re.compile(r"\{(\w+)\}")
@@ -584,7 +585,7 @@ async def principal(
 def main() -> None:
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # pyright: ignore[reportUnknownMemberType]
-    parser = argparse.ArgumentParser(description="Évalue l'agent ERP-RH sur le jeu de référence")
+    parser = argparse.ArgumentParser(description="Évalue l'agent Staport Intelligence sur le jeu de référence")
     parser.add_argument("--rapport", type=Path, default=Path("evaluation-ia.json"))
     parser.add_argument("--cas", help="identifiants de cas séparés par des virgules (défaut : tout le jeu)")
     parser.add_argument("--repetitions", type=int, default=1, help="exécutions de chaque cas (stabilité, pass^k)")

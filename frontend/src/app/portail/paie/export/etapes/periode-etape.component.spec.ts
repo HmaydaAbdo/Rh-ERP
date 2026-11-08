@@ -40,7 +40,7 @@ describe('PaieExportEtapePeriodeComponent', () => {
     expect(carte.getAttribute('role')).toBe('status');
     expect(carte.querySelector('strong')?.textContent).toContain('août 2026 contient de la paie');
     expect(Array.from(carte.querySelectorAll('dt')).map((dt) => dt.textContent)).toEqual(['bulletins', 'chantiers', 'masse salariale', 'STC / sorties']);
-    expect(carte.textContent?.replace(/[\s  ]/g, ' ')).toContain('5 500 000,50 DH');
+    expect(carte.textContent?.replace(/[\s  ]/g, ' ')).toContain('5 500 001 DH');
   });
 
   it('choisir un mois dans la grille le retient dans l’assistant', async () => {

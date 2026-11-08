@@ -19,7 +19,7 @@ Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions 
   MCP revalide émetteur, audience, expiration, permissions et périmètre.
 - **Champs rendus.** Les mêmes que les écrans pour un utilisateur donné (CIN, dates et montants compris) ; seules
   les permissions filtrent, quel que soit le fournisseur (cible : modèle local).
-- **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé d'Staport Intelligence autorise
+- **LiteLLM.** Une clé virtuelle par application, jamais la clé master ; la clé de Staport Intelligence autorise
   uniquement les six groupes de production (aucun groupe d'évaluation ni de test), une limite de débit et un budget. Port lié
   à `127.0.0.1` ou au seul réseau Docker interne. Cache de réponses désactivé.
 - **Audit et exploitation.** Acteur humain, service délégué et corrélation

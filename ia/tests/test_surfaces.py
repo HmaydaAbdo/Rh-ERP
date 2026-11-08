@@ -10,8 +10,8 @@ from doubles import appel, modele
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 
-from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.surfaces import CATALOGUE_ERP, operations_pour, resultat_sans_surface
+from staport_ia.agent import creer_agent
+from staport_ia.surfaces import CATALOGUE_ERP, operations_pour, resultat_sans_surface
 
 LIGNES: list[dict[str, Any]] = [
     {"id": i, "code": f"CH{i}", "libelle": f"Chantier {i}", "effectif": 10 * i, "enPoste": 9 * i} for i in range(1, 6)
