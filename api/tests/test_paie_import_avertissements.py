@@ -30,7 +30,7 @@ from staport.domains.paie.schemas import (
     PaieImportErreur,
 )
 
-VIDE = Ligne(scalar_one_or_none=lambda: None, scalars=lambda: iter(()), all=lambda: [])
+VIDE = Ligne(scalar_one_or_none=lambda: None, scalars=lambda: iter(()), all=list)
 
 
 @pytest.mark.asyncio

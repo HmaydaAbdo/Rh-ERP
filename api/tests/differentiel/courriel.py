@@ -1,3 +1,4 @@
+# pyright: basic
 """Courriel de réinitialisation : même message sur Spring et Python, puis parcours complet du jeton reçu.
 
 À lancer après `scenarios_auth` (qui a demandé la réinitialisation de `oubli@example.org` sur les deux backends) :

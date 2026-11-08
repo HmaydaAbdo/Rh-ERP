@@ -1,3 +1,4 @@
+# pyright: basic
 """Sorties de la paie : export Excel multi-feuilles comparé cellule par cellule, avec ses cas d'erreur."""
 
 from typing import Any

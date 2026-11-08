@@ -1,3 +1,4 @@
+# pyright: basic
 """Heures supplémentaires : import par chantier, recherche, analytique et rapport PDF."""
 
 from io import BytesIO

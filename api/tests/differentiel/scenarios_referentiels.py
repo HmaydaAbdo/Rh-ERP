@@ -1,3 +1,4 @@
+# pyright: basic
 """Fonctions, équipes, chantiers, employés : création, validations, conflits, recherche (étape 2)."""
 
 from typing import Any

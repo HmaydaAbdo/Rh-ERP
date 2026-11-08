@@ -1,3 +1,4 @@
+# pyright: basic
 """Comparaison des routes : Spring (springdoc, /v3/api-docs) contre FastAPI (/openapi.json).
 
 Compare l'ensemble (méthode, chemin) puis, pour chaque route commune, les paramètres de requête, le type de corps,

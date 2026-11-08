@@ -1,3 +1,4 @@
+# pyright: basic
 """Rend chaque PDF du dossier `sorties` en PNG côte à côte (Spring à gauche, Python à droite) pour l'œil.
 
 uv run --with pypdfium2 python -m tests.differentiel.rendre_pdf [nom ...]
@@ -6,7 +7,7 @@ uv run --with pypdfium2 python -m tests.differentiel.rendre_pdf [nom ...]
 import sys
 from pathlib import Path
 
-import pypdfium2 as pdfium
+import pypdfium2 as pdfium  # pyright: ignore[reportMissingImports]
 from PIL import Image
 
 DOSSIER = Path(__file__).parent / "sorties"

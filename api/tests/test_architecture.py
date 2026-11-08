@@ -7,6 +7,7 @@ ni le routeur d'un autre ; aucune sortie standard ; chaque routeur est étiquet�
 """
 
 import ast
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -44,7 +45,11 @@ def _role(module: str) -> tuple[str, str] | None:
     return morceaux[2], morceaux[3]
 
 
-def _ecarts(regle) -> list[str]:  # type: ignore[no-untyped-def]
+# (domaine du fichier, nom du fichier, domaine importé, fichier importé) -> écart ?
+Regle = Callable[[str, str, str, str], bool]
+
+
+def _ecarts(regle: Regle) -> list[str]:
     ecarts: list[str] = []
     for chemin in _modules():
         domaine = chemin.relative_to(DOMAINES).parts[0]

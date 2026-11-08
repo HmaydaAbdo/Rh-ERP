@@ -72,7 +72,7 @@ class DefiAuthentification:
                 ] + [(b"www-authenticate", defi)]
             await send(message)
 
-        await self._app(scope, receive, envoyer)
+        await self._app(scope, receive, envoyer)  # pyright: ignore
 
 
 def creer_serveur(

@@ -1,3 +1,4 @@
+# pyright: basic
 """Exécute les scénarios sur les deux backends et imprime le tableau par module.
 
 uv run python -m tests.differentiel.run [module ...]

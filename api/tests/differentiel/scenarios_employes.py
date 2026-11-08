@@ -1,3 +1,4 @@
+# pyright: basic
 """Employés, fonctions, équipes, chantiers : analytique, regroupements, imports Excel, masquage de la paie."""
 
 from datetime import date
@@ -127,7 +128,11 @@ def _imports_employes() -> list[Etape]:
     h = ["Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance"]
 
     def ligne(
-        cin: str, nom: str = "Import", fonction: str = "Maçon", chantier: str = "CH1", naissance: str = "1990-01-01"
+        cin: str,
+        nom: str = "Import",
+        fonction: str = "Maçon",
+        chantier: str = "CH1",
+        naissance: str | date = "1990-01-01",
     ):
         return ["2024-01-15", nom, cin, fonction, chantier, naissance]
 
