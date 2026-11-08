@@ -345,6 +345,7 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/paie/chantiers/search"): {"PAIE_READ"},
     ("GET", "/paie/chantiers"): {"PAIE_READ"},
     ("GET", "/paie/materiel"): {"PAIE_READ"},
+    ("GET", "/paie/materiel/valeurs"): {"PAIE_EXPORT"},
     ("POST", "/paie/analytique"): {"PAIE_READ"},
     ("POST", "/paie/options/chantiers"): {"PAIE_READ"},
     ("POST", "/paie/options/equipes"): {"PAIE_READ"},
@@ -398,7 +399,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 98
+    assert len(declarees) == 99
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

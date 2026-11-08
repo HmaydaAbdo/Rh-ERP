@@ -12,7 +12,7 @@ from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
 from .materiel import tableaux_materiel
-from .periode import PeriodePaie, afficher_periode
+from .periode import PeriodePaie, afficher_periode, lire_periode
 from .repository import TRIS_PUBLICS
 from .schemas import (
     PaieAnalytiqueReponse,
@@ -28,6 +28,7 @@ from .schemas import (
     PaieImportDeparts,
     PaieImportResult,
     PaieMaterielTableau,
+    PaieMaterielValeur,
     PaieModificationRequete,
     PaieOptionsChantierRequete,
     PaieOptionsEquipeRequete,
@@ -111,6 +112,11 @@ async def materiel() -> list[PaieMaterielTableau]:
     return tableaux_materiel()
 
 
+@paies.get("/materiel/valeurs", dependencies=[Depends(exiger("PAIE_EXPORT"))])
+async def valeurs_materiel(periode: PeriodePaie, session: Session, contexte: Contexte) -> list[PaieMaterielValeur]:
+    return await contexte.materiel_paie.valeurs(session, periode)
+
+
 @paies.post("/analytique", dependencies=[Depends(exiger("PAIE_READ"))])
 async def analytique(corps: PaieRecherche, session: Session, contexte: Contexte) -> PaieAnalytiqueReponse:
     return await contexte.paies.analytique(session, corps, contexte.parametres)
@@ -143,6 +149,7 @@ async def parcours(id: int, session: Session, contexte: Contexte) -> PaieParcour
 @paies.post("/export", dependencies=[Depends(exiger("PAIE_EXPORT"))])
 async def exporter(corps: PaieExportRequete, session: Session, contexte: Contexte) -> StreamingResponse:
     contenu = await contexte.export_paie.exporter(session, corps)
+    await contexte.materiel_paie.memoriser(session, corps.periode, dict(corps.materiel or {}))
     return StreamingResponse(
         contenu,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -153,6 +160,7 @@ async def exporter(corps: PaieExportRequete, session: Session, contexte: Context
 @paies.post("/report/pdf", dependencies=[Depends(exiger("PAIE_EXPORT"))])
 async def rapport_pdf(corps: PaieRapportRequete, session: Session, contexte: Contexte) -> Response:
     pdf = (await contexte.rapport_paie.generer(session, corps)).getvalue()
+    await contexte.materiel_paie.memoriser(session, lire_periode(corps.periode), corps.materiel)
     return Response(
         pdf,
         media_type="application/pdf",

@@ -261,6 +261,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré, avec masse et STC (Cartes) | 200 |
 | `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (assistant d'export) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
+| `GET` | `/paie/materiel/valeurs?periode=` | Derniers nombres saisis par ligne du parc, au plus tard pour le mois (mémoire `paie_materiel`, KAN-229) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
 | `POST` | `/paie/report/pdf` (corps `PaieReportPdfRequestDto`) | Rapport PDF de synthèse — mois, nom, CIN, fonction simple et marchés sélectionnés; `sansVueEnsemble` retire le chapitre global, voir [Rapport](../rapport/index.md) | 200, 400, 404 |
 

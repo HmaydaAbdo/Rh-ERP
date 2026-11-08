@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, ForeignKey, Identity, Integer, Numeric, String
+from sqlalchemy import BigInteger, ForeignKey, Identity, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from staport.platform.base_de_donnees import Base, version_suivante
@@ -25,3 +25,21 @@ class Paie(Base):
     prime_roulage_dimanche: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     salaire_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     observation: Mapped[str | None] = mapped_column(String(255))
+
+
+class PaieMateriel(Base):
+    """Dernier nombre saisi pour une ligne du parc matériel, mémorisé par mois de paie (KAN-229).
+
+    Une ligne n'existe que si un nombre a été explicitement fourni pour ce mois : une ligne laissée vide ne crée ni
+    n'efface rien, la valeur d'un mois antérieur reste alors celle qui est proposée.
+    """
+
+    __tablename__ = "paie_materiel"
+    __table_args__ = (UniqueConstraint("periode", "chantier_code", "equipe_code", "libelle"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    periode: Mapped[int] = mapped_column(Integer, nullable=False)
+    chantier_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    equipe_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    libelle: Mapped[str] = mapped_column(String(100), nullable=False)
+    quantite: Mapped[int] = mapped_column(Integer, nullable=False)

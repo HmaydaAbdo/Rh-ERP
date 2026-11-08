@@ -152,6 +152,14 @@ class PaieMaterielTableau(ModeleApi):
     libelles: list[str]
 
 
+class PaieMaterielValeur(ModeleApi):
+    """Dernier nombre saisi pour une ligne du parc matériel, avec le mois où il l'a été."""
+
+    libelle: str
+    quantite: int
+    periode: PeriodePaie
+
+
 class PaieKpi(ModeleApi):
     masse: Nombre
     effectif: int
