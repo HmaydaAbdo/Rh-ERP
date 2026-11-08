@@ -7,7 +7,7 @@ chaque changement transverse et chaque correction de bug. Une modification n'est
 sont écrits ou mis à jour, passent localement et sont exécutés par les contrôles requis de la CI.
 
 Cette convention définit la stratégie commune, quel que soit le langage ou le framework. Les commandes, outils,
-fixtures et écarts constatés propres à ERP-RH sont décrits dans [`site/docs/exploitation/tests.md`](../site/docs/exploitation/tests.md). Les exigences
+fixtures et écarts constatés propres à Staport Intelligence sont décrits dans [`site/docs/exploitation/tests.md`](../site/docs/exploitation/tests.md). Les exigences
 spécifiques aux outils MCP et au RAG sont précisées dans [`mcp.md`](mcp.md) et [`rag.md`](rag.md) ; les contrôles
 d'accès, d'audit et de confidentialité sont définis dans [`security.md`](security.md) et [`audit.md`](audit.md).
 Les interfaces AG-UI/A2UI et les événements de mascotte suivent aussi les contrats de

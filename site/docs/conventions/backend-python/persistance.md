@@ -50,7 +50,9 @@ de l'`UPDATE` et lève `StaleDataError` quand aucune ligne ne correspond. Règle
 
 ## Migrations (Alembic)
 
-Flyway reste figé (V1 à V44) dans la branche de migration comme référence exécutable ; Alembic gère tout schéma nouveau (ADR 0016, § 3).
+Flyway n'est plus exécuté (KAN-237) : ses 44 scripts (V1 à V44) restent figés dans `api/src/staport/migrations/flyway_v44` et sont rejoués par la révision `0001_base_v44` ; Alembic gère tout le schéma (ADR 0016, § 3).
+
+La révision `0003_montants_entiers` (KAN-239) passe tous les montants à `NUMERIC(10,0)` (salaire de l'employé, bulletin de paie, salaire de référence des heures supplémentaires, tables d'audit comprises) : PostgreSQL arrondit les lignes existantes à l'entier le plus proche, les centimes sont perdus et le retour arrière ne les restitue pas ; faire une sauvegarde avant de la jouer en production.
 
 1. Créer une révision par évolution cohérente, avec un message en minuscules ; **une migration déjà appliquée sur un environnement partagé n'est jamais modifiée** :
    toute correction est une nouvelle révision.
@@ -65,7 +67,7 @@ Flyway reste figé (V1 à V44) dans la branche de migration comme référence ex
 Mise en place documentée par Alembic :
 
 * modèle `async` (`alembic init -t async`) pour le script `env.py`, avec `NullPool` pour la commande de migration ;
-* base existante : `alembic stamp` écrit la révision de base sans exécuter de migration (schéma V44), les bases neuves sont construites à partir d'elle ;
+* base existante issue de Flyway : le garde de déploiement (`staport.migrations.deploiement`) vérifie que `flyway_schema_history` contient exactement V1 à V44, réussis, avec les sommes de contrôle des scripts fournis (algorithme de Flyway, `historique_flyway.py`), puis `alembic stamp` écrit la révision de base sans exécuter de migration ; les bases neuves sont construites à partir d'elle ;
 * **exécution** : étape de déploiement dédiée avant le démarrage de l'application, jamais dans son `lifespan` ; la table `flyway_schema_history` est conservée en lecture seule.
 
 Noms de contraintes : le `MetaData` de base déclare une `naming_convention` (clés `ix`, `uq`, `ck`, `fk`, `pk`), appliquée à tout objet sans nom explicite et visible dans les

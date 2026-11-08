@@ -3,8 +3,8 @@ import { v4 as uuid } from 'uuid';
 
 import { AuthService } from '../auth/services/auth.service';
 
-const CLE = 'erp-rh.assistant.fil';
-const CLE_UTILISE = 'erp-rh.assistant.fil-utilise';
+const CLE = 'staport.assistant.fil';
+const CLE_UTILISE = 'staport.assistant.fil-utilise';
 
 /**
  * Le fil de discussion de l'assistant pour l'utilisateur connecté : repris après un rechargement de la page (le runtime

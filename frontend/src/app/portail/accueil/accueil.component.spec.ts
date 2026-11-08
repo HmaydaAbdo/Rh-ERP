@@ -53,7 +53,7 @@ describe('AccueilComponent', () => {
     const { racine, paieService } = monter();
 
     const tuiles = Array.from(racine.querySelectorAll('.app-kpi')).map((t) => Array.from(t.children).map((e) => e.textContent?.trim()).join(' | '));
-    expect(tuiles[0]).toMatch(/^Masse salariale \| 4\s500,00 DH \| \+500,00 DH \(\+12,5 %\) sur le mois précédent$/);
+    expect(tuiles[0]).toMatch(/^Masse salariale \| 4\s500 DH \| \+500 DH \(\+12,5 %\) sur le mois précédent$/);
     expect(tuiles[1]).toMatch(/^Bulletins de paie \| 3 bulletins \| \+1 bulletin \(\+50,0 %\) sur le mois précédent$/);
     expect(tuiles[2]).toMatch(/^Employés en poste \| 3 \| 75 % de l’effectif$/);
     expect(paieService.analyser).toHaveBeenCalledWith({ periode: '2026-08' });

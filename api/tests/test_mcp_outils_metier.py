@@ -410,7 +410,7 @@ def test_le_parcours_deduit_les_evenements_des_bulletins_et_des_departs(
         (S2, "CHANGEMENT_CHANTIER"),
         (S1, "ENTREE"),
     ]
-    assert (b["evenements"][0]["avant"], b["evenements"][0]["apres"]) == ("2000.00", "2200.00")
+    assert (b["evenements"][0]["avant"], b["evenements"][0]["apres"]) == ("2000", "2200")
     assert (b["evenements"][1]["avant"], b["evenements"][1]["apres"]) == (donnees.codes[0], donnees.codes[1])
     assert b["evenements"][2]["apres"] == f"{donnees.codes[0]} · {donnees.libelles[0]}"
     assert b["vue"]["vue"] == "fiche"

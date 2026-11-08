@@ -1,4 +1,4 @@
-# ERP-RH — entrée pour Claude
+# Staport Intelligence — entrée pour Claude
 
 Avant toute intervention, lire et appliquer [AGENTS.md](AGENTS.md), la porte d'entrée commune à
 Claude et Codex. Ce fichier centralise les principes, l'ordre de lecture et les règles d'accord du
@@ -51,5 +51,5 @@ Context7 (`resolve-library-id` puis `query-docs`). Ne rien supprimer
 (fichier, branche, donnée) hors du périmètre de la tâche sans l'accord du propriétaire. Toute nouvelle erreur ou surprise
 coûteuse s'ajoute à [`conventions/lecons.md`](conventions/lecons.md).
 
-Tout nouveau domaine doit aussi être intégré à l'IA ERP-RH selon la règle d'`AGENTS.md` : cas d'usage et données
+Tout nouveau domaine doit aussi être intégré à l'IA Staport Intelligence selon la règle d'`AGENTS.md` : cas d'usage et données
 documentés dans `site/docs/ia`, capacités métier pertinentes exposées par MCP et protégées par les permissions du domaine.

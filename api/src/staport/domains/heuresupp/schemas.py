@@ -12,7 +12,7 @@ from staport.domains.employee.models import TypeSalaire
 from staport.domains.paie.periode import PeriodePaie
 
 Heures = Annotated[Decimal, Field(ge=0, max_digits=8, decimal_places=1)]
-Forfait = Annotated[Decimal, Field(ge=0, max_digits=14, decimal_places=0)]
+Forfait = Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=14, decimal_places=0)]
 
 
 class HeuresSuppCreationRequete(ModeleApi):
@@ -186,7 +186,7 @@ class ImportCreation(ModeleApi):
     date_naissance: Annotated[date, AfterValidator(_dans_le_passe)]
     date_embauche: date
     fonction_id: int
-    salaire: Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=10, decimal_places=2)]
+    salaire: Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=10, decimal_places=0)]
     type_salaire: TypeSalaire
 
 

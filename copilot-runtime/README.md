@@ -1,4 +1,4 @@
-# Runtime CopilotKit (`erp-rh-copilot-runtime`)
+# Runtime CopilotKit (`staport-intelligence-copilot-runtime`)
 
 Le runtime CopilotKit officiel (`@copilotkit/runtime`), placé entre Angular et le service IA Python (site/docs/ia, T16).
 Il ne contient aucune logique métier à nous :

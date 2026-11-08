@@ -3,7 +3,7 @@ title: "Frontend"
 sidebar_position: 1
 ---
 
-> Application Angular de rh-erp : structure, routes, protection par permission, composants partagés et
+> Application Angular de Staport Intelligence : structure, routes, protection par permission, composants partagés et
 > comportement des tableaux. Les règles d'écriture (composants standalone, `inject()`, formulaires
 > réactifs, tableaux, sélecteurs…) sont dans `conventions/frontend.md` ; ce document décrit leur
 > application dans ce projet.

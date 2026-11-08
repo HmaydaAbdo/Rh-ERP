@@ -189,7 +189,7 @@ def test_restauration_recree_le_groupe_depuis_l_audit(
             .mappings()
             .one()
         )
-    assert [(x[0], x[1], str(x[2])) for x in lignes] == [(e, PERIODE, "100.00") for e in sorted(jeu.employes)]
+    assert [(x[0], x[1], str(x[2])) for x in lignes] == [(e, PERIODE, "100") for e in sorted(jeu.employes)]
     assert set(jeu.bulletins).isdisjoint({x[3] for x in lignes}), "les bulletins reçoivent de nouveaux identifiants"
     assert journal["nombre_elements"] == 3
     assert journal["type_operation"] == "CREATE"

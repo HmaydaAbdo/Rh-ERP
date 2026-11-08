@@ -26,7 +26,7 @@ import { PaieAnalytique, PaieEffectifMois, PaieSearchCriteria } from '../../paie
 import { couleurEvolution, libelleEvolutionMesure, MesureEvolution } from '../../paie/analytique/paie-chart-theme';
 import { TableColumn } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
-import { formaterMontant, formaterMontantEntier, formaterVariation, libellePeriode } from '../../paie/paie-format';
+import { formaterMontant, formaterVariation, libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../../heures-supp/services/heures-supp.service';
 import { HeuresSuppAnalytique } from '../../heures-supp/models/heures-supp.model';
@@ -184,7 +184,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleTranche = libelleTranche;
   protected readonly libelleTrancheTotal = libelleTrancheTotal;
   protected readonly formaterMontant = formaterMontant;
-  protected readonly formaterMontantEntier = formaterMontantEntier;
+  
   protected readonly hauteurPourLignes = hauteurPourLignes;
 
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && (this.module().sourcesAnalytique?.includes('PAIE') ?? true));

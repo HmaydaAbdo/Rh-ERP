@@ -9,8 +9,8 @@ import httpx
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage
 
-from erp_rh_ia.agent import SYSTEME, creer_agent
-from erp_rh_ia.surfaces import OUTIL_A2UI
+from staport_ia.agent import SYSTEME, creer_agent
+from staport_ia.surfaces import OUTIL_A2UI
 
 
 async def _repondre(

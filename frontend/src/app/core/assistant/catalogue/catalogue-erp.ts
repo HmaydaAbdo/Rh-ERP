@@ -9,7 +9,7 @@ import { SurfaceA2uiErpComponent } from './surface-a2ui-erp.component';
 
 /**
  * Catalogue que l'application déclare à CopilotKit (`a2ui.catalog`) : il annonce à l'agent les composants de l'ERP (mêmes noms
- * et mêmes propriétés que `ia/src/erp_rh_ia/catalogue_a2ui_erp.json`) et fait monter `SurfaceA2uiErpComponent`, qui rend les
+ * et mêmes propriétés que `ia/src/staport_ia/catalogue_a2ui_erp.json`) et fait monter `SurfaceA2uiErpComponent`, qui rend les
  * surfaces avec `@a2ui/angular`. Les classes passées à `createAngularCatalog` ne servent qu'à la déclaration : le rendu des
  * composants appartient à `creerCatalogueRendu`.
  */

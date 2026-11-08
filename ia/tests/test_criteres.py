@@ -8,7 +8,7 @@ from doubles import outil
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
-from erp_rh_ia.criteres import (
+from staport_ia.criteres import (
     appels_hors_catalogue,
     chiffres_non_fondes,
     efficacite,
@@ -16,8 +16,8 @@ from erp_rh_ia.criteres import (
     nombres_fondes,
     noms_techniques,
 )
-from erp_rh_ia.evaluation import Reponse, evaluer_criteres, extraire_nombres
-from erp_rh_ia.juge import Verdict
+from staport_ia.evaluation import Reponse, evaluer_criteres, extraire_nombres
+from staport_ia.juge import Verdict
 
 RESULTAT = json.dumps({"indicateurs": {"masse": 3000, "effectif": 2}, "employes": [{"nom": "A"}, {"nom": "B"}]})
 

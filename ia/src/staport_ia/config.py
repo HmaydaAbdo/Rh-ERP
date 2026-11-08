@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     enabled: bool
     # Racine de l'API compatible OpenAI de la passerelle, par exemple http://litellm:4000/v1.
     litellm_base_url: AnyHttpUrl
-    # Clé virtuelle LiteLLM propre à ERP-RH (jamais la clé master).
+    # Clé virtuelle LiteLLM propre à Staport Intelligence (jamais la clé master).
     litellm_api_key: SecretStr = Field(min_length=8)
     # Alias unique exposé par la passerelle ; la tâche est choisie par tag, pas par nom de modèle.
     litellm_model: str = Field(default="ai-gateway", min_length=1)

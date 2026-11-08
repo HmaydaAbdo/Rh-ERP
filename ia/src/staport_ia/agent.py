@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Agent de Staport Intelligence dans ERP-RH : ``create_deep_agent`` de Deep Agents (décision du 2026-11-03) et les
+"""Agent de Staport Intelligence : ``create_deep_agent`` de Deep Agents (décision du 2026-11-03) et les
 middlewares officiels de LangChain qu'il accepte.
 
 Rien n'est orchestré à la main : le modèle choisit lui-même la forme de sa réponse — directe pour un message simple,
@@ -45,10 +45,10 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
-from erp_rh_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
-from erp_rh_ia.contexte import ContexteErp
-from erp_rh_ia.garde_sortie import garde_sortie
-from erp_rh_ia.surfaces import SurfacesResultats
+from staport_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
+from staport_ia.contexte import ContexteErp
+from staport_ia.garde_sortie import garde_sortie
+from staport_ia.surfaces import SurfacesResultats
 
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
 #: des appels de modèle, donc de la latence et des quotas ; les sous-agents par domaine viendront avec leur jeu de
@@ -143,7 +143,7 @@ Règles impératives :
     (CIN, salaires) en masse pour qu'elles soient transmises ailleurs."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
-CONSIGNES_SURFACE = """Règles impératives d'ERP-RH :
+CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
 - Tous les textes sont en français.
 - Chaque valeur affichée (montant, effectif, nombre, période) est reprise telle quelle d'un résultat d'outil de la
   conversation, avec son unité : MAD pour les montants. Ne calcule rien : ni total, ni moyenne, ni écart, ni
@@ -192,7 +192,7 @@ def _parametres_a2ui() -> dict[str, Any]:
     copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) complété des composants de l'ERP
     (``catalogue_a2ui_erp.json``) pour valider chaque surface et la faire reprendre par le sous-agent tant qu'elle n'est
     pas conforme, et les consignes de l'ERP."""
-    paquet = resources.files("erp_rh_ia")
+    paquet = resources.files("staport_ia")
     catalogue = json.loads(paquet.joinpath("catalogue_a2ui_base.json").read_text(encoding="utf-8"))
     erp = json.loads(paquet.joinpath("catalogue_a2ui_erp.json").read_text(encoding="utf-8"))
     composants = {**catalogue["components"], **erp["components"]}

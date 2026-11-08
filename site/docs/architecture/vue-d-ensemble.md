@@ -1,5 +1,5 @@
 ---
-title: "Architecture de rh-erp"
+title: "Architecture de Staport Intelligence"
 sidebar_position: 2
 ---
 
@@ -112,8 +112,8 @@ Les composants transverses qui produisent des événements d'audit dépendent du
 3. **Authentification** : l'API valide la signature RS256, l'émetteur, le destinataire et l'expiration du jeton, puis
    relit le compte et ses permissions.
 4. **`exiger("X")`** sur la route : refuse en `403` sans la permission.
-5. **Validation** des modèles Pydantic : `400` avec la liste `champ : message` ; les montants sont arrondis à deux
-   décimales par le type partagé `Montant` avant d'être contrôlés.
+5. **Validation** des modèles Pydantic : `400` avec la liste `champ : message` ; les montants sont arrondis à l'entier
+   de dirham par le type partagé `Montant` avant d'être contrôlés.
 6. **Service** : règles métier, vérification des doublons (`409`) et des références (`400`), transaction.
 7. **Réponse** : modèle de réponse (jamais une entité). Toute erreur a la forme
    `timestamp`, `status`, `error`, `message`, `path` (`staport/platform/erreurs.py`), affichée par l'intercepteur d'erreurs du
@@ -149,7 +149,7 @@ Les composants transverses qui produisent des événements d'audit dépendent du
 
 | Élément | Accès |
 |---|---|
-| Documentation OpenAPI | `/openapi.json` et `/docs` (Swagger UI), **éteints par défaut** (donc en production : ces routes n'existent pas, `404`) ; allumés en développement par `SPRINGDOC_API_DOCS_ENABLED` (spécification) et `SPRINGDOC_SWAGGER_UI_ENABLED` (interface, qui exige la spécification) — noms hérités de l'ancien backend |
+| Documentation OpenAPI | `/openapi.json` et `/docs` (Swagger UI), **éteints par défaut** (donc en production : ces routes n'existent pas, `404`) ; allumés en développement par `API_DOCS_ENABLED` (spécification) et `SWAGGER_UI_ENABLED` (interface, qui exige la spécification) |
 | Santé | `/health` (public — utilisé par les healthchecks Docker) : l'application répond et la base répond |
 | Mesures Prometheus | `GET /metrics` : audit (`rh_audit_*` : écritures en échec, événements de sécurité, intégrité, chaîne) et synchronisation des chantiers (`rh_chantier_sync_*`). Public comme la santé (aucune donnée sensible) mais **joignable depuis le serveur seulement** : nginx inner ne relaie pas ce chemin, le port de l'API est lié à `127.0.0.1`. Raccordement opérationnel suivi dans Jira (KAN-163) |
 | Logs | Module `logging` de Python ; jamais de secret, identifiant de connexion, identité d'employé ni contenu métier/financier (voir `conventions/logging.md`). Format : texte en développement ; **JSON en production** (`LOGGING_FORMAT=json`, une ligne par événement, seule clé de contexte : `requestId`) ; en plus de la console, `LOGGING_FILE_PATH` écrit `application.json`, archivé chaque jour à minuit UTC, compressé et gardé 30 jours dans `./logs/archive`. L'acteur reste traçable dans l'audit à accès contrôlé |

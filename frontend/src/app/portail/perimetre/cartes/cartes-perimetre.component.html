@@ -57,10 +57,10 @@
           <p class="app-muted" role="status">
             {{ libelleGroupesResume(groupes() ?? []) }}
             @if (module().sansEffectifFichesDansCartes) {
-              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
             } @else {
               @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.0-0' }} DH }
             }
             @if (voitPaie() && !periode() && niveau() !== 'PERIODE' && !erreurPeriodes() && !chargementPeriodes()) { · aucun mois de paie disponible }
           </p>
@@ -98,10 +98,10 @@
               <p class="app-muted" role="status">
                 {{ libelleGroupesResume(liste) }}
                 @if (module().sansEffectifFichesDansCartes) {
-                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.2-2' }} DH · {{ libellePeriode(periode()!) }} }
+                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
                 } @else {
                   @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
-                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.2-2' }} DH }
+                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.0-0' }} DH }
                 }
                 @if (voitPaie() && !periode() && niveau() !== 'PERIODE' && !erreurPeriodes() && !chargementPeriodes()) { · aucun mois de paie disponible }
               </p>
@@ -154,7 +154,7 @@
                           <div class="app-entity__indicator">
                             <dt>Masse salariale (DH)</dt>
                             <dd>
-                              <strong>{{ (groupe.paie?.masse ?? 0) | number: '1.2-2' }} DH</strong>
+                              <strong>{{ (groupe.paie?.masse ?? 0) | number: '1.0-0' }} DH</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'masse', mois) }}</small>
                             </dd>
                           </div>
@@ -168,7 +168,7 @@
                           <div class="app-entity__indicator">
                             <dt>STC (DH)</dt>
                             <dd>
-                              <strong>{{ (groupe.paie?.stcMontant ?? 0) | number: '1.2-2' }} DH</strong>
+                              <strong>{{ (groupe.paie?.stcMontant ?? 0) | number: '1.0-0' }} DH</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'stcMontant', mois) }}</small>
                             </dd>
                           </div>

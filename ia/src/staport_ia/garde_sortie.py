@@ -13,7 +13,7 @@ from langchain.agents.middleware import AgentMiddleware, AgentState, after_agent
 from langchain_core.messages import AIMessage
 from langgraph.runtime import Runtime
 
-from erp_rh_ia.criteres import OUTILS_HARNAIS, fuite_systeme, noms_techniques, sans_accents
+from staport_ia.criteres import OUTILS_HARNAIS, fuite_systeme, noms_techniques, sans_accents
 
 REPONSE_REMPLACEMENT = "Je ne peux pas répondre ainsi. Posez-moi une question sur vos données RH."
 

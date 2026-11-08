@@ -15,7 +15,7 @@ Règles :
 
 * **Le framework est la première abstraction.** Avant d'en écrire une, chercher celle que le framework retenu fournit
   (Spring Data, Angular, Deep Agents, LangGraph, CopilotKit, `openevals`…). L'abstraction maison n'existe que pour le
-  métier d'ERP-RH ou pour le raccordement de deux briques, branchée sur un point d'extension officiel.
+  métier de Staport Intelligence ou pour le raccordement de deux briques, branchée sur un point d'extension officiel.
 * **Une abstraction maison se justifie par deux usages réels au moins, ou par une frontière** (réseau, base de données,
   identité, modèle). Un seul usage reste concret (YAGNI, [`design-patterns.md`](design-patterns.md)).
 * **Chaque règle vit dans une seule couche** : la règle métier dans le domaine, le droit dans le RBAC, la forme de
@@ -60,7 +60,7 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 | Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | rejoueur et critères déterministes de `evaluation.py` (dette déclarée, KAN-208 puis E10) |
 | Traces et métriques | OpenTelemetry, Phoenix | configuration |
 | Droits, périmètre, audit | Spring Security, `@PreAuthorize`, `@AuditableAction` | règles métier (permanentes) |
-| Schéma de base de données | Flyway | aucune |
+| Schéma de base de données | Alembic | aucune |
 | Mapping objet ↔ DTO | MapStruct | aucune |
 | Tableaux de données (frontend) | AG Grid | coque partagée (configuration par domaine) |
 | Interface agentique (frontend) | CopilotKit + AG-UI ; Next.js (React) à l'épopée E3 | un seul outil côté navigateur à ce jour (KAN-210) |
@@ -182,12 +182,12 @@ réévaluée à l'entrée de l'épopée E3.
 
 # 6. Documentation du site à jour à la fin de chaque épopée
 
-Le site de documentation (Docusaurus, dossier `site/`, image `erp-rh-docs`) **reflète toujours l'état réel du produit**.
+Le site de documentation (Docusaurus, dossier `site/`, image `staport-intelligence-docs`) **reflète toujours l'état réel du produit**.
 Une épopée ne passe à « Terminé(e) » que si, dans la dernière PR de l'épopée :
 
 * les pages du site concernées sont créées ou mises à jour (fonctionnement, architecture, exploitation, ce qui a changé) ;
 * `npm run build` du dossier `site/` réussit sans lien cassé ;
-* la CI publie l'image `erp-rh-docs` (vérifié sur `main`) ;
+* la CI publie l'image `staport-intelligence-docs` (vérifié sur `main`) ;
 * le ticket de l'épopée porte, en commentaire, le lien de la page mise à jour.
 
 Cette exigence s'ajoute à la documentation du domaine (`site/docs/domaines/<domaine>/`) : le site de documentation du dépôt est la source.

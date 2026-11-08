@@ -326,7 +326,7 @@ de l'interface d'Esri peuvent varier légèrement.
 3. **Referrers** : laisser vide. La clé est utilisée par le serveur, qui n'envoie pas d'en-tête `Referer`.
 4. **Privileges** : cocher **Location services → Basemaps** (et rien d'autre).
 5. **Item access** : aucun élément.
-6. Nommer la clé (par exemple « Carte RH-ERP »), choisir une **date d'expiration** (un an au plus) et la noter dans
+6. Nommer la clé (par exemple « Carte Staport Intelligence »), choisir une **date d'expiration** (un an au plus) et la noter dans
    l'agenda, puis créer la clé et **copier sa valeur** (elle n'est affichée qu'une fois).
 7. Sur le serveur, dans `.env` : `ARCGIS_API_KEY=la-valeur-copiée`, puis `docker compose up -d frontend`.
 8. Vérifier, sur le serveur : `curl -sI http://127.0.0.1:${FRONTEND_PORT}/carte/satellite/12/1665/1960` doit répondre

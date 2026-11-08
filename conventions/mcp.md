@@ -6,7 +6,7 @@ ses cas d'usage. Elle conserve ses API et services comme frontières métier. Le
 des adaptateurs vers les cas d'usage publics du domaine, jamais un accès parallèle aux repositories
 ou aux règles métier. L'exposition n'implique pas d'exposer toutes les opérations CRUD.
 
-Pour ERP-RH, les services métier Spring exposent leurs capacités au service IA Python par MCP ;
+Pour Staport Intelligence, les services métier Spring exposent leurs capacités au service IA Python par MCP ;
 aucun framework LLM Java n'est requis. Le catalogue, les versions retenues et l'ordre de
 réalisation sont tenus dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md).
 
@@ -101,9 +101,9 @@ commun.
 
 ## Implémentation et version du protocole
 
-* Dans ERP-RH, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
+* Dans Staport Intelligence, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
   Choisir le SDK Java maintenu et son mode d'intégration seulement après vérification avec les
-  versions réelles du JDK et de Spring Boot. Pour ERP-RH, c'est le serveur MCP de Spring AI, outils
+  versions réelles du JDK et de Spring Boot. Pour Staport Intelligence, c'est le serveur MCP de Spring AI, outils
   déclarés par annotations ; l'intégration n'ajoute au monolithe aucun client de modèle ni
   LangChain4j. Le SDK retenu, ses versions et la révision négociée sont consignés dans
   [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md).
@@ -140,10 +140,10 @@ le RBAC. Toute modification et tout refus pertinent suivent les conventions
 [`security.md`](security.md) et [`audit.md`](audit.md).
 
 Ne pas partager le `JWT_SECRET` du monolithe avec le service IA pour lui permettre de fabriquer
-des jetons ERP-RH. Ne pas transmettre un jeton reçu à un service pour lequel il n'a pas été émis
+des jetons Staport Intelligence. Ne pas transmettre un jeton reçu à un service pour lequel il n'a pas été émis
 (token passthrough). Une délégation documentée utilise des credentials destinés à la ressource MCP,
 avec portée limitée et vérification de l'émetteur, de l'audience, de l'expiration et des droits
-effectifs. Pour ERP-RH, la cible décidée est un jeton délégué court, émis par Spring pour
+effectifs. Pour Staport Intelligence, la cible décidée est un jeton délégué court, émis par Spring pour
 l'utilisateur connecté, signé de façon asymétrique (clé publique publiée, par exemple JWKS),
 d'audience MCP et à scopes réduits ; son état d'implémentation est suivi dans `site/docs/ia`.
 
@@ -154,13 +154,13 @@ argument d'outil ni filtré après coup dans la réponse.
 Les champs qu'un outil rend suivent une règle documentée par l'application et jamais plus que ce que
 l'identité peut lire dans ses écrans ; la règle tient compte de l'endroit où tourne le modèle (local ou
 fournisseur externe) et de la classification des données (voir [`agents-ia.md`](agents-ia.md)). Pour
-ERP-RH, elle est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Un outil peut renvoyer, à côté de
+Staport Intelligence, elle est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Un outil peut renvoyer, à côté de
 ses données, une description de vue validée par schéma (vue du domaine, filtres, période) que
 l'interface traduit en route connue ; cette description n'accorde aucun droit.
 
 Les permissions HTTP ne sont pas héritées automatiquement par une façade Java. Un adaptateur doit
 réappliquer l'autorisation et les règles de divulgation métier effectivement nécessaires. Dans
-ERP-RH, notamment, un DTO Employé issu d'un service ne doit pas révéler un salaire à une identité
+Staport Intelligence, notamment, un DTO Employé issu d'un service ne doit pas révéler un salaire à une identité
 sans `PAIE_READ` sous prétexte que le contrôleur REST masquait déjà ce champ. Les tests MCP couvrent
 les mêmes refus et masquages que le parcours HTTP, y compris les appels directs aux outils.
 

@@ -35,7 +35,7 @@ class Competence:
 
 
 def dossier_competences() -> Path:
-    return Path(str(resources.files("erp_rh_ia").joinpath("competences")))
+    return Path(str(resources.files("staport_ia").joinpath("competences")))
 
 
 @cache

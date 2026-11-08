@@ -14,7 +14,7 @@ from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import Field
 
-from erp_rh_ia.agent import PROFIL_HARNAIS
+from staport_ia.agent import PROFIL_HARNAIS
 
 # Le profil d'harnais de l'ERP (agent.py) s'applique au fournisseur du faux modèle comme à celui de ChatLiteLLM.
 register_harness_profile("modelescripte", PROFIL_HARNAIS)

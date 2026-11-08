@@ -116,7 +116,7 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |
 | Reprise opérationnelle, état et sujets ouverts | Jira (projet `KAN`) : statut, preuve et commentaire de reprise de la tâche ; jamais un fichier markdown |
-| Fin d'épopée | Site de documentation (`site/docs`, Docusaurus) : pages créées ou mises à jour, `npm run build` sans lien cassé, image `erp-rh-docs` publiée par la CI de `main`, lien de la page en commentaire du ticket d'épopée. Une épopée ne passe pas à « Terminé(e) » sans cela |
+| Fin d'épopée | Site de documentation (`site/docs`, Docusaurus) : pages créées ou mises à jour, `npm run build` sans lien cassé, image `staport-intelligence-docs` publiée par la CI de `main`, lien de la page en commentaire du ticket d'épopée. Une épopée ne passe pas à « Terminé(e) » sans cela |
 | Code maison ajouté, remplacé ou supprimé | Registre des abstractions de [`ingenierie-agentique.md`](ingenierie-agentique.md) et épopée E10 (KAN-23) |
 | Erreur ou surprise coûteuse rencontrée | Une ligne dans [`lecons.md`](lecons.md), dans le commit qui la corrige |
 

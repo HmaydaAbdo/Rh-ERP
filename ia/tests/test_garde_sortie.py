@@ -4,7 +4,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from erp_rh_ia.garde_sortie import REPONSE_REMPLACEMENT, garde_sortie, motifs
+from staport_ia.garde_sortie import REPONSE_REMPLACEMENT, garde_sortie, motifs
 
 
 def _etat(*messages: Any) -> Any:

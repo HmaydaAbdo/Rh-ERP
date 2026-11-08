@@ -98,7 +98,7 @@
             <div class="app-controle__qui">
               <strong>{{ inconnu.nomPrenom ?? 'Sans nom' }}</strong>
               <span>CIN {{ inconnu.cin }} · ligne {{ inconnu.numeroLigne }}</span>
-              <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.2-2' }}</span>
+              <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.0-0' }}</span>
             </div>
             @if (store.peutCorriger()) {
               <div class="app-controle__saisie">

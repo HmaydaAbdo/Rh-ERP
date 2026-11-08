@@ -1,7 +1,7 @@
 """Preuve T4 (site/docs/ia) : le client MCP Python officiel appelle la vraie route /mcp avec un jeton agent.
 
-Lancé par `McpClientPythonIntegrationTest` (application complète, base de test) avec MCP_ERP_RH_URL,
-MCP_ERP_RH_JETON et MCP_ERP_RH_UTILISATEUR ; ignoré sinon. Seul un serveur loopback est admis.
+Lancé par `McpClientPythonIntegrationTest` (application complète, base de test) avec MCP_STAPORT_URL,
+MCP_STAPORT_JETON et MCP_STAPORT_UTILISATEUR ; ignoré sinon. Seul un serveur loopback est admis.
 """
 
 import os
@@ -15,11 +15,11 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.types import CallToolResult, Implementation
 
-URL = os.environ.get("MCP_ERP_RH_URL", "")
-JETON = os.environ.get("MCP_ERP_RH_JETON", "")
-UTILISATEUR = os.environ.get("MCP_ERP_RH_UTILISATEUR", "")
+URL = os.environ.get("MCP_STAPORT_URL", "")
+JETON = os.environ.get("MCP_STAPORT_JETON", "")
+UTILISATEUR = os.environ.get("MCP_STAPORT_UTILISATEUR", "")
 pytestmark = [
-    pytest.mark.skipif(not URL, reason="MCP_ERP_RH_URL absent : lancé par McpClientPythonIntegrationTest"),
+    pytest.mark.skipif(not URL, reason="MCP_STAPORT_URL absent : lancé par McpClientPythonIntegrationTest"),
 ]
 
 
@@ -40,7 +40,7 @@ async def connexion(jeton: str | None) -> AsyncGenerator[ClientSession]:
             lecture,
             ecriture,
             read_timeout_seconds=10.0,
-            client_info=Implementation(name="erp-rh-ia", version="T4"),
+            client_info=Implementation(name="staport-intelligence-ia", version="T4"),
         )
         async with session:
             await session.initialize()

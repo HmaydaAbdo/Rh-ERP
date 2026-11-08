@@ -6,10 +6,10 @@ Client de test du SDK MCP TypeScript (le même SDK que celui du runtime Node Cop
 
 Le test est lancé par `api/tests/test_mcp_clients_externes.py`, qui démarre l'application complète sur un
 port loopback éphémère (uvicorn, PostgreSQL réel par testcontainers), crée un administrateur, émet son jeton
-agent puis exécute, avec `MCP_ERP_RH_URL`, `MCP_ERP_RH_JETON` et `MCP_ERP_RH_UTILISATEUR` :
+agent puis exécute, avec `MCP_STAPORT_URL`, `MCP_STAPORT_JETON` et `MCP_STAPORT_UTILISATEUR` :
 
 - ce client TypeScript (`node --test src/interop.test.ts`) ;
-- le client Python officiel du service IA (`ia/tests/integration/test_mcp_erp_rh.py`, lancé par `uv run --locked`).
+- le client Python officiel du service IA (`ia/tests/integration/test_mcp_staport.py`, lancé par `uv run --locked`).
 
 Depuis la racine, avec Node 24.15+ (< 25), `uv` et Docker :
 

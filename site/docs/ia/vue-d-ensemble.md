@@ -9,7 +9,7 @@ Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions 
 
 ## 1. Objectif
 
-La migration Python prépare le serveur MCP dans l'image `erp-rh-api` et son export OTLP vers Phoenix. Le service IA
+La migration Python prépare le serveur MCP dans l'image `staport-intelligence-api` et son export OTLP vers Phoenix. Le service IA
 reste connecté à Spring jusqu'à la bascule de l'authentification : les jetons utilisateur Spring HS256 ne sont pas
 acceptés par l'API Python RS256. La réception d'un span MCP par Phoenix est vérifiée dans un projet Compose isolé,
 avec des données synthétiques. Voir la
@@ -53,10 +53,10 @@ prend aucune décision sur une personne : elle explique et prépare, une personn
 | Mascotte | Personnage animé **Rive** (State Machines), aux couleurs Staport et à l'univers du chantier, piloté par les événements AG-UI ; design final validé sur maquette (§ 6). |
 | Orchestration | **Un Deep Agent** (`create_deep_agent`, décision du propriétaire du 2026-11-03 : Deep Agents est le point d'entrée de tout agent, il porte les middlewares LangChain et s'exécute sur LangGraph) ; les outils métier lui sont exposés par la sélection juste-à-temps bornée (T32), et non plus par `LLMToolSelectorMiddleware`. Les **sous-agents par domaine** du harnais sont ajoutés quand le jeu de référence montre qu'un domaine a besoin de ses propres instructions, outils ou budget, ou qu'une tâche est longue : contrôle de la paie (J5), assistant réglementaire (J7), documents RH (J6). Pas avant : chaque sous-agent ajoute des appels de modèle, donc de la latence et des quotas (les offres gratuites répondent déjà 429 parfois). Le service actuel est encore sur `create_agent` : sa migration est la tâche T33. Détail : conventions (`conventions/agents-ia.md`). |
 | Fournisseurs gratuits | Cumul des **offres gratuites à quota renouvelable**, un compte par fournisseur, quotas respectés (`rpm`/`tpm`) ; un modèle sans clé est désactivé au démarrage. Un modèle n'entre dans un pool qu'après une sonde outils + JSON réussie à travers la passerelle. NVIDIA NIM (offre de prototypage) est dans les pools ; les préversions à sortie instable restent sous tags `eval`. |
-| Inter-applications | **A2A** relie les capacités des applications des autres départements à Staport Intelligence ; l'Staport Intelligence demeure une application métier raccordée, pas le nom de l'assistant d'entreprise. |
+| Inter-applications | **A2A** relie les capacités des applications des autres départements à Staport Intelligence ; Staport Intelligence demeure une application métier raccordée, pas le nom de l'assistant d'entreprise. |
 | Frameworks d'abord | Décision du 2026-10-26 : tout le code IA s'appuie sur Deep Agents (`create_deep_agent`, qui porte les middlewares LangChain), LangGraph, le MCP intégré à LangChain (`langchain.mcp`), `ag-ui-langgraph` et CopilotKit (raisonnement, texte, A2UI, interface Angular), LiteLLM pour la passerelle et ses garde-fous ; côté Java, le serveur MCP de **Spring AI** et l'échange de jetons OAuth2 de **Spring Authorization Server** ; tout code maison qui duplique un composant officiel est retiré, et **le code maison restant est une dette suivie jusqu'à zéro, sans service payant** (§ 7, « Objectif : aucun code IA fait maison ») (règle et correspondances (`conventions/agents-ia.md`)). L'agent décide lui-même de sa forme de réponse : directe, raisonnée avec outils, ou planifiée et suivie étape par étape, comme Claude, ChatGPT, Gemini et Grok. Remplace, une fois T10 à T20 faites, le graphe explicite de T6 et le ciblage maison. |
 | Cadre de référence | Les pratiques des cadres reconnus s'appliquent à tout le chantier (décision du 2026-10-26) : NIST AI RMF et son profil IA générative, ISO/IEC 42001, OWASP Top 10 LLM 2025 et menaces agentiques, conventions OpenTelemetry de l'IA générative, loi 09-08. Leur traduction en règles est dans les conventions (`conventions/agents-ia.md`) ; l'écart avec l'existant est suivi au § 10. |
-| Images et secrets | Chaque service a **sa propre image** (`erp-rh-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
+| Images et secrets | Chaque service a **sa propre image** (`staport-intelligence-<service>`) construite par la CI. Les clés vivent uniquement dans le `.env` racine unique (non versionné) ; les fichiers versionnés ne contiennent que des références `os.environ/…`. |
 
 ## 3. Architecture
 
@@ -64,15 +64,15 @@ prend aucune décision sur une personne : elle explique et prépare, une personn
 Angular (CopilotKit Angular : discussion, raisonnement, surfaces A2UI)
    │  /ia/copilotkit (nginx)
    ▼
-erp-rh-copilot-runtime (Node, runtime CopilotKit + middleware A2UI)
+staport-intelligence-copilot-runtime (Node, runtime CopilotKit + middleware A2UI)
    │  AG-UI : entrées HTTP, événements SSE, jeton de l'utilisateur
    ▼
-erp-rh-ia (Python, Deep Agents sur LangGraph, `create_deep_agent` depuis T33)
+staport-intelligence-ia (Python, Deep Agents sur LangGraph, `create_deep_agent` depuis T33)
    │  outils → réponse (+ generate_a2ui) → vérification des chiffres de la réponse et de la surface
-   ├── erp-rh-litellm → fournisseurs (groupes officiels par capacité)
+   ├── staport-intelligence-litellm → fournisseurs (groupes officiels par capacité)
    ├── A2A (plus tard) → agents des autres applications
    ▼  MCP + jeton délégué
-erp-rh-backend (Spring) : adaptateurs MCP → façades de domaine → périmètre fiche de poste → audit
+staport-intelligence-api (Spring) : adaptateurs MCP → façades de domaine → périmètre fiche de poste → audit
    ▼
 PostgreSQL ERP (métier) · base LiteLLM dédiée (clés virtuelles, budgets) · plus tard corpus/pgvector
 ```

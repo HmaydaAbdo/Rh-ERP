@@ -41,7 +41,7 @@ mkdir -p "$BACKUP_DIR"
 
 now=$(date -u +%s)
 recent_backup=false
-for archive in "$BACKUP_DIR"/rh-erp-*.tar.gz.age; do
+for archive in "$BACKUP_DIR"/staport-intelligence-*.tar.gz.age "$BACKUP_DIR"/rh-erp-*.tar.gz.age; do
   [ -f "$archive" ] || continue
   modified=$(stat -c %Y "$archive")
   if [ $((now - modified)) -lt 86400 ]; then

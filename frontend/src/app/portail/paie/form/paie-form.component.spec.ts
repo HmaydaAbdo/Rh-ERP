@@ -28,9 +28,9 @@ const BULLETIN: Paie = {
   joursRecuperationOuvrable: 1.5,
   joursRecuperationDimanche: null,
   salaireMensuel: 4000,
-  primeRoulageOrdinaire: 120.5,
+  primeRoulageOrdinaire: 120,
   primeRoulageDimanche: null,
-  salaireTotal: 4350.5,
+  salaireTotal: 4350,
   observation: 'Heures de nuit'
 };
 
@@ -84,7 +84,7 @@ describe('PaieFormComponent', () => {
     f.chantierId().value.set(2);
     f.nombreJoursTravailles().value.set(26);
     f.salaireMensuel().value.set(4000);
-    f.salaireTotal().value.set(4350.5);
+    f.salaireTotal().value.set(4350);
     await stabiliser();
   }
 
@@ -151,7 +151,7 @@ describe('PaieFormComponent', () => {
 
     it.each([
       ['joursRecuperationOuvrable', 1000], ['joursRecuperationDimanche', 1.001],
-      ['primeRoulageOrdinaire', 100000000], ['primeRoulageDimanche', 1.001], ['salaireTotal', 100000000]
+      ['primeRoulageOrdinaire', 10000000000], ['primeRoulageDimanche', 1.5], ['salaireTotal', 10000000000]
     ] as const)('refuse %s hors des bornes et de la précision du contrat', async (champ, valeur) => {
       await afficher();
       await remplirObligatoires();
@@ -187,7 +187,7 @@ describe('PaieFormComponent', () => {
       await stabiliser();
 
       expect(formulaire().salaireMensuel().value()).toBe(0);
-      expect(champ.value).toBe('0,00');
+      expect(champ.value).toBe('0');
     });
 
     it('crée le bulletin : période au format aaaa-mm, champs facultatifs absents envoyés comme tels', async () => {
@@ -209,7 +209,7 @@ describe('PaieFormComponent', () => {
         salaireMensuel: 4000,
         primeRoulageOrdinaire: null,
         primeRoulageDimanche: null,
-        salaireTotal: 4350.5,
+        salaireTotal: 4350,
         observation: null
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Bulletin créé');
@@ -302,7 +302,7 @@ describe('PaieFormComponent', () => {
     it('affiche les montants au format français', async () => {
       await afficher('8');
 
-      expect((racine().querySelector('input#salaireTotal') as HTMLInputElement).value.replace(/\s/g, ' ')).toBe('4 350,50');
+      expect((racine().querySelector('input#salaireTotal') as HTMLInputElement).value.replace(/\s/g, ' ')).toBe('4 350');
       expect((racine().querySelector('input#nombreJoursTravailles') as HTMLInputElement).value).toBe('26');
     });
 
@@ -322,7 +322,7 @@ describe('PaieFormComponent', () => {
         joursRecuperationOuvrable: 1.5,
         joursRecuperationDimanche: null,
         salaireMensuel: 4000,
-        primeRoulageOrdinaire: 120.5,
+        primeRoulageOrdinaire: 120,
         primeRoulageDimanche: null,
         salaireTotal: 4500,
         observation: null

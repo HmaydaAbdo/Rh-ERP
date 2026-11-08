@@ -5,7 +5,7 @@ export const randomFillSync = <T extends ArrayBufferView<ArrayBuffer>>(octets: T
 export const randomUUID = (): string => crypto.randomUUID();
 export default { randomFillSync, randomUUID };
 
-// uuid importe aussi `createHash` (UUID v3/v5, jamais utilisés par ERP-RH) : une version non prise en charge, explicite.
+// uuid importe aussi `createHash` (UUID v3/v5, jamais utilisés par Staport Intelligence) : une version non prise en charge, explicite.
 export const createHash = (): never => {
   throw new Error('createHash n’est pas disponible dans le navigateur de test');
 };

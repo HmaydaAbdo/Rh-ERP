@@ -17,7 +17,7 @@ Confirmé par le propriétaire le 2026-10-31.
 
 ## Product Purpose
 
-ERP-RH est le système de gestion du personnel, du pointage et de la paie de Staport, entreprise du BTP (bâtiment et travaux publics) au Maroc. Il réunit employés, équipes, fonctions, chantiers, paie, heures supplémentaires, audit et paramètres, plus un assistant IA qui répond aux questions à partir des données de l'ERP. Le succès : une paie juste, des chiffres lisibles du premier coup d'œil, et des utilisateurs qui aiment s'en servir.
+Staport Intelligence est le système de gestion du personnel, du pointage et de la paie de Staport, entreprise du BTP (bâtiment et travaux publics) au Maroc. Il réunit employés, équipes, fonctions, chantiers, paie, heures supplémentaires, audit et paramètres, plus un assistant IA qui répond aux questions à partir des données de l'ERP. Le succès : une paie juste, des chiffres lisibles du premier coup d'œil, et des utilisateurs qui aiment s'en servir.
 
 ## Positioning
 

@@ -1,5 +1,5 @@
 # =========================================================================
-# rh-erp — .gitignore racine
+# Staport Intelligence — .gitignore racine
 # Couvre le dépôt entier (backend, frontend, Docker, fichiers locaux).
 # backend/.gitignore et frontend/.gitignore restent en place (spécifiques
 # à chaque sous-projet) ; ce fichier couvre ce qu'ils ne voient pas :
@@ -99,7 +99,6 @@ __pycache__/
 # Couverture Python (pytest --cov) : rapports produits en local et en CI
 api/.coverage
 api/coverage.json
-api/tests/differentiel/sorties/
 
 # Journaux et rapports des lanceurs IA (api/tests/test_ia_lanceurs.py)
 api/target/

@@ -56,11 +56,10 @@ class Configuration(BaseSettings):
     # Audit : période de la vérification de la chaîne d'intégrité du journal (par défaut une fois par jour)
     audit_integrite_chaine_delai_ms: int = 86_400_000
 
-    # Documentation d'API : éteinte par défaut, donc en production. `SPRINGDOC_*` : noms hérités de l'ancien backend,
-    # conservés pour ne pas changer les `.env`. La spécification (`/openapi.json`) et l'interface (`/docs`) se règlent
-    # séparément ; éteintes, leurs routes n'existent pas (`404`).
-    springdoc_api_docs_enabled: bool = False
-    springdoc_swagger_ui_enabled: bool = False
+    # Documentation d'API : éteinte par défaut, donc en production. La spécification (`/openapi.json`) et l'interface
+    # (`/docs`) se règlent séparément ; éteintes, leurs routes n'existent pas (`404`).
+    api_docs_enabled: bool = False
+    swagger_ui_enabled: bool = False
 
     # Journaux : text (défaut) ou json (production) ; répertoire des journaux archivés chaque jour (facultatif)
     logging_format: str = "text"

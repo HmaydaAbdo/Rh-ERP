@@ -39,7 +39,7 @@
       <stp-select ariaLabel="Recherche" placeholder="Rechercher un chantier" [options]="options" [formField]="formulaire.recherche" />
     </div>
     <div class="w-60">
-      <stp-number-input ariaLabel="Montant" [formField]="formulaire.nombre" [minFractionDigits]="2" />
+      <stp-number-input ariaLabel="Montant" [formField]="formulaire.nombre" [maxFractionDigits]="0" />
     </div>
     <div class="w-60">
       <stp-date-input ariaLabel="Date de référence" [formField]="formulaire.date" />

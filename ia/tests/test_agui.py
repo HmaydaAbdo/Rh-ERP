@@ -13,10 +13,10 @@ from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool, StructuredTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
-from erp_rh_ia.agent import SYSTEME, creer_agent
-from erp_rh_ia.agui import FabriqueAgent
-from erp_rh_ia.app import creer_app
-from erp_rh_ia.config import Settings
+from staport_ia.agent import SYSTEME, creer_agent
+from staport_ia.agui import FabriqueAgent
+from staport_ia.app import creer_app
+from staport_ia.config import Settings
 
 QUESTION = "Masse salariale de 2026-09 ?"
 REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."

@@ -17,7 +17,7 @@
         </div>
         <div class="app-kpi">
           <span>Total perçu</span>
-          <strong>{{ p.indicateurs.totalPercu | number: '1.2-2' }}</strong>
+          <strong>{{ p.indicateurs.totalPercu | number: '1.0-0' }}</strong>
           <small>sur toute la période</small>
         </div>
         <div class="app-kpi">
@@ -73,8 +73,8 @@
               @case ('periode') { <a class="app-link" [routerLink]="['/paie', mois.bulletinId]">{{ libellePeriode(mois.periode) }}</a> }
               @case ('equipe') { {{ mois.equipe ?? '—' }} }
               @case ('nombreJoursTravailles') { {{ mois.nombreJoursTravailles | number: '1.0-2' }} }
-              @case ('salaireMensuel') { {{ mois.salaireMensuel | number: '1.2-2' }} }
-              @case ('salaireTotal') { <strong>{{ mois.salaireTotal | number: '1.2-2' }}</strong> }
+              @case ('salaireMensuel') { {{ mois.salaireMensuel | number: '1.0-0' }} }
+              @case ('salaireTotal') { <strong>{{ mois.salaireTotal | number: '1.0-0' }}</strong> }
               @default { {{ mois[col.field] ?? '' }} }
             }
           </ng-template>

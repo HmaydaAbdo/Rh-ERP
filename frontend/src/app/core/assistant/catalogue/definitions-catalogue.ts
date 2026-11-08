@@ -5,7 +5,7 @@ const FORMAT = z.enum(['texte', 'nombre', 'montant', 'periode']);
 
 /**
  * Propriétés des composants du catalogue de l'ERP : mêmes noms et mêmes propriétés que
- * `ia/src/erp_rh_ia/catalogue_a2ui_erp.json`, que le service IA utilise pour valider les surfaces.
+ * `ia/src/staport_ia/catalogue_a2ui_erp.json`, que le service IA utilise pour valider les surfaces.
  * Une seule source pour l'annonce faite à l'agent (`createAngularCatalog`) et pour le rendu (`@a2ui/angular`).
  */
 export const PROPRIETES_DATA_TABLE = z.object({
