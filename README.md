@@ -8,7 +8,7 @@ manquants ajoutés depuis l'ERP existant), **Équipe** (référentiel des équip
 affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapport PDF de synthèse) et **Auth**
 (comptes, rôles, permissions). Le domaine **Pointage** reste à construire (voir Jira, KAN-171).
 
-> **Documentation** : tout est indexé dans [`docs/README.md`](docs/README.md). Les conventions de
+> **Documentation** : tout est dans le site [`site/`](site) (pages dans [`site/docs`](site/docs/index.md)). Les conventions de
 > développement, génériques et réutilisables, sont dans [`conventions/`](conventions) et font foi pour toute
 > contribution — voir [CLAUDE.md](CLAUDE.md) pour l'ordre de lecture recommandé.
 
@@ -112,7 +112,7 @@ docker compose down -v       # supprime aussi les données PostgreSQL
 backend/      API Spring Boot (staport.rh.<domaine> : auth, chantier, employee, equipe, function, paie, common)
 frontend/     Application Angular (migration vers Angular Aria/CDK + composants Staport), nginx.conf (nginx de production)
 conventions/  Conventions du projet — source de vérité, génériques et réutilisables entre projets
-docs/         Documentation propre à ce projet : architecture, modèle de données, domaines, RBAC, déploiement
+site/         Site de documentation (Docusaurus) : architecture, modèle de données, domaines, RBAC, IA, décisions, déploiement
 .github/workflows/  CI (tests + build + publication des images Docker)
 docker-compose.yml  Stack de production (images publiées uniquement, voir site/docs/exploitation/deploiement.md)
 backend/Dockerfile, frontend/Dockerfile
@@ -123,7 +123,7 @@ CLAUDE.md, AGENTS.md  Point d'entrée du projet et ordre de lecture des conventi
 
 ## Documentation
 
-Index complet et glossaire : [`docs/README.md`](docs/README.md).
+Index complet : [`site/docs/index.md`](site/docs/index.md).
 
 | Sujet | Document |
 |---|---|
