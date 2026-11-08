@@ -133,16 +133,16 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   });
   expect(importHs.ok(), `POST /heures-supp/import: ${await importHs.text()}`).toBeTruthy();
   const bilanHs = await importHs.json() as { lignesHeures: number; heuresTotales: number; montantTotalDh: number; netTotalDh: number };
-  expect(bilanHs).toMatchObject({ lignesHeures: 1, heuresTotales: 2, montantTotalDh: 30, netTotalDh: 30 });
+  expect(bilanHs).toMatchObject({ lignesHeures: 1, heuresTotales: 2, montantTotalDh: 30.76, netTotalDh: 30.76 });
   const lignesHs = await api<{ content: Array<{ cin: string; montantDh: number; salaireHoraireDh: number }> }>(
     page, adminToken, 'POST', '/heures-supp/search', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
   );
-  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30 })]);
-  expect(lignesHs.content[0]?.salaireHoraireDh).toBe(15); // 4000 ÷ 260 = 15,38 arrondi à l’entier
+  expect(lignesHs.content).toEqual([expect.objectContaining({ cin: cinHs, montantDh: 30.76 })]);
+  expect(lignesHs.content[0]?.salaireHoraireDh).toBe(15.38); // 4000 ÷ 260 = 15,3846 arrondi à deux décimales
   const analyseHs = await api<{ indicateurs: { lignesHeures: number; heures: number; netAPayerDh: number } }>(
     page, adminToken, 'POST', '/heures-supp/analytique', { periode: moisCourant, chantierIds: [chantierHeuresSupp.id] }
   );
-  expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30 });
+  expect(analyseHs.indicateurs).toMatchObject({ lignesHeures: 1, heures: 2, netAPayerDh: 30.76 });
   await page.goto(`/heures-supp?periode=${moisCourant}&chantierIds=${chantierHeuresSupp.id}`);
   await expect(page.getByRole('heading', { name: 'Heures sup.' })).toBeVisible();
   await expect(page.getByText(cinHs)).toBeVisible();

@@ -21,8 +21,8 @@ test('la liste filtrée affiche les champs métier et le total', async ({ page }
   await page.goto('/heures-supp?periode=2026-10&cin=AB123&nom=Salma');
   await expect(page.getByRole('heading', { name: 'Heures sup.' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
-  await expect(page.getByText(/15 DH\/h/)).toBeVisible();
-  await expect(page.getByText(/130 DH/).first()).toBeVisible();
+  await expect(page.getByText(/15\.00 DH\/h/)).toBeVisible();
+  await expect(page.getByText(/130\.00 DH/).first()).toBeVisible();
   await expect(page.locator('.app-table-bar__summary')).toContainText('Net à payer');
   const presentation = await page.evaluate(() => {
     const filtres = document.querySelector('form.app-toolbar[aria-label="Filtres des heures supplémentaires"]');
@@ -55,7 +55,7 @@ test('l’écran de modification présente les données historiques et enregistr
   await page.goto('/heures-supp/1/edit');
   await expect(page.getByRole('heading', { name: 'Modifier la ligne d’heures supplémentaires' })).toBeVisible();
   await expect(page.getByText('AB123', { exact: true })).toBeVisible();
-  await expect(page.getByText(/15 DH\/h/)).toBeVisible();
+  await expect(page.getByText(/15\.00 DH\/h/)).toBeVisible();
   await page.getByLabel('Heures supplémentaires (P/H)').fill('3');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(page).toHaveURL(/\/heures-supp\?periode=2026-10/);
@@ -94,7 +94,7 @@ test('les vues Cartes et Analytique affichent les heures supplémentaires et sui
   await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Exporter' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Importer/ }).first()).toBeVisible();
-  await expect(page.getByText(/130 DH/).first()).toBeVisible();
+  await expect(page.getByText(/130\.00 DH/).first()).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10', cin: 'AB123' });
 });
 
@@ -111,6 +111,6 @@ test('sans mois dans l’URL, Cartes et Analytique prennent le dernier mois d’
 
   await page.goto('/heures-supp/analytique');
   await expect(page.getByRole('heading', { name: 'Analyse des heures supplémentaires' })).toBeVisible();
-  await expect(page.getByText(/130 DH/).first()).toBeVisible();
+  await expect(page.getByText(/130\.00 DH/).first()).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10' });
 });
