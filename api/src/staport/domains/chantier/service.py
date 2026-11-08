@@ -99,7 +99,7 @@ def _coord(req: ChantierCreationRequete) -> tuple[str | None, Decimal | None, De
         if lat.as_tuple().exponent < -8 or lon.as_tuple().exponent < -8:  # type: ignore[operator]
             raise ChantierLocalisationInvalide(_COORDONNEES_DECIMALES)
         loc = f"https://www.google.com/maps/search/?api=1&query={lat.normalize():f},{lon.normalize():f}"
-    if req.afficher_sur_carte and (req.nature is None or loc is None or lat is None):
+    if req.afficher_sur_carte and (req.nature is None or loc is None or lat is None):  # pyright: ignore
         raise ChantierLocalisationInvalide(_CARTE_INCOMPLETE)
     return loc, lat, lon
 

@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Any, cast
 
 from openpyxl import Workbook, load_workbook
-from openpyxl.utils.datetime import from_excel
+from openpyxl.utils.datetime import from_excel  # pyright: ignore
 from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError

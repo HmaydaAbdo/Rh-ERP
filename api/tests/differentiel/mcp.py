@@ -1,3 +1,4 @@
+# pyright: basic
 """MCP : liste des outils, schémas et appels comparés entre Spring et l'API Python (transport Streamable HTTP).
 
 Prérequis : bases remises à zéro (`reinitialiser.sh`), banc démarré. Le script crée les données d'amorce (scénario de

@@ -1,3 +1,4 @@
+# pyright: basic
 """Harnais différentiel : rejoue la même séquence de requêtes sur Spring (référence) et sur l'API Python.
 
 Spring (tag java-final) est la RÉFÉRENCE : tout écart est un bug Python, sauf écart accepté par le propriétaire

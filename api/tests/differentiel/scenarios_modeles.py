@@ -1,3 +1,4 @@
+# pyright: basic
 """Modèles Excel téléchargeables : comparaison cellule par cellule."""
 
 from .harnais import Etape

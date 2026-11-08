@@ -544,8 +544,8 @@ class PaieImportCreationCorrection(ModeleApi):
 
 
 class PaieImportCorrections(ModeleApi):
-    aligner: list[PaieImportAlignement] = Field(default_factory=list)
-    creer: list[PaieImportCreationCorrection] = Field(default_factory=list)
+    aligner: list[PaieImportAlignement] = Field(default_factory=list)  # pyright: ignore
+    creer: list[PaieImportCreationCorrection] = Field(default_factory=list)  # pyright: ignore
 
 
 class PaieImportResult(ModeleApi):

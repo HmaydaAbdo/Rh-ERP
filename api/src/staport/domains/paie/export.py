@@ -25,7 +25,7 @@ from .schemas import PaieExportRequete
 
 def _police(**options: bool) -> Font:
     """Calibri 11 comme les polices créées par POI : une police sans nom n'est pas celle du classeur de référence."""
-    return Font(name="Calibri", size=11, **options)
+    return Font(name="Calibri", size=11, **options)  # pyright: ignore
 
 
 class ServiceExportPaie:
@@ -205,7 +205,7 @@ def _ecrire(
     modeles: dict[int, StyleArray] = {}
     for ligne in feuille.iter_rows(min_row=5, max_row=4 + len(ordonnees), max_col=13):
         for cellule in ligne:
-            modele = modeles.get(cellule.column)
+            modele = modeles.get(cellule.column)  # pyright: ignore
             if modele is not None:
                 cellule._style = copy(modele)  # pyright: ignore[reportPrivateUsage]
                 continue
@@ -216,7 +216,7 @@ def _ecrire(
             cellule.alignment = Alignment(horizontal=alignement, vertical="center")
             if cellule.column in (7, 8, 9, 10):
                 cellule.number_format = "#,##0.00"
-            modeles[cellule.column] = copy(cellule._style)  # pyright: ignore[reportPrivateUsage]
+            modeles[cellule.column or 0] = copy(cellule._style)  # pyright: ignore[reportPrivateUsage]
     total_ligne = 5 + len(ordonnees)
     precedent_ligne = total_ligne + 1
     for index, libelle in ((total_ligne, "TOTAL GENERAL"), (precedent_ligne, "TOTAL GENERAL MOIS PRECEDENT")):

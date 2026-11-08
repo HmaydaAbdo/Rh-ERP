@@ -14,6 +14,7 @@ Le résultat est imprimé (`PERFORMANCE_PROFILE ...`) et écrit dans `api/target
 (artefact « Performance profile » de la CI).
 """
 
+import importlib
 import json
 import os
 import socket
@@ -110,7 +111,8 @@ def serveur_isole(plateforme: Plateforme) -> Iterator[str]:
 
 def _pdf_disponible() -> bool:
     try:
-        from weasyprint import HTML  # noqa: F401  import différé : la bibliothèque native peut manquer
+        # Import différé : la bibliothèque native peut manquer.
+        importlib.import_module("weasyprint")
     except OSError:
         return False
     return True

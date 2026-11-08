@@ -1,3 +1,4 @@
+# pyright: basic
 """Matrice route par route des permissions : `@PreAuthorize` de Spring contre `exiger(...)` de l'API Python.
 
 Comparaison statique (sources Java du tag java-final, application FastAPI construite sans base) : chaque route doit

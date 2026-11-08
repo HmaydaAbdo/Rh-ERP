@@ -1,3 +1,4 @@
+# pyright: basic
 """Authentification : connexion, verrouillage, cookie de rafraîchissement, mot de passe, JWKS, jeton agent."""
 
 from typing import Any

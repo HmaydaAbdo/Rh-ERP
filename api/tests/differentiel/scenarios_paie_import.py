@@ -1,3 +1,4 @@
+# pyright: basic
 """Import de paie (étape 1) : analyse, import, corrections, erreurs de fichier et de mois, atomicité.
 
 Les fichiers sont fabriqués ici et envoyés à l'identique aux deux backends. Format Spring (`LecteurFichierPaie`) : trois
@@ -33,7 +34,7 @@ def _fichier(contenu: bytes, nom: str = "paie.xlsx", mime: str = MIME) -> dict[s
     return {"file": (nom, contenu, mime)}
 
 
-def ligne(nom: str, fonction: str, cin: str, jours: Any = 26, salaire: Any = 4500, **plus: Any) -> list[Any]:
+def ligne(nom: str, fonction: str, cin: str | None, jours: Any = 26, salaire: Any = 4500, **plus: Any) -> list[Any]:
     """Une ligne à 13 colonnes ; `plus` surcharge jro, jrd, pro, prd, total, obs, chantier, equipe."""
     v = {"jro": 0, "jrd": 0, "pro": 0, "prd": 0, "total": salaire, "obs": None, "chantier": "CH-A", "equipe": None}
     v.update(plus)

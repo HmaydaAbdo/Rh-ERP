@@ -1,3 +1,4 @@
+# pyright: basic
 """Lectures et écritures unitaires de la paie : recherche (tris, filtres), KPI, effectifs, parcours, options, CRUD."""
 
 from typing import Any

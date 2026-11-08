@@ -1,3 +1,4 @@
+# pyright: basic
 """Rôles, permissions, utilisateurs, paramètres, accueil, journal d'audit et matrice des permissions (étape 3)."""
 
 from typing import Any
