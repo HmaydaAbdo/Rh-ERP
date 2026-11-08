@@ -20,7 +20,7 @@ const apiPaths = ['/accueil', '/employees', '/functions', '/chantiers', '/equipe
 // (une seule clé pour les deux façons de lancer l'application). Obligatoire, sauf en CI : ses tests n'affichent pas l'imagerie.
 const cleArcgis = process.env.ARCGIS_API_KEY || lireDansEnv('ARCGIS_API_KEY');
 if (!cleArcgis && !process.env.CI) {
-  throw new Error('ARCGIS_API_KEY est obligatoire : la mettre dans le .env racine (création pas à pas : docs/chantier/carte.md, « Clé ArcGIS »).');
+  throw new Error('ARCGIS_API_KEY est obligatoire : la mettre dans le .env racine (création pas à pas : site/docs/domaines/chantier/carte.md, « Clé ArcGIS »).');
 }
 
 /** Valeur d'une variable du `.env` racine, à côté de docker-compose.yml ; chaîne vide si le fichier ou la variable manque. */

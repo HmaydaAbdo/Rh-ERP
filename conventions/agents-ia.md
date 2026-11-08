@@ -2,7 +2,7 @@
 
 Cette convention s'applique aux applications qui intègrent des capacités d'IA et aux agents qui
 contribuent à leur développement. Elle fixe les règles communes ; chaque application documente ses
-cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans `docs/` et ses
+cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques dans le site de documentation (`site/docs/`) et ses
 ADR.
 
 Pour ERP-RH, les décisions, l'architecture, la feuille de route et l'état du chantier sont tenus
@@ -156,7 +156,7 @@ Une skill fournit une procédure ou du contexte vérifié. Elle ne constitue ni 
 métier autonome ni un droit d'accès.
 
 Une skill de domaine réside avec la documentation de ce domaine, par exemple dans
-`docs/<domaine>/skills/`. Elle doit :
+la page du domaine (`site/docs/domaines/<domaine>/index.md`, section « Guide agent »). Elle doit :
 
 * indiquer son objectif, son périmètre et les sources métier faisant autorité ;
 * renvoyer aux README, contrats et documents RBAC pertinents au lieu d'en recopier les règles ;
@@ -428,7 +428,7 @@ avant l'adoption.
 ### Agents de domaine
 
 Un agent de domaine (« micro-agent ») possède un périmètre métier explicite et ne travaille que sur
-ses outils, ses skills (`docs/<domaine>/skills/`) et son contexte. Dans ERP-RH, sa définition reste
+ses outils, ses skills (guide agent de `site/docs/domaines/<domaine>/`) et son contexte. Dans ERP-RH, sa définition reste
 dans le service IA, organisée par domaine ; les règles métier et les adaptateurs MCP restent
 dans leurs domaines Spring propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
 modèle et son budget. Un besoin d'un autre domaine passe par une délégation explicite du superviseur

@@ -30,7 +30,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
 0. Consulter Jira (projet `KAN`, source de vérité des tâches : statut, preuve, historique) pour la tâche reprise ou à
    créer. Une tâche termine en Jira avec sa preuve en commentaire, jamais sans.
 1. Lire [`site/docs/exploitation/developpement-local.md`](../site/docs/exploitation/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
-   commises et règle qui les évite), puis les conventions applicables et `docs/README.md`.
+   commises et règle qui les évite), puis les conventions applicables et le site de documentation (`site/docs/index.md`).
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
    Lire [`ingenierie-agentique.md`](ingenierie-agentique.md) et chercher dans son registre la ligne du cas d'usage de la
    tâche. Sans ligne, proposer l'abstraction officielle (framework, point d'extension, source) avant d'écrire du code.
@@ -110,8 +110,8 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 
 | Élément | Source à maintenir |
 |---|---|
-| Fonctionnement du domaine | `docs/<domaine>/README.md` : règles, modèle de données, DTO exposés (types, contraintes, descriptions), contrats, permissions et accès associés, vues, imports/exports et scénarios liés aux tests |
-| Procédure de l'agent sur ce domaine | `docs/<domaine>/skills/SKILL.md`, avec renvois aux sources faisant autorité |
+| Fonctionnement du domaine | `site/docs/domaines/<domaine>/index.md`, `contrats.md` et `droits.md` : règles, modèle de données, DTO exposés (types, contraintes, descriptions), contrats, permissions et accès associés, vues, imports/exports et scénarios liés aux tests |
+| Procédure de l'agent sur ce domaine | section « Guide agent » de `site/docs/domaines/<domaine>/index.md`, avec renvois aux sources faisant autorité |
 | Travail ouvert (domaine ou transversal), décision à prendre, support différé | Tâche Jira (projet `KAN`), rattachée à son épopée ; jamais un `TODO.md` |
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |

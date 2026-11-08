@@ -190,8 +190,7 @@ Une épopée ne passe à « Terminé(e) » que si, dans la dernière PR de l'ép
 * la CI publie l'image `erp-rh-docs` (vérifié sur `main`) ;
 * le ticket de l'épopée porte, en commentaire, le lien de la page mise à jour.
 
-Cette exigence s'ajoute à la documentation du domaine (`docs/<domaine>/`) : la documentation du dépôt est la source, le
-site la présente.
+Cette exigence s'ajoute à la documentation du domaine (`site/docs/domaines/<domaine>/`) : le site de documentation du dépôt est la source.
 
 # 7. Contrôle en revue
 

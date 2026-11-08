@@ -47,7 +47,7 @@ function dateIso(date: Date): string {
 
 /**
  * État et logique de l'assistant d'import de la paie (voir `PaieImportWizardComponent` et
- * docs/adr/0010-employe-etat-du-dernier-mois-de-paie.md). Le fichier est analysé sans rien enregistrer ; les écarts avec les
+ * site/docs/decisions/0010-employe-etat-du-dernier-mois-de-paie.md). Le fichier est analysé sans rien enregistrer ; les écarts avec les
  * fiches se corrigent ici (mettre à jour la fiche, créer un CIN inconnu, rouvrir un chantier clôturé) ou dans le fichier,
  * qu'on réimporte — autant de fois qu'il faut. L'import n'est possible qu'une fois l'analyse prête ; les départs proposés sont cochés d'office.
  */

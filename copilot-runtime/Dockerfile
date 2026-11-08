@@ -1,4 +1,4 @@
-# Image erp-rh-copilot-runtime : runtime CopilotKit officiel entre Angular et le service IA (docs/ia.md, T16).
+# Image erp-rh-copilot-runtime : runtime CopilotKit officiel entre Angular et le service IA (site/docs/ia, T16).
 # Base épinglée par version et digest ; dépendances installées depuis le lockfile, sans scripts d'installation.
 FROM node:26.13.0-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 WORKDIR /app

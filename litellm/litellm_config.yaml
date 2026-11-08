@@ -1,7 +1,7 @@
 # Passerelle LiteLLM : groupes officiels par capacité. Le champ model sélectionne le pool.
 # Les tags sont conservés pour observation ; ils ne déterminent plus les droits ni le routage.
 # Groupes eval et test réservés à la clé de test. Garde-fou pré-appel conservé.
-# Source : docs/ia-proposition-routage-litellm.md (adoptée par le propriétaire).
+# Source : site/docs/ia/routage-litellm.md (adoptée par le propriétaire).
 
 model_list:
   - model_name: ai-gateway-code
