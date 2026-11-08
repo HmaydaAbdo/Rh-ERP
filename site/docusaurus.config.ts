@@ -22,7 +22,7 @@ const config: Config = {
     },
   },
 
-  // Site statique servi chez nous (nginx), jamais public : voir docs/exploitation.
+  // Site statique servi chez nous (nginx), jamais public : voir site/docs/exploitation.
   url: 'https://docs.staport.local',
   baseUrl: '/',
 

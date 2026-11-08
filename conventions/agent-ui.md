@@ -4,7 +4,7 @@ Cette convention définit une architecture réutilisable pour les interfaces pil
 qu'elles soient ajoutées à une application existante ou conçues pour une nouvelle application. Elle
 décrit les contrats et les responsabilités, pas une dépendance obligatoire à un framework client ou
 serveur. Chaque application documente ses versions, son catalogue de composants, ses adaptateurs et
-ses parcours dans `docs/`.
+ses parcours dans le site de documentation (`site/docs/`).
 
 Pour ERP-RH, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
 capacités métier MCP côté Spring ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier

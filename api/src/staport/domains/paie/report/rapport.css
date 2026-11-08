@@ -27,7 +27,7 @@
    entièrement pré-découpé côté Java (RapportPageModelBuilder) — @page n'a donc qu'à fixer la
    taille du support PDF, sans marge (la marge de 20pt devient le padding interne de .page), et
    aucune règle CSS de pagination avancée (running headers, string-set, compteurs de page) n'est
-   utilisée : voir docs/report/README.md pour la justification de ce choix. */
+   utilisée : voir site/docs/domaines/rapport/index.md pour la justification de ce choix. */
 
 @page {
     size: 842pt 595pt;
