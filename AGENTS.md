@@ -23,7 +23,7 @@ Après toute modification :
 
 - vérifier que le projet compile ;
 - supprimer le dead code ;
-- mettre à jour la documentation concernée (le README du domaine, `docs/rbac/` si une permission change,
+- mettre à jour la documentation concernée (la page du domaine dans `site/docs/domaines/`, ses droits (`droits.md`) si une permission change,
   `site/docs/architecture/modele-de-donnees.md` si le schéma change, et Jira (projet `KAN`) si un sujet est traité ou découvert).
 
 Une tâche n'est terminée que lorsque le code, la documentation et les conventions sont synchronisés.
@@ -202,11 +202,13 @@ dans l'ordre ci-dessous.
     livraison agentique par page, documentation à jour en fin d'épopée ; **à lire à l'ouverture de toute tâche**)
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
-comment écrire le code) : `docs/README.md` est l'index — architecture, modèle de données, domaines, imports,
-authentification, permissions (RBAC), frontend, tests, configuration, déploiement. Avant de modifier un domaine,
-lire son README dans `docs/<domaine>/`, son skill dans `docs/<domaine>/skills/SKILL.md` s'il existe, et son fichier
-`docs/rbac/<domaine>.md` s'il existe. Une skill aide l'agent à appliquer le contexte documenté ; elle ne remplace
-pas ces sources et ne confère aucun droit applicatif.
+comment écrire le code) : le site de documentation `site/` (Docusaurus, pages dans `site/docs/`) est l'unique
+source de cette documentation, avec Jira (projet `KAN`) pour le suivi et GitHub pour le code et les revues. Il n'existe
+plus de dossier `docs/`. Le site couvre l'architecture, le modèle de données, les domaines, les imports, l'authentification,
+les permissions (RBAC), le frontend, les tests, la configuration, le déploiement, l'IA et les décisions (ADR). Avant de
+modifier un domaine, lire `site/docs/domaines/<domaine>/index.md` (règles, modèle, contrats, guide agent), `contrats.md`
+et `droits.md` du même dossier. Une skill aide l'agent à appliquer le contexte documenté ; elle ne remplace pas ces
+sources et ne confère aucun droit applicatif.
 
 En cas de conflit entre plusieurs conventions :
 

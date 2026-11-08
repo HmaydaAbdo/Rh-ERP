@@ -10,7 +10,7 @@ Pour reprendre et mener une tâche :
    [`site/docs/exploitation/developpement-local.md`](site/docs/exploitation/developpement-local.md) et [`conventions/lecons.md`](conventions/lecons.md).
 2. Suivre la [routine commune](conventions/workflow.md), puis les conventions applicables dans
    l'ordre indiqué par `AGENTS.md`.
-3. Ouvrir [l'index de documentation](docs/README.md), puis le README, la skill et les permissions
+3. Ouvrir [le site de documentation](site/docs/index.md) (seule source documentaire avec Jira et GitHub), puis la page, les contrats et les permissions
    des domaines concernés.
 4. Lors d'un passage entre Claude et Codex, vérifier l'état réel des fichiers, de la branche et des
    contrôles. Avant de céder le travail, mettre à jour la tâche Jira (statut, preuve, prochaine action en commentaire) :
