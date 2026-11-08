@@ -184,15 +184,15 @@ def etapes() -> list[Etape]:
     base = [*_fonctions(), *_equipes(), *_chantiers(), *_employes()]
     toutes = [*base, *_comptes(), *_masquage(), *_analyses(), *_imports_employes(), *_imports_referentiels()]
     questions = {
-        "pas-un-classeur": "Texte d'erreur de la bibliothèque Excel (POI côté Spring, openpyxl côté Python).",
-        "csv": "Texte d'erreur de la bibliothèque Excel (POI côté Spring, openpyxl côté Python).",
-        "sans-fichier": "Fichier absent : Spring répond 500, Python 400 (même question que le tri inconnu).",
-        "21-mo": "Au-delà de 20 Mo Spring coupe la connexion ; Python répond 413 avec un message.",
+        "pas-un-classeur": "Décidé : message français unique, indépendant de la bibliothèque Excel.",
+        "csv": "Décidé : message français unique, indépendant de la bibliothèque Excel.",
+        "sans-fichier": "Décidé : fichier absent = 400 (Spring 500, défaut de Spring).",
+        "21-mo": "Décidé : au-delà de 20 Mo, 413 avec message (Spring coupe la connexion).",
     }
     for e in toutes:
         e.module = M
         e.trier_listes = e.chemin.startswith(("/roles", "/users"))
-        e.question = next((q for cle, q in questions.items() if e.nom.endswith(cle)), e.question)
+        e.decide = next((q for cle, q in questions.items() if e.nom.endswith(cle)), e.decide)
         if e.nom.endswith("modifier-sans-droit"):
             e.decide = "Spring valide le corps avant les droits (400) ; Python refuse d'abord (403)."
     return toutes

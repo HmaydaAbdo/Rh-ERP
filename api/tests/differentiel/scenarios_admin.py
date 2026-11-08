@@ -62,7 +62,7 @@ def _roles() -> list[Etape]:
             "/roles/search",
             {},
             params={"sort": "zzz"},
-            question="Q2 tri inconnu.",
+            decide="Décidé : tri inconnu = 400 avec message (Spring 500, défaut de Spring).",
         ),
         _e("role-recherche-nom-long", "POST", "/roles/search", {"nom": "x" * 51}),
     ]
@@ -177,7 +177,14 @@ def _journal() -> list[Etape]:
         _e("journal-entite", "POST", "/logs/search", {"entiteType": "Role"}, params={"sort": "id,asc"}),
         _e("journal-corps-absent", "POST", "/logs/search", params={"sort": "id,asc"}),
         _e("journal-categorie-inconnue", "POST", "/logs/search", {"categories": ["NOPE"]}),
-        _e("journal-tri-inconnu", "POST", "/logs/search", {}, params={"sort": "zzz"}, question="Q2 tri inconnu."),
+        _e(
+            "journal-tri-inconnu",
+            "POST",
+            "/logs/search",
+            {},
+            params={"sort": "zzz"},
+            decide="Décidé : tri inconnu = 400 avec message (Spring 500, défaut de Spring).",
+        ),
         _e("journal-entree", "GET", "/logs/{l_id}"),
         _e("journal-entree-inconnue", "GET", "/logs/999999"),
         _e("journal-details", "GET", "/logs/{l_id}/details"),
@@ -290,11 +297,9 @@ def etapes() -> list[Etape]:
         if e.nom.startswith("journal") and e.nom != "journal-categorie-inconnue" and "tri" not in e.nom:
             e.decide = "Journal d'audit : opérations seulement, jamais les lectures (décision du propriétaire)."
         if e.nom == "user-modifier-sans-actif":
-            e.question = "Spring : actif absent = corps illisible (booléen primitif) ; Python : champ obligatoire."
+            e.decide = "Spring : actif absent = corps illisible ; Python : message propre (décision du propriétaire)."
         if e.nom.startswith("403") and "import" in e.chemin:
-            e.question = (
-                "Spring écrit error='Internal Server Error' sur ce 403 (étiquette fausse) ; Python 'Forbidden'."
-            )
+            e.decide = "Spring écrit error='Internal Server Error' sur ce 403 (étiquette fausse) ; Python 'Forbidden'."
         e.trier_listes = e.trier_listes or e.chemin.startswith(
             ("/roles", "/users")
         )  # permissions : ensemble non ordonné

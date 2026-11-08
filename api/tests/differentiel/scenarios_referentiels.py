@@ -72,7 +72,7 @@ def _fonctions() -> list[Etape]:
             "/functions/search",
             {},
             params={"sort": "inexistant,asc"},
-            question="Q2 : Spring répond 500 (PropertyReferenceException), Python 400 volontairement",
+            decide="Décidé : tri inconnu = 400 avec message (Spring 500, défaut de Spring).",
         ),
         _post("fonction-recherche-taille-max", "/functions/search", {}, params={"size": 500}),
         _post("fonction-recherche-page-negative", "/functions/search", {}, params={"page": -1}),

@@ -138,7 +138,6 @@ def _rapports() -> list[Etape]:
         pdf(
             "pdf-equipes-par-chantier",
             {"periode": p, "equipesParChantier": {"CH-A": ["Équipe 1"]}},
-            question="Pagination du détail d'une équipe sélectionnée : Spring 14 pages, Python 15 (non reproduit).",
         ),
         pdf(
             "pdf-materiel",

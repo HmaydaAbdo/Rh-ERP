@@ -55,14 +55,14 @@ def _recherches() -> list[Etape]:
             "/paie/search",
             {},
             params={"sort": "nope,asc"},
-            question="Q2 : tri inconnu ou sens invalide, Spring répond 500, Python 400/ignoré.",
+            decide="Décidé : tri inconnu = 400 avec message (Spring 500, défaut de Spring).",
         ),
         _post(
             "recherche-tri-sens-invalide",
             "/paie/search",
             {},
             params={"sort": "id,up"},
-            question="Q2 : tri inconnu ou sens invalide, Spring répond 500, Python 400/ignoré.",
+            decide="Décidé : tri inconnu = 400 avec message (Spring 500, défaut de Spring).",
         ),
         _post("recherche-sans-authentification", "/paie/search", {}, jeton=False),
     ]

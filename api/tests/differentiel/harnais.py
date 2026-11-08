@@ -286,12 +286,12 @@ def _pages_pdf(fichier: Path) -> list[str]:
     pages = traite.stdout.decode("utf-8").split("")
     if pages and not pages[-1].strip():
         pages.pop()
-    # Chantier sans nom : Spring imprime « null », Python « None » : question posée au propriétaire (rapport Jira)
+    # Chantier sans nom : Spring imprime « · null », Python n'imprime que le code (décision du propriétaire)
     return [
         " ".join(
             re.sub(r"Édité le \S+ à \S+", "Édité le <horodatage>", page)
-            .replace("· null", "· ?")
-            .replace("· None", "· ?")
+            .replace("· null", "")
+            .replace("· None", "")
             .split()
         )
         for page in pages
@@ -352,7 +352,7 @@ def _categorie(e: Etape, objet: str, spring: Any) -> str:
     if e.decide:
         return "decide"
     if objet == "$.message" and isinstance(spring, str) and ANGLAIS_VALIDATION.search(spring):
-        return "a_valider"
+        return "decide"
     return "ecart"
 
 
