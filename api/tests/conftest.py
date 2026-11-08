@@ -147,8 +147,8 @@ def construire_configuration(url: str, cle_b64: str, **remplacements: Any) -> Co
         "mail_from": "noreply@example.org",
         "chantier_sync_base_url": "http://chantiers.example/getChantiers",
         # Indépendant de l'environnement : un test qui charge le `.env` de développement allume sinon la documentation.
-        "springdoc_api_docs_enabled": False,
-        "springdoc_swagger_ui_enabled": False,
+        "api_docs_enabled": False,
+        "swagger_ui_enabled": False,
         **remplacements,
     }
     return Configuration(**valeurs)  # pyright: ignore[reportCallIssue]

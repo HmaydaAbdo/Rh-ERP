@@ -84,8 +84,8 @@ def test_la_rotation_archive_compresse_et_purge(dossier: Path) -> None:
     ("remplacements", "docs", "openapi"),
     [
         ({}, 404, 404),
-        ({"springdoc_api_docs_enabled": True}, 404, 200),
-        ({"springdoc_api_docs_enabled": True, "springdoc_swagger_ui_enabled": True}, 200, 200),
+        ({"api_docs_enabled": True}, 404, 200),
+        ({"api_docs_enabled": True, "swagger_ui_enabled": True}, 200, 200),
     ],
 )
 def test_la_documentation_d_api_est_eteinte_par_defaut(

@@ -139,10 +139,8 @@ def creer_app(
         vie = combine_lifespans(vie, cycle_ia(configuration_ia))
     if configuration_ is not None:
         configurer_journalisation(configuration_.logging_format, configuration_.logging_file_path)
-    documentation_allumee = configuration_ is not None and configuration_.springdoc_api_docs_enabled
-    interface_allumee = (
-        documentation_allumee and configuration_ is not None and configuration_.springdoc_swagger_ui_enabled
-    )
+    documentation_allumee = configuration_ is not None and configuration_.api_docs_enabled
+    interface_allumee = documentation_allumee and configuration_ is not None and configuration_.swagger_ui_enabled
     app = FastAPI(
         title="Staport Intelligence",
         lifespan=vie,
