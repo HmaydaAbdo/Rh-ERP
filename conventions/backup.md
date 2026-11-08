@@ -34,7 +34,7 @@ responsable, les objectifs de reprise et la procédure de restauration.
 * Une stratégie limitée à l'hôte peut être retenue par décision explicite du propriétaire. Documenter
   les risques acceptés : une copie stockée sur le même hôte ne protège pas contre sa perte ou sa
   compromission. Revoir cette décision si les obligations métier ou le niveau de risque évoluent.
-* Pour ERP-RH, le propriétaire a retenu une seule destination locale chiffrée, distincte du volume
+* Pour Staport Intelligence, le propriétaire a retenu une seule destination locale chiffrée, distincte du volume
   PostgreSQL. Aucune copie des archives de base hors hôte n'est demandée. Le répertoire `./backups/`,
   à côté du fichier Compose, est exclu du contrôle de version et sa protection d'accès est documentée
   dans la procédure de déploiement.

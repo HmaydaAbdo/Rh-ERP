@@ -1,8 +1,8 @@
-"""Point d'entrée : `python -m erp_rh_ia`."""
+"""Point d'entrée : `python -m staport_ia`."""
 
 import uvicorn
 
-from erp_rh_ia.app import creer_app
+from staport_ia.app import creer_app
 
 
 def main() -> None:

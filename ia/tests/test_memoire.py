@@ -19,8 +19,8 @@ from doubles import modele
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from erp_rh_ia.agent import creer_agent
-from erp_rh_ia.memoire import espace_conversation, ouvrir_memoire, sujet
+from staport_ia.agent import creer_agent
+from staport_ia.memoire import espace_conversation, ouvrir_memoire, sujet
 
 URL = os.environ.get("IA_TEST_DATABASE_URL")
 

@@ -36,7 +36,7 @@ Le transverse d'abord, puis le métier du moins couplé au plus couplé. Les tai
 6. **Documentation** : README de domaine, conventions et site de documentation à jour (règle d'`AGENTS.md`).
 7. **Rapprochement** : `main` est fusionné dans la branche de travail (`git merge main`) ; les changements de comportement arrivés sur
    `main` pendant le domaine ont leur ticket de report.
-8. **Sauvegarde** : `git bundle create ../erp-rh-migration-<domaine>.bundle --all` (la branche n'est pas poussée avant la fin).
+8. **Sauvegarde** : `git bundle create ../staport-intelligence-migration-<domaine>.bundle --all` (la branche n'est pas poussée avant la fin).
 
 ## Coexistence des deux backends
 

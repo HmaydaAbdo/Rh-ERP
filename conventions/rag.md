@@ -4,7 +4,7 @@ Le RAG peut aider à retrouver des sources pertinentes pour une réponse. Il ne 
 de vérité métier : les documents originaux, les services de domaine et les définitions officielles
 des indicateurs restent autoritaires.
 
-Le cadrage ERP-RH est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Un corpus réglementaire (barèmes,
+Le cadrage Staport Intelligence est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Un corpus réglementaire (barèmes,
 taux, textes) porte la date d'effet de chaque version ; une réponse cite la version applicable à
 la période demandée.
 Le premier corpus, ses propriétaires et ses droits sont à valider avant ingestion. La présence de
@@ -39,7 +39,7 @@ Le choix du stockage suit l'évaluation, par étapes :
    l'évaluation montre que les questions attendues exigent de relier des informations dispersées
    (questions à plusieurs sauts, vue d'ensemble d'un corpus) et que les solutions plus simples
    n'atteignent pas les critères validés. L'introduction d'une base graphe suit un ADR ; elle ne
-   fait pas partie du MVP ERP-RH.
+   fait pas partie du MVP Staport Intelligence.
 
 Les données transactionnelles d'un domaine (employés, chantiers, paie…) ne sont jamais recopiées dans un
 index ou un graphe pour être interrogées par un modèle : elles restent lues par les outils de leur

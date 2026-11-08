@@ -11,6 +11,6 @@ esac
 : "${DATABASE_URL:?DATABASE_URL est obligatoire}"
 
 # Configuration effective : sans les déploiements dont la clé est vide (litellm/filtrer_config.py).
-python3 /usr/local/bin/erp-rh-filtrer-config /app/config.yaml /tmp/config.yaml
+python3 /usr/local/bin/staport-intelligence-filtrer-config /app/config.yaml /tmp/config.yaml
 
 exec docker/prod_entrypoint.sh "$@"

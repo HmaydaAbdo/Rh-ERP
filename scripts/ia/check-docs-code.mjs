@@ -37,7 +37,7 @@ const outilsMcp = fichiers(join(racine, 'api/src/staport/domains/mcp'), /\.py$/)
   (n, f) => n + (readFileSync(f, 'utf8').match(/^\s*@serveur\.tool\(/gm) ?? []).length,
   0
 );
-const agent = lire('ia/src/erp_rh_ia/agent.py');
+const agent = lire('ia/src/staport_ia/agent.py');
 const seuils = {
   resume_jetons: Number(agent.match(/^SEUIL_RESUME_JETONS = ([\d_]+)/m)?.[1].replaceAll('_', '')),
   resume_messages: Number(agent.match(/keep=\("messages", (\d+)\)/)?.[1]),

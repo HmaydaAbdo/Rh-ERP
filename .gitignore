@@ -1,5 +1,5 @@
 # =========================================================================
-# rh-erp — .gitignore racine
+# Staport Intelligence — .gitignore racine
 # Couvre le dépôt entier (backend, frontend, Docker, fichiers locaux).
 # backend/.gitignore et frontend/.gitignore restent en place (spécifiques
 # à chaque sous-projet) ; ce fichier couvre ce qu'ils ne voient pas :

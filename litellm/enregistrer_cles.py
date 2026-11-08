@@ -3,7 +3,7 @@
 
   python litellm/enregistrer_cles.py
 
-- IA_LITELLM_API_KEY  -> clé « erp-rh-ia » : groupes de production uniquement, 60 requêtes/min,
+- IA_LITELLM_API_KEY  -> clé « staport-intelligence-ia » : groupes de production uniquement, 60 requêtes/min,
   8 simultanées, 300 000 jetons/min.
 - LITELLM_TEST_API_KEY -> clé « smoke-tests » : groupes de production, évaluation et tests (test_providers.py).
 
@@ -27,7 +27,7 @@ if not CONFIG.exists():
 GROUPES = sorted(set(re.findall(r"^  - model_name: (\S+)", CONFIG.read_text(encoding="utf-8"), re.M)))
 PRODUCTION = ["ai-gateway-" + c for c in ("simple", "medium", "complex", "complex-fallback", "code", "ocr")]
 CLES = [
-    ("IA_LITELLM_API_KEY", {"key_alias": "erp-rh-ia", "models": PRODUCTION, "rpm_limit": 60,
+    ("IA_LITELLM_API_KEY", {"key_alias": "staport-intelligence-ia", "models": PRODUCTION, "rpm_limit": 60,
                             "max_parallel_requests": 8, "tpm_limit": 300000}),
     ("LITELLM_TEST_API_KEY", {"key_alias": "smoke-tests", "models": GROUPES}),
 ]

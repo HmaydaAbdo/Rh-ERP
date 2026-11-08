@@ -34,7 +34,7 @@ describe('FilAssistant', () => {
   });
 
   it('ne reprend jamais le fil d’un autre utilisateur', () => {
-    localStorage.setItem('erp-rh.assistant.fil.8', 'u7-vole');
+    localStorage.setItem('staport.assistant.fil.8', 'u7-vole');
     utilisateur.set({ id: 8 });
     expect(service().fil()).toMatch(/^u8-/);
   });

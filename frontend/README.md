@@ -1,4 +1,4 @@
-# Frontend — rh-erp
+# Frontend — Staport Intelligence
 
 Application Angular 22 (composants standalone `OnPush`, signaux, zoneless) avec le kit Staport (Angular Aria/CDK, Lucide, Tailwind 4). La documentation complète
 (structure, routes et permissions, session, composants partagés, tableaux) est dans

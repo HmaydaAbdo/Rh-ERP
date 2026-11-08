@@ -1,6 +1,6 @@
-# Passerelle LiteLLM — image `erp-rh-litellm`
+# Passerelle LiteLLM — image `staport-intelligence-litellm`
 
-Passerelle unique, compatible OpenAI, entre le service IA d'ERP-RH et les fournisseurs de modèles.
+Passerelle unique, compatible OpenAI, entre le service IA de Staport Intelligence et les fournisseurs de modèles.
 Décisions et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). Ce dossier ne contient **aucun secret** : la
 configuration ne référence que des variables `os.environ/…`, fournies par le `.env` racine unique.
 
@@ -77,7 +77,7 @@ python litellm/enregistrer_cles.py
 
 | Variable | Clé | Droits |
 |---|---|---|
-| `IA_LITELLM_API_KEY` | `erp-rh-ia` | Six groupes de production uniquement, 60 requêtes/min |
+| `IA_LITELLM_API_KEY` | `staport-intelligence-ia` | Six groupes de production uniquement, 60 requêtes/min |
 | `LITELLM_TEST_API_KEY` | `smoke-tests` | Groupes de production, évaluation, sondes et selftest |
 
 Pour une nouvelle valeur, la générer (`python -c "import secrets;print('sk-'+secrets.token_hex(24))"`), la placer

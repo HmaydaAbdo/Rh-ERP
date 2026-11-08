@@ -110,7 +110,7 @@ VARIANTES_REFUSEES: dict[str, Callable[[Plateforme], str]] = {
     "identifiant-de-cle-inconnu": lambda p: _signer(p, kid="cle-inconnue"),
     "autre-emetteur": lambda p: _signer(p, iss="autre-emetteur"),
     "autre-destinataire": lambda p: _signer(p, aud="autre-application"),
-    "jeton-agent-non-accepte": lambda p: _signer(p, aud=["erp-rh-ia", "erp-rh-mcp"]),
+    "jeton-agent-non-accepte": lambda p: _signer(p, aud=["staport-intelligence-ia", "staport-intelligence-mcp"]),
     "expire": lambda p: _signer(p, exp=datetime.now(UTC) - timedelta(minutes=5)),
     "uid-non-numerique": lambda p: _signer(p, uid="12"),
     "sans-uid": lambda p: _signer(p, uid=None),
@@ -470,7 +470,10 @@ def test_le_jeton_agent_porte_l_identite_seule_pendant_cinq_minutes(
     assert entete["alg"] == "RS256" and entete["kid"] == "cle-essai-1" and entete["typ"] == "JWT"
     claims = jwt.decode(corps["jeton"], options={"verify_signature": False})
     assert claims["iss"] == EMETTEUR and claims["sub"] == nom and claims["uid"] == identifiant
-    assert set(claims["aud"]) == {"erp-rh-ia", "erp-rh-mcp"} and claims["scope"] == "mcp:lecture"
+    assert (
+        set(claims["aud"]) == {"staport-intelligence-ia", "staport-intelligence-mcp"}
+        and claims["scope"] == "mcp:lecture"
+    )
     assert claims["exp"] - claims["iat"] == 300 and claims["jti"] and claims["nbf"] == claims["iat"]
     assert "permissions" not in claims and "roles" not in claims
     cles = JeuDeCles.depuis_configuration(plateforme.cle_b64, "cle-essai-1", "", "", "MCP_JWT")

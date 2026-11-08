@@ -3,7 +3,7 @@ title: "Audit — journal, historique et garde-fous"
 sidebar_position: 1
 ---
 
-> Ce document décrit **ce qui existe** dans rh-erp. Les règles réutilisables d'un projet à l'autre (comment écrire une
+> Ce document décrit **ce qui existe** dans Staport Intelligence. Les règles réutilisables d'un projet à l'autre (comment écrire une
 > entité, une migration, un service auditables) sont dans `conventions/audit.md` (`conventions/audit.md`) et font foi ;
 > la permission est décrite dans [rbac/audit.md](droits.md), les tables dans data-model.md ([architecture/modele-de-donnees](../../architecture/modele-de-donnees.md)).
 

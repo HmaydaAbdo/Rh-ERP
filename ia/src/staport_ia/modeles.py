@@ -9,7 +9,7 @@ from enum import StrEnum
 
 from langchain_litellm import ChatLiteLLM
 
-from erp_rh_ia.config import Settings
+from staport_ia.config import Settings
 
 
 class Tache(StrEnum):
