@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
@@ -42,12 +43,15 @@ from staport.domains.paie import router as routes_paie
 from staport.domains.parametre import router as routes_parametre
 from staport.platform.base_de_donnees import creer_fabrique_sessions, creer_moteur
 from staport.platform.configuration import Configuration, configuration
-from staport.platform.erreurs import enregistrer_gestionnaires
+from staport.platform.erreurs import enregistrer_gestionnaires, reponse
 from staport.platform.requete import EN_TETE_REQUEST_ID, EN_TETES_SECURITE, enregistrer_identifiant_requete
 from staport.platform.sante import sante
 
 if TYPE_CHECKING:
     from erp_rh_ia.config import Settings as SettingsIA
+
+
+TAILLE_MAX_TELEVERSEMENT = 20 * 1024 * 1024
 
 
 async def _amorcer_admin(
@@ -134,6 +138,20 @@ def creer_app(
             expose_headers=[EN_TETE_REQUEST_ID],
             allow_credentials=True,
         )
+
+        @app.middleware("http")
+        async def _limiter_televersement(requete: Request, suite: Callable[[Request], Awaitable[Response]]) -> Response:
+            """`spring.servlet.multipart.max-request-size: 20MB` : Spring coupe la connexion, l'API répond 413."""
+            taille = requete.headers.get("content-length", "")
+            multipart = requete.headers.get("content-type", "").startswith("multipart/form-data")
+            if multipart and taille.isdigit() and int(taille) > TAILLE_MAX_TELEVERSEMENT:
+                reponse_413 = reponse(
+                    requete, HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "Fichier trop volumineux : 20 Mo maximum."
+                )
+                for nom, valeur in EN_TETES_SECURITE.items():
+                    reponse_413.headers.setdefault(nom, valeur)
+                return reponse_413
+            return await suite(requete)
 
         @app.middleware("http")
         async def _refuser_origine_inconnue(

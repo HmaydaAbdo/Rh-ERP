@@ -38,7 +38,7 @@ async def lire(identifiant: int, session: Session, contexte: Contexte) -> Equipe
 
 
 @equipes.post("/search", dependencies=[Depends(exiger("EQUIPE_READ"))])
-async def rechercher(corps: EquipeRecherche | None, page: PageEquipes, session: Session, contexte: Contexte):
+async def rechercher(page: PageEquipes, session: Session, contexte: Contexte, corps: EquipeRecherche | None = None):
     return await contexte.equipes.rechercher(session, corps, page)
 
 
