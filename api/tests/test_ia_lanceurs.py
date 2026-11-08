@@ -13,6 +13,7 @@ L'application complète écoute sur un port loopback (base PostgreSQL réelle, d
 
 # ruff: noqa: F811  (la fixture `serveur_loopback` importée est reprise par nom)
 
+import contextlib
 import json
 import os
 import random
@@ -29,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import psutil
 import pytest
 from conftest import Plateforme
 from sqlalchemy import text
@@ -155,8 +157,21 @@ def _service_ia(api: str, port: int, journal: Path) -> Generator[subprocess.Pope
         try:
             yield service
         finally:
-            service.kill()
-            service.wait(timeout=30)
+            _arreter_arbre(service)
+
+
+def _arreter_arbre(service: subprocess.Popen[bytes]) -> None:
+    """`uv run` lance uvicorn dans un processus enfant : le tuer seul laisserait le service (370 Mo) orphelin."""
+    try:
+        racine = psutil.Process(service.pid)
+        processus = [*racine.children(recursive=True), racine]
+    except psutil.NoSuchProcess:
+        processus = []
+    for p in processus:
+        with contextlib.suppress(psutil.NoSuchProcess):
+            p.kill()
+    psutil.wait_procs(processus, timeout=30)
+    service.wait(timeout=30)
 
 
 def _attendre(url: str, service: subprocess.Popen[bytes], journal: Path, delai: float = 90) -> None:
