@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import Field, model_validator
 
-from staport.domains.common.schemas import ModeleApi, Nombre, NonVide, Page, regle_metier
+from staport.domains.common.schemas import ModeleApi, Montant, Nombre, NonVide, Page, regle_metier
 from staport.domains.paie.periode import PeriodePaie
 
 from .models import EmployeeStatut, TypeSalaire
@@ -17,7 +17,7 @@ class _EmployeeBase(ModeleApi):
     date_embauche: date
     fonction_id: int
     equipe_id: int | None = None
-    salaire: Nombre | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    salaire: Montant | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
     type_salaire: TypeSalaire | None = None
 
     @model_validator(mode="after")

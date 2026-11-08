@@ -4,8 +4,9 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, BeforeValidator, Field
 
+from staport.domains.common.montant import arrondir_si_nombre
 from staport.domains.common.schemas import ModeleApi, Nombre, NonVide
 from staport.domains.employee.models import TypeSalaire
 from staport.domains.paie.periode import PeriodePaie
@@ -185,7 +186,7 @@ class ImportCreation(ModeleApi):
     date_naissance: Annotated[date, AfterValidator(_dans_le_passe)]
     date_embauche: date
     fonction_id: int
-    salaire: Annotated[Decimal, Field(ge=0, max_digits=10, decimal_places=2)]
+    salaire: Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=10, decimal_places=2)]
     type_salaire: TypeSalaire
 
 

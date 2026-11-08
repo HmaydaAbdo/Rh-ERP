@@ -36,10 +36,10 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
     assert reponse.status_code == 200, reponse.text
     analyse = reponse.json()
     assert analyse["periode"] == "2026-11"
-    assert any(
-        erreur["numeroLigne"] == 4 and erreur["champ"] == "salaireMensuel" and erreur["valeur"] == "123.456"
+    assert not any(
+        erreur["numeroLigne"] == 4 and erreur["champ"] in ("salaireMensuel", "salaireTotal")
         for erreur in analyse["erreurs"]
-    )
+    ), "123,456 est arrondi automatiquement à 123,46 : plus d'erreur de précision"
     assert any(
         avertissement["numeroLigne"] == 5
         and avertissement["champ"] == "salaireMensuel"
