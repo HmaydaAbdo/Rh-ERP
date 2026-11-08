@@ -1,6 +1,6 @@
-"""Règle commune des montants : entiers de dirham, arrondi « demi supérieur », appliqué automatiquement partout."""
+"""Règle commune des montants : entiers de dirham, 0,5 inclus on descend, au-delà on monte (HALF_DOWN), partout."""
 
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_DOWN, Decimal, InvalidOperation
 from typing import Any
 
 UN = Decimal(1)
@@ -9,10 +9,10 @@ _SEUIL_ARRONDI = Decimal("9999999999.5")
 
 
 def arrondir_montant(valeur: Decimal) -> Decimal:
-    """Arrondit à l'entier de dirham (0,5 → 1) ; les valeurs non finies ou hors capacité restent intactes."""
+    """Arrondit à l'entier de dirham (0,5 → 0, 0,51 → 1) ; les valeurs non finies ou hors capacité restent intactes."""
     if not valeur.is_finite() or abs(valeur) >= _SEUIL_ARRONDI:
         return valeur
-    return valeur.quantize(UN, rounding=ROUND_HALF_UP)
+    return valeur.quantize(UN, rounding=ROUND_HALF_DOWN)
 
 
 def arrondir_si_nombre(valeur: Any) -> Any:

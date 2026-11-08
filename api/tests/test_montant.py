@@ -1,4 +1,4 @@
-"""Règle commune des montants : entiers de dirham, arrondi automatique (demi supérieur) dans tous les domaines."""
+"""Règle commune des montants : entiers de dirham, arrondi automatique (0,5 descend) dans tous les domaines."""
 
 from datetime import date
 from decimal import Decimal
@@ -29,7 +29,7 @@ def _bulletin(**montants: object) -> PaieCreationRequete:
 
 def test_un_bulletin_saisi_arrondit_salaire_primes_et_total() -> None:
     bulletin = _bulletin(
-        salaireMensuel=769.230769, primeRoulageOrdinaire="12.5", primeRoulageDimanche=0.004, salaireTotal=1000.999
+        salaireMensuel=769.5, primeRoulageOrdinaire="12.51", primeRoulageDimanche=0.004, salaireTotal=1000.999
     )
     assert bulletin.salaire_mensuel == Decimal("769")
     assert bulletin.prime_roulage_ordinaire == Decimal("13")

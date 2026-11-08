@@ -129,7 +129,7 @@ bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement «
 0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
 `salaireMensuel`, `primeRoulageOrdinaire`,
 `primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, sont arrondis automatiquement à l'entier
-de dirham (règle commune des montants : 769,5 devient 770, sans erreur) et ont une
+de dirham (règle commune des montants : 769,5 devient 769 et 769,51 devient 770, sans erreur) et ont une
 borne maximale de `9 999 999 999` contrôlée après arrondi ; un montant négatif reste refusé. Toute erreur de cellule doit identifier la ligne Excel, le nom
 exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
 salaires et primes n'est pas un contrat suffisant.

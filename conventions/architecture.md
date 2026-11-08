@@ -70,15 +70,15 @@ cycle de mise à jour/suppression définis. Il ne devient pas une seconde source
 
 ## Montants
 
-Tout montant d'argent est **un entier de dirham, arrondi automatiquement** (demi supérieur : 0,5 → 1), partout
+Tout montant d'argent est **un entier de dirham, arrondi automatiquement** (0,5 inclus on descend, au-delà on monte : 12,5 → 12, 12,51 → 13), partout
 dans le projet et jamais à la main : saisie d'un formulaire, API, import Excel, MCP. L'arrondi est posé une seule
 fois, au bord du système, par le type partagé du schéma (`Montant`, `common/montant.py` côté API) avant les
 contraintes (positif ou nul, borne maximale, nombre de chiffres). Un montant n'est donc jamais refusé pour avoir des
 décimales ; il l'est s'il est négatif ou hors capacité. Aucun montant n'a de centimes, dans aucun domaine : salaire,
 primes, bulletin de paie, heures supplémentaires, forfaits, coûts moyens, totaux et affichages (`1.0-0` côté Angular, colonnes
-`NUMERIC(p,0)` côté base). Les calculs dérivés (S/H, montant d'heures supplémentaires) s'arrondissent eux aussi à l'entier ;
-seule exception écrite, décidée par le propriétaire : leur arrondi d'un demi exact descend (`HALF_DOWN`, parité Spring). Toute
-autre exception est une règle métier écrite par le propriétaire, jamais un oubli. Les quantités (jours, heures) ne sont pas
+`NUMERIC(p,0)` côté base). Les calculs dérivés (S/H, montant d'heures supplémentaires, coûts moyens) s'arrondissent eux aussi à l'entier par la même
+règle (`HALF_DOWN`) : il n'y a qu'une seule règle d'arrondi des montants. Toute exception est une règle métier écrite par
+le propriétaire, jamais un oubli. Les quantités (jours, heures) ne sont pas
 des montants : elles ne sont pas arrondies.
 
 ## Décisions d'architecture

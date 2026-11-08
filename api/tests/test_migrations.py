@@ -208,8 +208,12 @@ def test_tous_les_montants_sont_des_entiers_de_dirham_et_le_retour_arriere_rend_
             for colonne in colonnes:
                 assert (table, colonne, 0) in echelles, (table, colonne)
         assert all(echelle == 0 for _, _, echelle in echelles)
-        # PostgreSQL arrondit « demi supérieur » en changeant le type : 0,5 → 1, comme `arrondir_montant`.
-        assert connexion.execute(text("SELECT 4500.5::numeric(10, 0), 0.4::numeric(10, 0)")).one() == (4501, 0)
+        # Expression de conversion de la révision : 0,5 descend, 0,51 monte (HALF_DOWN, comme `arrondir_montant`).
+        assert connexion.execute(text("SELECT CEIL(4500.5 - 0.5), CEIL(4500.51 - 0.5), CEIL(0.4 - 0.5)")).one() == (
+            4500,
+            4501,
+            0,
+        )
     moteur.dispose()
     config = _config(url)
     command.downgrade(config, "0002_paie_materiel")

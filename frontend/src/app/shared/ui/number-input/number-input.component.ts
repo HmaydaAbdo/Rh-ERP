@@ -103,11 +103,19 @@ export class NumberInputComponent implements FormValueControl<number | null> {
     }
     const min = this.min();
     const max = this.max();
-    // En quittant le champ, une valeur est arrondie à sa précision d'affichage (demi supérieur) : les montants sont des entiers.
+    // En quittant le champ, une valeur est arrondie à sa précision d'affichage (0,5 inclus on descend, au-delà on monte) : les montants sont des entiers.
     const decimales = this.maxFractionDigits();
-    const arrondi = decimales === null ? value : Math.round((value + Number.EPSILON) * 10 ** decimales) / 10 ** decimales;
+    const arrondi = decimales === null ? value : this.arrondirDemiBas(value, decimales);
     const auMoins = min === undefined ? arrondi : Math.max(min, arrondi);
     return max === undefined ? auMoins : Math.min(max, auMoins);
+  }
+
+  /** 0,5 inclus on descend, au-delà on monte (même règle que le serveur, `arrondir_montant`). */
+  private arrondirDemiBas(value: number, decimales: number): number {
+    const echelle = 10 ** decimales;
+    const brut = value * echelle;
+    const plancher = Math.floor(brut);
+    return (brut - plancher > 0.5 + 1e-9 ? plancher + 1 : plancher) / echelle;
   }
 
   private render(): void {
