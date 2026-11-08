@@ -70,4 +70,8 @@ export class PaieImportEtapeControleComponent {
   protected confirmerZero(evenement: Event): void {
     this.store.confirmerSalaireZero.set((evenement.target as HTMLInputElement).checked);
   }
+
+  protected confirmerPeriode(evenement: Event): void {
+    this.store.confirmerPeriode((evenement.target as HTMLInputElement).checked);
+  }
 }

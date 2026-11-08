@@ -1,13 +1,16 @@
+from collections.abc import Callable
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any, cast
 
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut, TypeSalaire
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
@@ -15,12 +18,13 @@ from staport.domains.function.models import Fonction
 from .exceptions import ErreurImportPaie
 from .models import Paie
 from .observation import est_stc_ou_sortie
-from .periode import afficher_periode, mois_suivant
+from .periode import afficher_periode
 from .schemas import (
     PaieImportAnalyse,
     PaieImportChamp,
     PaieImportChantierCloture,
     PaieImportCinInconnu,
+    PaieImportControlePeriode,
     PaieImportCorrections,
     PaieImportDecisionsEquipe,
     PaieImportDepart,
@@ -51,6 +55,49 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
         return lignes
     finally:
         classeur.close()
+
+
+MOTIF_ABSENT_DU_FICHIER = "Absent du fichier"
+SEUIL_CONTENU_IDENTIQUE = 0.9
+PERIODES_COMPAREES = 3
+
+
+def montant_ligne(ligne: list[Any], index: int) -> Decimal | None:
+    """Montant d'une cellule, arrondi à deux décimales (règle commune des montants) ; `None` si vide ou illisible."""
+    valeur = ligne[index] if len(ligne) > index else None
+    if valeur is None:
+        return None
+    try:
+        nombre = Decimal(str(valeur).strip())
+    except InvalidOperation, ValueError:
+        return None
+    return arrondir_montant(nombre) if nombre.is_finite() else None
+
+
+def _nombre_ligne(ligne: list[Any], index: int) -> Decimal | None:
+    valeur = ligne[index] if len(ligne) > index else None
+    if valeur is None:
+        return None
+    try:
+        nombre = Decimal(str(valeur).strip())
+    except InvalidOperation, ValueError:
+        return None
+    return nombre.normalize() if nombre.is_finite() else None
+
+
+def signature_ligne(ligne: list[Any]) -> tuple[Any, ...]:
+    """Ce qui fait la paie d'un employé : jours, récupérations, salaire, primes, total et observation."""
+    observation = str(ligne[10]).strip().lower() if len(ligne) > 10 and ligne[10] is not None else ""
+    return (
+        _nombre_ligne(ligne, 3),
+        _nombre_ligne(ligne, 4),
+        _nombre_ligne(ligne, 5),
+        montant_ligne(ligne, 6),
+        montant_ligne(ligne, 7),
+        montant_ligne(ligne, 8),
+        montant_ligne(ligne, 9),
+        observation,
+    )
 
 
 def departs_et_retours(
@@ -86,8 +133,9 @@ def departs_et_retours(
 
 
 class ServiceImportPaie:
-    def __init__(self, auditeur: Auditeur) -> None:
+    def __init__(self, auditeur: Auditeur, aujourd_hui: Callable[[], date] = date.today) -> None:
         self._auditeur = auditeur
+        self._aujourd_hui = aujourd_hui
 
     def generer_modele(self) -> BytesIO:
         classeur = Workbook()
@@ -121,14 +169,50 @@ class ServiceImportPaie:
         sortie.seek(0)
         return sortie
 
+    def _controle_calendrier(self, periode: int) -> PaieImportControlePeriode | None:
+        """Une paie n'existe qu'à la fin de son mois : la période courante ou future demande confirmation."""
+        aujourd_hui = self._aujourd_hui()
+        courant = aujourd_hui.year * 100 + aujourd_hui.month
+        if periode < courant:
+            return None
+        return PaieImportControlePeriode(
+            code="PERIODE_COURANTE_OU_FUTURE",
+            message=(
+                f"La période {afficher_periode(periode)} est le mois en cours ou un mois à venir : la paie d'un mois "
+                "n'existe qu'à sa fin (en novembre, on importe la paie d'octobre). Confirmez si ce choix est voulu."
+            ),
+            periode_reference=None,
+        )
+
     @staticmethod
-    def _verifier_mois(dernier: int | None, periode: int) -> None:
-        """`verifierMois` de Spring : seul le mois suivant le dernier importé est accepté, avant lecture du fichier."""
-        if dernier is not None and periode != mois_suivant(dernier):
-            raise ErreurImportPaie(
-                f"Seul le mois {afficher_periode(mois_suivant(dernier))} peut être importé : la paie s'importe mois "
-                f"après mois et le dernier mois importé est {afficher_periode(dernier)}."
-            )
+    def _controle_doublon(
+        lignes: list[tuple[int, list[Any]]],
+        employees: dict[str, Employee],
+        bulletins_voisins: dict[int, dict[int, tuple[Any, ...]]],
+    ) -> PaieImportControlePeriode | None:
+        """Le fichier reprend (presque) à l'identique les bulletins d'un autre mois : même fichier importé deux fois."""
+        if not lignes:
+            return None
+        for autre in sorted(bulletins_voisins, reverse=True):
+            bulletins = bulletins_voisins[autre]
+            identiques = 0
+            for _, ligne in lignes:
+                cin = str(ligne[2]).strip().upper() if len(ligne) > 2 and ligne[2] is not None else None
+                employe = employees.get(cin) if cin else None
+                if employe is not None and bulletins.get(employe.id) == signature_ligne(ligne):
+                    identiques += 1
+            if identiques / len(lignes) >= SEUIL_CONTENU_IDENTIQUE:
+                return PaieImportControlePeriode(
+                    code="CONTENU_DEJA_IMPORTE",
+                    message=(
+                        f"{identiques} bulletin(s) sur {len(lignes)} sont identiques à ceux de "
+                        f"{afficher_periode(autre)} "
+                        "(jours, salaires, primes, total, observation) : ce fichier semble déjà importé. Confirmez "
+                        "seulement s'il s'agit bien d'un autre mois."
+                    ),
+                    periode_reference=autre,
+                )
+        return None
 
     async def analyser(self, session: AsyncSession, contenu: bytes, periode: int) -> PaieImportAnalyse:
         erreurs: list[PaieImportErreur] = []
@@ -148,11 +232,39 @@ class ServiceImportPaie:
             employes_avec_bulletin = set(
                 (await session.execute(select(Paie.employee_id).where(Paie.periode == periode))).scalars()
             )
-            dernier_mois = (await session.execute(select(func.max(Paie.periode)))).scalar_one_or_none()
+            autres_periodes = list(
+                (
+                    await session.execute(
+                        select(Paie.periode)
+                        .where(Paie.periode != periode)
+                        .distinct()
+                        .order_by(Paie.periode.desc())
+                        .limit(PERIODES_COMPAREES)
+                    )
+                ).scalars()
+            )
+            bulletins_voisins: dict[int, dict[int, tuple[Any, ...]]] = {}
+            if autres_periodes:
+                for b in (
+                    await session.execute(
+                        select(
+                            Paie.periode,
+                            Paie.employee_id,
+                            Paie.nombre_jours_travailles,
+                            Paie.jours_recuperation_ouvrable,
+                            Paie.jours_recuperation_dimanche,
+                            Paie.salaire_mensuel,
+                            Paie.prime_roulage_ordinaire,
+                            Paie.prime_roulage_dimanche,
+                            Paie.salaire_total,
+                            Paie.observation,
+                        ).where(Paie.periode.in_(autres_periodes))
+                    )
+                ).all():
+                    bulletins_voisins.setdefault(b[0], {})[b[1]] = signature_ligne([None, None, None, *b[2:]])
             fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
             chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
-        self._verifier_mois(dernier_mois, periode)
         lignes = lire_lignes_paie(contenu)
         for numero, ligne in lignes:
             nom = str(ligne[0]).strip() if len(ligne) > 0 and ligne[0] is not None else None
@@ -183,11 +295,7 @@ class ServiceImportPaie:
                         )
                     )
                 if cin:
-                    salaire_brut = ligne[6] if len(ligne) > 6 else None
-                    try:
-                        salaire_inconnu = Decimal(str(salaire_brut)) if salaire_brut is not None else None
-                    except InvalidOperation:
-                        salaire_inconnu = None
+                    salaire_inconnu = montant_ligne(ligne, 6)
                     cin_inconnus.append(
                         PaieImportCinInconnu(
                             numero_ligne=numero,
@@ -350,10 +458,7 @@ class ServiceImportPaie:
                             employe_id=employe.id,
                         )
                     )
-                try:
-                    salaire_fichier = Decimal(str(ligne[6])) if len(ligne) > 6 and ligne[6] is not None else None
-                except InvalidOperation:
-                    salaire_fichier = None
+                salaire_fichier = montant_ligne(ligne, 6)
                 if salaire_fichier is not None and employe.salaire != salaire_fichier:
                     champs.append(
                         PaieImportChamp(
@@ -443,13 +548,7 @@ class ServiceImportPaie:
                         )
                     )
                     continue
-                exposant = nombre.as_tuple().exponent
-                hors_limites = (
-                    not nombre.is_finite()
-                    or nombre < 0
-                    or nombre > Decimal("99999999.99")
-                    or (isinstance(exposant, int) and exposant < -2)
-                )
+                hors_limites = not nombre.is_finite() or nombre < 0 or nombre >= Decimal("99999999.995")
                 if hors_limites:
                     erreurs.append(
                         PaieImportErreur(
@@ -458,10 +557,11 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="montant attendu entre 0 et 99 999 999,99 avec deux décimales au plus",
+                            raison="montant attendu entre 0 et 99 999 999,99",
                         )
                     )
                     continue
+                nombre = arrondir_montant(nombre)  # règle commune : deux décimales, arrondi automatique
                 connu = employees.get(cin.upper()) if cin else None
                 if champ == "salaireMensuel" and nombre == 0 and not (connu and connu.salaire != 0):
                     avertissements.append(
@@ -499,6 +599,13 @@ class ServiceImportPaie:
                             )
                         )
         departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
+        controles_periode: list[PaieImportControlePeriode] = []
+        controle_calendrier = self._controle_calendrier(periode)
+        if controle_calendrier is not None:
+            controles_periode.append(controle_calendrier)
+        controle_doublon = self._controle_doublon(lignes, employees, bulletins_voisins)
+        if controle_doublon is not None:
+            controles_periode.append(controle_doublon)
         return PaieImportAnalyse(
             periode=periode,
             total_lignes=len(lignes),
@@ -509,7 +616,8 @@ class ServiceImportPaie:
             ecarts=ecarts,
             departs=departs,
             retours=retours,
-            pret=not erreurs and not avertissements and not ecarts,
+            controles_periode=controles_periode,
+            pret=not erreurs and not avertissements and not ecarts and not controles_periode,
         )
 
     async def importer(
@@ -520,6 +628,7 @@ class ServiceImportPaie:
         ignorer_salaires_zero: bool,
         departs_confirmes: PaieImportDeparts,
         decisions_equipe: PaieImportDecisionsEquipe | None = None,
+        periode_confirmee: bool = False,
     ) -> PaieImportResult:
         analyse = await self.analyser(session, contenu, periode)
         decisions = {d.employe_id: d.action for d in (decisions_equipe or PaieImportDecisionsEquipe()).decisions}
@@ -539,11 +648,27 @@ class ServiceImportPaie:
             )
         if avertissements_non_confirmes:
             raise ErreurImportPaie("L'analyse n'est pas prête : confirmez les avertissements.")
-        proposes = {depart.employe_id for depart in analyse.departs}
+        if analyse.controles_periode and not periode_confirmee:
+            raise ErreurImportPaie(
+                "La période demande confirmation : " + " ".join(c.message for c in analyse.controles_periode)
+            )
+        proposes = {depart.employe_id: depart for depart in analyse.departs}
+        motifs: dict[int, str] = {}
         for depart in departs_confirmes.departs:
-            if depart.employe_id not in proposes:
+            propose = proposes.get(depart.employe_id)
+            if propose is None:
                 raise ErreurImportPaie(
                     f"Ce départ n'a pas été proposé par l'analyse du fichier : employé {depart.employe_id}"
+                )
+            saisi = depart.motif.strip()
+            if saisi:
+                motifs[depart.employe_id] = saisi
+            elif propose.motif is None and depart.sans_motif:
+                motifs[depart.employe_id] = MOTIF_ABSENT_DU_FICHIER
+            else:
+                raise ErreurImportPaie(
+                    f"Le départ de l'employé {depart.employe_id} demande un motif"
+                    + (" ou la confirmation explicite « sans motif »." if propose.motif is None else ".")
                 )
         lignes = lire_lignes_paie(contenu)
         action = self._auditeur.auditer(session, "PAIE_IMPORT", TypeOperation.CREATE, "Paie")
@@ -574,7 +699,7 @@ class ServiceImportPaie:
                         raise ErreurImportPaie(
                             f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
                         )
-                    employe.salaire = Decimal(str(ligne[6] or 0))
+                    employe.salaire = montant_ligne(ligne, 6) or Decimal(0)
                     employe.statut = EmployeeStatut.ACTIF
                 if nom and employe.nom_prenom != nom:
                     employe.nom_prenom = nom
@@ -607,14 +732,10 @@ class ServiceImportPaie:
                         jours_recuperation_dimanche=Decimal(str(ligne[5]))
                         if len(ligne) > 5 and ligne[5] is not None
                         else None,
-                        salaire_mensuel=Decimal(str(ligne[6] or 0)),
-                        prime_roulage_ordinaire=Decimal(str(ligne[7]))
-                        if len(ligne) > 7 and ligne[7] is not None
-                        else None,
-                        prime_roulage_dimanche=Decimal(str(ligne[8]))
-                        if len(ligne) > 8 and ligne[8] is not None
-                        else None,
-                        salaire_total=Decimal(str(ligne[9] or 0)),
+                        salaire_mensuel=montant_ligne(ligne, 6) or Decimal(0),
+                        prime_roulage_ordinaire=montant_ligne(ligne, 7),
+                        prime_roulage_dimanche=montant_ligne(ligne, 8),
+                        salaire_total=montant_ligne(ligne, 9) or Decimal(0),
                         observation=str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
                     )
                 )
@@ -632,7 +753,7 @@ class ServiceImportPaie:
                     raise ErreurImportPaie(
                         f"Un départ est déjà enregistré pour cet employé ce mois-ci : {afficher_periode(periode)}"
                     )
-                session.add(EmployeeSortie(employee_id=employe.id, periode=periode, motif=depart.motif.strip()))
+                session.add(EmployeeSortie(employee_id=employe.id, periode=periode, motif=motifs[depart.employe_id]))
                 employe.statut = EmployeeStatut.INACTIF
                 employe.chantier_id = None
                 employe.equipe_id = None
@@ -713,7 +834,7 @@ class ServiceImportPaie:
                         employe.chantier_id = chantier
                         if equipe is not None:
                             employe.equipe_id = equipe
-                        salaire = Decimal(str(ligne[6]))
+                        salaire = montant_ligne(ligne, 6) or Decimal(0)
                         if employe.salaire != salaire:
                             if correction.type_salaire is None:
                                 raise ErreurImportPaie(
@@ -751,7 +872,7 @@ class ServiceImportPaie:
                             fonction_id=fonction,
                             chantier_id=chantier,
                             equipe_id=equipe,
-                            salaire=Decimal(str(ligne[6])),
+                            salaire=montant_ligne(ligne, 6) or Decimal(0),
                             type_salaire=TypeSalaire(correction.type_salaire),
                         )
                         session.add(employe)

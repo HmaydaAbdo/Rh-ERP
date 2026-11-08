@@ -14,15 +14,9 @@
           @case ('fichier') {
             <section class="app-wizard__panneau">
               <div class="app-wizard__mois">
-                @if (store.moisImpose()) {
-                  <span class="app-wizard__etiquette">Mois à importer</span>
-                  <strong>{{ store.libellePeriode(store.mois()) }}</strong>
-                  <span class="app-wizard__legende">La paie s'importe mois après mois : c'est le mois qui suit le dernier importé.</span>
-                } @else {
-                  <label for="importMois" class="app-wizard__etiquette">Mois à importer</label>
-                  <stp-month-input inputId="importMois" (valueChange)="store.choisirMois($event)" placeholder="Choisir le mois" />
-                  <span class="app-wizard__legende">Premier import : choisissez le mois du fichier.</span>
-                }
+                <label for="importMois" class="app-wizard__etiquette">Mois à importer</label>
+                <stp-month-input inputId="importMois" [value]="store.moisDate()" (valueChange)="store.choisirMois($event)" placeholder="Choisir le mois" />
+                <span class="app-wizard__legende">Le mois de la paie du fichier, proposé : le mois écoulé. Il se choisit librement ; un mois en cours ou à venir demande une confirmation.</span>
               </div>
               <label class="app-wizard__depot" [class.app-wizard__depot--inactif]="!store.mois() || store.occupe()">
                 <stp-icon name="file-spreadsheet" size="2rem" />
@@ -43,7 +37,7 @@
                 @if (analyse.departs.length === 0) {
                   <p class="app-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans STC.</p>
                 } @else {
-                  <p class="app-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé.</p>
+                  <p class="app-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé, sauf pour un salarié absent du fichier, dont le départ peut être confirmé sans motif.</p>
                   <ul class="app-wizard__departs">
                     @for (depart of analyse.departs; track depart.employeId) {
                       <li [class.app-wizard__depart--decoche]="!store.departs()[depart.employeId]?.coche">
@@ -57,10 +51,16 @@
                           maxlength="255"
                           placeholder="Motif du départ"
                           [attr.aria-label]="'Motif du départ de ' + depart.nomPrenom"
-                          [disabled]="!store.departs()[depart.employeId]?.coche"
+                          [disabled]="!store.departs()[depart.employeId]?.coche || store.departs()[depart.employeId]?.sansMotif"
                           [value]="store.departs()[depart.employeId]?.motif ?? ''"
                           (input)="store.saisirDepart(depart.employeId, { motif: texte($event) })"
                         />
+                        @if (!depart.motif) {
+                          <label class="app-wizard__case">
+                            <input type="checkbox" [checked]="store.departs()[depart.employeId]?.sansMotif" [disabled]="!store.departs()[depart.employeId]?.coche" (change)="store.saisirDepart(depart.employeId, { sansMotif: coche($event) })" />
+                            <span>Confirmer le départ sans motif</span>
+                          </label>
+                        }
                       </li>
                     }
                   </ul>
@@ -127,7 +127,7 @@
           }
           @case ('departs') {
             @if (!store.departsValides()) {
-              <span class="app-wizard__indice">Saisissez le motif de chaque départ coché.</span>
+              <span class="app-wizard__indice">Saisissez le motif de chaque départ coché, ou confirmez-le sans motif quand le salarié est absent du fichier.</span>
             }
             <button stp-button icon="arrow-right" type="button" [disabled]="!store.departsValides()" (click)="store.suivant()">Continuer</button>
           }

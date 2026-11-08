@@ -187,6 +187,7 @@ async def importer(
     ignorer_salaires_zero: Annotated[bool, Form()] = False,
     departs: Annotated[str | None, Form()] = None,
     equipes: Annotated[str | None, Form()] = None,
+    periode_confirmee: Annotated[bool, Form()] = False,
     file: UploadFile = File(...),  # noqa: B008
 ) -> PaieImportResult:
     try:
@@ -195,7 +196,7 @@ async def importer(
     except ValidationError as erreur:
         raise RequestValidationError(erreur.errors()) from erreur
     return await contexte.import_paie.importer(
-        session, await file.read(), periode, ignorer_salaires_zero, confirmes, decisions
+        session, await file.read(), periode, ignorer_salaires_zero, confirmes, decisions, periode_confirmee
     )
 
 

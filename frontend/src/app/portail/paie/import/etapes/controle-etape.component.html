@@ -50,6 +50,20 @@
       }
     }
 
+    @if (analyse.controlesPeriode.length > 0) {
+      <h3 class="app-wizard__titre"><stp-icon name="calendar" /> Période à confirmer <span class="app-wizard__nombre">{{ analyse.controlesPeriode.length }}</span></h3>
+      <ul class="app-controle__cartes">
+        @for (controle of analyse.controlesPeriode; track controle.code) {
+          <li class="app-controle__carte">
+            <div class="app-controle__qui">
+              <span>{{ controle.message }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+      <label><input type="checkbox" [checked]="store.periodeConfirmee()" (change)="confirmerPeriode($event)" /> Je confirme la période {{ store.libellePeriode(store.mois()) }}</label>
+    }
+
     @if (analyse.chantiersClotures.length > 0) {
       <h3 class="app-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="app-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
       <p class="app-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.

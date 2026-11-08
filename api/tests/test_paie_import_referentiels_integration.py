@@ -44,7 +44,7 @@ def test_import_refuse_les_referentiels_absents_et_met_a_jour_les_affectations_e
 async def _verifier_referentiels(url: str) -> None:
     moteur = create_async_engine(url)
     sessions = async_sessionmaker(moteur, expire_on_commit=False)
-    service = ServiceImportPaie(AuditeurJournal())
+    service = ServiceImportPaie(AuditeurJournal(), aujourd_hui=lambda: date(2027, 6, 1))
     try:
         async with sessions() as session, session.begin():
             ancienne_fonction = (
@@ -111,7 +111,7 @@ async def _verifier_referentiels(url: str) -> None:
             )
             assert corrigee.pret
             assert (await service.importer(session, valide, 202611, False, PaieImportDeparts())).crees == 1
-            with pytest.raises(ErreurImportPaie, match="Seul le mois 2026-12"):
+            with pytest.raises(ErreurImportPaie, match="Le fichier n'est pas prêt"):
                 await service.importer(session, valide, 202611, False, PaieImportDeparts())
 
         async with sessions() as session:
