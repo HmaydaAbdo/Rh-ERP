@@ -108,13 +108,14 @@ export class PaieService {
     return this.http.post<PaieImportAnalyse>(`${this.baseUrl}/import/corrections`, this.formulaireImport(file, periode, { corrections }));
   }
 
-  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif). */
+  /** Importe un fichier prêt, avec les départs confirmés (chacun avec son motif, ou explicitement sans motif). */
   importer(
-    file: File, periode: string, departs: { employeId: number; motif: string }[], ignorerSalairesZero: boolean,
-    decisionsEquipe: { employeId: number; action: 'CONSERVER' | 'VIDER' }[] = []
+    file: File, periode: string, departs: { employeId: number; motif: string; sansMotif?: boolean }[], ignorerSalairesZero: boolean,
+    decisionsEquipe: { employeId: number; action: 'CONSERVER' | 'VIDER' }[] = [], periodeConfirmee = false
   ): Observable<PaieImportResult> {
     return this.http.post<PaieImportResult>(`${this.baseUrl}/import`, this.formulaireImport(file, periode, {
-      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero, equipes: { decisions: decisionsEquipe }
+      departs: { departs }, ignorer_salaires_zero: ignorerSalairesZero, equipes: { decisions: decisionsEquipe },
+      periode_confirmee: periodeConfirmee
     }));
   }
 

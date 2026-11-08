@@ -6,11 +6,11 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, Nombre, Page
+from staport.domains.common.schemas import ModeleApi, Montant, Nombre, Page
 
 from .periode import PeriodePaie
 
-DeuxDecimales = Annotated[Nombre, Field(ge=0, max_digits=10, decimal_places=2)]
+DeuxDecimales = Annotated[Montant, Field(ge=0, max_digits=10, decimal_places=2)]
 
 
 class PaieChampsBulletin(ModeleApi):
@@ -427,6 +427,14 @@ class PaieImportErreur(ModeleApi):
     type_salaire_propose: Literal["JOURNALIER", "MENSUEL"] | None = None
 
 
+class PaieImportControlePeriode(ModeleApi):
+    """Contrôle de la période choisie, à confirmer explicitement pour importer (mois en cours ou doublon)."""
+
+    code: Literal["PERIODE_COURANTE_OU_FUTURE", "CONTENU_DEJA_IMPORTE"]
+    message: str
+    periode_reference: PeriodePaie | None = None
+
+
 class PaieImportAnalyse(ModeleApi):
     periode: PeriodePaie
     total_lignes: int
@@ -437,6 +445,7 @@ class PaieImportAnalyse(ModeleApi):
     ecarts: list[PaieImportEcart]
     departs: list[PaieImportDepart]
     retours: list[PaieImportRetour]
+    controles_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
     pret: bool
 
 
@@ -469,8 +478,11 @@ class PaieImportDecisionsEquipe(ModeleApi):
 
 
 class PaieImportDepartConfirme(ModeleApi):
+    """Un départ confirmé. Un départ déduit de l'absence du salarié peut l'être sans motif, par `sans_motif`."""
+
     employe_id: int
-    motif: Annotated[str, Field(min_length=1, max_length=255, pattern=r"\S")]
+    motif: Annotated[str, Field(max_length=255)] = ""
+    sans_motif: bool = False
 
 
 class PaieImportDeparts(ModeleApi):

@@ -21,6 +21,7 @@ const PRETE: PaieImportAnalyse = {
     { employeId: 2, cin: 'CD2', nomPrenom: 'OMAR', motif: null }
   ],
   retours: [{ employeId: 3, cin: 'EF3', nomPrenom: 'ZAHRA' }],
+  controlesPeriode: [],
   pret: true
 };
 
@@ -44,7 +45,11 @@ describe('PaieImportStore', () => {
         { provide: PaieService, useValue: service }, { provide: ChantierService, useValue: chantiers }]
     });
     store = TestBed.inject(PaieImportStore);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 8)); // 8 novembre 2026 : le mois proposé est octobre
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it('rouvre un chantier clôturé puis réanalyse le même fichier', () => {
     const cloture = { chantierId: 8, code: 'C059', designation: 'Voirie', lignes: [4, 5] };
@@ -52,7 +57,7 @@ describe('PaieImportStore', () => {
     const chantier = { id: 8, version: 3, code: 'C059', designation: 'Voirie', nom: null, nature: null, localisation: null, latitude: null, longitude: null, afficherSurCarte: false, sourceErp: true, actif: false };
     chantiers.getById.mockReturnValue(of(chantier));
     chantiers.changerStatut.mockReturnValue(of({ ...chantier, actif: true }));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     expect(store.nombreProblemes()).toBe(1);
 
@@ -64,15 +69,64 @@ describe('PaieImportStore', () => {
     expect(store.peutRouvrir()).toBe(true);
   });
 
-  it('impose le mois qui suit le dernier importé, et laisse choisir au premier import', () => {
-    store.ouvrir(['2026-12', '2026-11']);
-    expect(store.mois()).toBe('2027-01');
-    expect(store.moisImpose()).toBe(true);
+  it('propose le mois civil précédent et laisse l’utilisateur choisir librement', () => {
+    store.ouvrir();
+    expect(store.mois()).toBe('2026-10');
 
-    store.ouvrir([]);
-    expect(store.mois()).toBeNull();
     store.choisirMois(new Date(2026, 2, 1));
     expect(store.mois()).toBe('2026-03');
+    store.choisirMois(new Date(2026, 10, 1));
+    expect(store.mois()).toBe('2026-11');
+  });
+
+  it('exige la confirmation d’une période du mois en cours avant de valider le contrôle', () => {
+    const courante = {
+      ...PRETE,
+      controlesPeriode: [{ code: 'PERIODE_COURANTE_OU_FUTURE' as const, message: 'Mois en cours.', periodeReference: null }],
+      pret: false
+    };
+    service.analyserImport.mockReturnValue(of(courante));
+    store.ouvrir();
+    store.choisirMois(new Date(2026, 10, 1));
+    store.analyser(fichier);
+    expect(store.pret()).toBe(false);
+
+    store.confirmerPeriode(true);
+    expect(store.pret()).toBe(true);
+
+    store.choisirMois(new Date(2026, 9, 1));
+    expect(store.periodeConfirmee()).toBe(false);
+  });
+
+  it('envoie la confirmation de période à l’import', () => {
+    service.analyserImport.mockReturnValue(of({
+      ...PRETE,
+      controlesPeriode: [{ code: 'CONTENU_DEJA_IMPORTE' as const, message: 'Déjà importé.', periodeReference: '2026-09' }],
+      pret: false
+    }));
+    service.importer.mockReturnValue(of({ periode: '2026-10', crees: 2, departs: 0, retours: 1 }));
+    store.ouvrir();
+    store.analyser(fichier);
+    store.saisirDepart(2, { coche: false });
+    store.confirmerPeriode(true);
+
+    store.importer(() => undefined);
+
+    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC', sansMotif: false }], false, [], true);
+  });
+
+  it('confirme sans motif un départ déduit de l’absence, mais jamais un STC ou une sortie du fichier', () => {
+    service.analyserImport.mockReturnValue(of(PRETE));
+    store.ouvrir();
+    store.analyser(fichier);
+    expect(store.departsValides()).toBe(false); // OMAR (absent du fichier) est coché sans motif
+
+    store.saisirDepart(2, { sansMotif: true });
+    expect(store.departsValides()).toBe(true);
+    expect(store.departsConfirmes()).toContainEqual({ employeId: 2, motif: '', sansMotif: true });
+
+    store.saisirDepart(1, { motif: '', sansMotif: true }); // ALI porte STC dans le fichier
+    expect(store.departsValides()).toBe(false);
   });
 
   it('exige la confirmation du salaire zéro sans valider un salaire différent', () => {
@@ -84,7 +138,7 @@ describe('PaieImportStore', () => {
       pret: false
     };
     service.analyserImport.mockReturnValue(of(salaireZero));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     expect(store.pret()).toBe(false);
     store.confirmerSalaireZero.set(true);
@@ -109,7 +163,7 @@ describe('PaieImportStore', () => {
       pret: false
     };
     service.analyserImport.mockReturnValue(of(equipeVide));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     expect(store.pret()).toBe(false);
 
@@ -120,18 +174,21 @@ describe('PaieImportStore', () => {
 
   it('analyse le fichier, passe au contrôle et coche d’office les départs proposés', () => {
     service.analyserImport.mockReturnValue(of(PRETE));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
 
     store.analyser(fichier);
 
     expect(service.analyserImport).toHaveBeenCalledWith(fichier, '2026-10');
     expect(store.etape()).toBe('controle');
-    expect(store.departs()).toEqual({ 1: { coche: true, motif: 'STC' }, 2: { coche: true, motif: '' } });
+    expect(store.departs()).toEqual({
+      1: { coche: true, motif: 'STC', sansMotif: false },
+      2: { coche: true, motif: '', sansMotif: false }
+    });
   });
 
   it('ne passe le contrôle qu’avec un fichier prêt, et les départs qu’avec un motif pour chaque départ coché', () => {
     service.analyserImport.mockReturnValue(of(AVEC_ECART));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
 
     store.suivant();
@@ -153,20 +210,20 @@ describe('PaieImportStore', () => {
 
   it('garde les choix de départ déjà faits quand l’analyse revient après une correction', () => {
     service.analyserImport.mockReturnValue(of(AVEC_ECART));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     store.saisirDepart(2, { motif: 'Démission' });
 
     service.corrigerImport.mockReturnValue(of(PRETE));
     store.alignerTout();
 
-    expect(store.departs()[2]).toEqual({ coche: true, motif: 'Démission' });
+    expect(store.departs()[2]).toEqual({ coche: true, motif: 'Démission', sansMotif: false });
   });
 
   it('crée un CIN inconnu avec ses dates au format ISO, une fois la saisie complète', () => {
     service.analyserImport.mockReturnValue(of(AVEC_ECART));
     service.corrigerImport.mockReturnValue(of(PRETE));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
 
     store.saisirCreation(7, { dateNaissance: new Date(1990, 0, 2), dateEmbauche: new Date(2026, 9, 1) });
@@ -188,14 +245,14 @@ describe('PaieImportStore', () => {
   it('importe avec les seuls départs cochés, puis annonce la fin', () => {
     service.analyserImport.mockReturnValue(of(PRETE));
     service.importer.mockReturnValue(of({ periode: '2026-10', crees: 2, departs: 1, retours: 1 }));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     store.saisirDepart(2, { coche: false });
     const importe = vi.fn();
 
     store.importer(importe);
 
-    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC' }], false, []);
+    expect(service.importer).toHaveBeenCalledWith(fichier, '2026-10', [{ employeId: 1, motif: 'STC', sansMotif: false }], false, [], false);
     expect(store.etat()).toBe('termine');
     expect(store.bilan()?.crees).toBe(2);
     expect(importe).toHaveBeenCalledTimes(1);
@@ -204,7 +261,7 @@ describe('PaieImportStore', () => {
   it('montre le message du serveur quand il refuse, et reste à l’étape', () => {
     service.analyserImport.mockReturnValue(of(PRETE));
     service.importer.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400, error: { message: 'Seul le mois 2026-10 peut être importé.' } })));
-    store.ouvrir(['2026-09']);
+    store.ouvrir();
     store.analyser(fichier);
     store.saisirDepart(2, { motif: 'Démission' });
 

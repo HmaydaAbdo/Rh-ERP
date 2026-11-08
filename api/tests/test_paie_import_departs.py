@@ -138,7 +138,7 @@ def _importer(plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu, contenu
     return plateforme.client.post(
         "/paie/import",
         headers=entetes,
-        data={"periode": jeu.periode, "departs": json.dumps({"departs": departs})},
+        data={"periode": jeu.periode, "periode_confirmee": "true", "departs": json.dumps({"departs": departs})},
         files={"file": ("paie.xlsx", contenu, TYPE_XLSX)},
     )
 
@@ -305,7 +305,7 @@ def _importer_avec_equipes(
     return plateforme.client.post(
         "/paie/import",
         headers=entetes,
-        data={"periode": jeu.periode, "equipes": json.dumps({"decisions": decisions})},
+        data={"periode": jeu.periode, "periode_confirmee": "true", "equipes": json.dumps({"decisions": decisions})},
         files={"file": ("paie.xlsx", _classeur(jeu), TYPE_XLSX)},
     )
 
@@ -345,3 +345,58 @@ def test_decision_vider_retire_l_equipe_de_la_fiche(
 
     assert reponse.status_code == 200, reponse.text
     assert _equipe_de(plateforme, jeu.present) is None
+
+
+def _motif_sortie(plateforme: Plateforme, employe: int, periode: int) -> str | None:
+    with plateforme.moteur.connect() as c:
+        return c.execute(
+            text("SELECT motif FROM employe_sortie WHERE employee_id = :e AND periode = :p"),
+            {"e": employe, "p": periode},
+        ).scalar_one_or_none()
+
+
+def test_un_depart_deduit_de_l_absence_peut_etre_confirme_sans_motif(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    departs = [{"employeId": jeu.stc, "motif": "STC"}, {"employeId": jeu.absent, "sansMotif": True}]
+
+    reponse = _importer(plateforme, _entetes(connecter), jeu, _classeur(jeu), departs)
+
+    assert reponse.status_code == 200, reponse.text
+    assert _motif_sortie(plateforme, jeu.absent, jeu.periode_numerique) == "Absent du fichier"
+    assert _statut(plateforme, jeu.absent)[0] == "INACTIF"
+
+
+def test_un_depart_deduit_de_l_absence_garde_le_motif_saisi_meme_avec_sans_motif(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    departs = [{"employeId": jeu.absent, "motif": "Démission", "sansMotif": True}]
+
+    reponse = _importer(plateforme, _entetes(connecter), jeu, _classeur(jeu), departs)
+
+    assert reponse.status_code == 200, reponse.text
+    assert _motif_sortie(plateforme, jeu.absent, jeu.periode_numerique) == "Démission"
+
+
+def test_un_depart_deduit_de_l_absence_sans_motif_ni_confirmation_est_refuse(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    reponse = _importer(
+        plateforme, _entetes(connecter), jeu, _classeur(jeu), [{"employeId": jeu.absent, "motif": "  "}]
+    )
+
+    assert reponse.status_code == 400, reponse.text
+    assert "sans motif" in reponse.json()["message"]
+    assert _bulletins(plateforme, jeu) == 0
+
+
+def test_un_depart_stc_ou_sortie_du_fichier_exige_toujours_un_motif(
+    plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
+) -> None:
+    reponse = _importer(
+        plateforme, _entetes(connecter), jeu, _classeur(jeu), [{"employeId": jeu.stc, "sansMotif": True}]
+    )
+
+    assert reponse.status_code == 400, reponse.text
+    assert "sans motif" not in reponse.json()["message"]
+    assert _statut(plateforme, jeu.stc)[0] == "ACTIF"

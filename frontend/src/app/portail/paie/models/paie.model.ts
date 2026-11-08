@@ -297,7 +297,15 @@ export interface PaieImportAnalyse {
   ecarts: PaieImportEcart[];
   departs: PaieImportDepart[];
   retours: { employeId: number; cin: string; nomPrenom: string }[];
+  /** Période du mois en cours ou à venir, ou fichier déjà importé sous un autre mois : à confirmer pour importer. */
+  controlesPeriode: PaieImportControlePeriode[];
   pret: boolean;
+}
+
+export interface PaieImportControlePeriode {
+  code: 'PERIODE_COURANTE_OU_FUTURE' | 'CONTENU_DEJA_IMPORTE';
+  message: string;
+  periodeReference: string | null;
 }
 
 /** Corrections des fiches depuis l'assistant (POST /paie/import/corrections). */
