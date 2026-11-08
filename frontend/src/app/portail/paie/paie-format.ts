@@ -39,13 +39,6 @@ export function formaterPart(part: number): string {
   return `${part.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
-const FORMAT_MONTANT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-
-/** Montants des heures supplémentaires : toujours en dirhams entiers (arrondi demi vers le bas fait par le serveur). */
-export function formaterMontantEntier(valeur: number): string {
-  return FORMAT_MONTANT_ENTIER.format(valeur);
-}
-
 /** Montant au format de l'application (`fr-FR`, deux décimales). */
 export function formaterMontant(valeur: number): string {
   return FORMAT_MONTANT.format(valeur);

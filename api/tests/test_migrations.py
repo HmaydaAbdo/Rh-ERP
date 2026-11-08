@@ -55,7 +55,9 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
+        assert (
+            c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003_heures_supp_deux_decimales"
+        )
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         assert c.execute(text("SELECT count(*) FROM permission")).scalar_one() > 0
@@ -108,7 +110,10 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
+        assert (
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0003_heures_supp_deux_decimales"
+        )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
@@ -146,7 +151,10 @@ def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
+        assert (
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0003_heures_supp_deux_decimales"
+        )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
         assert not connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'flyway_schema_history', 'INSERT')")
@@ -200,15 +208,77 @@ def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_
     moteur.dispose()
     config = _config(url)
     command.stamp(config, "0001_base_v44")
-    command.upgrade(config, "head")  # ne fait rien
+    command.upgrade(config, "0001_base_v44")  # ne fait rien : la base est déjà à cette révision
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
         assert (
             c.execute(text("SELECT count(*) FROM information_schema.columns WHERE table_name='employe'")).scalar_one()
             == 1
         )
     moteur.dispose()
+
+
+def test_les_heures_supp_existantes_sont_recalculees_a_deux_decimales(creer_base: Callable[[str], str]) -> None:
+    url = creer_base("heures_supp_decimales")
+    config = _config(url)
+    command.upgrade(config, "0002_paie_materiel")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('F') RETURNING id")).scalar_one()
+        chantier = c.execute(
+            text("INSERT INTO chantier (code, designation) VALUES ('C', 'C') RETURNING id")
+        ).scalar_one()
+        lignes = [  # (CIN, type, salaire, P/H, STC ?, forfait, montant entier V44)
+            ("H1", "MENSUEL", 4500, "7.5", False, None, 130),
+            ("H2", "JOURNALIER", "250.50", "1.5", True, None, 38),
+            ("H3", "MENSUEL", 4500, "2", False, 40, 35),
+        ]
+        for cin, type_salaire, salaire, heures, stc, forfait, entier in lignes:
+            employe = c.execute(
+                text(
+                    "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
+                    "statut, "
+                    "salaire, type_salaire) VALUES (:c, :c, '1990-01-01', '2020-01-01', :f, :ch, 'ACTIF', :s, :t) "
+                    "RETURNING id"
+                ),
+                {"c": cin, "f": fonction, "ch": chantier, "s": salaire, "t": type_salaire},
+            ).scalar_one()
+            paie = c.execute(
+                text(
+                    "INSERT INTO paie (employee_id, periode, fonction_id, chantier_id, nombre_jours_travailles, "
+                    "salaire_mensuel, salaire_total) VALUES (:e, 202501, :f, :c, 26, :s, :s) RETURNING id"
+                ),
+                {"e": employe, "f": fonction, "c": chantier, "s": salaire},
+            ).scalar_one()
+            c.execute(
+                text(
+                    "INSERT INTO heures_supp (employee_id, paie_id, fonction_id, chantier_id, periode, "
+                    "salaire_reference, type_salaire_reference, s_h, p_h, montant, est_stc_ou_sortie, stc_dh, forfait, "
+                    "net_a_payer) VALUES (:e, :p, :f, :c, 202501, :s, :t, 17, :h, :m, :stc, :sd, :fo, :n)"
+                ),
+                {
+                    "e": employe, "p": paie, "f": fonction, "c": chantier, "s": salaire, "t": type_salaire,
+                    "h": heures, "m": entier, "stc": stc, "sd": entier if stc else 0, "fo": forfait,
+                    "n": entier - (entier if stc else 0) + (forfait or 0),
+                },
+            )  # fmt: skip
+    moteur.dispose()
+    command.upgrade(config, "head")
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        lues = c.execute(
+            text(
+                "SELECT e.cin, h.s_h, h.montant, h.stc_dh, h.forfait, h.net_a_payer FROM heures_supp h "
+                "JOIN employe e ON e.id = h.employee_id ORDER BY e.cin"
+            )
+        ).all()
+    moteur.dispose()
+    assert [tuple(map(str, ligne)) for ligne in lues] == [
+        ("H1", "17.31", "129.83", "0.00", "None", "129.83"),  # 4500 / 260 = 17,3077 ; 17,31 x 7,5 = 129,825
+        ("H2", "25.05", "37.58", "37.58", "None", "0.00"),  # 250,50 / 10 ; 25,05 x 1,5 = 37,575 ; STC = montant
+        ("H3", "17.31", "34.62", "0.00", "40.00", "74.62"),  # le forfait saisi n'est pas recalculé
+    ]
 
 
 def test_les_modeles_correspondent_exactement_a_la_base_alembic(creer_base: Callable[[str], str]) -> None:

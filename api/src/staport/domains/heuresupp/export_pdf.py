@@ -174,12 +174,12 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + _td(ligne.cin)
             + _td(ligne.fonction)
             + _td(nombre(ligne.salaire_reference_dh, 2), "num")
-            + _td(nombre(ligne.salaire_horaire_dh, 0), "num")
+            + _td(nombre(ligne.salaire_horaire_dh, 2), "num")
             + _td(nombre(ligne.heures_supplementaires, 1), "num")
-            + _td(nombre(ligne.montant_dh, 0), "num")
-            + _td(nombre(ligne.stc_dh, 0), "num")
-            + _td(nombre(ligne.forfait_dh, 0), "num")
-            + _td(nombre(ligne.net_a_payer_dh, 0), "num")
+            + _td(nombre(ligne.montant_dh, 2), "num")
+            + _td(nombre(ligne.stc_dh, 2), "num")
+            + _td(nombre(ligne.forfait_dh, 2), "num")
+            + _td(nombre(ligne.net_a_payer_dh, 2), "num")
             + '<td class="emargement"></td></tr>'
         )
     zero = Decimal(0)
@@ -189,10 +189,10 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
         + f'<td colspan="5">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
         + '<td class="num"></td><td class="num"></td>'
         + _td(nombre(heures, 1), "num")
-        + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.forfait_dh or zero for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.net_a_payer_dh for ligne in lignes), zero), 0), "num")
+        + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 2), "num")
+        + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero), 2), "num")
+        + _td(nombre(sum((ligne.forfait_dh or zero for ligne in lignes), zero), 2), "num")
+        + _td(nombre(sum((ligne.net_a_payer_dh for ligne in lignes), zero), 2), "num")
         + "<td></td></tr></tbody></table>"
     )
     return (

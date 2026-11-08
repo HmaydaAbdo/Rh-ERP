@@ -216,14 +216,14 @@
         <section class="app-kpis" aria-label="Indicateurs des heures supplémentaires">
           <div class="app-kpi"><span>Employés</span><strong>{{ analyse.indicateurs.employes }}</strong></div>
           <div class="app-kpi"><span>Heures</span><strong>{{ analyse.indicateurs.heures | number: '1.0-1' }} h</strong></div>
-          <div class="app-kpi"><span>Montant</span><strong>{{ formaterMontantEntier(analyse.indicateurs.montantDh) }} DH</strong></div>
-          <div class="app-kpi"><span>STC</span><strong>{{ formaterMontantEntier(analyse.indicateurs.stcDh) }} DH</strong></div>
-          <div class="app-kpi"><span>Forfaits</span><strong>{{ formaterMontantEntier(analyse.indicateurs.forfaitDh) }} DH</strong></div>
-          <div class="app-kpi"><span>Net à payer</span><strong>{{ formaterMontantEntier(analyse.indicateurs.netAPayerDh) }} DH</strong></div>
+          <div class="app-kpi"><span>Montant</span><strong>{{ formaterMontant(analyse.indicateurs.montantDh) }} DH</strong></div>
+          <div class="app-kpi"><span>STC</span><strong>{{ formaterMontant(analyse.indicateurs.stcDh) }} DH</strong></div>
+          <div class="app-kpi"><span>Forfaits</span><strong>{{ formaterMontant(analyse.indicateurs.forfaitDh) }} DH</strong></div>
+          <div class="app-kpi"><span>Net à payer</span><strong>{{ formaterMontant(analyse.indicateurs.netAPayerDh) }} DH</strong></div>
         </section>
         <section class="app-panel" aria-labelledby="hs-repartition-titre">
           <h4 id="hs-repartition-titre">Répartition par {{ libelleDimensionVue() }}</h4>
-          <stp-table label="Répartition des heures supplémentaires" [value]="groupesHeuresSupp()" [columns]="colonnesHeuresSupp()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" emptyMessage="Aucune donnée sur ce périmètre."><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('heures') { {{ l.heures | number: '1.0-1' }} } @case ('montantDh') { {{ formaterMontantEntier(l.montantDh) }} } @case ('stcDh') { {{ formaterMontantEntier(l.stcDh) }} } @case ('forfaitDh') { {{ formaterMontantEntier(l.forfaitDh) }} } @case ('netAPayerDh') { {{ formaterMontantEntier(l.netAPayerDh) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
+          <stp-table label="Répartition des heures supplémentaires" [value]="groupesHeuresSupp()" [columns]="colonnesHeuresSupp()" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" emptyMessage="Aucune donnée sur ce périmètre."><ng-template stpCell let-l let-col="col">@switch (col.field) { @case ('heures') { {{ l.heures | number: '1.0-1' }} } @case ('montantDh') { {{ formaterMontant(l.montantDh) }} } @case ('stcDh') { {{ formaterMontant(l.stcDh) }} } @case ('forfaitDh') { {{ formaterMontant(l.forfaitDh) }} } @case ('netAPayerDh') { {{ formaterMontant(l.netAPayerDh) }} } @default { {{ l[col.field] }} } }</ng-template></stp-table>
         </section>
       </section>
     } @else if (!chargement()) {

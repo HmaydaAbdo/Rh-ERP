@@ -126,14 +126,13 @@ def _revisions(p: Plateforme, identifiant: int) -> list[int]:
         )
 
 
-def test_le_calcul_arrondit_a_l_entier_en_half_down() -> None:
-    assert calcul.salaire_horaire(Decimal("105"), TypeSalaire.JOURNALIER) == 10  # 10,5 : on descend
-    assert calcul.salaire_horaire(Decimal("106"), TypeSalaire.JOURNALIER) == 11
-    assert calcul.salaire_horaire(Decimal("2600"), TypeSalaire.MENSUEL) == 10
-    assert calcul.salaire_horaire(Decimal("10000"), TypeSalaire.MENSUEL) == 38
-    assert calcul.salaire_horaire(Decimal("130"), TypeSalaire.MENSUEL) == 0  # 0,5 : on descend
-    assert calcul.montant(Decimal(10), Decimal("1.5")) == 15
-    assert calcul.montant(Decimal(3), Decimal("0.5")) == 1  # 1,5 : on descend
+def test_le_calcul_arrondit_a_deux_decimales_demi_superieur() -> None:
+    assert calcul.salaire_horaire(Decimal("105"), TypeSalaire.JOURNALIER) == Decimal("10.50")
+    assert calcul.salaire_horaire(Decimal("2600"), TypeSalaire.MENSUEL) == Decimal("10.00")
+    assert calcul.salaire_horaire(Decimal("10000"), TypeSalaire.MENSUEL) == Decimal("38.46")  # 38,4615
+    assert calcul.salaire_horaire(Decimal("4500"), TypeSalaire.MENSUEL) == Decimal("17.31")  # 17,3077
+    assert calcul.montant(Decimal(10), Decimal("1.5")) == Decimal("15.00")
+    assert calcul.montant(Decimal("17.31"), Decimal("7.5")) == Decimal("129.83")  # 129,825 : demi supérieur
     assert calcul.montant(None, Decimal(2)) == 0
     assert calcul.net_a_payer(Decimal(100), Decimal(100), Decimal(30)) == 30
 
@@ -173,13 +172,13 @@ def test_creation_calcule_le_taux_le_montant_et_l_audit(
     )
 
 
-def test_un_taux_exactement_a_la_moitie_descend_et_un_forfait_seul_n_a_pas_de_taux(
+def test_le_taux_journalier_garde_ses_centimes_et_un_forfait_seul_n_a_pas_de_taux(
     plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
 ) -> None:
     journalier = _creer(plateforme, entetes, jeu, 1, heuresSupplementaires="1.5").json()
     forfait = _creer(plateforme, entetes, jeu, 0, forfaitDh="500").json()
 
-    assert (journalier["salaireHoraireDh"], journalier["montantDh"]) == (10.0, 15.0)
+    assert (journalier["salaireHoraireDh"], journalier["montantDh"]) == (10.5, 15.75)
     assert forfait["heuresSupplementaires"] is None
     assert (forfait["salaireHoraireDh"], forfait["salaireReferenceDh"], forfait["typeSalaireReference"]) == (
         None,
@@ -232,8 +231,15 @@ def test_creation_refuse_les_saisies_incoherentes_avec_les_messages_de_spring(
     inconnu = _creer(plateforme, entetes, jeu, 0, heuresSupplementaires="1", employeeId=999999999)
     assert inconnu.status_code == 404
     invalide = _creer(plateforme, entetes, jeu, 0, heuresSupplementaires="-1")
-    decimale = _creer(plateforme, entetes, jeu, 0, forfaitDh="1.5")
-    assert (invalide.status_code, decimale.status_code) == (400, 400)
+    assert invalide.status_code == 400
+
+
+def test_un_forfait_decimal_est_arrondi_automatiquement_a_deux_decimales(
+    plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
+) -> None:
+    corps = _creer(plateforme, entetes, jeu, 0, forfaitDh="1.555").json()
+
+    assert (corps["forfaitDh"], corps["netAPayerDh"]) == (1.56, 1.56)
 
 
 def test_un_bulletin_stc_donne_un_montant_porte_en_stc_sans_forfait(
@@ -241,8 +247,8 @@ def test_un_bulletin_stc_donne_un_montant_porte_en_stc_sans_forfait(
 ) -> None:
     corps = _creer(plateforme, entetes, jeu, 2, heuresSupplementaires="2").json()
 
-    assert (corps["stcOuSortie"], corps["salaireHoraireDh"], corps["montantDh"]) == (True, 38.0, 76.0)
-    assert (corps["stcDh"], corps["forfaitDh"], corps["netAPayerDh"]) == (76.0, None, 0.0)
+    assert (corps["stcOuSortie"], corps["salaireHoraireDh"], corps["montantDh"]) == (True, 38.46, 76.92)
+    assert (corps["stcDh"], corps["forfaitDh"], corps["netAPayerDh"]) == (76.92, None, 0.0)
 
 
 def test_modification_recalcule_avec_le_taux_enregistre_et_controle_la_version(
@@ -300,7 +306,7 @@ def test_recherche_filtres_tri_et_pagination(plateforme: Plateforme, entetes: di
     )
     tri_inconnu = plateforme.client.post("/heures-supp/search?sort=nimporte,asc", headers=entetes, json=filtre)
 
-    assert [ligne["montantDh"] for ligne in par_montant.json()["content"]] == [76.0, 50.0, 10.0]
+    assert [ligne["montantDh"] for ligne in par_montant.json()["content"]] == [76.92, 52.5, 10.0]
     assert par_montant.json()["page"] == {"size": 20, "number": 0, "totalElements": 3, "totalPages": 1}
     assert [ligne["nomPrenom"] for ligne in sans_equipe.json()["content"]] == ["Heures 1", "Heures 2"]
     assert [ligne["nomPrenom"] for ligne in de_l_equipe.json()["content"]] == ["Heures 0"]
@@ -341,10 +347,10 @@ def test_analytique_indicateurs_et_repartitions(plateforme: Plateforme, entetes:
         "employes": 3,
         "lignesHeures": 3,
         "heures": 8.0,
-        "montantDh": 136.0,
-        "stcDh": 76.0,
+        "montantDh": 139.42,
+        "stcDh": 76.92,
         "forfaitDh": 27.0,
-        "netAPayerDh": 87.0,
+        "netAPayerDh": 89.5,
     }
     chantiers = corps["parChantier"]
     assert [groupe["id"] for groupe in chantiers] == [jeu.chantier, jeu.autre_chantier]

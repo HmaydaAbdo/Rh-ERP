@@ -15,7 +15,7 @@ PostgreSQL reste le moteur de référence. Le schéma reste la source de vérit�
   `selectinload` (ou équivalent) dans la requête. Aucun accès à une relation non chargée n'est permis dans un routeur ou un schéma de réponse.
 * Cascades limitées aux relations de composition ; collections jamais `None` ; côté propriétaire et côté inverse explicites.
 * Montants et mesures exactes : `Decimal` en mémoire, `NUMERIC` en base, jamais `float`. L'arrondi est toujours explicite (`quantize` avec un mode d'arrondi
-  nommé, par exemple `ROUND_HALF_DOWN` pour les montants entiers des heures supplémentaires) et chaque règle est couverte par un test de parité avec le calcul Java.
+  nommé : les montants passent par `arrondir_montant`, deux décimales, `ROUND_HALF_UP`) et chaque règle est couverte par un test.
 * Instants en UTC avec fuseau (`TIMESTAMPTZ`), conversion à l'affichage uniquement.
 
 ## Verrouillage optimiste
