@@ -70,7 +70,7 @@ cycle de mise à jour/suppression définis. Il ne devient pas une seconde source
 
 ## Décisions d'architecture
 
-Documenter une décision structurante dans `docs/adr/NNNN-titre.md` avec le contexte, la décision,
+Documenter une décision structurante dans `site/docs/decisions/NNNN-titre.md` avec le contexte, la décision,
 les options, les conséquences et le statut. Un changement de stockage, d'identité ou de protocole
 transverse requiert un plan de migration et de retour arrière avant son déploiement.
 

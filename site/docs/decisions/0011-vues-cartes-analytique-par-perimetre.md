@@ -1,4 +1,7 @@
-# ADR 0011 — Les Cartes et l'Analytique de tous les modules sont des vues partagées par périmètre
+---
+title: "ADR 0011 — Les Cartes et l'Analytique de tous les modules sont des vues partagées par périmètre"
+sidebar_position: 12
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-23

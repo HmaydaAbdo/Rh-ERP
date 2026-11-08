@@ -1,4 +1,7 @@
-# ADR 0014 — Les vues partagées suivent le parcours métier de chaque domaine
+---
+title: "ADR 0014 — Les vues partagées suivent le parcours métier de chaque domaine"
+sidebar_position: 15
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-23

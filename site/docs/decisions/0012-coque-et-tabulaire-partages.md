@@ -1,4 +1,7 @@
-# ADR 0012 — Coque et vue Tabulaire partagées par domaine
+---
+title: "ADR 0012 — Coque et vue Tabulaire partagées par domaine"
+sidebar_position: 13
+---
 
 - Date : 2026-10-23
 - Statut : accepté par le propriétaire
@@ -31,4 +34,3 @@ Les domaines ont toutefois des contrats différents : colonnes et rendu des cell
 - **Garder uniquement `stp-table` partagé** : rejeté, car le compteur, le choix des colonnes et l'assemblage du tableau restent copiés dans chaque domaine.
 - **Partager des primitives visuelles seulement** : rejeté, car les composants de page continueraient à réimplémenter la structure et les interactions communes.
 - **Créer une page métier universelle avec chargement des données, formulaires, filtres et règles conditionnels** : rejeté, car les contrats de domaine et permissions seraient mélangés dans un composant à nombreuses branches.
-

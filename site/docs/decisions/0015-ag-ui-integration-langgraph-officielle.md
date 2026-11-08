@@ -1,4 +1,7 @@
-# ADR 0015 — AG-UI par l'intégration LangGraph officielle, encore en 0.0.x
+---
+title: "ADR 0015 — AG-UI par l'intégration LangGraph officielle, encore en 0.0.x"
+sidebar_position: 16
+---
 
 - **Statut** : accepté
 - **Date** : 2026-10-25

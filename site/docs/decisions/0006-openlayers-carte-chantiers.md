@@ -1,4 +1,7 @@
-# ADR 0006 — OpenLayers pour la carte des chantiers
+---
+title: "ADR 0006 — OpenLayers pour la carte des chantiers"
+sidebar_position: 7
+---
 
 - **Statut** : **remplacé** par l'[ADR 0007](0007-maplibre-protomaps-auto-heberge.md) le 2026-10-17 (`ol` retiré avant tout usage)
 - **Date** : 2026-10-17
