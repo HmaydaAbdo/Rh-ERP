@@ -285,6 +285,8 @@ def _corrections() -> list[Etape]:
 
 REFONTE = "Assistant d'import refondu (avertissements, EQUIPE_VIDE, erreurs par champ) : site/docs/migration/paie.md"
 DECIDES = {
+    "analyse-sans-fichier": "Décidé : fichier absent = 400 (Spring 500, défaut de Spring).",
+    "corrections-sans-partie": "Décidé : partie absente = 400 (Spring 500, défaut de Spring).",
     "analyse-valide": REFONTE,
     "analyse-mois-2": REFONTE,
     "analyse-lignes-vides": REFONTE,
@@ -297,22 +299,18 @@ DECIDES = {
     "corrections-vides": REFONTE,
     "corrections-aligner-et-creer": REFONTE,
     "analyse-fichier-vide": REFONTE,
+    "analyse-periode-en-query": REFONTE,
     "analyse-nom-xls": REFONTE,
     "analyse-type-mime-texte": REFONTE,
     "analyse-periode-annee-passee": REFONTE,
     "analyse-octets-illisibles": "Même message, détail du lecteur Excel propre à la bibliothèque (POI / openpyxl)",
     "analyse-zero-octet": "Même message, détail du lecteur Excel propre à la bibliothèque (POI / openpyxl)",
-    "analyse-periode-vide": "FastAPI traite un champ de formulaire vide comme absent (400 dans les deux cas)",
-}
-QUESTIONS = {
     "analyse-mauvaises-lignes": "Spring rejette tout le fichier si une cellule numérique contient du texte ; "
-    "Python signale ligne par ligne.",
-    "analyse-periode-en-query": "Spring accepte periode en query ou en formulaire ; Python seulement en formulaire.",
-    "analyse-periode-an-9999": "Spring accepte toute année ; Python borne à 1900-2999.",
-    "corrections-employe-inconnu": "Spring ignore une correction visant une fiche non proposée (200) ; "
-    "Python répond 400 : garder 400 ?",
-    "analyse-sans-fichier": "Spring répond 500 sans fichier ; Python 400 : garder 400 ?",
-    "corrections-sans-partie": "Spring répond 500 sans partie corrections ; Python 400 : garder 400 ?",
+    "Python signale ligne par ligne (décision du propriétaire).",
+    "analyse-periode-an-9999": "Spring accepte toute année ; Python borne à 1900-2999 (décision du propriétaire).",
+    "corrections-employe-inconnu": "Spring ignore une correction visant une fiche non proposée (200) ; Python 400 "
+    "(décision du propriétaire).",
+    "analyse-periode-vide": "FastAPI traite un champ de formulaire vide comme absent (400 dans les deux cas)",
 }
 
 
@@ -320,5 +318,4 @@ def etapes() -> list[Etape]:
     toutes = _amorce() + _analyses() + _imports() + _corrections()
     for e in toutes:
         e.decide = DECIDES.get(e.nom)
-        e.question = QUESTIONS.get(e.nom, e.question)
     return toutes

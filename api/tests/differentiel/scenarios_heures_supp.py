@@ -51,7 +51,6 @@ def _imports() -> list[Etape]:
             f"{IMPORT}/analyse",
             fichiers=_fichier(ca_janvier, "hs.xlsx", MIME),
             donnees={"periode": "2026-01", "chantierId": "{c_a}"},
-            question="Spring lit periode et chantierId en query ou en formulaire ; Python en query seulement.",
         ),
         _import("import-ch-a-janvier", IMPORT, ca_janvier, "2026-01", "c_a"),
         _import("import-ch-a-janvier-doublon", IMPORT, ca_janvier, "2026-01", "c_a"),
@@ -160,5 +159,5 @@ def etapes() -> list[Etape]:
     for e in toutes:
         e.module = M
         if e.nom == "creer-employe-inconnu":
-            e.question = "Employé inconnu : Spring répond 500 (erreur non gérée), Python 404 avec message."
+            e.decide = "Décidé : employé inconnu = 404 avec message (Spring 500, défaut de Spring)."
     return toutes
