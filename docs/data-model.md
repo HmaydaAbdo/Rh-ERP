@@ -1,6 +1,6 @@
 # Modèle de données
 
-> Schéma PostgreSQL complet, tel que créé par les migrations Flyway (`backend/src/main/resources/db/migration`).
+> Schéma PostgreSQL complet, tel que créé par les migrations Flyway (`api/src/staport/migrations/flyway_v44`).
 > Le détail colonne par colonne de chaque domaine métier est dans son README (`docs/<domaine>/README.md`) ;
 > ce document donne la vue d'ensemble, les contraintes d'intégrité et l'historique des migrations.
 
