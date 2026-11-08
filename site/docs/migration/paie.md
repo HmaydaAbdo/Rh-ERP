@@ -28,7 +28,7 @@ Deux tests de classeur couvrent les périmètres et ce placement. La comparaison
 styles, largeurs, formules recalculées dans Excel et données réelles reste à faire.
 
 Le périmètre restant avant clôture comprend le contrat complet du wizard d'import, les exports et
-le rapport PDF, la suppression-restauration de groupe, les outils MCP et la parité exhaustive des
+le rapport PDF (503 en attente), les outils MCP et la parité exhaustive des
 tests Spring documentés dans `docs/paie/skills/SKILL.md`.
 
 Le calcul automatique n'est pas introduit : `salaire_total` reste une valeur fournie par le contrat
@@ -46,14 +46,18 @@ Un bulletin existant n'est jamais écrasé sans confirmation auditée; les dépa
 d'affectation ne sont pas déduits automatiquement.
 L'option « Ignorer et conserver 0 » ne confirme que l'avertissement de salaire nul ; un salaire
 différent de la fiche employé reste à traiter dans le wizard avant la création des bulletins.
-Si le fichier porte `0` et que la fiche porte un autre salaire, les deux avertissements sont rendus
-séparément (`SALAIRE_ZERO` et `SALAIRE_DIFFERENT`). Le second propose le type `JOURNALIER`
+Si le fichier porte `0` et que la fiche porte un autre salaire, seul `SALAIRE_DIFFERENT` est rendu
+(décision du propriétaire du 2026-11-07), avec l'ancien salaire dans `salaireActuel` et dans la raison ;
+`SALAIRE_ZERO` reste réservé aux fiches dont le salaire est déjà nul. Une équipe vide dans le fichier pour
+un employé actif qui en a une produit `EQUIPE_VIDE` : l'utilisateur choisit `CONSERVER` ou `VIDER` par
+employé (champ multipart `equipes`, JSON `{"decisions":[{employeId,action}]}`), sans décision l'import est refusé.
+`SALAIRE_DIFFERENT` propose le type `JOURNALIER`
 jusqu'à 500 inclus et `MENSUEL` au-dessus ; l'action « Ignorer 0 » ne l'efface pas.
 Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel entièrement vides
 après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
 L'analyse signale avant import un bulletin déjà présent pour l'employé et le mois, ainsi qu'un CIN
 en doublon dans le fichier ou un champ obligatoire absent. Elle nomme aussi le champ et la valeur
-si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides ; les longueurs du nom,
+si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides (les montants, eux, sont arrondis à deux décimales) ; les longueurs du nom,
 du CIN et de l'observation sont contrôlées. Lors de la création, le nom, la fonction,
 le chantier et l'équipe renseignée mettent à jour la fiche Employé dans la même transaction que les
 nouveaux bulletins. Une équipe vide sur la ligne reste vide sur le bulletin mais ne supprime pas
@@ -61,16 +65,24 @@ l'affectation de la fiche Employé.
 Fonction, Chantier et Équipe sont des référentiels préexistants : l'analyse signale toute référence
 introuvable et bloque l'import. La Paie n'en crée aucune.
 Un chantier présent mais clôturé est signalé séparément et doit être rouvert avant l'import.
-S'il existe déjà de la paie, seul le mois civil suivant le dernier mois importé est accepté ;
-le refus indique le mois attendu.
+Refonte par rapport à Spring (KAN-231) : le mois d'import est libre, la règle « dernier mois + 1 » est
+retirée. Une période égale ou postérieure au mois civil en cours, ou un fichier identique à 90 % à un des
+trois derniers autres mois, demande une confirmation explicite (`controlesPeriode`, `periode_confirmee`).
+Autres refontes : arrondi automatique des montants à deux décimales (KAN-228) et départ déduit de
+l'absence confirmable sans motif (KAN-230). Le banc différentiel les classe `REFONTE`.
 
 Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart/form-data` pour
 l'analyse et l'import final. La correction envoie en plus le texte JSON `corrections` avec les
 alignements et créations proposés; le serveur relit le classeur et vérifie les employés et lignes
 avant d'écrire, puis renvoie une analyse recalculée. Les permissions de correction sont
-`PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`. Cette tranche n'établit pas encore la parité complète
-du wizard : les propositions et confirmations de départ/STC/retour ne sont pas portées par FastAPI;
-les listes correspondantes restent vides et aucune transition de statut n'est déduite.
+`PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`. L'analyse propose désormais les départs (STC ou « sortie » dans la colonne Observation, motif prérempli ;
+actifs absents du fichier, motif à saisir) et les retours (inactifs présents). L'import reçoit les départs
+confirmés dans le champ multipart `departs` (JSON `{"departs":[{employeId,motif}]}`), refuse (400) un départ
+non proposé, un motif vide, un départ déjà enregistré ce mois ou un retour sans type de salaire, et annule
+alors toute l'importation (une transaction). La création et la modification d'un bulletin exigent
+`PAIE_WRITE` et `EMPLOYEE_WRITE` (la fiche Employé change de chantier et d'équipe), comme Spring. La
+suppression de groupe (`POST /paie/suppression`, `PAIE_PURGE`) et sa restauration depuis l'audit
+(`POST /paie/restauration/{id}`, `PAIE_RESTORE`) sont portées, atomiques et éprouvées sur PostgreSQL.
 
 Pour l'export, la parité Spring est le comportement par défaut. Le regroupement demandé est un
 choix distinct de la sélection des équipes à détailler. Le contrat Python prévoit
@@ -79,21 +91,26 @@ lignes des équipes choisies une seule fois, tandis que la sélection classique 
 séparées. L'étape facultative de l'assistant et l'agrégation de tous les indicateurs du PDF restent
 à livrer avant l'activation ; cette option n'est pas encore disponible à l'utilisateur.
 
-Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). La couverture, les bandeaux et le tableau de détail reprennent la structure
+Un prototype PDF FastAPI utilise WeasyPrint 70.0, Pillow 13.0.0 et Matplotlib 3.11.2 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). Matplotlib fournit le rendu SVG statique ; son interface `Figure.savefig` écrit le graphique dans un flux mémoire
+([backends](https://matplotlib.org/stable/users/explain/figure/backends.html), [Figure.savefig](https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.savefig.html)).
+La couverture, les bandeaux et le tableau de détail reprennent la structure
 HTML Spring ; un essai Linux sur trois bulletins a produit trois pages. Après pagination, un essai
 Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre pages de contenu),
 avec 65 lignes présentes dans le modèle HTML.
 Le détail emploie les mêmes séparateurs français que Spring (espace insécable pour les milliers,
 virgule décimale, tiret pour les valeurs numériques absentes).
-Le prototype a une page de périmètre quand un filtre est actif et omet sa synthèse quand
+Le rendu Python reprend les six KPI globaux de Spring (masse, masse du mois précédent, bulletins, chantiers, nombre et montant des STC) et leurs comparaisons.
+La vue d'ensemble présente les KPI, les rubriques d'évolution et les courbes sur les périodes réellement disponibles des douze derniers mois, puis la répartition par chantier. Chaque chantier est numéroté en chiffres romains : après la vue globale, le premier chantier est II ; sans vue globale, il est I. Chaque chantier et équipe sélectionnée présente ses KPI, ses rubriques d'évolution et son historique.
+Les graphiques de répartition présentent ensemble les quatre mesures Spring : masse, nombre de bulletins, STC en personnes et montant STC. La vue globale exprime la contribution de chaque chantier au total; les vues de détail conservent les échelles comparables. La répartition globale garde l'ordre de masse décroissante et répartit les chantiers en pages équilibrées, avec au plus seize catégories par page.
+Le chantier sans équipe choisie présente sa répartition par fonction ; avec une sélection, il présente la répartition de toutes ses équipes. Chaque équipe choisie a sa propre répartition par fonction, poursuivie sur des pages équilibrées au-delà de quinze fonctions. Les rubriques sont numérotées comme dans le rapport Spring : évolutions 1 et 2, répartition 3, matériel 4 si affiché, puis liste des employés 4 ou 5.
+Chaque section d'employés présente un tableau récapitulatif par fonction (bulletins, STC et montant STC), découpé selon la hauteur réelle des libellés et réuni avec le détail lorsque l'espace le permet. Une équipe choisie du catalogue C168 affiche son graphique matériel lorsque le wizard fournit au moins une quantité positive; si les hauteurs le permettent, les répartitions par fonction et matériel partagent la même page.
+Les pages propres à une équipe répètent dans leur bandeau et leur pied de page le chantier et le libellé d'équipe, comme le rapport Spring.
+Une seule requête historique groupe les bulletins par chantier, équipe et mois en base, conserve les filtres du rapport et fournit les courbes globales et par chantier par totalisation. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
 La mesure des lignes s'appuie sur les polices embarquées et les hauteurs du gabarit Spring ; le
 prototype découpe les tableaux longs en pages physiques sans perdre de ligne dans le modèle HTML.
-`POST /paie/report/pdf`
-répond temporairement `503` : le découpage n'a pas encore de preuve visuelle de parité,
-et les graphiques, comparaisons et sections complètes du rapport Spring restent à porter. La route ne sera
-ouverte qu'après portage complet et comparaison sur un même jeu de données.
+`POST /paie/report/pdf` répond temporairement `503` tant que les scénarios de pagination et la comparaison des PDF Spring/Python rendus sur un même jeu de données n'ont pas prouvé la parité. Les tests ciblés couvrent les rubriques, les récapitulatifs par fonction, la hauteur des cartes KPI, les répartitions et le placement des sections ; les tests Spring de construction de pages et de rendu PDF passent également. Reste à comparer les deux rendus sur les mêmes données, confirmer le contrat HTTP du téléchargement, et vérifier les limites de validation des champs de requête. La route ne doit pas être activée avant ces preuves.
 
 Les montants nuls sont acceptés. Un `salaireMensuel` nul n'est toutefois jamais silencieux :
 l'assistant bloque la poursuite et exige l'action explicite « Ignorer et conserver 0 ». Une erreur de montant doit toujours nommer la ligne Excel, le
@@ -108,3 +125,21 @@ ligne d'exemple, sous `PAIE_IMPORT`.
 Le nom de feuille, les dimensions et toutes les cellules du modèle produit ont été comparés au
 fichier `Modele_Import_Paie.xlsx` fourni par le propriétaire : ils sont identiques. Cette comparaison
 ne porte pas sur les styles ni les propriétés internes du classeur.
+
+Le gabarit du rapport embarque Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
+(rendu hors de la boucle d'événements). Un rendu Linux réel a été vérifié le 2026-11-07 pour la page de garde et un tableau paginé. Le portage des sections et graphiques est couvert par des tests ciblés, mais la comparaison côte à côte avec Spring sur les mêmes données reste à faire ; la route reste en `503` jusque-là.
+
+## Parcours, effectifs et statuts HTTP (parité Spring, KAN-226)
+
+`GET /paie/employes/{id}/parcours` renvoie, pour chaque mois, `fonction` (libellé), `chantier` (code) et `equipe` (code, `null`
+sans équipe), comme `ParcoursEmployeDto.MoisDto`. Les événements du plus récent au plus ancien (à mois égal : `RETOUR`,
+`DEPART`, `CHANGEMENT_SALAIRE`, `CHANGEMENT_EQUIPE`, `CHANGEMENT_FONCTION`, `CHANGEMENT_CHANTIER`, `ENTREE`) sont : `ENTREE`
+(`apres` = « code chantier · libellé fonction »), les changements entre deux bulletins consécutifs (codes et libellés, salaire
+en décimal brut), `RETOUR` quand un départ tombe entre deux bulletins et `DEPART` (avec `motif`) pour chaque ligne de
+`employe_sortie`. Un employé inconnu répond `404`. Le calcul est dans `paie/historique.py`.
+
+`POST /paie/effectifs` calcule `entrees`, `sorties`, `mutations` et `plusPayes` comme `PaieEffectifsService`, face au mois civil
+précédent (`mois_precedent`, qui enjambe janvier). Le premier mois du périmètre n'a ni `entrees` ni `mutations`.
+
+Statuts : bulletin introuvable `404`, doublon employé/mois `409` (message avec le mois `AAAA-MM`), suppression bloquée par une
+contrainte `409`. Preuve : `api/tests/test_paie_parcours_contrat.py`.

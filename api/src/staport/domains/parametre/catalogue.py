@@ -72,25 +72,30 @@ def expression_cron_valide(valeur: str) -> bool:
     champ jour de semaine n'accepte donc que `*` et les noms `MON` à `SUN` (listes et plages comprises). Le caractère
     `?` de Spring n'est pas reconnu : écrire `*`.
     """
-    champs = valeur.split()
-    if len(champs) != 6:
-        return False
-    seconde, minute, heure, jour, mois, jour_semaine = champs
-    if any(c.isdigit() for c in jour_semaine):
-        return False
     try:
-        CronTrigger(
-            second=seconde,
-            minute=minute,
-            hour=heure,
-            day=jour,
-            month=mois,
-            day_of_week=jour_semaine.lower(),
-            timezone="UTC",
-        )
+        declencheur_cron(valeur)
     except ValueError:
         return False
     return True
+
+
+def declencheur_cron(valeur: str) -> CronTrigger:
+    """Le déclencheur APScheduler d'une expression à six champs, en UTC. @raise ValueError si elle est invalide."""
+    champs = valeur.split()
+    if len(champs) != 6:
+        raise ValueError("six champs attendus")
+    seconde, minute, heure, jour, mois, jour_semaine = champs
+    if any(c.isdigit() for c in jour_semaine):
+        raise ValueError("jour de semaine : `*` ou noms MON à SUN")
+    return CronTrigger(
+        second=seconde,
+        minute=minute,
+        hour=heure,
+        day=jour,
+        month=mois,
+        day_of_week=jour_semaine.lower(),
+        timezone="UTC",
+    )
 
 
 JETON_ACCES = DefinitionParametre(

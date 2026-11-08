@@ -3,7 +3,7 @@
 Service Python d'ERP-RH, construit uniquement sur les composants officiels (règle « frameworks d'abord ») : agent
 `create_agent` de LangChain sur LangGraph (T10), flux AG-UI par CopilotKit et `ag-ui-langgraph` (T11), outils MCP par
 le MCP intégré à LangChain, modèles par `ChatLiteLLM` et la passerelle [LiteLLM](../litellm/README.md).
-Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
+Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). Règles : [conventions/agents-ia.md](../conventions/agents-ia.md).
 
 ## État actuel
 
@@ -46,15 +46,10 @@ Décisions, plan et état : [docs/ia.md](../docs/ia.md). Règles : [conventions/
 abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur appelle l'outil attendu
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
-```bash
-cd backend
-./mvnw -B -Dia.evaluation=true -Dtest=EvaluationAgentIaTest test
-```
-
-Prérequis : passerelle LiteLLM prête et `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` dans
-l'environnement. Le test crée des données synthétiques, démarre l'application, puis lance
-`python -m erp_rh_ia.evaluation`. Rapport : `backend/target/evaluation-ia.json` (exactitude,
-latences p50/p95, détail par cas) ; journal : `backend/target/evaluation-ia.txt`.
+Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui remplace `EvaluationAgentIaTest` du backend Java retiré
+en E2 : il démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory erp_rh_ia.app:creer_app`)
+puis `python -m erp_rh_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
+s'active avec `IA_EVALUATION=1`.
 
 ## Développer
 
@@ -69,41 +64,21 @@ uv run pyright
 uv run pytest -q
 ```
 
-Les tests de `tests/compatibilite/` sont ignorés sans `MCP_COMPATIBILITY_URL`. Pour les exécuter
-contre le serveur Java synthétique :
+`tests/integration/` appelle la **vraie** route `/mcp` de l'application (FastMCP, API Python) avec un jeton agent
+RS256 ; il est ignoré sans `MCP_ERP_RH_URL` et lancé, avec le client TypeScript du SDK MCP, par l'API
+(application complète et base de test) :
 
 ```bash
-cd backend
-./mvnw -B -P mcp-compatibility -Dtest=McpCompatibilityTest test
+cd api
+uv run pytest tests/test_mcp_clients_externes.py
+uv run pytest tests/test_ia_lanceurs.py   # démarrage du service IA et refus d'un jeton invalide, sans passerelle
 ```
 
-Rapport : `backend/target/mcp-compatibility/client-python.txt`.
-
-`tests/integration/` appelle la **vraie** route `/mcp` de l'application avec un jeton agent ; lancé par
-`McpClientPythonIntegrationTest` (application complète et base de test) :
-
-```bash
-cd backend
-./mvnw -B -Dia.client-python=true -Dtest=McpClientPythonIntegrationTest test
-```
-
-Rapport : `backend/target/client-python-mcp-erp-rh.txt`.
-
-Flux AG-UI réel avec le client officiel `@ag-ui/client` (`scripts/ia/agui-client`) : l'application de test,
-ce service lancé par `uvicorn` et une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) :
-
-```bash
-npm ci --ignore-scripts --prefix scripts/ia/agui-client
-cd backend
-./mvnw -B -Dia.agui=true -Dtest=FluxAgUiIntegrationTest test
-```
-
-Journaux : `backend/target/agui-client.txt` et `backend/target/agui-service.txt`.
-
-Banc de démonstration pour le navigateur (`BancAssistantTest`, `-Dia.banc=true`) : l'application de test avec des données
-fictives, un compte de test et ce service (port 5103), laissés en marche jusqu'à `backend/target/banc-assistant.stop`
-(45 minutes au plus). Ports, compte et codes chantier dans `backend/target/banc-assistant.json` ; pointer `ng serve` dessus
-avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS` incluant l'origine de `ng serve`.
+Les lanceurs de `api/tests/test_ia_lanceurs.py` couvrent le flux AG-UI réel avec le client officiel `@ag-ui/client`
+(`scripts/ia/agui-client`, `IA_AGUI=1`), l'évaluation (`IA_EVALUATION=1`) et le banc de démonstration pour le navigateur
+(`IA_BANC=1`, écrit `api/target/banc-assistant.json`, s'arrête avec `banc-assistant.stop` ou après 45 minutes). Ces trois
+modes exigent la passerelle LiteLLM ; sans elle ils sont ignorés. Le client TypeScript refuse toute URL autre que
+`http://127.0.0.1:<port>/agui`.
 
 ## Image et exploitation
 

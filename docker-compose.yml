@@ -1,7 +1,7 @@
-# Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers le
-# backend), Spring Boot (backend), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
+# Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers
+# l'API), API FastAPI (api), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
 # public) est géré séparément sur le serveur de déploiement, hors de ce fichier — voir
-# docs/deployment.md pour l'architecture complète et conventions/deployment.md pour le pattern
+# site/docs/exploitation/deploiement.md pour l'architecture complète et conventions/deployment.md pour le pattern
 # générique.
 #
 # Production uniquement : aucun `build:`, uniquement des `image:` déjà publiées sur Docker Hub
@@ -40,11 +40,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Persistance des données — voir docs/deployment.md pour la stratégie de backup (distincte
+      # Persistance des données — voir site/docs/exploitation/deploiement.md pour la stratégie de backup (distincte
       # de ce volume, qui ne protège que contre l'arrêt/la recréation du conteneur, pas contre la
       # perte du volume lui-même).
       # PostgreSQL 18 stocke ses données dans un sous-répertoire de ce point de montage ; voir
-      # docs/deployment.md pour la migration majeure et le volume PG17 conservé.
+      # site/docs/exploitation/deploiement.md pour la migration majeure et le volume PG17 conservé.
       - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
@@ -174,7 +174,6 @@ services:
     networks:
       - db-net
 
-  # Préparation de la bascule E2 : ne pas déployer cette branche avant le retrait de Spring (KAN-50).
   api:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -212,6 +211,7 @@ services:
       MAIL_FROM: ${MAIL_FROM}
       CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
       LOGGING_FORMAT: json
+      LOGGING_FILE_PATH: /app/logs
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
@@ -222,69 +222,11 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp
-    networks:
-      - db-net
-      - ia-net
-      - trace-net
-
-  backend:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-backend:${BACKEND_IMAGE_TAG:?BACKEND_IMAGE_TAG est obligatoire}
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      # Traces : attendre que Phoenix réponde évite de perdre les premiers lots ; facultatif (required: false), l'ERP
-      # démarre même si l'observabilité est en panne.
-      phoenix:
-        condition: service_healthy
-        required: false
-    environment:
-      PGAUDIT_ENABLED: "true"
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB}
-      # Deux comptes obligatoires (voir docs/deployment.md, « Deux comptes PostgreSQL ») : le compte applicatif n'a
-      # que SELECT et INSERT sur les tables d'audit ; le propriétaire (POSTGRES_USER) ne sert qu'à Flyway.
-      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
-      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
-      DB_MIGRATION_USER: ${POSTGRES_USER}
-      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
-      CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      COOKIE_SECURE: ${COOKIE_SECURE}
-      ADMIN_USERNAME: ${ADMIN_USERNAME}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USERNAME: ${SMTP_USERNAME}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      SMTP_AUTH: ${SMTP_AUTH}
-      SMTP_STARTTLS: ${SMTP_STARTTLS}
-      MAIL_FROM: ${MAIL_FROM}
-      # Assistant IA (docs/ia.md, § 5) : route /mcp et jeton agent RS256, actifs par défaut. MCP_ENABLED=false
-      # les coupe ; la clé et son identifiant restent alors exigés pour garder un seul .env complet.
-      MCP_ENABLED: ${MCP_ENABLED:-true}
-      MCP_JWT_PRIVATE_KEY: ${MCP_JWT_PRIVATE_KEY:?MCP_JWT_PRIVATE_KEY est obligatoire (voir .env.example)}
-      MCP_JWT_KEY_ID: ${MCP_JWT_KEY_ID:?MCP_JWT_KEY_ID est obligatoire}
-      MCP_JWT_PREVIOUS_PUBLIC_KEY: ${MCP_JWT_PREVIOUS_PUBLIC_KEY:-}
-      MCP_JWT_PREVIOUS_KEY_ID: ${MCP_JWT_PREVIOUS_KEY_ID:-}
-      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18) : requêtes HTTP, outils MCP et requêtes SQL, même trace que le
-      # service IA (en-tête W3C traceparent).
-      MANAGEMENT_TRACING_ENABLED: "true"
-      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT: http://phoenix:6006/v1/traces
-      MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_HEADERS_AUTHORIZATION: Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
-      # Journaux JSON sur la console et dans des archives journalières (30 jours, UTC).
-      LOGGING_FORMAT: json
-      LOGGING_FILE_PATH: /app/logs
     volumes:
+      # Journaux JSON archivés chaque jour, compressés, gardés 30 jours ; le dossier doit être inscriptible par l'uid 10001.
       - type: bind
         source: ./logs
         target: /app/logs
-        bind:
-          create_host_path: false
     networks:
       - db-net
       - web-net
@@ -293,31 +235,22 @@ services:
       - ia-net
       - trace-net
     ports:
-      # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif réel n'y passe pas — nginx
-      # inner atteint le backend via le réseau Docker interne (web-net, nom de service "backend"),
-      # voir frontend/nginx.conf. Cette publication loopback ne sert qu'au diagnostic/à l'admin
-      # depuis le serveur lui-même.
-      - "127.0.0.1:${BACKEND_PORT}:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
-      interval: 10s
-      timeout: 5s
-      start_period: 40s
-      retries: 5
+      # Lié à 127.0.0.1 : jamais exposé à Internet. Le trafic applicatif passe par nginx inner (web-net, service "api").
+      - "127.0.0.1:${API_PORT}:8080"
 
   frontend:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     depends_on:
-      backend:
+      api:
         condition: service_healthy
     networks:
       - web-net
       # Relais /ia/copilotkit/ vers le runtime CopilotKit (nginx.conf).
       - assistant-net
     environment:
-      # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et docs/chantier/carte.md).
-      ARCGIS_API_KEY: ${ARCGIS_API_KEY:?ARCGIS_API_KEY est obligatoire (clé ArcGIS gratuite, voir docs/chantier/carte.md)}
+      # Clé de l'imagerie satellite, ajoutée aux tuiles par nginx (voir .env.example et site/docs/domaines/chantier/carte.md).
+      ARCGIS_API_KEY: ${ARCGIS_API_KEY:?ARCGIS_API_KEY est obligatoire (clé ArcGIS gratuite, voir site/docs/domaines/chantier/carte.md)}
     volumes:
       # Fond de carte auto-hébergé (monde, Maroc détaillé, relief, polices, icônes), produit par
       # scripts/carte/preparer-fond-carte.sh ; lecture seule, hors de l'image (plusieurs dizaines de Go).
@@ -340,7 +273,7 @@ services:
     networks:
       - web-net
     ports:
-      # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (docs/deployment.md).
+      # Lié à 127.0.0.1 : seul nginx outer s'y connecte et pose l'authentification (site/docs/exploitation/deploiement.md).
       - "127.0.0.1:${DOCS_PORT:-5005}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health"]
@@ -349,7 +282,7 @@ services:
       start_period: 5s
       retries: 3
 
-  # --- IA (voir docs/ia.md) ---------------------------------------------------------------------
+  # --- IA (voir site/docs/ia) ---------------------------------------------------------------------
   # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
   # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.
   litellm-db:
@@ -372,7 +305,7 @@ services:
       retries: 10
 
   ia-db:
-    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, docs/ia.md T19) : instance et volume
+    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, site/docs/ia T19) : instance et volume
     # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     restart: unless-stopped
@@ -467,9 +400,9 @@ services:
       # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
       IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire (clé virtuelle LiteLLM, litellm/README.md)}
-      # Jeton agent et route /mcp du backend, par le réseau ia-net.
-      IA_ERP_API_URL: http://backend:8080
-      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      # Jeton agent et route /mcp de l'API, par le réseau ia-net.
+      IA_ERP_API_URL: http://api:8080
+      # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
@@ -494,7 +427,7 @@ services:
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
-  # Runtime CopilotKit officiel (docs/ia.md, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
+  # Runtime CopilotKit officiel (site/docs/ia, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
   # nginx). Il applique le middleware A2UI et relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur.
   copilot-runtime:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
@@ -509,9 +442,9 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
-      # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.
-      ERP_API_URL: http://backend:8080
-      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
+      ERP_API_URL: http://api:8080
+      # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-copilot-runtime
       OTEL_METRICS_EXPORTER: none
@@ -562,7 +495,7 @@ services:
     networks:
       - db-net
 
-  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, traces
+  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (site/docs/ia, T18). Un seul conteneur, traces
   # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}

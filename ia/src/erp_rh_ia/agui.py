@@ -1,6 +1,6 @@
 # ag-ui-langgraph et copilotkit ne publient pas de stubs : seules ces deux règles sont levées, et seulement ici.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Point d'entrée AG-UI (docs/ia.md, T11) : ``LangGraphAGUIAgent`` de CopilotKit, sur l'intégration officielle
+"""Point d'entrée AG-UI (site/docs/ia, T11) : ``LangGraphAGUIAgent`` de CopilotKit, sur l'intégration officielle
 ``ag-ui-langgraph``, diffuse le run de l'agent — raisonnement (``REASONING_*``), texte en flux, appels d'outils,
 plan, état partagé et outils déclarés par le navigateur.
 

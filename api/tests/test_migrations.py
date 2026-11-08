@@ -52,7 +52,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         assert c.execute(text("SELECT count(*) FROM permission")).scalar_one() > 0
@@ -105,7 +105,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
@@ -117,7 +117,7 @@ def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
     creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     url = creer_base("deploiement_flyway")
-    command.upgrade(_config(url), "head")
+    command.upgrade(_config(url), "0001_base_v44")  # l'état d'une base Flyway V44 : sans les révisions suivantes
     moteur = create_engine(url)
     with moteur.begin() as connexion:
         roles_avant = connexion.execute(text("SELECT count(*) FROM role")).scalar_one()
@@ -134,7 +134,7 @@ def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
         assert not connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'flyway_schema_history', 'INSERT')")
@@ -177,7 +177,7 @@ def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_
     command.upgrade(config, "head")  # ne fait rien
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0002_paie_materiel"
         assert (
             c.execute(text("SELECT count(*) FROM information_schema.columns WHERE table_name='employe'")).scalar_one()
             == 1

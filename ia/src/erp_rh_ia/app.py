@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
-"""Application HTTP du service IA : santé et point d'entrée AG-UI ``POST /agui`` (docs/ia.md, T11)."""
+"""Application HTTP du service IA : santé et point d'entrée AG-UI ``POST /agui`` (site/docs/ia, T11)."""
 
 from collections.abc import AsyncGenerator, Callable, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager

@@ -6,11 +6,11 @@ import { mockApi, page as pageDe } from './support/api-mock';
 /**
  * Captures des écrans de référence de E0.5 (à faire valider par le propriétaire) : la paie sur ordinateur et un écran de chantier
  * sur téléphone, en clair et en sombre, avec des données réalistes simulées. Régénération : `npm run e2e:references` (écrit dans
- * `docs/frontend/references/`). Elles servent de repère de revue, pas de comparaison pixel à pixel.
+ * `site/docs/frontend/references/`). Elles servent de repère de revue, pas de comparaison pixel à pixel.
  */
 test.skip(!process.env['E2E_REFERENCES'], 'Captures de référence : lancer `npm run e2e:references`.');
 
-const DOSSIER = resolve(process.cwd(), '..', 'docs', 'frontend', 'references');
+const DOSSIER = resolve(process.cwd(), '..', 'site', 'docs', 'frontend', 'references');
 
 const PERSONNES: [string, string, string, string, number, number, number][] = [
   ['ALAMI Karim', 'AB1234', 'CH. CAMION', 'Chauffeurs', 26, 4500, 300],
@@ -72,6 +72,7 @@ const ROUTES = {
   'POST /paie/options/chantiers': () => pageDe(CHANTIERS),
   'POST /paie/options/equipes': () => pageDe([{ id: 5, code: 'CH', libelle: 'Chauffeurs' }]),
   'GET /paie/materiel': () => [],
+  'GET /paie/materiel/valeurs': () => [],
   'POST /chantiers/search': () => pageDe(CHANTIERS),
   'POST /equipes/search': () => pageDe([]),
   'POST /functions/search': () => pageDe([]),

@@ -1,6 +1,6 @@
 # Runtime CopilotKit (`erp-rh-copilot-runtime`)
 
-Le runtime CopilotKit officiel (`@copilotkit/runtime`), placé entre Angular et le service IA Python (docs/ia.md, T16).
+Le runtime CopilotKit officiel (`@copilotkit/runtime`), placé entre Angular et le service IA Python (site/docs/ia, T16).
 Il ne contient aucune logique métier à nous :
 
 - il relaie l'agent AG-UI du service IA (`IA_AGUI_URL`) avec le jeton de l'utilisateur, recréé à chaque requête par

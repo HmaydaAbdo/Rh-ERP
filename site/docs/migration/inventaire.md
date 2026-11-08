@@ -11,7 +11,7 @@ sidebar_position: 1
 
 ## Totaux
 
-- 429 fichiers Java, 25176 lignes ; 109 fichiers de test, 584 tests.
+- 430 fichiers Java, 25203 lignes ; 110 fichiers de test, 586 tests.
 - 101 routes HTTP, 31 outils MCP, 73 actions d'audit distinctes, 1 tâches planifiées.
 - 44 migrations Flyway (`V1__enable_extensions.sql` à `V44__heures_supp_montants_entiers.sql`), 7 fichiers de modèles de rapport, 35 clés de configuration lues dans `application.yml`.
 
@@ -25,7 +25,7 @@ sidebar_position: 1
 | audit | 48 | 2798 | 4 | 0 | 0 | 2 | 95 |
 | auth | 73 | 3399 | 21 | 0 | 6 | 5 | 113 |
 | chantier | 29 | 1230 | 8 | 0 | 4 | 1 | 29 |
-| common | 12 | 564 | 0 | 0 | 0 | 0 | 21 |
+| common | 13 | 591 | 0 | 0 | 0 | 0 | 23 |
 | employee | 37 | 1970 | 9 | 0 | 5 | 2 | 46 |
 | equipe | 19 | 806 | 7 | 0 | 4 | 1 | 13 |
 | function | 19 | 726 | 7 | 0 | 4 | 1 | 10 |

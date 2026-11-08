@@ -29,8 +29,8 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
 
 0. Consulter Jira (projet `KAN`, source de vérité des tâches : statut, preuve, historique) pour la tâche reprise ou à
    créer. Une tâche termine en Jira avec sa preuve en commentaire, jamais sans.
-1. Lire [`docs/developpement-local.md`](../docs/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
-   commises et règle qui les évite), puis les conventions applicables et `docs/README.md`.
+1. Lire [`site/docs/exploitation/developpement-local.md`](../site/docs/exploitation/developpement-local.md) et [`lecons.md`](lecons.md) (erreurs déjà
+   commises et règle qui les évite), puis les conventions applicables et le site de documentation (`site/docs/index.md`).
 2. Identifier les domaines et composants partagés concernés ; lire leurs README, skills et permissions.
    Lire [`ingenierie-agentique.md`](ingenierie-agentique.md) et chercher dans son registre la ligne du cas d'usage de la
    tâche. Sans ligne, proposer l'abstraction officielle (framework, point d'extension, source) avant d'écrire du code.
@@ -48,7 +48,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   le catalogue et ses usages dans les domaines. Consigner dans le plan ou la revue la correspondance
   entre les besoins de l'écran et les composants retenus. Si une brique générique manque, proposer son
   ajout au socle et au catalogue avant de la coder dans un domaine ; ne pas contourner cette étape par
-  une copie locale. Consulter l'inventaire [composants partagés](../docs/frontend/audit-composants-partages.md)
+  une copie locale. Consulter l'inventaire [composants partagés](../site/docs/frontend/audit-composants-partages.md)
   pour les écarts connus et le mettre à jour lorsque le constat change.
 * Appliquer les principes de [`ingenierie-agentique.md`](ingenierie-agentique.md) : abstraction à sa place (second usage
   ou frontière nommé), bon framework (besoin en une phrase, couverture native vérifiée), bon outillage (contrôles locaux
@@ -98,7 +98,7 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   domaines consommateurs modifiés. Une brique d'interface locale n'est pas justifiée par sa seule
   spécificité métier : toute exception temporaire suit les preuves et l'accord préalable prévus dans
   [frontend.md](frontend.md) et figure à l'inventaire avec son plan de sortie.
-* Respecter les services et ports du propriétaire décrits dans [developpement-local.md](../docs/developpement-local.md). Utiliser `localhost`
+* Respecter les services et ports du propriétaire décrits dans [developpement-local.md](../site/docs/exploitation/developpement-local.md). Utiliser `localhost`
   pour la revue locale lorsqu'il est demandé ; les serveurs de test utilisent leur environnement
   dédié. Déclarer les contrôles impossibles ou interrompus et leur cause.
 
@@ -110,8 +110,8 @@ des migrations, catalogue de données réelles ni attribution conversationnelle 
 
 | Élément | Source à maintenir |
 |---|---|
-| Fonctionnement du domaine | `docs/<domaine>/README.md` : règles, modèle de données, DTO exposés (types, contraintes, descriptions), contrats, permissions et accès associés, vues, imports/exports et scénarios liés aux tests |
-| Procédure de l'agent sur ce domaine | `docs/<domaine>/skills/SKILL.md`, avec renvois aux sources faisant autorité |
+| Fonctionnement du domaine | `site/docs/domaines/<domaine>/index.md`, `contrats.md` et `droits.md` : règles, modèle de données, DTO exposés (types, contraintes, descriptions), contrats, permissions et accès associés, vues, imports/exports et scénarios liés aux tests |
+| Procédure de l'agent sur ce domaine | section « Guide agent » de `site/docs/domaines/<domaine>/index.md`, avec renvois aux sources faisant autorité |
 | Travail ouvert (domaine ou transversal), décision à prendre, support différé | Tâche Jira (projet `KAN`), rattachée à son épopée ; jamais un `TODO.md` |
 | Permission, schéma ou contrat transverse touché | Catalogue RBAC, modèle de données ou document transverse concerné, avec renvoi au domaine pour ses règles détaillées |
 | Décisions et propositions d'évolution | PV global : règles actuelles et propositions clairement distinguées ; une évolution proposée ne devient pas une règle active |

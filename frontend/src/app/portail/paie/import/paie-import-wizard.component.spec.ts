@@ -29,6 +29,7 @@ const ANALYSE: PaieImportAnalyse = {
   ],
   departs: [{ employeId: 2, cin: 'CD2', nomPrenom: 'OMAR', motif: null }],
   retours: [],
+  controlesPeriode: [],
   pret: false
 };
 
@@ -41,6 +42,8 @@ describe('PaieImportWizardComponent', () => {
   async function ouvrir(permissions: string[]): Promise<void> {
     service = { analyserImport: vi.fn().mockReturnValue(of(ANALYSE)), corrigerImport: vi.fn().mockReturnValue(of(ANALYSE)), importer: vi.fn() };
     TestBed.configureTestingModule({ providers: [fournirPermissions(permissions).providers, { provide: PaieService, useValue: service }] });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 8)); // 8 novembre 2026 : le mois proposé est octobre
     fixture = TestBed.createComponent(PaieImportWizardComponent);
     fixture.componentRef.setInput('periodes', ['2026-09']);
     fixture.componentRef.setInput('visible', true);
@@ -56,12 +59,15 @@ describe('PaieImportWizardComponent', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove()));
+  afterEach(() => {
+    vi.useRealTimers();
+    document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove());
+  });
 
-  it('annonce le mois imposé avant le choix du fichier', async () => {
+  it('propose le mois écoulé, au choix de l’utilisateur, avant le choix du fichier', async () => {
     await ouvrir(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE']);
 
-    expect(dialogue().querySelector('.app-wizard__mois strong')?.textContent).toBe('octobre 2026');
+    expect(dialogue().querySelector('.app-wizard__mois stp-month-input')?.textContent).toContain('10/2026');
     expect(dialogue().querySelector('.app-wizard__depot input[type="file"]')).not.toBeNull();
   });
 

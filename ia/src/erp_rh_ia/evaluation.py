@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Évaluation de l'agent sur le jeu de référence (docs/ia.md, § 4 et T12) : ``python -m erp_rh_ia.evaluation``.
+"""Évaluation de l'agent sur le jeu de référence (site/docs/ia, § 4 et T12) : ``python -m erp_rh_ia.evaluation``.
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
 le vrai agent (``create_deep_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent

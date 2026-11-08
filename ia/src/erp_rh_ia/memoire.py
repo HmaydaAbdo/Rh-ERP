@@ -1,7 +1,7 @@
 # LangGraph et ses intégrations ne publient pas de stubs complets : seules ces deux règles sont levées, et seulement
 # pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Conversations durables de l'assistant (docs/ia.md, T19).
+"""Conversations durables de l'assistant (site/docs/ia, T19).
 
 Le checkpointer officiel de LangGraph pour PostgreSQL (``AsyncPostgresSaver``) garde l'état de chaque conversation
 dans une base dédiée à l'IA (service ``ia-db``, aucune donnée du reste de l'ERP) : une question posée après un

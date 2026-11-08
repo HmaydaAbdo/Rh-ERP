@@ -22,13 +22,13 @@ repos:
         name: documentation · faits vérifiables contre le code
         language: system
         entry: node scripts/ia/check-docs-code.mjs .
-        files: ^(docs/|conventions/|AGENTS\.md|CLAUDE\.md|scripts/ia/|ia/|backend/src/)
+        files: ^(site/docs/|conventions/|AGENTS\.md|CLAUDE\.md|scripts/ia/|ia/|api/src/staport/domains/mcp/)
         pass_filenames: false
       - id: docs-domaines
         name: documentation · domaines
         language: system
         entry: node scripts/check-docs-domaines.mjs .
-        files: ^(docs/|conventions/|backend/src/)
+        files: ^(site/docs/domaines/|conventions/|scripts/check-docs-domaines\.mjs|api/src/staport/domains/)
         pass_filenames: false
       - id: ia-pyright
         name: ia · pyright

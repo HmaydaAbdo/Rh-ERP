@@ -617,7 +617,7 @@ Toute évolution d'un contrat API doit être répercutée sur le frontend.
 
 # Documentation
 
-Après toute évolution d'un module frontend, mettre à jour la documentation concernée dans `docs/`
+Après toute évolution d'un module frontend, mettre à jour la documentation concernée dans `site/docs/`
 (structure propre à chaque projet — voir son propre `README.md`).
 
 ---

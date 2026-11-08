@@ -11,7 +11,7 @@ Les middlewares officiels bornent la boucle (appels de modèle et d'outils) et i
 par les compétences de domaine (``competences.py``, ``SkillsMiddleware``), épinglées hors modèle (``routage.py``).
 
 L'exactitude des chiffres repose sur les outils de l'ERP : ils calculent eux-mêmes totaux, écarts, pourcentages,
-moyennes et rangs (décision du propriétaire du 2026-10-27, docs/ia.md § 4) ; le modèle ne fait que les reprendre.
+moyennes et rangs (décision du propriétaire du 2026-10-27, site/docs/ia § 4) ; le modèle ne fait que les reprendre.
 Aucun contrôle après coup : le vérificateur de chiffres a été supprimé.
 """
 
@@ -59,7 +59,7 @@ register_harness_profile("litellm", PROFIL_HARNAIS)
 
 #: Permissions documentées du système de fichiers de Deep Agents : aujourd'hui rien ne s'écrit, les compétences sont en
 #: lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
-#: d'écriture était lié par erreur. L'épopée d'écriture (docs/ia.md) l'ouvrira domaine par domaine, uniquement sous
+#: d'écriture était lié par erreur. L'épopée d'écriture (site/docs/ia) l'ouvrira domaine par domaine, uniquement sous
 #: ``/espace/``, qui est propre à l'identité de l'utilisateur (``backend_par_identite``).
 PERMISSIONS_FICHIERS = [FilesystemPermission(operations=["write"], paths=["/**"], mode="deny")]
 

@@ -17,3 +17,10 @@ class EntiteAuditeeInconnue(ErreurMetier):
 
     def __init__(self, nom: str) -> None:
         super().__init__(f"Entité auditée inconnue : {nom}")
+
+
+class EntreeNonRestaurable(ErreurMetier):
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self, identifiant: int) -> None:
+        super().__init__(f"L'entrée d'audit {identifiant} ne correspond pas à une suppression de groupe restaurable.")

@@ -16,10 +16,16 @@ export function periodePrecedente(periode: string): string {
   return mois === 1 ? `${annee - 1}-12` : `${annee}-${String(mois - 1).padStart(2, '0')}`;
 }
 
-/** `2026-12` -> `2027-01` : le mois contigu qui suit (le seul que l'import de paie accepte après le dernier importé). */
+/** `2026-12` -> `2027-01` : le mois contigu qui suit. */
 export function periodeSuivante(periode: string): string {
   const [annee, mois] = periode.split('-').map(Number);
   return mois === 12 ? `${annee + 1}-01` : `${annee}-${String(mois + 1).padStart(2, '0')}`;
+}
+
+/** Le mois civil qui précède `date` (`2026-10` un jour de novembre 2026) : la RH importe toujours la paie du mois écoulé. */
+export function moisCivilPrecedent(date: Date): string {
+  const precedent = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return `${precedent.getFullYear()}-${String(precedent.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** Variation en pourcentage avec son signe et sa virgule française : `+3,1 %`, `-0,8 %`. */

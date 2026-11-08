@@ -24,7 +24,7 @@ import { fichierChoisi, PaieImportStore } from './paie-import.store';
 })
 export class PaieImportWizardComponent {
   readonly visible = model(false);
-  /** Mois déjà importés, du plus récent au plus ancien : le mois à importer est celui qui suit le premier. */
+  /** Mois déjà importés (information de la page) : le mois à importer reste au choix de l'utilisateur. */
   readonly periodes = input<string[]>([]);
   /** Un import a réussi : la page recharge la vue. */
   readonly importe = output<void>();
@@ -35,7 +35,7 @@ export class PaieImportWizardComponent {
   constructor() {
     effect(() => {
       if (this.visible()) {
-        untracked(() => this.store.ouvrir(this.periodes()));
+        untracked(() => this.store.ouvrir());
       }
     });
   }

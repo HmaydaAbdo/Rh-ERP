@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Contexte métier fourni à Staport Intelligence dès le départ (docs/ia.md, harnais de l'agent).
+"""Contexte métier fourni à Staport Intelligence dès le départ (site/docs/ia, harnais de l'agent).
 
 Sans lui, presque chaque question commence par deux appels de modèle pour apprendre ce que l'ERP sait déjà : qui est
 l'utilisateur et quel est le dernier mois de paie importé. Ici, le middleware officiel ``before_agent`` appelle une

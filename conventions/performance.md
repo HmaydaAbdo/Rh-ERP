@@ -32,7 +32,7 @@ et les profils de charge pertinents.
   effectuer ces opérations plus efficacement.
 
 Les règles propres à un ORM, à un moteur de stockage ou à la pagination sont dans la convention
-technologique correspondante, notamment `conventions/jpa.md` et `conventions/database.md`.
+technologique correspondante, notamment `site/docs/conventions/backend-python/persistance.md` et `conventions/database.md`.
 
 ## Services et intégrations
 

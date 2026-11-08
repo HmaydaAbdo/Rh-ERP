@@ -6,7 +6,7 @@ import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierService } from '../../chantier/services/chantier.service';
 import { TypeSalaire } from '../../employee/models/employee.model';
 import { PaieImportAnalyse, PaieImportResult } from '../models/paie.model';
-import { libellePeriode, periodeSuivante } from '../paie-format';
+import { libellePeriode, moisCivilPrecedent } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
 export type EtapeImport = 'fichier' | 'controle' | 'departs' | 'recap';
@@ -31,6 +31,8 @@ export interface CreationSaisie {
 export interface DepartSaisi {
   coche: boolean;
   motif: string;
+  /** Départ déduit de l'absence du salarié, confirmé sans motif par un choix explicite. */
+  sansMotif: boolean;
 }
 
 /** Le fichier choisi dans un champ `<input type="file">`, qu'on vide pour pouvoir rechoisir le même fichier corrigé. */
@@ -47,7 +49,7 @@ function dateIso(date: Date): string {
 
 /**
  * État et logique de l'assistant d'import de la paie (voir `PaieImportWizardComponent` et
- * docs/adr/0010-employe-etat-du-dernier-mois-de-paie.md). Le fichier est analysé sans rien enregistrer ; les écarts avec les
+ * site/docs/decisions/0010-employe-etat-du-dernier-mois-de-paie.md). Le fichier est analysé sans rien enregistrer ; les écarts avec les
  * fiches se corrigent ici (mettre à jour la fiche, créer un CIN inconnu, rouvrir un chantier clôturé) ou dans le fichier,
  * qu'on réimporte — autant de fois qu'il faut. L'import n'est possible qu'une fois l'analyse prête ; les départs proposés sont cochés d'office.
  */
@@ -71,9 +73,16 @@ export class PaieImportStore {
   readonly occupe = signal(false);
   readonly erreur = signal<string | null>(null);
 
-  /** Mois à importer : imposé (celui qui suit le dernier importé), ou à choisir quand il n'y a encore aucune paie. */
+  /** Mois à importer, au choix de l'utilisateur ; proposé par défaut : le mois civil précédent. */
   readonly mois = signal<string | null>(null);
-  readonly moisImpose = signal(false);
+  readonly moisDate = computed(() => {
+    const mois = this.mois();
+    if (!mois) return null;
+    const [annee, numero] = mois.split('-').map(Number);
+    return new Date(annee, numero - 1, 1);
+  });
+  /** L'utilisateur a confirmé la période signalée (mois en cours ou à venir, fichier déjà importé sous un autre mois). */
+  readonly periodeConfirmee = signal(false);
   readonly fichier = signal<File | null>(null);
   readonly analyse = signal<PaieImportAnalyse | null>(null);
   readonly bilan = signal<PaieImportResult | null>(null);
@@ -83,6 +92,8 @@ export class PaieImportStore {
   readonly typesChoisis = signal<Record<number, TypeSalaire | null>>({});
   /** Saisies des employés à créer, par numéro de ligne du fichier. */
   readonly creations = signal<Record<number, CreationSaisie>>({});
+  /** Choix de l'utilisateur quand le fichier laisse vide l'équipe d'un employé qui en a une (par employé). */
+  readonly decisionsEquipe = signal<Record<number, 'CONSERVER' | 'VIDER'>>({});
   /** Départs proposés, par identifiant d'employé. */
   readonly departs = signal<Record<number, DepartSaisi>>({});
 
@@ -91,10 +102,14 @@ export class PaieImportStore {
     const analyse = this.analyse();
     if (!analyse) return false;
     const avertissementsNonConfirmes = analyse.avertissements.filter((a) =>
-      a.codeAvertissement !== 'SALAIRE_ZERO' || !this.confirmerSalaireZero()
+      !((a.codeAvertissement === 'SALAIRE_ZERO' && this.confirmerSalaireZero()) ||
+        (a.codeAvertissement === 'EQUIPE_VIDE' && a.employeId != null && this.decisionsEquipe()[a.employeId] !== undefined))
     );
-    return analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 &&
-      (analyse.pret || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
+    // Le serveur déclare `pret` sans contrôle de période non confirmé : on le retrouve en ne comptant pas ce contrôle.
+    const sansControle = analyse.pret || (analyse.controlesPeriode.length > 0 && analyse.erreurs.length === 0 && analyse.avertissements.length === 0 && analyse.ecarts.length === 0);
+    const periodeAcceptee = analyse.controlesPeriode.length === 0 || this.periodeConfirmee();
+    return analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 && periodeAcceptee &&
+      (sansControle || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
   });
   readonly avertissementSalaireZero = computed(() => {
     const avertissements = this.analyse()?.avertissements ?? [];
@@ -104,13 +119,23 @@ export class PaieImportStore {
     const a = this.analyse();
     return a ? a.erreurs.length + a.avertissements.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
   });
+  readonly decisionsEquipeEnvoyees = computed(() =>
+    Object.entries(this.decisionsEquipe()).map(([id, action]) => ({ employeId: Number(id), action }))
+  );
   readonly departsConfirmes = computed(() =>
     (this.analyse()?.departs ?? [])
       .filter((d) => this.departs()[d.employeId]?.coche)
-      .map((d) => ({ employeId: d.employeId, motif: this.departs()[d.employeId].motif.trim() }))
+      .map((d) => ({
+        employeId: d.employeId,
+        motif: this.departs()[d.employeId].motif.trim(),
+        sansMotif: this.departs()[d.employeId].sansMotif
+      }))
   );
-  /** Chaque départ coché a un motif. */
-  readonly departsValides = computed(() => this.departsConfirmes().every((d) => d.motif.length > 0));
+  /** Chaque départ coché a un motif ; un départ déduit de l'absence peut être confirmé sans motif, explicitement. */
+  readonly departsValides = computed(() => {
+    const proposes = new Map((this.analyse()?.departs ?? []).map((d) => [d.employeId, d]));
+    return this.departsConfirmes().every((d) => d.motif.length > 0 || (d.sansMotif && proposes.get(d.employeId)?.motif == null));
+  });
 
   readonly sousTitre = computed(() => {
     switch (this.etape()) {
@@ -125,14 +150,14 @@ export class PaieImportStore {
     }
   });
 
-  /** Ouvre l'assistant sur un état neuf ; `periodes` : les mois déjà importés, du plus récent au plus ancien. */
-  ouvrir(periodes: string[]): void {
+  /** Ouvre l'assistant sur un état neuf, avec le mois civil précédent proposé : le mois reste au choix de l'utilisateur. */
+  ouvrir(): void {
     this.etape.set('fichier');
     this.etat.set('saisie');
     this.occupe.set(false);
     this.erreur.set(null);
-    this.moisImpose.set(periodes.length > 0);
-    this.mois.set(periodes.length > 0 ? periodeSuivante(periodes[0]) : null);
+    this.mois.set(moisCivilPrecedent(new Date()));
+    this.periodeConfirmee.set(false);
     this.fichier.set(null);
     this.analyse.set(null);
     this.bilan.set(null);
@@ -144,6 +169,11 @@ export class PaieImportStore {
 
   choisirMois(date: Date | null): void {
     this.mois.set(date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` : null);
+    this.periodeConfirmee.set(false);
+  }
+
+  confirmerPeriode(confirmee: boolean): void {
+    this.periodeConfirmee.set(confirmee);
   }
 
   /** Analyse un fichier (premier choix ou fichier corrigé) : rien n'est enregistré. */
@@ -276,7 +306,9 @@ export class PaieImportStore {
     }
     this.etat.set('import');
     this.envoyer(
-      this.paieService.importer(fichier, mois, this.departsConfirmes(), this.confirmerSalaireZero()),
+      this.paieService.importer(
+        fichier, mois, this.departsConfirmes(), this.confirmerSalaireZero(), this.decisionsEquipeEnvoyees(), this.periodeConfirmee()
+      ),
       (bilan) => {
         this.bilan.set(bilan);
         this.etat.set('termine');
@@ -295,16 +327,23 @@ export class PaieImportStore {
     this.envoyer(this.paieService.corrigerImport(fichier, mois, corrections), (analyse) => this.recevoir(analyse));
   }
 
+  decider(employeId: number, action: 'CONSERVER' | 'VIDER'): void {
+    this.decisionsEquipe.update((d) => ({ ...d, [employeId]: action }));
+  }
+
   /** Nouvelle analyse : les départs gardent ce que l'utilisateur a déjà saisi, les nouveaux sont cochés d'office. */
   private recevoir(analyse: PaieImportAnalyse): void {
     this.analyse.set(analyse);
     if (!analyse.avertissements.some((a) => a.codeAvertissement === 'SALAIRE_ZERO')) {
       this.confirmerSalaireZero.set(false);
     }
+    if (analyse.controlesPeriode.length === 0) {
+      this.periodeConfirmee.set(false);
+    }
     const precedents = this.departs();
     const departs: Record<number, DepartSaisi> = {};
     for (const depart of analyse.departs) {
-      departs[depart.employeId] = precedents[depart.employeId] ?? { coche: true, motif: depart.motif ?? '' };
+      departs[depart.employeId] = precedents[depart.employeId] ?? { coche: true, motif: depart.motif ?? '', sansMotif: false };
     }
     this.departs.set(departs);
   }

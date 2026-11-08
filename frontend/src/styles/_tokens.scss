@@ -3,7 +3,7 @@
 // Charte « standard de la catégorie » (décision du propriétaire, 2026-10-31) : bleu d'action sur neutres ardoise en thème clair,
 // gris chauds neutres et action blanc cassé en thème sombre. Seules des couleurs sémantiques sont exposées : un composant ne
 // lit jamais une teinte brute. Chaque couple texte / surface et bordure / surface est mesuré par `npm run check:contraste`
-// (rapport dans docs/frontend/contraste-jetons.md) ; les valeurs de ce fichier sont donc des hexadécimaux littéraux ou des
+// (rapport dans site/docs/frontend/contraste-jetons.md) ; les valeurs de ce fichier sont donc des hexadécimaux littéraux ou des
 // références `var()` vers eux.
 //
 // Le thème est porté par `data-theme="light|dark"` sur <html> (voir core/theme/theme.service.ts, et le script d'index.html qui

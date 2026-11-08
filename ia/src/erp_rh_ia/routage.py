@@ -1,6 +1,6 @@
 # fastembed et numpy ne publient pas de stubs complets : seules ces règles sont levées, et seulement ici.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Routage hors modèle : quelles compétences épingler pour une question (docs/ia.md, T32).
+"""Routage hors modèle : quelles compétences épingler pour une question (site/docs/ia, T32).
 
 Seule pièce maison de la sélection d'outils : un classement par similarité entre la question et la description de chaque
 outil du catalogue de l'utilisateur, avec un modèle d'embeddings gratuit exécuté en local (fastembed, MiniLM

@@ -4,10 +4,10 @@ Cette convention définit une architecture réutilisable pour les interfaces pil
 qu'elles soient ajoutées à une application existante ou conçues pour une nouvelle application. Elle
 décrit les contrats et les responsabilités, pas une dépendance obligatoire à un framework client ou
 serveur. Chaque application documente ses versions, son catalogue de composants, ses adaptateurs et
-ses parcours dans `docs/`.
+ses parcours dans le site de documentation (`site/docs/`).
 
 Pour ERP-RH, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
-capacités métier MCP côté Spring ; décisions et état dans [`docs/ia.md`](../docs/ia.md). Le premier
+capacités métier MCP côté Spring ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier
 parcours rend messages, sources et états avec les composants Staport et **pilote les vues partagées
 existantes** (voir « Pilotage des vues existantes »). A2UI, une mascotte Rive ou une vue immersive
 ne sont introduits qu'après un besoin mesuré que ce pilotage ne couvre pas.
@@ -60,7 +60,7 @@ son test, et aucune n'est remplacée par une autre :
   décrite dans `security.md` et `mcp.md`.
 * **Arrêt et repli** : un paramètre désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
   repli (catalogue ou texte) et est journalisé sans son contenu.
-* **Veille** : à chaque revue mensuelle des modèles (`docs/ia.md` § 4.1), relire les nouvelles pratiques de sécurité des
+* **Veille** : à chaque revue mensuelle des modèles (`site/docs/ia` § 4.1), relire les nouvelles pratiques de sécurité des
   interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner en commentaire de la tâche Jira de veille (label `veille-ia`) ce qui
   change cette liste.
 

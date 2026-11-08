@@ -29,16 +29,6 @@ frontend/.env.*
 ~$*.xlsx
 ~$*.xls
 
-# --- Backend (Java / Maven) ---------------------------------------------
-backend/target/
-backend/**/target/
-!backend/**/src/main/**/target/
-!backend/**/src/test/**/target/
-*.class
-*.jar
-!.mvn/wrapper/maven-wrapper.jar
-.mvn/wrapper/maven-wrapper.jar
-
 # --- Frontend (Angular / Node) -------------------------------------------
 frontend/node_modules/
 frontend/dist/
@@ -95,7 +85,7 @@ backups/
 
 # --- Fond de carte auto-hébergé (carte des chantiers) : données téléchargées, jamais versionnées ---
 /carte-fond/
-# Lien de développement vers /carte-fond/, servi par ng serve sous carte/fond/ (voir docs/chantier/carte.md).
+# Lien de développement vers /carte-fond/, servi par ng serve sous carte/fond/ (voir site/docs/domaines/chantier/carte.md).
 /frontend/carte-fond
 # Dossier de travail de scripts/carte/preparer-fond-carte.sh (gardé après un échec pour reprendre, supprimé en cas de succès).
 carte-fond.preparation/
@@ -106,3 +96,10 @@ api/.venv/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+# Couverture Python (pytest --cov) : rapports produits en local et en CI
+api/.coverage
+api/coverage.json
+api/tests/differentiel/sorties/
+
+# Journaux et rapports des lanceurs IA (api/tests/test_ia_lanceurs.py)
+api/target/

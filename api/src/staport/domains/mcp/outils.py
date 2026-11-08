@@ -8,7 +8,8 @@ des autres domaines arrivent avec leur domaine (KAN-49). La liste des comptes n'
 
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
-from typing import Annotated, Any, cast
+from enum import StrEnum
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -16,7 +17,6 @@ from fastmcp.server.dependencies import get_access_token
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from mcp.types import ToolAnnotations
 from staport.domains.audit import consultation
 from staport.domains.audit.exceptions import EntiteAuditeeInconnue
 from staport.domains.audit.registre import registre
@@ -24,27 +24,74 @@ from staport.domains.audit.schemas import CategorieAudit, RechercheJournal, Resu
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.auth.schemas import RoleRecherche
 from staport.domains.auth.securite import SCOPE_LECTURE
-from staport.domains.chantier import repository as repository_chantier
+from staport.domains.chantier.exceptions import ChantierIntrouvable
 from staport.domains.chantier.schemas import ChantierRecherche
 from staport.domains.common.pagination import Pagination
-from staport.domains.employee import repository as repository_employee
-from staport.domains.employee.schemas import EmployeeRecherche
-from staport.domains.equipe import repository as repository_equipe
+from staport.domains.equipe.exceptions import EquipeIntrouvable
 from staport.domains.equipe.schemas import EquipeRecherche
-from staport.domains.function import repository as repository_fonction
+from staport.domains.function.exceptions import FonctionIntrouvable
+from staport.domains.function.schemas import FonctionRecherche
+from staport.domains.mcp.formats import (
+    LECTURE_SEULE,
+    Page,
+    Sens,
+    SensTri,
+    ascendant,
+    nombre_de,
+    nombre_de_total,
+    texte,
+    vue,
+)
 from staport.domains.mcp.telemetrie import outil
 
 LIGNES = 20
+LIGNES_DEFAUT = 10  # Spring : 20 au plus, 10 quand `limite` est absent (référentiels)
 VERSIONS = 10
-PAGE_DOC = (
-    "Numéro de la page de résultats, à partir de 0 (0 par défaut). Toutes les pages restent accessibles. Avec `limite` "
-    "comme taille de page, permet de parcourir tous les résultats quand `total` dépasse ce qui est rendu."
-)
-LECTURE_SEULE = ToolAnnotations(
-    read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False
-)
 
-Page = Annotated[int, Field(ge=0, description=PAGE_DOC)]
+
+class StatutChantier(StrEnum):
+    """Statut d'un chantier dans le vocabulaire de l'interface."""
+
+    EN_COURS = "EN_COURS"
+    CLOTURE = "CLOTURE"
+
+
+class TriChantier(StrEnum):
+    """Critère de tri des chantiers."""
+
+    CODE = "CODE"
+    NOM = "NOM"
+    DESIGNATION = "DESIGNATION"
+
+
+class TriEquipe(StrEnum):
+    """Critère de tri des équipes."""
+
+    CODE = "CODE"
+    LIBELLE = "LIBELLE"
+
+
+class EntiteJournal(StrEnum):
+    """Types d'enregistrement que l'agent peut interroger dans le journal (mêmes que Spring)."""
+
+    PAIE = "Paie"
+    EMPLOYEE = "Employee"
+    CHANTIER = "Chantier"
+    EQUIPE = "Equipe"
+    FUNCTION = "Function"
+    ROLE = "Role"
+    PARAMETRE = "Parametre"
+
+
+def _chantier(chantier: Any) -> dict[str, Any]:
+    return {
+        "id": chantier.id,
+        "code": chantier.code,
+        "designation": chantier.designation,
+        "nom": chantier.nom,
+        "sourceErp": chantier.source_erp,
+        "statut": "EN_COURS" if chantier.actif else "CLOTURE",
+    }
 
 
 def _jour(valeur: str | None, nom: str, *, fin: bool) -> datetime | None:
@@ -57,23 +104,6 @@ def _jour(valeur: str | None, nom: str, *, fin: bool) -> datetime | None:
         raise ToolError(f"« {nom} » doit être une date réelle au format aaaa-MM-jj.") from cause
     debut = datetime(jour.year, jour.month, jour.day, tzinfo=UTC)
     return debut + timedelta(days=1) - timedelta(microseconds=1) if fin else debut
-
-
-def _texte(valeur: str | None) -> str | None:
-    return None if valeur is None or not valeur.strip() else valeur.strip()
-
-
-def _nombre_de(cle: str) -> Callable[[dict[str, Any]], int | None]:
-    def compter(resultat: dict[str, Any]) -> int | None:
-        valeurs = resultat.get(cle)
-        return len(cast(list[Any], valeurs)) if isinstance(valeurs, list) else None
-
-    return compter
-
-
-def _nombre_de_total(resultat: dict[str, Any]) -> int | None:
-    total = resultat.get("total")
-    return total if isinstance(total, int) else None
 
 
 def enregistrer(
@@ -95,12 +125,15 @@ def enregistrer(
             "concerné. Sans paramètre ; la liste des droits est rendue en entier, sans pagination."
         ),
     )
-    @outil("systeme_identite", None, _nombre_de("autorites"))
+    @outil("systeme_identite", None, nombre_de("autorites"))
     async def systeme_identite() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
         jeton = get_access_token()
         # `get_access_token` n'est jamais vide ici : le décorateur a exigé le scope de lecture.
         assert jeton is not None  # noqa: S101
-        return {"utilisateur": jeton.client_id, "autorites": sorted(set(jeton.scopes) - {SCOPE_LECTURE})}
+        return {
+            "utilisateur": jeton.client_id,
+            "autorites": sorted({*jeton.scopes, f"SCOPE_{SCOPE_LECTURE}"} - {SCOPE_LECTURE}),
+        }
 
     @serveur.tool(
         name="parametres_lire",
@@ -114,7 +147,7 @@ def enregistrer(
             "sans pagination. Pour savoir qui peut les gérer, `roles_lister`."
         ),
     )
-    @outil("parametres_lire", "PARAMETRE_READ", _nombre_de("parametres"))
+    @outil("parametres_lire", "PARAMETRE_READ", nombre_de("parametres"))
     async def parametres_lire() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
         async with fabrique()() as session:
             parametres = await contexte().parametres.lister(session)
@@ -147,7 +180,7 @@ def enregistrer(
             "un rôle, `audit_historique`."
         ),
     )
-    @outil("roles_lister", "ROLE_MANAGE", _nombre_de_total)
+    @outil("roles_lister", "ROLE_MANAGE", nombre_de_total)
     async def roles_lister(  # pyright: ignore[reportUnusedFunction]
         nom: Annotated[
             str | None, Field(max_length=50, description="Nom du rôle, partiel. Absent = tous les rôles.")
@@ -157,7 +190,7 @@ def enregistrer(
         ] = LIGNES,
         page: Page = 0,
     ) -> dict[str, Any]:
-        criteres = RoleRecherche(nom=_texte(nom))
+        criteres = RoleRecherche(nom=texte(nom))
         async with fabrique()() as session:
             resultats = await contexte().roles.rechercher(session, criteres, Pagination(page, limite, (("nom", True),)))
         return {
@@ -181,27 +214,40 @@ def enregistrer(
         title="Rechercher des fonctions",
         annotations=LECTURE_SEULE,
         description=(
-            "Trouve des fonctions par libellé partiel, sans tenir compte de la casse. Rend les résultats paginés "
-            "avec le nombre total ; parcourir les pages jusqu'au total. Réservé aux utilisateurs qui voient le "
-            "référentiel des fonctions. Lecture seule : ne modifie rien."
+            "Trouve des fonctions (métiers : maçon, électricien, chef de chantier…) par libellé. À utiliser quand la "
+            "question cite un métier : l'identifiant rendu sert de filtre `fonctionIds` aux outils Paie et Employé. "
+            "Rend id et libellé, plus le nombre total ; 20 résultats au plus par page (`page`). Parcourir toutes les "
+            "pages jusqu'au total pour une réponse complète ; triés par libellé (`sens` ASC ou DESC). "
+            "Pour la fiche d'une fonction connue par son identifiant, `fonction_fiche` ; pour l'effectif par "
+            "fonction, `employes_regrouper`."
         ),
     )
-    @outil("fonction_rechercher", "FUNCTION_READ", _nombre_de_total)
+    @outil("fonction_rechercher", "FUNCTION_READ", nombre_de_total)
     async def fonction_rechercher(
-        recherche: Annotated[str | None, Field(max_length=100, description="Libellé partiel de la fonction.")] = None,
-        limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre de fonctions par page.")] = LIGNES,
+        recherche: Annotated[
+            str | None,
+            Field(max_length=100, description="Texte partiel du libellé du métier. Absent = toutes les fonctions."),
+        ] = None,
+        limite: Annotated[
+            int, Field(ge=1, le=LIGNES, description="Nombre de fonctions rendues par page, de 1 à 20, 10 par défaut.")
+        ] = LIGNES_DEFAUT,
+        sens: Sens = None,
         page: Page = 0,
     ) -> dict[str, Any]:
         async with fabrique()() as session:
-            resultats = await repository_fonction.rechercher(
-                session, _texte(recherche), Pagination(page, limite, (("libelle", True),))
+            resultat = await contexte().fonctions.rechercher(
+                session,
+                FonctionRecherche(libelle=texte(recherche)),
+                Pagination(page, limite, (("libelle", ascendant(sens, SensTri.ASC)),)),
             )
-        lignes, total = resultats
+        lignes, total = resultat.content, resultat.page.total_elements
+        parametres = {"libelle": cherche} if (cherche := texte(recherche)) else {}
         return {
             "total": total,
+            "rendus": len(lignes),
             "page": page,
             "fonctions": [{"id": f.id, "libelle": f.libelle} for f in lignes],
-            "vue": {"module": "function", "vue": "tabulaire", "parametres": {}},
+            "vue": vue("functions", "tabulaire", parametres),
         }
 
     @serveur.tool(
@@ -209,21 +255,25 @@ def enregistrer(
         title="Fiche d'une fonction",
         annotations=LECTURE_SEULE,
         description=(
-            "Lit le libellé d'une fonction à partir de son identifiant. L'identifiant doit venir de "
-            "fonction_rechercher ; identifiant inconnu : erreur. Réservé aux utilisateurs qui voient le référentiel."
+            "Lit la fiche d'une fonction (métier) à partir de son identifiant. Identifiant inconnu : le chercher "
+            "d'abord avec `fonction_rechercher`. Rend une seule fonction, sans pagination."
         ),
     )
     @outil("fonction_fiche", "FUNCTION_READ", lambda _: 1)
     async def fonction_fiche(
-        id: Annotated[int, Field(gt=0, description="Identifiant obtenu avec fonction_rechercher.")],
+        id: Annotated[
+            int,
+            Field(gt=0, description="Identifiant de la fonction (entier positif), rendu par `fonction_rechercher`."),
+        ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            fonction = await repository_fonction.par_id(session, id)
-        if fonction is None:
-            raise ToolError(f"Fonction introuvable avec l'id : {id}")
+        try:
+            async with fabrique()() as session:
+                fonction = await contexte().fonctions.lire(session, id)
+        except FonctionIntrouvable as cause:
+            raise ToolError(f"Fonction introuvable avec l'id : {id}") from cause
         return {
             "fonction": {"id": fonction.id, "libelle": fonction.libelle},
-            "vue": {"module": "function", "vue": "detail", "parametres": {"id": id}},
+            "vue": vue("functions", "fiche", {"id": str(fonction.id)}),
         }
 
     @serveur.tool(
@@ -231,26 +281,42 @@ def enregistrer(
         title="Rechercher des équipes",
         annotations=LECTURE_SEULE,
         description=(
-            "Trouve des équipes par code ou libellé partiel, sans tenir compte de la casse. Rend les résultats "
-            "paginés avec le nombre total ; parcourir les pages jusqu'au total. Réservé aux utilisateurs qui voient "
-            "le référentiel des équipes. Lecture seule : ne modifie rien."
+            "Trouve des équipes (groupes d'ouvriers) par code ou libellé. À utiliser quand la question cite une "
+            "équipe : l'identifiant rendu sert de filtre `equipeIds` aux outils Paie et Employé (l'identifiant 0 y "
+            "désigne les employés sans équipe). Rend id, code et libellé, plus le nombre total ; 20 résultats au "
+            "plus par page (`page`). Parcourir toutes les pages jusqu'au total pour une réponse complète. Triable : "
+            "`tri` CODE (défaut) ou LIBELLE, `sens` ASC ou DESC. Pour la fiche d'une équipe connue par son "
+            "identifiant, `equipe_fiche` ; pour l'effectif par équipe, `employes_regrouper`."
         ),
     )
-    @outil("equipe_rechercher", "EQUIPE_READ", _nombre_de_total)
+    @outil("equipe_rechercher", "EQUIPE_READ", nombre_de_total)
     async def equipe_rechercher(
-        recherche: Annotated[str | None, Field(max_length=100, description="Code ou libellé partiel.")] = None,
-        limite: Annotated[int, Field(ge=1, le=LIGNES, description="Nombre d'équipes par page.")] = LIGNES,
+        recherche: Annotated[
+            str | None,
+            Field(max_length=100, description="Texte partiel du code ou du libellé. Absent = toutes les équipes."),
+        ] = None,
+        limite: Annotated[
+            int, Field(ge=1, le=LIGNES, description="Nombre d'équipes rendues par page, de 1 à 20, 10 par défaut.")
+        ] = LIGNES_DEFAUT,
+        tri: Annotated[TriEquipe | None, Field(description="Critère de tri : CODE (défaut) ou LIBELLE.")] = None,
+        sens: Sens = None,
         page: Page = 0,
     ) -> dict[str, Any]:
+        critere = (tri or TriEquipe.CODE).value.lower()
         async with fabrique()() as session:
-            lignes, total = await repository_equipe.rechercher(
-                session, EquipeRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+            resultat = await contexte().equipes.rechercher(
+                session,
+                EquipeRecherche(recherche=texte(recherche)),
+                Pagination(page, limite, ((critere, ascendant(sens, SensTri.ASC)),)),
             )
+        lignes, total = resultat.content, resultat.page.total_elements
+        parametres = {"code": cherche} if (cherche := texte(recherche)) else {}
         return {
             "total": total,
+            "rendus": len(lignes),
             "page": page,
             "equipes": [{"id": e.id, "code": e.code, "libelle": e.libelle} for e in lignes],
-            "vue": {"module": "equipe", "vue": "tabulaire", "parametres": {}},
+            "vue": vue("equipes", "tabulaire", parametres),
         }
 
     @serveur.tool(
@@ -258,127 +324,105 @@ def enregistrer(
         title="Fiche d'une équipe",
         annotations=LECTURE_SEULE,
         description=(
-            "Lit le code et le libellé d'une équipe à partir de son identifiant. L'identifiant doit venir de "
-            "equipe_rechercher ; identifiant inconnu : erreur. Réservé aux utilisateurs qui voient le référentiel."
+            "Lit la fiche d'une équipe à partir de son identifiant : code et libellé. Identifiant inconnu : le "
+            "chercher d'abord avec `equipe_rechercher`. Rend une seule équipe, sans pagination."
         ),
     )
     @outil("equipe_fiche", "EQUIPE_READ", lambda _: 1)
     async def equipe_fiche(
-        id: Annotated[int, Field(gt=0, description="Identifiant obtenu avec equipe_rechercher.")],
+        id: Annotated[
+            int, Field(gt=0, description="Identifiant de l'équipe (entier positif), rendu par `equipe_rechercher`.")
+        ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            equipe = await repository_equipe.par_id(session, id)
-        if equipe is None:
-            raise ToolError(f"Équipe introuvable avec l'id : {id}")
+        try:
+            async with fabrique()() as session:
+                equipe = await contexte().equipes.lire(session, id)
+        except EquipeIntrouvable as cause:
+            raise ToolError(f"Équipe introuvable avec l'id : {id}") from cause
         return {
             "equipe": {"id": equipe.id, "code": equipe.code, "libelle": equipe.libelle},
-            "vue": {"module": "equipe", "vue": "detail", "parametres": {"id": id}},
+            "vue": vue("equipes", "fiche", {"id": str(equipe.id)}),
         }
 
     @serveur.tool(
         name="chantier_rechercher",
         title="Rechercher des chantiers",
         annotations=LECTURE_SEULE,
-        description="Trouve des chantiers par code, nom ou désignation. Lecture seule, résultats paginés.",
+        description=(
+            "Trouve des chantiers (sites de construction) par leur code, nom ou désignation, éventuellement filtrés "
+            "par statut. À utiliser en premier dès que la question cite un chantier par son nom ou son code : "
+            "l'identifiant rendu (`id`) sert ensuite de filtre `chantierIds` aux outils Paie et Employé, ou de "
+            "paramètre de `chantier_fiche`. Rend, pour chaque chantier : id, code, désignation, nom, origine ERP et "
+            "statut (EN_COURS ou CLOTURE), plus le nombre total trouvé. 20 résultats au plus par page ; si `total` "
+            "dépasse ce qui est rendu, parcourir toutes les pages (`page`) jusqu'au total pour une réponse complète. "
+            "Triable : `tri` CODE (défaut), NOM ou DESIGNATION, `sens` ASC ou DESC."
+        ),
     )
-    @outil("chantier_rechercher", "CHANTIER_READ", _nombre_de_total)
+    @outil("chantier_rechercher", "CHANTIER_READ", nombre_de_total)
     async def chantier_rechercher(
-        recherche: Annotated[str | None, Field(max_length=500, description="Texte partiel.")] = None,
-        limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
+        recherche: Annotated[
+            str | None,
+            Field(
+                max_length=100,
+                description="Texte partiel du code, du nom ou de la désignation, par exemple « C-1042 » ou "
+                "« Casablanca ». Absent = tous les chantiers.",
+            ),
+        ] = None,
+        statut: Annotated[
+            StatutChantier | None,
+            Field(description="EN_COURS (chantier actif) ou CLOTURE. Absent = les deux."),
+        ] = None,
+        limite: Annotated[
+            int, Field(ge=1, le=LIGNES, description="Nombre de chantiers rendus par page, de 1 à 20, 10 par défaut.")
+        ] = LIGNES_DEFAUT,
+        tri: Annotated[
+            TriChantier | None, Field(description="Critère de tri : CODE (défaut), NOM ou DESIGNATION.")
+        ] = None,
+        sens: Sens = None,
         page: Page = 0,
     ) -> dict[str, Any]:
+        actif = None if statut is None else statut is StatutChantier.EN_COURS
+        critere = (tri or TriChantier.CODE).value.lower()
         async with fabrique()() as session:
-            lignes, total = await repository_chantier.rechercher(
-                session, ChantierRecherche(recherche=_texte(recherche)), Pagination(page, limite, (("code", True),))
+            resultat = await contexte().chantiers.rechercher(
+                session,
+                ChantierRecherche(recherche=texte(recherche), actif=actif),
+                Pagination(page, limite, ((critere, ascendant(sens, SensTri.ASC)),)),
             )
+        lignes, total = resultat.content, resultat.page.total_elements
+        parametres: dict[str, str] = {"code": lignes[0].code} if len(lignes) == 1 else {}
+        if actif is not None:
+            parametres["actif"] = "true" if actif else "false"
         return {
             "total": total,
+            "rendus": len(lignes),
             "page": page,
-            "chantiers": [
-                {"id": x.id, "code": x.code, "designation": x.designation, "nom": x.nom, "actif": x.actif}
-                for x in lignes
-            ],
-            "vue": {"module": "chantier", "vue": "tabulaire", "parametres": {}},
+            "chantiers": [_chantier(x) for x in lignes],
+            "vue": vue("chantiers", "tabulaire", parametres),
         }
 
     @serveur.tool(
         name="chantier_fiche",
         title="Fiche d'un chantier",
         annotations=LECTURE_SEULE,
-        description="Lit la fiche d'un chantier à partir de son identifiant.",
+        description=(
+            "Lit la fiche d'un chantier à partir de son identifiant : code, désignation, nom, origine ERP, statut. "
+            "Identifiant inconnu : le chercher d'abord avec `chantier_rechercher`. Propose la vue Fiche du chantier. "
+            "Rend un seul chantier, sans pagination."
+        ),
     )
     @outil("chantier_fiche", "CHANTIER_READ", lambda _: 1)
-    async def chantier_fiche(id: Annotated[int, Field(gt=0)]) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            chantier = await repository_chantier.par_id(session, id)
-        if chantier is None:
-            raise ToolError(f"Chantier introuvable avec l'id : {id}")
-        return {
-            "chantier": {
-                "id": chantier.id,
-                "code": chantier.code,
-                "designation": chantier.designation,
-                "nom": chantier.nom,
-                "actif": chantier.actif,
-                "nature": chantier.nature,
-                "localisation": chantier.localisation,
-                "latitude": chantier.latitude,
-                "longitude": chantier.longitude,
-            },
-            "vue": {"module": "chantier", "vue": "detail", "parametres": {"id": id}},
-        }
-
-    @serveur.tool(
-        name="employes_rechercher",
-        title="Rechercher des employés",
-        annotations=LECTURE_SEULE,
-        description="Recherche paginée d'employés par nom, CIN ou statut. Le salaire est omis sans PAIE_READ.",
-    )
-    @outil("employes_rechercher", "EMPLOYEE_READ", _nombre_de_total)
-    async def employes_rechercher(
-        recherche: Annotated[str | None, Field(max_length=150)] = None,
-        limite: Annotated[int, Field(ge=1, le=LIGNES)] = LIGNES,
-        page: Page = 0,
+    async def chantier_fiche(
+        id: Annotated[
+            int, Field(gt=0, description="Identifiant du chantier (entier positif), rendu par `chantier_rechercher`.")
+        ],
     ) -> dict[str, Any]:
-        async with fabrique()() as session:
-            lignes, total = await repository_employee.rechercher(
-                session,
-                EmployeeRecherche(nom_prenom=_texte(recherche)),
-                Pagination(page, limite, (("nom_prenom", True),)),
-            )
-        return {
-            "total": total,
-            "page": page,
-            "employes": [{"id": x.id, "nomPrenom": x.nom_prenom, "cin": x.cin, "statut": x.statut} for x in lignes],
-            "vue": {"module": "employee", "vue": "tabulaire", "parametres": {}},
-        }
-
-    @serveur.tool(
-        name="employe_fiche",
-        title="Fiche d'un employé",
-        annotations=LECTURE_SEULE,
-        description="Lit la fiche d'un employé par identifiant. Lecture seule.",
-    )
-    @outil("employe_fiche", "EMPLOYEE_READ", lambda _: 1)
-    async def employe_fiche(id: Annotated[int, Field(gt=0)]) -> dict[str, Any]:
-        async with fabrique()() as session, session.begin():
-            employe = await repository_employee.par_id(session, id)
-        if employe is None:
-            raise ToolError(f"Employé introuvable avec l'id : {id}")
-        return {
-            "employe": {
-                "id": employe.id,
-                "nomPrenom": employe.nom_prenom,
-                "cin": employe.cin,
-                "dateNaissance": employe.date_naissance,
-                "dateEmbauche": employe.date_embauche,
-                "fonctionId": employe.fonction_id,
-                "chantierId": employe.chantier_id,
-                "equipeId": employe.equipe_id,
-                "statut": employe.statut,
-            },
-            "vue": {"module": "employee", "vue": "detail", "parametres": {"id": id}},
-        }
+        try:
+            async with fabrique()() as session:
+                chantier = await contexte().chantiers.lire(session, id)
+        except ChantierIntrouvable as cause:
+            raise ToolError(f"Chantier introuvable avec l'id : {id}") from cause
+        return {"chantier": _chantier(chantier), "vue": vue("chantiers", "fiche", {"id": str(chantier.id)})}
 
     @serveur.tool(
         name="audit_rechercher",
@@ -392,7 +436,7 @@ def enregistrer(
             "journal ; résultats paginés avec le nombre total. Parcourir les pages jusqu'au total."
         ),
     )
-    @outil("audit_rechercher", "AUDIT_READ", _nombre_de_total)
+    @outil("audit_rechercher", "AUDIT_READ", nombre_de_total)
     async def audit_rechercher(  # pyright: ignore[reportUnusedFunction]
         depuis: Annotated[
             str | None,
@@ -410,10 +454,8 @@ def enregistrer(
         ] = None,
         categorie: Annotated[CategorieAudit | None, Field(description="Catégorie de l'entrée.")] = None,
         resultat: Annotated[ResultatAudit | None, Field(description="Résultat de l'action : SUCCES ou ECHEC.")] = None,
-        entite: Annotated[
-            str | None, Field(max_length=100, description=f"Type de l'enregistrement concerné ({liste_entites}).")
-        ] = None,
-        entite_id: Annotated[
+        entite: Annotated[EntiteJournal | None, Field(description="Type de l'enregistrement concerné.")] = None,
+        entiteId: Annotated[
             int | None, Field(gt=0, description="Identifiant de l'enregistrement concerné (entier positif).")
         ] = None,
         limite: Annotated[
@@ -424,12 +466,12 @@ def enregistrer(
         criteres = RechercheJournal(
             date_debut=_jour(depuis, "depuis", fin=False),
             date_fin=_jour(jusqua, "jusqua", fin=True),
-            utilisateur=_texte(utilisateur),
+            utilisateur=texte(utilisateur),
             categorie=categorie,
-            action=_texte(action),
+            action=texte(action),
             resultat=resultat,
-            entite_type=_texte(entite),
-            entite_id=entite_id,
+            entite_type=entite.value if entite else None,
+            entite_id=entiteId,
         )
         pagination = Pagination(page, limite, (("horodatage", False),))
         async with fabrique()() as session, session.begin():
@@ -468,9 +510,9 @@ def enregistrer(
             "Pour chercher dans tout le journal sans cibler un enregistrement, utiliser `audit_rechercher`."
         ),
     )
-    @outil("audit_historique", "AUDIT_READ", _nombre_de_total)
+    @outil("audit_historique", "AUDIT_READ", nombre_de_total)
     async def audit_historique(  # pyright: ignore[reportUnusedFunction]
-        entite: Annotated[str, Field(description=f"Type de l'enregistrement : {liste_entites}.")],
+        entite: Annotated[EntiteJournal, Field(description="Type de l'enregistrement.")],
         id: Annotated[  # nom du paramètre exposé à l'agent, identique à celui de Spring
             int,
             Field(

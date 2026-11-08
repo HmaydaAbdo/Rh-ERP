@@ -146,6 +146,9 @@ def construire_configuration(url: str, cle_b64: str, **remplacements: Any) -> Co
         "smtp_starttls": False,
         "mail_from": "noreply@example.org",
         "chantier_sync_base_url": "http://chantiers.example/getChantiers",
+        # Indépendant de l'environnement : un test qui charge le `.env` de développement allume sinon la documentation.
+        "springdoc_api_docs_enabled": False,
+        "springdoc_swagger_ui_enabled": False,
         **remplacements,
     }
     return Configuration(**valeurs)  # pyright: ignore[reportCallIssue]
@@ -175,7 +178,7 @@ def plateforme(creer_base: Callable[[str], str], cle_rsa_b64: str) -> Iterator[P
     contexte = construire_contexte(configuration, journal)
     moteur = create_engine(url)
     # Sous Windows, psycopg asynchrone refuse la boucle Proactor par défaut : boucle à sélecteur (celle de Linux).
-    app = creer_app(configuration, contexte=contexte)
+    app = creer_app(configuration, contexte=contexte, planifier_synchronisation=False)
     with TestClient(
         app,
         raise_server_exceptions=False,

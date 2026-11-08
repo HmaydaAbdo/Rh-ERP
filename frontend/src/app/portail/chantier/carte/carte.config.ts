@@ -63,7 +63,7 @@ export interface CarteConfig {
 }
 
 /**
- * Fichiers produits par `scripts/carte/preparer-fond-carte.sh`, servis sous `carte/fond/` (voir docs/chantier/carte.md) : le monde
+ * Fichiers produits par `scripts/carte/preparer-fond-carte.sh`, servis sous `carte/fond/` (voir site/docs/domaines/chantier/carte.md) : le monde
  * entier, et le Maroc jusqu'au zoom 15.
  */
 export const FOND_DE_CARTE_PAR_DEFAUT: FondDeCarte = {
@@ -95,7 +95,7 @@ const SATELLITE_PAR_DEFAUT: SatelliteDeCarte = {
 /**
  * Le monde entier, ouvert sur le Maroc, provinces du Sud comprises (frontière Natural Earth, point de vue du Maroc). Le
  * territoire est calculé par `scripts/carte/calculer-emprise.mjs` et vérifié contre la frontière par `fond-de-carte.spec.ts` :
- * ne jamais le saisir à la main (voir docs/chantier/carte.md, « Emprise du Maroc »).
+ * ne jamais le saisir à la main (voir site/docs/domaines/chantier/carte.md, « Emprise du Maroc »).
  */
 export const CARTE_CONFIG_PAR_DEFAUT: CarteConfig = {
   fond: FOND_DE_CARTE_PAR_DEFAUT,

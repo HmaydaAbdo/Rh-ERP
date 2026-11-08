@@ -1,7 +1,7 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Surfaces déterministes des résultats d'outils (docs/ia.md, T16 : interface composée).
+"""Surfaces déterministes des résultats d'outils (site/docs/ia, T16 : interface composée).
 
 Un tableau de 50 lignes recopié par le modèle coûte des milliers de jetons, des dizaines de secondes et un risque
 d'erreur de recopie. Ici, c'est le code qui présente : quand un outil MCP de l'ERP rend une liste d'au moins

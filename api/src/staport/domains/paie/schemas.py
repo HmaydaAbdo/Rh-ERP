@@ -1,25 +1,25 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, Page
+from staport.domains.common.schemas import ModeleApi, Montant, Nombre, Page
 
 from .periode import PeriodePaie
 
-DeuxDecimales = Annotated[Decimal, Field(ge=0, max_digits=10, decimal_places=2)]
+DeuxDecimales = Annotated[Montant, Field(ge=0, max_digits=10, decimal_places=2)]
 
 
 class PaieChampsBulletin(ModeleApi):
     fonction_id: int
     chantier_id: int
     equipe_id: int | None = None
-    nombre_jours_travailles: Annotated[Decimal, Field(ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_ouvrable: Annotated[Decimal | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_dimanche: Annotated[Decimal | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
+    nombre_jours_travailles: Annotated[Nombre, Field(ge=0, max_digits=5, decimal_places=2)]
+    jours_recuperation_ouvrable: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
+    jours_recuperation_dimanche: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
     salaire_mensuel: DeuxDecimales
     prime_roulage_ordinaire: DeuxDecimales | None = None
     prime_roulage_dimanche: DeuxDecimales | None = None
@@ -39,11 +39,25 @@ class PaieModificationRequete(PaieChampsBulletin):
 class PaieRecherche(ModeleApi):
     cin: str | None = Field(default=None, max_length=30)
     nom_prenom: str | None = Field(default=None, max_length=150)
-    employee_id: int | None = None
     periode: PeriodePaie | None = None
     fonction_ids: list[int] | None = None
     chantier_ids: list[int] | None = None
     equipe_ids: list[int] | None = None
+
+
+class PaieSuppressionGroupeRequete(ModeleApi):
+    """Groupe décrit par `criteres` (mois obligatoire) ; `nombre_attendu` est le nombre confirmé par l'utilisateur."""
+
+    criteres: PaieRecherche
+    nombre_attendu: Annotated[int, Field(ge=0)]
+
+
+class PaieSuppression(ModeleApi):
+    supprimes: int
+
+
+class PaieRestauration(ModeleApi):
+    restaures: int
 
 
 class PaieEmployeeResume(ModeleApi):
@@ -77,13 +91,13 @@ class PaieReponse(ModeleApi):
     fonction: PaieFonctionResume
     chantier: PaieChantierResume
     equipe: PaieEquipeResume | None
-    nombre_jours_travailles: Decimal
-    jours_recuperation_ouvrable: Decimal | None
-    jours_recuperation_dimanche: Decimal | None
-    salaire_mensuel: Decimal
-    prime_roulage_ordinaire: Decimal | None
-    prime_roulage_dimanche: Decimal | None
-    salaire_total: Decimal
+    nombre_jours_travailles: Nombre
+    jours_recuperation_ouvrable: Nombre | None
+    jours_recuperation_dimanche: Nombre | None
+    salaire_mensuel: Nombre
+    prime_roulage_ordinaire: Nombre | None
+    prime_roulage_dimanche: Nombre | None
+    salaire_total: Nombre
     observation: str | None
 
 
@@ -94,17 +108,17 @@ class PaiePeriodeResume(ModeleApi):
     periode: PeriodePaie
     nombre_bulletins: int
     nombre_chantiers: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaiePeriodeComparaison(ModeleApi):
     periode: PeriodePaie
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieEquipePeriode(ModeleApi):
@@ -112,9 +126,9 @@ class PaieEquipePeriode(ModeleApi):
     code: str
     libelle: str
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
     mois_precedent: PaiePeriodeComparaison | None
 
 
@@ -123,9 +137,9 @@ class PaieChantierPeriode(ModeleApi):
     code: str
     libelle: str | None
     effectif: int
-    masse: Decimal
+    masse: Nombre
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
     mois_precedent: PaiePeriodeComparaison | None
     sans_equipe_mois_precedent: PaiePeriodeComparaison | None
     equipes: list[PaieEquipePeriode]
@@ -138,56 +152,64 @@ class PaieMaterielTableau(ModeleApi):
     libelles: list[str]
 
 
+class PaieMaterielValeur(ModeleApi):
+    """Dernier nombre saisi pour une ligne du parc matériel, avec le mois où il l'a été."""
+
+    libelle: str
+    quantite: int
+    periode: PeriodePaie
+
+
 class PaieKpi(ModeleApi):
-    masse: Decimal
+    masse: Nombre
     effectif: int
-    cout_moyen: Decimal | None
+    cout_moyen: Nombre | None
     nombre_chantiers: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieChantierMasse(ModeleApi):
     id: int
     code: str
     libelle: str | None
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieEquipeMasse(ModeleApi):
     id: int | None
     code: str | None
     libelle: str | None
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieFonctionMasse(ModeleApi):
     id: int
     libelle: str
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieTranche(ModeleApi):
-    min: Decimal
-    max: Decimal | None
+    min: Nombre
+    max: Nombre | None
     effectif: int
 
 
 class PaieEvolution(ModeleApi):
     periode: PeriodePaie
-    masse: Decimal
+    masse: Nombre
     effectif: int
     stc: int
-    stc_montant: Decimal
+    stc_montant: Nombre
 
 
 class PaieQualite(ModeleApi):
@@ -237,21 +259,23 @@ class PaieEffectifMois(ModeleApi):
     effectif: int
     effectif_mois_precedent: int | None
     variation: int | None
-    entrees: int
+    entrees: int | None
     plus_payes: int | None
     sorties: int
     mutations: int | None
 
 
 class PaieParcoursMois(ModeleApi):
+    """La photo du bulletin : libellé de la fonction, codes du chantier et de l'équipe du mois (`MoisDto`)."""
+
     bulletin_id: int
     periode: PeriodePaie
-    fonction_id: int
-    chantier_id: int
-    equipe_id: int | None
-    nombre_jours_travailles: Decimal
-    salaire_mensuel: Decimal
-    salaire_total: Decimal
+    fonction: str
+    chantier: str
+    equipe: str | None
+    nombre_jours_travailles: Nombre
+    salaire_mensuel: Nombre
+    salaire_total: Nombre
     observation: str | None
 
 
@@ -263,15 +287,114 @@ class PaieParcoursEvenement(ModeleApi):
     motif: str | None
 
 
-class PaieParcoursReponse(ModeleApi):
-    employe_id: int
+class PaieParcoursIndicateurs(ModeleApi):
     mois_payes: int
-    total_percu: Decimal
-    jours_travailles: Decimal
+    total_percu: Nombre
+    jours_travailles: Nombre
     premier_mois: PeriodePaie | None
     dernier_mois: PeriodePaie | None
+
+
+class PaieParcoursReponse(ModeleApi):
+    employe_id: int
+    indicateurs: PaieParcoursIndicateurs
     mois: list[PaieParcoursMois]
     evenements: list[PaieParcoursEvenement]
+
+
+class DimensionPaie(StrEnum):
+    CHANTIER = "CHANTIER"
+    EQUIPE = "EQUIPE"
+    FONCTION = "FONCTION"
+
+
+class TriRepartition(StrEnum):
+    MASSE = "MASSE"
+    EFFECTIF = "EFFECTIF"
+    STC = "STC"
+    STC_MONTANT = "STC_MONTANT"
+    LIBELLE = "LIBELLE"
+    CODE = "CODE"
+
+
+class TriComparaison(StrEnum):
+    MASSE = "MASSE"
+    VARIATION_MASSE = "VARIATION_MASSE"
+    VARIATION_POURCENTAGE = "VARIATION_POURCENTAGE"
+    EFFECTIF = "EFFECTIF"
+    VARIATION_EFFECTIF = "VARIATION_EFFECTIF"
+    LIBELLE = "LIBELLE"
+
+
+class PaieRepartitionGroupe(ModeleApi):
+    id: int | None
+    code: str | None
+    libelle: str | None
+    masse: Nombre
+    effectif: int
+    stc: int
+    stc_montant: Nombre
+
+
+class PaieRepartitionReponse(ModeleApi):
+    """Répartition d'un mois de paie triée selon le critère demandé (`PaieRepartitionDto`)."""
+
+    periode: PeriodePaie
+    dimension: DimensionPaie
+    nombre_groupes: int
+    groupes: list[PaieRepartitionGroupe]
+
+
+class PaieComparaisonTotal(ModeleApi):
+    masse: Nombre
+    masse_reference: Nombre | None
+    variation_masse: Nombre | None
+    variation_pourcentage: Nombre | None
+    effectif: int
+    effectif_reference: int | None
+    variation_effectif: int | None
+    cout_moyen: Nombre | None
+    cout_moyen_reference: Nombre | None
+
+
+class PaieFonctionPrincipale(ModeleApi):
+    libelle: str
+    effectif: int
+
+
+class PaieComparaisonGroupe(ModeleApi):
+    """`statut` : COMPARABLE, NOUVEAU ou DISPARU ; les variations sont nulles si un mois manque."""
+
+    id: int | None
+    code: str | None
+    libelle: str | None
+    statut: Literal["COMPARABLE", "NOUVEAU", "DISPARU"]
+    masse: Nombre | None
+    masse_reference: Nombre | None
+    variation_masse: Nombre | None
+    variation_pourcentage: Nombre | None
+    effectif: int | None
+    effectif_reference: int | None
+    variation_effectif: int | None
+    cout_moyen: Nombre | None
+    cout_moyen_reference: Nombre | None
+    fonction_principale: PaieFonctionPrincipale | None
+
+
+class PaieComparaisonReponse(ModeleApi):
+    """Comparaison de deux mois de paie sur le même périmètre (`PaieComparaisonDto`)."""
+
+    periode: PeriodePaie
+    periode_reference: PeriodePaie
+    dimension: DimensionPaie
+    nombre_groupes: int
+    total: PaieComparaisonTotal
+    plus_forte_hausse: PaieComparaisonGroupe | None
+    plus_forte_baisse: PaieComparaisonGroupe | None
+    plus_forte_hausse_du_perimetre: PaieComparaisonGroupe | None
+    plus_forte_baisse_du_perimetre: PaieComparaisonGroupe | None
+    groupes: list[PaieComparaisonGroupe]
+    definitions: dict[str, str]
 
 
 class PaieExportRequete(ModeleApi):
@@ -282,7 +405,7 @@ class PaieExportRequete(ModeleApi):
     chantiers: list[str] | None = None
     # Compatibilité du premier contrat Python ; les nouveaux clients utilisent equipes_par_chantier.
     regroupements_equipes: dict[str, list[str]] = Field(default_factory=dict)
-    materiel: dict[str, int] | None = None
+    materiel: dict[str, Annotated[int, Field(ge=0, le=999)]] | None = None
 
 
 class PaieRapportRequete(ModeleApi):
@@ -290,11 +413,11 @@ class PaieRapportRequete(ModeleApi):
     nom_prenom: str | None = Field(default=None, max_length=150)
     cin: str | None = Field(default=None, max_length=30)
     fonction_id: int | None = None
-    chantier_ids: list[int] | None = None
+    chantier_ids: list[int] | None = Field(default=None, max_length=500)
     chantier_id: int | None = None
     equipes_par_chantier: dict[str, list[str]] | None = None
     regroupements_equipes_par_chantier: dict[str, list[list[str]]] | None = None
-    materiel: dict[str, int] | None = None
+    materiel: dict[str, Annotated[int | None, Field(ge=0, le=999)]] | None = None
     sans_vue_ensemble: bool | None = None
 
 
@@ -306,8 +429,18 @@ class PaieImportErreur(ModeleApi):
     valeur: str | None
     raison: str
     avertissement: bool = False
-    code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT"] | None = None
+    code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT", "EQUIPE_VIDE"] | None = None
+    employe_id: int | None = None
+    salaire_actuel: str | None = None
     type_salaire_propose: Literal["JOURNALIER", "MENSUEL"] | None = None
+
+
+class PaieImportControlePeriode(ModeleApi):
+    """Contrôle de la période choisie, à confirmer explicitement pour importer (mois en cours ou doublon)."""
+
+    code: Literal["PERIODE_COURANTE_OU_FUTURE", "CONTENU_DEJA_IMPORTE"]
+    message: str
+    periode_reference: PeriodePaie | None = None
 
 
 class PaieImportAnalyse(ModeleApi):
@@ -318,9 +451,52 @@ class PaieImportAnalyse(ModeleApi):
     chantiers_clotures: list[PaieImportChantierCloture]
     cin_inconnus: list[PaieImportCinInconnu]
     ecarts: list[PaieImportEcart]
-    departs: list[dict[str, object]]
-    retours: list[dict[str, object]]
+    departs: list[PaieImportDepart]
+    retours: list[PaieImportRetour]
+    controles_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
     pret: bool
+
+
+class PaieImportDepart(ModeleApi):
+    """Un employé qui quitte l'entreprise : STC ou sortie dans le fichier, ou actif absent du fichier (motif nul)."""
+
+    employe_id: int
+    cin: str
+    nom_prenom: str
+    motif: str | None
+
+
+class PaieImportRetour(ModeleApi):
+    """Un employé inactif présent dans le fichier : l'import le repasse ACTIF."""
+
+    employe_id: int
+    cin: str
+    nom_prenom: str
+
+
+class PaieImportDecisionEquipe(ModeleApi):
+    """Choix de l'utilisateur quand le fichier laisse vide l'équipe d'un employé qui en a une."""
+
+    employe_id: int
+    action: Literal["CONSERVER", "VIDER"]
+
+
+class PaieImportDecisionsEquipe(ModeleApi):
+    decisions: list[PaieImportDecisionEquipe] = Field(default_factory=lambda: [])
+
+
+class PaieImportDepartConfirme(ModeleApi):
+    """Un départ confirmé. Un départ déduit de l'absence du salarié peut l'être sans motif, par `sans_motif`."""
+
+    employe_id: int
+    motif: Annotated[str, Field(max_length=255)] = ""
+    sans_motif: bool = False
+
+
+class PaieImportDeparts(ModeleApi):
+    """Les départs confirmés à l'import : un départ proposé par l'analyse et absent d'ici n'est pas enregistré."""
+
+    departs: list[PaieImportDepartConfirme] = Field(default_factory=lambda: [])
 
 
 class PaieImportChantierCloture(ModeleApi):
@@ -337,7 +513,7 @@ class PaieImportCinInconnu(ModeleApi):
     fonction: str | None
     chantier: str | None
     equipe: str | None
-    salaire: Decimal | None
+    salaire: Nombre | None
 
 
 class PaieImportChamp(ModeleApi):
@@ -368,8 +544,8 @@ class PaieImportCreationCorrection(ModeleApi):
 
 
 class PaieImportCorrections(ModeleApi):
-    aligner: list[PaieImportAlignement]
-    creer: list[PaieImportCreationCorrection]
+    aligner: list[PaieImportAlignement] = Field(default_factory=list)  # pyright: ignore
+    creer: list[PaieImportCreationCorrection] = Field(default_factory=list)  # pyright: ignore
 
 
 class PaieImportResult(ModeleApi):

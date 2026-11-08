@@ -94,7 +94,9 @@ def _signer(
 def test_sans_jeton_la_requete_est_refusee_en_401_sans_corps(plateforme: Plateforme) -> None:
     reponse = plateforme.client.post("/users/search")
     assert reponse.status_code == 401 and reponse.content == b""
-    assert reponse.headers["www-authenticate"] == "Bearer"
+    assert reponse.headers["www-authenticate"] == (
+        'Bearer resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
     assert plateforme.journal.de(None, Action.ACCES_ANONYME_REFUSE)[-1].motif == "HTTP_401"
 
 
@@ -232,8 +234,8 @@ def test_le_rafraichissement_par_cookie_refuse_une_origine_non_autorisee_ou_abse
     plateforme.client.cookies.set("refresh_token", "x", path="/auth")
     sans_origine = plateforme.client.post("/auth/refresh")
     mauvaise = plateforme.client.post("/auth/refresh", headers={"Origin": "http://evil.example"})
-    assert sans_origine.status_code == 401 and mauvaise.status_code == 401
-    assert sans_origine.content == b"" and mauvaise.content == b""
+    assert sans_origine.status_code == 401 and sans_origine.content == b""
+    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # `DefaultCorsProcessor` de Spring
 
 
 def test_le_rafraichissement_accepte_une_origine_autorisee_jusqu_a_la_resolution_du_controleur(
@@ -281,6 +283,7 @@ PUBLIQUES = {
     ("POST", "/auth/reset-password"),
     ("GET", "/auth/password-policy"),
     ("GET", "/.well-known/jwks.json"),
+    ("GET", "/.well-known/oauth-protected-resource"),
 }
 AUTHENTIFIEES = {("POST", "/auth/logout"), ("GET", "/auth/me")}
 EXIGENCES: dict[tuple[str, str], set[str]] = {
@@ -297,16 +300,26 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/roles"): {"ROLE_MANAGE"},
     ("PUT", "/roles/{identifiant}"): {"ROLE_MANAGE"},
     ("DELETE", "/roles/{identifiant}"): {"ROLE_MANAGE"},
+    ("GET", "/accueil"): {"ACCUEIL_READ"},
+    ("PUT", "/accueil"): {"ACCUEIL_WRITE"},
+    ("DELETE", "/accueil"): {"ACCUEIL_WRITE"},
+    ("GET", "/accueil/utilisateurs/{identifiant}"): {"ACCUEIL_ADMIN"},
+    ("PUT", "/accueil/utilisateurs/{identifiant}"): {"ACCUEIL_ADMIN"},
+    ("DELETE", "/accueil/utilisateurs/{identifiant}"): {"ACCUEIL_ADMIN"},
     ("POST", "/functions"): {"FUNCTION_WRITE"},
     ("PUT", "/functions/{identifiant}"): {"FUNCTION_WRITE"},
     ("GET", "/functions/{identifiant}"): {"FUNCTION_READ"},
     ("POST", "/functions/search"): {"FUNCTION_READ"},
     ("DELETE", "/functions/{identifiant}"): {"FUNCTION_DELETE"},
+    ("POST", "/functions/import"): {"FUNCTION_IMPORT"},
+    ("GET", "/functions/import/modele"): {"FUNCTION_IMPORT"},
     ("POST", "/equipes"): {"EQUIPE_WRITE"},
     ("PUT", "/equipes/{identifiant}"): {"EQUIPE_WRITE"},
     ("GET", "/equipes/{identifiant}"): {"EQUIPE_READ"},
     ("POST", "/equipes/search"): {"EQUIPE_READ"},
     ("DELETE", "/equipes/{identifiant}"): {"EQUIPE_DELETE"},
+    ("POST", "/equipes/import"): {"EQUIPE_IMPORT"},
+    ("GET", "/equipes/import/modele"): {"EQUIPE_IMPORT"},
     ("POST", "/chantiers"): {"CHANTIER_WRITE"},
     ("PUT", "/chantiers/{identifiant}"): {"CHANTIER_WRITE"},
     ("PUT", "/chantiers/{identifiant}/statut"): {"CHANTIER_WRITE"},
@@ -323,9 +336,8 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/employees/analytique"): {"EMPLOYEE_READ"},
     ("POST", "/employees/regroupements"): {"EMPLOYEE_READ"},
     ("POST", "/employees/sorties-mois"): {"EMPLOYEE_READ"},
+    ("GET", "/employees/import/modele"): {"EMPLOYEE_IMPORT"},
     ("POST", "/employees/import"): {"EMPLOYEE_IMPORT"},
-    ("POST", "/paie"): {"PAIE_WRITE"},
-    ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE"},
     ("GET", "/paie/{identifiant}"): {"PAIE_READ"},
     ("POST", "/paie/search"): {"PAIE_READ"},
     ("GET", "/paie/periodes"): {"PAIE_READ"},
@@ -333,18 +345,43 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/paie/chantiers/search"): {"PAIE_READ"},
     ("GET", "/paie/chantiers"): {"PAIE_READ"},
     ("GET", "/paie/materiel"): {"PAIE_READ"},
+    ("GET", "/paie/materiel/valeurs"): {"PAIE_EXPORT"},
     ("POST", "/paie/analytique"): {"PAIE_READ"},
     ("POST", "/paie/options/chantiers"): {"PAIE_READ"},
     ("POST", "/paie/options/equipes"): {"PAIE_READ"},
     ("POST", "/paie/effectifs"): {"PAIE_READ"},
-    ("GET", "/paie/employes/{employee_id}/parcours"): {"PAIE_READ"},
+    ("GET", "/paie/employes/{id}/parcours"): {"PAIE_READ"},
     ("POST", "/paie/export"): {"PAIE_EXPORT"},
     ("POST", "/paie/report/pdf"): {"PAIE_EXPORT"},
     ("GET", "/paie/import/modele"): {"PAIE_IMPORT"},
     ("POST", "/paie/import"): {"PAIE_IMPORT"},
     ("DELETE", "/paie/{identifiant}"): {"PAIE_DELETE"},
+    ("POST", "/paie/suppression"): {"PAIE_PURGE"},
+    ("POST", "/paie/restauration/{identifiant_entree}"): {"PAIE_RESTORE"},
 }
 REQUIS_CUMULATIFS: dict[tuple[str, str], set[str]] = {
+    ("POST", "/heures-supp/search"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("GET", "/heures-supp/periodes"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("GET", "/heures-supp/{identifiant}"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("POST", "/heures-supp/analytique"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("POST", "/heures-supp/export/pdf"): {"HEURES_SUP_READ", "PAIE_READ"},
+    ("PUT", "/heures-supp/{identifiant}"): {"HEURES_SUP_IMPORT", "PAIE_READ"},
+    ("POST", "/heures-supp"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ", "CHANTIER_READ"},
+    ("DELETE", "/heures-supp/{identifiant}"): {"HEURES_SUP_DELETE", "PAIE_READ"},
+    ("GET", "/heures-supp/import/prerequis"): {"HEURES_SUP_IMPORT", "PAIE_READ", "CHANTIER_READ"},
+    ("POST", "/heures-supp/import/analyse"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("POST", "/heures-supp/import/corrections"): {
+        "HEURES_SUP_IMPORT",
+        "PAIE_READ",
+        "EMPLOYEE_WRITE",
+        "FUNCTION_READ",
+    },
+    ("POST", "/heures-supp/import"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("POST", "/heures-supp/import/remplacement"): {"HEURES_SUP_IMPORT", "PAIE_READ", "EMPLOYEE_READ"},
+    ("GET", "/heures-supp/import/modele"): {"HEURES_SUP_IMPORT", "PAIE_READ"},
+    ("POST", "/heures-supp/suppression-mois"): {"HEURES_SUP_PURGE", "PAIE_READ"},
+    ("POST", "/paie"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
+    ("PUT", "/paie/{identifiant}"): {"PAIE_WRITE", "EMPLOYEE_WRITE"},
     ("POST", "/paie/import/analyse"): {"PAIE_IMPORT", "PAIE_READ"},
     ("POST", "/paie/import/corrections"): {"PAIE_IMPORT", "PAIE_READ", "EMPLOYEE_WRITE"},
 }
@@ -362,7 +399,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 69
+    assert len(declarees) == 99
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 

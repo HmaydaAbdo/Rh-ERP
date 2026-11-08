@@ -26,3 +26,16 @@ class FonctionReponse(ModeleApi):
 
 
 FonctionsPage = Page[FonctionReponse]
+
+
+class FonctionLigneIgnoree(ModeleApi):
+    numero_ligne: int
+    libelle: str
+    raison: str
+
+
+class FonctionImportReponse(ModeleApi):
+    total_lignes: int
+    crees: int
+    ignores: int
+    lignes_ignorees: list[FonctionLigneIgnoree]

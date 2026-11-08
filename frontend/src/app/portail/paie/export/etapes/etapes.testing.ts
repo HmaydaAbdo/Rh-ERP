@@ -38,7 +38,8 @@ export async function monterEtape<T>(composant: Type<T>, preparer?: (store: Paie
   const service = {
     listerPeriodes: vi.fn().mockReturnValue(of(PERIODES)),
     listerChantiersDeLaPeriode: vi.fn().mockReturnValue(of(CHANTIERS)),
-    listerTableauxMateriel: vi.fn().mockReturnValue(of(TABLEAUX))
+    listerTableauxMateriel: vi.fn().mockReturnValue(of(TABLEAUX)),
+    listerValeursMateriel: vi.fn().mockReturnValue(of([]))
   };
   TestBed.configureTestingModule({ providers: [PaieExportStore, { provide: PaieService, useValue: service }] });
   const store = TestBed.inject(PaieExportStore);

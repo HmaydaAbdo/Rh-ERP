@@ -1,5 +1,5 @@
-// T7 (docs/ia.md) : le client AG-UI officiel (@ag-ui/client, HttpAgent) dialogue avec le point d'entrée du service IA.
-// Lancé par FluxAgUiIntegrationTest (backend) contre un service IA, un Spring de test et une passerelle LiteLLM réels.
+// T7 (site/docs/ia) : le client AG-UI officiel (@ag-ui/client, HttpAgent) dialogue avec le point d'entrée du service IA.
+// À lancer contre un service IA, une API de test et une passerelle LiteLLM réels (lanceur : api/tests/test_ia_lanceurs.py, IA_AGUI=1).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { HttpAgent, type BaseEvent } from "@ag-ui/client";
@@ -31,7 +31,7 @@ test("une question suit le cycle AG-UI jusqu'à la réponse vérifiée", { timeo
   assert.equal(types[0], "RUN_STARTED");
   assert.equal(types.at(-1), "RUN_FINISHED");
   assert.ok(!types.includes("RUN_ERROR"));
-  assert.ok(types.includes("TOOL_CALL_START"), "au moins un outil Spring");
+  assert.ok(types.includes("TOOL_CALL_START"), "au moins un outil MCP");
   assert.ok(types.includes("MESSAGES_SNAPSHOT"));
   assert.ok(!types.includes("RAW"));
   // Le résultat d'outil (synthèse lisible) arrive dans la conversation reconstruite par le client.
@@ -45,7 +45,7 @@ test("une question suit le cycle AG-UI jusqu'à la réponse vérifiée", { timeo
     .filter((e) => e.type === "STATE_SNAPSHOT")
     .map((e) => e.snapshot as { verification?: string; vue?: { module?: string } | null });
   assert.equal(etats.at(-1)?.verification, "verifiee");
-  // La vue que Spring propose pour cette réponse, posée une fois la réponse vérifiée : c'est elle que l'interface ouvre.
+  // La vue que l'API propose pour cette réponse, posée une fois la réponse vérifiée : c'est elle que l'interface ouvre.
   assert.ok(etats.at(-1)?.vue?.module, "vue proposée dans l'état partagé");
   // Raisonnement : selon le modèle servi, des événements officiels REASONING_* ; jamais d'événement maison.
   assert.ok(!recus.some((e) => e.type === "CUSTOM" && String(e.name).startsWith("com.staport.")));
