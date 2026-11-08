@@ -69,7 +69,7 @@ Refonte par rapport à Spring (KAN-231) : le mois d'import est libre, la règle 
 retirée. Une période égale ou postérieure au mois civil en cours, ou un fichier identique à 90 % à un des
 trois derniers autres mois, demande une confirmation explicite (`controlesPeriode`, `periode_confirmee`).
 Autres refontes : arrondi automatique des montants à deux décimales (KAN-228) et départ déduit de
-l'absence confirmable sans motif (KAN-230). Le banc différentiel les classe `REFONTE`.
+l'absence confirmable sans motif (KAN-230). Elles sont fixées par des tests de régression Python (`test_paie_import_http.py`, KAN-238).
 
 Le wizard FastAPI en cours de migration envoie `file` et `periode` en `multipart/form-data` pour
 l'analyse et l'import final. La correction envoie en plus le texte JSON `corrections` avec les
