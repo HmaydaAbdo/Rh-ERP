@@ -169,7 +169,7 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
         corps.append(
             "<tr>"
             + _td(afficher_periode(ligne.periode))
-            + _td(f"{ligne.code_chantier} · {ligne.chantier}")
+            + _td(" · ".join(x for x in (ligne.code_chantier, ligne.chantier) if x))
             + _td(ligne.nom_prenom)
             + _td(ligne.cin)
             + _td(ligne.fonction)

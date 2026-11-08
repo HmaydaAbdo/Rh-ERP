@@ -261,11 +261,13 @@ class ServiceRapportPaie:
                     )
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
             for index_section, (libelle, section, est_regroupe) in enumerate(sections):
-                titre = f"ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
+                titre = f"ÉQUIPE : {libelle.upper()}" if libelle else f"CHANTIER : {identifiant}"
                 niveau_section = (
                     f"CHANTIER : {identifiant} · ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
                 )
                 avec_equipe = libelle is None or est_regroupe
+                equipe_choisie = libelle is not None and not est_regroupe and libelle in choix
+                hauteur_derniere_analyse: float | None = None
                 graphique_materiel = None
                 if libelle is not None:
                     identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
@@ -320,12 +322,30 @@ class ServiceRapportPaie:
                         contenu_graphique = (
                             _rubrique(3, titre_repartition) + f'<div class="graphique">{graphique}</div>'
                         )
+                        hauteur_derniere_analyse = 18 + _hauteur_svg(graphique) + 8
                         if materiel_avec_fonctions:
                             contenu_graphique += cast(str, graphique_materiel)
+                            hauteur_derniere_analyse += 18 + _hauteur_svg(cast(str, graphique_materiel)) + 8
                         pages.append((niveau_section, contenu_graphique))
                     if graphique_materiel and not materiel_avec_fonctions:
+                        hauteur_derniere_analyse = 18 + _hauteur_svg(graphique_materiel) + 8
                         pages.append((niveau_section, graphique_materiel))
                 pages_recap = _recaps_fonctions([detail.valeurs for detail in section])
+                if libelle is None and choix and pages_recap:
+                    # Les employés hors des équipes choisies forment un groupe qui a ses propres indicateurs, en tête
+                    # de sa première page de récap (`ajouterPagesEquipe` avec `fusionneeAuChantier` faux).
+                    identifiants_reste = {detail.valeurs[0].equipe_id for detail in section}
+                    precedentes_reste = [
+                        ligne
+                        for ligne in lignes_chantier_precedentes
+                        if getattr(ligne[0], "equipe_id", None) in identifiants_reste
+                    ]
+                    tete_reste = f'<div class="titre-chapitre">{escape(titre)}</div>' + _cartes_kpi(
+                        [detail.valeurs for detail in section], precedentes_reste, inclure_chantiers=False
+                    )
+                    html_recap, hauteur_recap = pages_recap[0]
+                    # Titre d'équipe (20 pt) + titre des cartes (16 pt) + cartes (54 pt au minimum).
+                    pages_recap[0] = (tete_reste + html_recap, hauteur_recap + 20 + 16 + 54)
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -369,6 +389,21 @@ class ServiceRapportPaie:
                         )
                         + "</tr>"
                     )
+                if equipe_choisie and hauteurs:
+                    # Équipe choisie dans l'assistant : pas de récap, la liste des employés rejoint la dernière page
+                    # d'analyse si 3 lignes (ou toutes) y tiennent (`ajouterPagesEmployesEquipe` de Spring).
+                    pages.extend(
+                        _pages_employes_equipe(
+                            pages,
+                            niveau_section,
+                            lignes_html,
+                            hauteurs,
+                            hauteur_derniere_analyse,
+                            numero=5 if graphique_materiel else 4,
+                            avec_equipe=avec_equipe,
+                        )
+                    )
+                    continue
                 # 495 pt utiles, moins la marge de sécurité et les blocs présents sur la page.
                 # Mêmes hauteurs de base que RapportPageModelBuilder et rapport.css.
                 titre_chantier_hauteur = 24 if index_section == 0 and libelle is not None else 0
@@ -429,6 +464,65 @@ def _identite(label: str, valeur: str) -> str:
 
 def _rubrique(numero: int, titre: str) -> str:
     return f'<div class="titre-section rubrique-titre">{numero}. {escape(titre)}</div>'
+
+
+def _lignes_qui_tiennent(hauteurs: list[float], debut: int, disponible: float) -> int:
+    cumul, nombre = 0.0, 0
+    for hauteur in hauteurs[debut:]:
+        cumul += hauteur
+        if cumul > disponible:
+            break
+        nombre += 1
+    return nombre
+
+
+def _pages_employes_equipe(
+    pages: list[tuple[str, str]],
+    niveau: str,
+    lignes: list[str],
+    hauteurs: list[float],
+    hauteur_analyse: float | None,
+    *,
+    numero: int,
+    avec_equipe: bool,
+) -> list[tuple[str, str]]:
+    """Pages de la liste des employés d'une équipe choisie. La liste est ajoutée à la dernière page d'analyse (retirée
+    de `pages`, puis renvoyée complétée) quand assez de lignes y tiennent ; le reste suit sur des pages de suite."""
+    utile = 495 - 8
+    sortie: list[tuple[str, str]] = []
+    position = 0
+    tient = _lignes_qui_tiennent(hauteurs, 0, utile - (hauteur_analyse or utile) - 18 - 40)
+    if tient >= min(3, len(hauteurs)):
+        niveau_analyse, analyse = pages.pop()
+        liste = (
+            _rubrique(numero, "Liste des employés")
+            + _table_entete(avec_equipe=avec_equipe, avec_entete=True)
+            + "".join(lignes[:tient])
+            + "</tbody></table>"
+        )
+        sortie.append((niveau_analyse, analyse + liste))
+        position = tient
+    premiere = True
+    while position < len(hauteurs):
+        disponible = utile - 18 - 40 if premiere else utile
+        fin = min(len(hauteurs), position + max(1, _lignes_qui_tiennent(hauteurs, position, disponible)))
+        titre = (
+            _rubrique(numero, "Liste des employés")
+            if premiere
+            else '<div class="titre-section">Liste des employés (suite)</div>'
+        )
+        sortie.append(
+            (
+                niveau,
+                titre
+                + _table_entete(avec_equipe=avec_equipe, avec_entete=premiere)
+                + "".join(lignes[position:fin])
+                + "</tbody></table>",
+            )
+        )
+        position = fin
+        premiere = False
+    return sortie
 
 
 def _hauteur_svg(contenu: str) -> float:
