@@ -335,7 +335,11 @@ async def _champs(
         lignes = (
             await session.execute(
                 select(liaison.c.revtype, liaison.c[collection.colonne_element]).where(
-                    liaison.c.rev == apres["rev"], liaison.c[collection.colonne_proprietaire] == apres["id"]
+                    # Les liens modifiés dans une révision où l'entité elle-même n'a pas de version (un droit ajouté
+                    # par migration) sont rattachés à la version suivante, comme Spring.
+                    liaison.c.rev > (avant["rev"] if avant is not None else 0),
+                    liaison.c.rev <= apres["rev"],
+                    liaison.c[collection.colonne_proprietaire] == apres["id"],
                 )
             )
         ).all()

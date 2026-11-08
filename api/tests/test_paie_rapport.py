@@ -108,7 +108,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "3. Répartition par fonction" in html_equipe
     assert "4. Liste des employés" in html_equipe
     assert '<div class="label">Masse mois precedent</div><div class="valeur montant"></div>' in html_equipe
-    assert "Page 8 / 8" in html_equipe
+    # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
+    assert "Page 7 / 7" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
         (paie, employe, chantier_materiel, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
