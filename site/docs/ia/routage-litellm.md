@@ -1,4 +1,7 @@
-# Décision — rétablir les pools LiteLLM avec les groupes de modèles officiels
+---
+title: "Décision — rétablir les pools LiteLLM avec les groupes de modèles officiels"
+sidebar_position: 10
+---
 
 Statut : adoptée par le propriétaire le 2026-10-28 ; implémentation locale validée pour le routage et les contrôles ci-dessous.
 

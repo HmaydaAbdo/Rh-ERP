@@ -1,6 +1,6 @@
 {
  "version": 2,
- "description": "Jeu de référence de l'agent (docs/ia.md, § 4 ; KAN-205). Les {marqueurs} sont remplis par les données synthétiques de EvaluationAgentIaTest ; la vérité est lue en appelant l'outil MCP de référence, jamais écrite à la main. Types : reponse (défaut), ouvert, abstention, absence, refus, securite, capacites, simple. Champs : verites (plusieurs lectures), tours (tours précédents d'une conversation), interdits (valeurs qui ne doivent pas fuiter). Le chemin de l'agent est libre : seul le résultat et le comportement sont jugés.",
+ "description": "Jeu de référence de l'agent (site/docs/ia, § 4 ; KAN-205). Les {marqueurs} sont remplis par les données synthétiques de EvaluationAgentIaTest ; la vérité est lue en appelant l'outil MCP de référence, jamais écrite à la main. Types : reponse (défaut), ouvert, abstention, absence, refus, securite, capacites, simple. Champs : verites (plusieurs lectures), tours (tours précédents d'une conversation), interdits (valeurs qui ne doivent pas fuiter). Le chemin de l'agent est libre : seul le résultat et le comportement sont jugés.",
  "cas": [
   {
    "id": "identite-utilisateur",

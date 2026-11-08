@@ -1,6 +1,6 @@
 # deepagents ne publie pas de stubs complets : seules ces règles sont levées, et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Compétences par domaine : les outils métier ne sont exposés au modèle que par elles (docs/ia.md, T32).
+"""Compétences par domaine : les outils métier ne sont exposés au modèle que par elles (site/docs/ia, T32).
 
 Une compétence est un dossier ``competences/<domaine>/SKILL.md`` dont l'en-tête liste ses outils
 (``metadata.include_tools``). Le ``SkillsMiddleware`` de Deep Agents protège ces outils : un appel échoue comme un outil
@@ -23,7 +23,7 @@ from langchain_core.tools import BaseTool
 #: d'interface composée que CopilotKit injecte ; il ne vient pas du catalogue MCP).
 OUTILS_PERMANENTS = frozenset({"systeme_identite", "generate_a2ui"})
 
-#: Au plus ce nombre d'outils par compétence : au-delà, le domaine est scindé (docs/ia.md, T32).
+#: Au plus ce nombre d'outils par compétence : au-delà, le domaine est scindé (site/docs/ia, T32).
 OUTILS_MAX_PAR_COMPETENCE = 7
 
 

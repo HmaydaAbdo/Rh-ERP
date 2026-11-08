@@ -1,4 +1,4 @@
-// T7 (docs/ia.md) : le client AG-UI officiel (@ag-ui/client, HttpAgent) dialogue avec le point d'entrée du service IA.
+// T7 (site/docs/ia) : le client AG-UI officiel (@ag-ui/client, HttpAgent) dialogue avec le point d'entrée du service IA.
 // Lancé par FluxAgUiIntegrationTest (backend) contre un service IA, un Spring de test et une passerelle LiteLLM réels.
 import assert from "node:assert/strict";
 import { test } from "node:test";

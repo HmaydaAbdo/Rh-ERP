@@ -1,4 +1,4 @@
-"""Garde de sortie de l'agent (docs/ia.md, § 4 ; épopée KAN-205) : un contrôle déterministe de la réponse finale,
+"""Garde de sortie de l'agent (site/docs/ia, § 4 ; épopée KAN-205) : un contrôle déterministe de la réponse finale,
 hors modèle. Une règle de prompt demande au modèle de se retenir, elle ne l'y oblige pas (conventions/lecons.md).
 
 Méthode documentée par LangChain (« After agent guardrails ») : un ``after_agent`` remplace la dernière réponse qui

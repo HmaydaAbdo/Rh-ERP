@@ -1,7 +1,7 @@
 """Extrait le catalogue MCP (nom, titre, description) des classes d'outils Spring : entrée de l'évaluation du routage.
 
 Usage, depuis ia/ : ``python evaluation/extraire_catalogue.py evaluation/catalogue_mcp.json``. À relancer à chaque
-changement d'une définition d'outil (docs/ia.md, T32).
+changement d'une définition d'outil (site/docs/ia, T32).
 """
 
 import glob

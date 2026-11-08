@@ -1,6 +1,6 @@
 # LangChain ne publie pas de stubs complets pour la sortie structurée : cette règle n'est levée que pour ce fichier.
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Juge LLM de l'évaluation (docs/ia.md, § 4 ; épopée KAN-205) : l'évaluateur officiel ``openevals``
+"""Juge LLM de l'évaluation (site/docs/ia, § 4 ; épopée KAN-205) : l'évaluateur officiel ``openevals``
 (``create_async_llm_as_judge``) compare la réponse à la vérité lue dans l'ERP et rend un verdict structuré (KAN-208).
 
 Le juge est le groupe ``medium`` de la passerelle, jamais celui de l'agent (``complex``) : il ne se note pas lui-même.

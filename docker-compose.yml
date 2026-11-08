@@ -276,7 +276,7 @@ services:
       start_period: 5s
       retries: 3
 
-  # --- IA (voir docs/ia.md) ---------------------------------------------------------------------
+  # --- IA (voir site/docs/ia) ---------------------------------------------------------------------
   # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
   # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.
   litellm-db:
@@ -299,7 +299,7 @@ services:
       retries: 10
 
   ia-db:
-    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, docs/ia.md T19) : instance et volume
+    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, site/docs/ia T19) : instance et volume
     # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     restart: unless-stopped
@@ -396,7 +396,7 @@ services:
       IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire (clé virtuelle LiteLLM, litellm/README.md)}
       # Jeton agent et route /mcp de l'API, par le réseau ia-net.
       IA_ERP_API_URL: http://api:8080
-      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
@@ -421,7 +421,7 @@ services:
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
-  # Runtime CopilotKit officiel (docs/ia.md, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
+  # Runtime CopilotKit officiel (site/docs/ia, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
   # nginx). Il applique le middleware A2UI et relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur.
   copilot-runtime:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
@@ -438,7 +438,7 @@ services:
       IA_AGUI_URL: http://ia:8000/agui
       # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.
       ERP_API_URL: http://api:8080
-      # Traces OpenTelemetry vers Phoenix (docs/ia.md, T18), jeton partagé par le réseau interne trace-net.
+      # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-copilot-runtime
       OTEL_METRICS_EXPORTER: none
@@ -489,7 +489,7 @@ services:
     networks:
       - db-net
 
-  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (docs/ia.md, T18). Un seul conteneur, traces
+  # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (site/docs/ia, T18). Un seul conteneur, traces
   # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/erp-rh-phoenix:${PHOENIX_IMAGE_TAG:-latest}

@@ -1,4 +1,4 @@
-"""Preuve T3 (docs/ia.md) : le client MCP Python officiel contre le serveur Java du profil Maven
+"""Preuve T3 (site/docs/ia) : le client MCP Python officiel contre le serveur Java du profil Maven
 `mcp-compatibility`. Mêmes scénarios que le client TypeScript de la preuve J0.
 
 Lancé par `McpCompatibilityTest` avec MCP_COMPATIBILITY_URL ; ignoré sinon. Seul le serveur de

@@ -40,4 +40,4 @@ Le résultat est `target/mcp-compatibility/mcp-compatibility-bom.json`. La CI pr
 exécute le test et scanne aussi ce SBOM avec OSV avant de pouvoir réussir son job backend.
 La réussite distante ne doit pas être présumée d'après un résultat local.
 
-Versions exercées, état et suite du chantier : [ia.md](../../../docs/ia.md).
+Versions exercées, état et suite du chantier : [ia.md](../../../site/docs/ia/vue-d-ensemble.md).

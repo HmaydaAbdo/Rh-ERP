@@ -76,7 +76,8 @@ for (const cle of Object.keys(seuils)) {
   if (!lignesBloc.some((l) => l.startsWith(`seuil ${cle} `))) erreurs.push(`scripts/ia/verrous.txt ne porte pas le seuil ${cle}`);
 }
 
-for (const doc of ['docs/ia/decisions.md', 'docs/ia.md', 'ia/README.md', 'AGENTS.md']) {
+const pagesIa = fichiers(join(racine, 'site/docs/ia'), /\.md$/).map((f) => f.slice(racine.length + 1).replaceAll('\\', '/'));
+for (const doc of [...pagesIa, 'ia/README.md', 'AGENTS.md']) {
   for (const [ligne, texte] of lire(doc).split(/\r?\n/).entries()) {
     if (/^\| \d{4}-\d{2}-\d{2} \|/.test(texte)) continue; // journal daté : état d'un jour donné
     for (const m of texte.matchAll(/\b(\d+) outils(?: de lecture| lecture| MCP)/g)) {
