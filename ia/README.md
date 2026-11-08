@@ -46,10 +46,10 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur appelle l'outil attendu
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
-Le jeu de référence est conservé, mais son lanceur (`EvaluationAgentIaTest`) appartenait au backend Java retiré en
-E2 (KAN-50) : le rejouer exige un lanceur côté API Python (application de test, données synthétiques, passerelle
-LiteLLM prête avec `IA_LITELLM_BASE_URL` et `IA_LITELLM_API_KEY`, puis `python -m erp_rh_ia.evaluation`). Ce lanceur
-est suivi dans Jira (épopée E5, évaluation de l'agent).
+Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui remplace `EvaluationAgentIaTest` du backend Java retiré
+en E2 : il démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory erp_rh_ia.app:creer_app`)
+puis `python -m erp_rh_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
+s'active avec `IA_EVALUATION=1`.
 
 ## Développer
 
@@ -71,12 +71,14 @@ RS256 ; il est ignoré sans `MCP_ERP_RH_URL` et lancé, avec le client TypeScrip
 ```bash
 cd api
 uv run pytest tests/test_mcp_clients_externes.py
+uv run pytest tests/test_ia_lanceurs.py   # démarrage du service IA et refus d'un jeton invalide, sans passerelle
 ```
 
-Le flux AG-UI réel avec le client officiel `@ag-ui/client` (`scripts/ia/agui-client`) et le banc de démonstration pour
-le navigateur étaient lancés par des tests du backend Java (`FluxAgUiIntegrationTest`, `BancAssistantTest`), retirés en E2
-(KAN-50) : leurs lanceurs sont à reconstruire côté API Python (suivi Jira). Le client TypeScript lui-même reste valide et
-refuse toute URL autre que `http://127.0.0.1:<port>/agui`.
+Les lanceurs de `api/tests/test_ia_lanceurs.py` couvrent le flux AG-UI réel avec le client officiel `@ag-ui/client`
+(`scripts/ia/agui-client`, `IA_AGUI=1`), l'évaluation (`IA_EVALUATION=1`) et le banc de démonstration pour le navigateur
+(`IA_BANC=1`, écrit `api/target/banc-assistant.json`, s'arrête avec `banc-assistant.stop` ou après 45 minutes). Ces trois
+modes exigent la passerelle LiteLLM ; sans elle ils sont ignorés. Le client TypeScript refuse toute URL autre que
+`http://127.0.0.1:<port>/agui`.
 
 ## Image et exploitation
 

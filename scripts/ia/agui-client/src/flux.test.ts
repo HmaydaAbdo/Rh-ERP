@@ -1,5 +1,5 @@
 // T7 (site/docs/ia) : le client AG-UI officiel (@ag-ui/client, HttpAgent) dialogue avec le point d'entrée du service IA.
-// À lancer contre un service IA, une API de test et une passerelle LiteLLM réels (lanceur Python à écrire, KAN-50).
+// À lancer contre un service IA, une API de test et une passerelle LiteLLM réels (lanceur : api/tests/test_ia_lanceurs.py, IA_AGUI=1).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { HttpAgent, type BaseEvent } from "@ag-ui/client";

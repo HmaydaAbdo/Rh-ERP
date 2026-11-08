@@ -8,6 +8,7 @@ Démarrage : `uvicorn staport.main:application --factory`.
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -223,7 +224,15 @@ def creer_app(
     return app
 
 
+#: Intervalle de bascule des fils de Python (5 ms par défaut). Les exports, rapports et lectures de classeurs tournent
+#: dans des fils (`asyncio.to_thread`) pendant que la boucle d'événements sert les autres requêtes : plus court, la
+#: boucle reprend la main plus vite quand un fil calcule. Mesuré par `tests/test_performance_profil.py` (KAN-233) :
+#: p95 d'une recherche pendant des opérations lourdes de 4 s à moins de 0,5 s.
+INTERVALLE_BASCULE_FILS = 0.0005
+
+
 def application() -> FastAPI:
+    sys.setswitchinterval(INTERVALLE_BASCULE_FILS)
     if "IA_ENABLED" not in os.environ:
         return creer_app(configuration())
     from erp_rh_ia.config import get_settings

@@ -100,3 +100,6 @@ __pycache__/
 api/.coverage
 api/coverage.json
 api/tests/differentiel/sorties/
+
+# Journaux et rapports des lanceurs IA (api/tests/test_ia_lanceurs.py)
+api/target/

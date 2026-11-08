@@ -203,6 +203,11 @@ class ServiceEmployee:
             r.type_salaire = None
         return r
 
+    async def departs(self, s: AsyncSession, i: int) -> list[tuple[int, int, str]]:
+        """Départs enregistrés d'un employé `(employé, mois, motif)`, du plus ancien au plus récent."""
+        async with s.begin():
+            return await repository.sorties(s, i)
+
     @staticmethod
     async def _verifier_references(
         s: AsyncSession, fonction_id: int, chantier_id: int | None, equipe_id: int | None

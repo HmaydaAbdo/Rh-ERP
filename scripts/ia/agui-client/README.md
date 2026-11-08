@@ -5,9 +5,8 @@ d'entrée `POST /agui` du service IA. Il vérifie le cycle complet (outil MCP, r
 mascotte), l'arrêt par le client et le refus d'un jeton invalide. Le client Angular du panneau (T8) est
 un autre sujet ; ce dossier ne fait pas partie du runtime.
 
-Son lanceur Java (`FluxAgUiIntegrationTest`) a été retiré avec le backend Spring (E2, KAN-50) ; un lanceur côté API Python
-(application de test, service IA et passerelle LiteLLM) reste à écrire et doit fournir `AGUI_URL`, `AGUI_JETON`,
-`AGUI_QUESTION` et `AGUI_ATTENDU`. Le client refuse toute URL autre que
+Son lanceur est `api/tests/test_ia_lanceurs.py` (`IA_AGUI=1`, KAN-234) : il démarre l'API de test, le service IA et
+fournit `AGUI_URL`, `AGUI_JETON`, `AGUI_QUESTION` et `AGUI_ATTENDU` ; la passerelle LiteLLM doit être prête. Le client refuse toute URL autre que
 `http://127.0.0.1:<port>/agui`. Mode d'emploi : [`ia/README.md`](../../../ia/README.md).
 
 ```powershell
