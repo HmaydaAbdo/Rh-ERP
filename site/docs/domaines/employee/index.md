@@ -106,7 +106,7 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Sp
   référence inconnue est refusée. `equipeId: null` signifie sans équipe; le formulaire convertit le
   choix synthétique « Orphelins (sans équipe) » en `null`, jamais en identifiant `0`.
 - Salaire et type de salaire se renseignent ensemble ou restent tous deux vides. Le salaire est
-  positif ou nul, avec deux décimales au plus. La saisie et la lecture exigent `PAIE_READ` en plus du
+  positif ou nul, arrondi automatiquement à deux décimales. La saisie et la lecture exigent `PAIE_READ` en plus du
   droit de l’opération Employé. Sans ce droit, les réponses masquent les deux champs, une écriture
   conserve le salaire existant et le tri sur ces champs est retiré.
   Cette règle appartient à `ProjectionPaieEmployee`, réutilisée par l’API REST et les outils MCP de
@@ -116,7 +116,8 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Sp
   passage à « Sorti » conserve son historique. Les écritures et leurs refus sont audités.
 - L’import Paie aligne les fiches selon son assistant : un employé sorti présent dans le fichier
   redevient en poste; un départ confirmé est enregistré avec sa période et son motif. Un départ par
-  employé et par mois au plus, motif obligatoire de 255 caractères au plus. Les règles de cet
+  employé et par mois au plus, motif de 255 caractères au plus, obligatoire sauf pour un départ déduit de l'absence du
+  salarié du fichier, confirmé explicitement sans motif (enregistré « Absent du fichier »). Les règles de cet
   assistant appartiennent au [domaine Paie](../paie/index.md).
 
 ## Modèle de données
@@ -149,7 +150,7 @@ Table `employe_sortie`, entité `EmployeeSortie`, auditée :
 | `id` | `BIGINT` | Clé primaire générée |
 | `employee_id` | `BIGINT` | FK obligatoire vers l’employé |
 | `periode` | `INT` | Mois `aaaaMM`, obligatoire |
-| `motif` | `VARCHAR(255)` | Obligatoire; « STC » ou motif saisi |
+| `motif` | `VARCHAR(255)` | Obligatoire en base; « STC », motif saisi ou « Absent du fichier » (confirmation sans motif) |
 
 L’unicité `(employee_id, periode)` permet plusieurs départs à des mois différents pour une personne
 qui revient puis repart. Les bulletins et départs sont les sources du parcours historique.
@@ -172,7 +173,7 @@ Java `Long`, représentés comme nombres JSON. Les montants sont des `BigDecimal
 | `fonctionId` | `Long` / entier | Obligatoire; référence existante |
 | `chantierId` | `Long` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
 | `equipeId` | `Long` / entier ou `null` | Facultatif; `null` si sorti |
-| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers et deux décimales au plus; avec son type |
+| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à deux décimales; avec son type |
 | `typeSalaire` | `TypeSalaire` / chaîne ou `null` | `MENSUEL` ou `JOURNALIER`; avec le salaire |
 
 La modification ajoute `version` (`Long`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :

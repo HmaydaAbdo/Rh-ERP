@@ -43,7 +43,7 @@ de push, CI, fusion, données ou production ; les autorisations déjà données 
 
 Deux règles imposées par le propriétaire, sans exception :
 
-- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (Spring, Angular, **Deep Agents**,
+- **Frameworks d'abord.** Tout est bâti sur les frameworks et bibliothèques retenus (FastAPI, Angular, **Deep Agents**,
   LangChain, LangGraph, CopilotKit, AG-UI, A2UI, LiteLLM…) et sur leurs composants et points d'extension officiels. Ne jamais
   réécrire ce qu'un framework fournit déjà, même partiellement, ni copier le comportement d'un de ses composants.
   Seuls restent écrits par nous les règles métier d'ERP-RH, la configuration et le raccordement entre briques, chacun
@@ -103,7 +103,7 @@ Deux règles imposées par le propriétaire, sans exception :
   son code source (une lecture tronquée se poursuit ; Context7 et le dépôt de l'éditeur sont admis). Ce qui n'a pas pu être
   lu est écrit « non vérifié » ; la mémoire du modèle n'est pas une source.
   **Accès à la documentation officielle : Context7 en premier.** Pour toute bibliothèque, tout framework, SDK, API ou outil
-  en ligne de commande (Spring, Angular, Next.js, FastAPI, LangChain, LangGraph, CopilotKit, AG Grid, Mintlify…), appeler le
+  en ligne de commande (Angular, Next.js, FastAPI, LangChain, LangGraph, CopilotKit, AG Grid, Mintlify…), appeler le
   serveur MCP Context7 : `resolve-library-id` pour trouver la bibliothèque, puis `query-docs` pour lire la documentation à
   jour, avant d'écrire ou d'affirmer quoi que ce soit, même pour une bibliothèque connue. Les serveurs de documentation
   dédiés (LangChain, CopilotKit, AG Grid, Angular CLI : décision Q16 de `site/docs/ia/principes-et-decisions.md`) complètent Context7 ; ils ne
@@ -180,7 +180,7 @@ dans l'ordre ci-dessous.
 1. `conventions/architecture.md`
 2. conventions/design-patterns.md
 3. conventions/configuration.md
-4. conventions/jpa.md
+4. site/docs/conventions/backend-python/persistance.md
 5. conventions/database.md
 6. conventions/testing.md
 7. conventions/deployment.md

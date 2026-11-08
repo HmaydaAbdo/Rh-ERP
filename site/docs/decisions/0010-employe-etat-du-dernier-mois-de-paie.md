@@ -31,7 +31,9 @@ fonction/chantier/équipe sont dupliqués »). L'historique d'un employé existe
    du fichier et départ confirmé par l'utilisateur).
 5. **L'import de la paie aligne la base** (lot 3, assistant) : un import ne se termine que si le fichier et les fiches
    concordent ; les écarts se corrigent dans l'assistant (mettre à jour la fiche) ou dans le fichier, puis on réimporte.
-   Seul le mois qui suit exactement le dernier mois importé est accepté.
+   *(Amendé le 2026-11-08, KAN-231 : cette règle « dernier mois + 1 » est retirée. Elle ouvrait un nouveau mois à chaque
+   import, même d'un fichier déjà importé, et empêchait de choisir le mois. Le mois est libre ; le mois en cours ou à
+   venir et un fichier déjà importé sous un autre mois demandent une confirmation explicite.)*
 6. **Le salaire et son type sont des données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas, ignore ceux qu'on
    saisit, et ne trie pas par salaire. Le masquage est fait au contrôleur, pour que les autres domaines lisent le vrai
    salaire par `IEmployeeService`.

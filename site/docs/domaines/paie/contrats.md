@@ -21,10 +21,10 @@ décimaux; une période est une chaîne `aaaa-MM`.
 | `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
 | `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
 | `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
-| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, deux décimales au plus | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
-| `primeRoulageOrdinaire` | `number|null`, mêmes bornes et précision que le salaire | Prime ordinaire. |
-| `primeRoulageDimanche` | `number|null`, mêmes bornes et précision que le salaire | Prime dimanche. |
-| `salaireTotal` | `number`, obligatoire, mêmes bornes et précision que le salaire | Total repris tel quel, jamais calculé par le backend. |
+| `salaireMensuel` | `number`, obligatoire, 0 à 99 999 999,99, arrondi automatiquement à deux décimales | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
+| `primeRoulageOrdinaire` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime ordinaire. |
+| `primeRoulageDimanche` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime dimanche. |
+| `salaireTotal` | `number`, obligatoire, mêmes bornes et même arrondi que le salaire | Total repris tel quel, jamais calculé par le backend. |
 | `observation` | `string|null`, 255 caractères au plus | Note du bulletin; `STC` et `sortie` identifient les lignes correspondantes dans les indicateurs. |
 
 Ces champs forment `PaieCreateRequestDto` et `PaieUpdateRequestDto`. Une validation invalide est
@@ -120,17 +120,25 @@ Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenc
 bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
 0 » pour poursuivre. Sans cette action, la ligne n'est pas importée. Les champs
 `salaireMensuel`, `primeRoulageOrdinaire`,
-`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, avec au plus deux décimales et une
-borne maximale de `99 999 999,99`. Toute erreur de cellule doit identifier la ligne Excel, le nom
+`primeRoulageDimanche` et `salaireTotal` acceptent donc `0`, sont arrondis automatiquement à deux
+décimales (règle commune des montants : 769,230769 devient 769,23, sans erreur) et ont une
+borne maximale de `99 999 999,99` contrôlée après arrondi ; un montant négatif reste refusé. Toute erreur de cellule doit identifier la ligne Excel, le nom
 exact du champ, la valeur reçue et la règle violée; le message générique regroupant tous les
 salaires et primes n'est pas un contrat suffisant.
 
-Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le serveur relit le fichier à
-chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
+Le mois d'import est choisi par l'utilisateur (le frontend propose le mois civil précédent) : le serveur
+n'impose plus « dernier mois + 1 ». Il signale en revanche, dans `controlesPeriode`, une période égale
+ou postérieure au mois civil en cours (`PERIODE_COURANTE_OU_FUTURE`) et un fichier qui reprend au moins
+90 % des bulletins identiques (jours, récupérations, salaire, primes, total, observation) d'un des trois
+derniers autres mois (`CONTENU_DEJA_IMPORTE`, avec le mois de référence). Tant qu'un contrôle n'est pas
+confirmé, l'analyse n'est pas `pret` et `POST /paie/import` refuse avec un `400` sauf si
+`periode_confirmee` vaut `true`. Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le
+serveur relit le fichier à chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.
 
 Le contrat HTTP FastAPI du wizard utilise `multipart/form-data` sur les trois étapes : `file` et
-`periode` sont des champs du formulaire; `/import/corrections` reçoit également `corrections` comme
+`periode` sont des champs du formulaire (`/import` ajoute `periode_confirmee`, `departs`, `equipes` et
+`ignorer_salaires_zero`, en texte JSON); `/import/corrections` reçoit également `corrections` comme
 texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, dateNaissance,
 dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
 identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
@@ -143,18 +151,19 @@ Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois l
 
 | Contrat | Champs et types | Description |
 |---|---|---|
-| `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu et écart. |
+| `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `controlesPeriode:ControlePeriode[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu, écart et contrôle de période non confirmé. |
+| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|CONTENU_DEJA_IMPORTE`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
 | `Erreur` | `numeroLigne:integer`, `cin:string|null`, `nomPrenom:string|null`, `raison:string` | Numéro réel Excel et correction attendue. |
 | `ChantierCloture` | `chantierId:integer`, `code:string`, `designation:string|null`, `lignes:integer[]` | Marché cité à rouvrir ou à corriger dans le fichier. |
 | `CinInconnu` | `numeroLigne:integer`, `cin:string`, `nomPrenom:string|null`, `fonction:string`, `chantier:string`, `equipe:string|null`, `salaire:number` | Données disponibles pour créer une fiche. |
 | `Ecart` | `employeId:integer`, `numeroLigne:integer`, `cin:string`, `nomPrenom:string`, `champs:Champ[]`, `typeSalaire:MENSUEL|JOURNALIER|null` | Champs à aligner, avec type de salaire existant. |
 | `Champ` | `champ:string`, `base:string|null`, `fichier:string|null` | Nom du champ, valeur en fiche et valeur du fichier. |
-| `Depart` d'analyse | `employeId:integer`, `cin:string`, `nomPrenom:string`, `motif:string|null` | Départ proposé; motif à saisir s'il est absent. |
+| `Depart` d'analyse | `employeId:integer`, `cin:string`, `nomPrenom:string`, `motif:string|null` | Départ proposé; `STC`/`Sortie` si le fichier l'indique, `null` si le salarié est seulement absent du fichier. |
 | `Retour` | `employeId:integer`, `cin:string`, `nomPrenom:string` | Employé sorti qui réapparaît dans le fichier. |
 | `PaieImportCorrectionsDto` | `aligner:Alignement[]`, `creer:Creation[]`; absents : listes vides | Corrections explicitement sélectionnées. |
 | `Alignement` | `employeId:integer` obligatoire; `typeSalaire:MENSUEL|JOURNALIER|null` | Fiche à aligner; type absent : conserver celui de la fiche s'il existe. |
 | `Creation` | `numeroLigne:integer`, `dateNaissance:string`, `dateEmbauche:string`, `typeSalaire:MENSUEL|JOURNALIER` | Dates ISO et type obligatoires pour une nouvelle fiche. |
-| `PaieImportDepartsDto` | `departs:{employeId:integer,motif:string}[]`; absente : liste vide | Motif obligatoire et non blanc, au plus 255 caractères. Seuls les départs proposés peuvent être confirmés. |
+| `PaieImportDepartsDto` | `departs:{employeId:integer,motif:string,sansMotif:boolean}[]`; absente : liste vide | Motif non blanc de 255 caractères au plus, **sauf** pour un départ déduit de l'absence du salarié (`motif` nul dans l'analyse) confirmé explicitement par `sansMotif: true` : le motif enregistré est alors « Absent du fichier ». Un départ `STC` ou `Sortie` exige toujours un motif. Seuls les départs proposés peuvent être confirmés. |
 | `PaieImportResultDto` | `periode:string`, `crees:integer`, `departs:integer`, `retours:integer` | Bilan de la transaction d'import. |
 
 ## Parcours de l’employé

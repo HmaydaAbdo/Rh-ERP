@@ -46,15 +46,10 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur appelle l'outil attendu
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
-```bash
-cd backend
-./mvnw -B -Dia.evaluation=true -Dtest=EvaluationAgentIaTest test
-```
-
-Prérequis : passerelle LiteLLM prête et `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` dans
-l'environnement. Le test crée des données synthétiques, démarre l'application, puis lance
-`python -m erp_rh_ia.evaluation`. Rapport : `backend/target/evaluation-ia.json` (exactitude,
-latences p50/p95, détail par cas) ; journal : `backend/target/evaluation-ia.txt`.
+Le jeu de référence est conservé, mais son lanceur (`EvaluationAgentIaTest`) appartenait au backend Java retiré en
+E2 (KAN-50) : le rejouer exige un lanceur côté API Python (application de test, données synthétiques, passerelle
+LiteLLM prête avec `IA_LITELLM_BASE_URL` et `IA_LITELLM_API_KEY`, puis `python -m erp_rh_ia.evaluation`). Ce lanceur
+est suivi dans Jira (épopée E5, évaluation de l'agent).
 
 ## Développer
 
@@ -69,41 +64,19 @@ uv run pyright
 uv run pytest -q
 ```
 
-Les tests de `tests/compatibilite/` sont ignorés sans `MCP_COMPATIBILITY_URL`. Pour les exécuter
-contre le serveur Java synthétique :
+`tests/integration/` appelle la **vraie** route `/mcp` de l'application (FastMCP, API Python) avec un jeton agent
+RS256 ; il est ignoré sans `MCP_ERP_RH_URL` et lancé, avec le client TypeScript du SDK MCP, par l'API
+(application complète et base de test) :
 
 ```bash
-cd backend
-./mvnw -B -P mcp-compatibility -Dtest=McpCompatibilityTest test
+cd api
+uv run pytest tests/test_mcp_clients_externes.py
 ```
 
-Rapport : `backend/target/mcp-compatibility/client-python.txt`.
-
-`tests/integration/` appelle la **vraie** route `/mcp` de l'application avec un jeton agent ; lancé par
-`McpClientPythonIntegrationTest` (application complète et base de test) :
-
-```bash
-cd backend
-./mvnw -B -Dia.client-python=true -Dtest=McpClientPythonIntegrationTest test
-```
-
-Rapport : `backend/target/client-python-mcp-erp-rh.txt`.
-
-Flux AG-UI réel avec le client officiel `@ag-ui/client` (`scripts/ia/agui-client`) : l'application de test,
-ce service lancé par `uvicorn` et une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) :
-
-```bash
-npm ci --ignore-scripts --prefix scripts/ia/agui-client
-cd backend
-./mvnw -B -Dia.agui=true -Dtest=FluxAgUiIntegrationTest test
-```
-
-Journaux : `backend/target/agui-client.txt` et `backend/target/agui-service.txt`.
-
-Banc de démonstration pour le navigateur (`BancAssistantTest`, `-Dia.banc=true`) : l'application de test avec des données
-fictives, un compte de test et ce service (port 5103), laissés en marche jusqu'à `backend/target/banc-assistant.stop`
-(45 minutes au plus). Ports, compte et codes chantier dans `backend/target/banc-assistant.json` ; pointer `ng serve` dessus
-avec `BACKEND_URL` et `IA_URL`, et lancer le backend avec `CORS_ALLOWED_ORIGINS` incluant l'origine de `ng serve`.
+Le flux AG-UI réel avec le client officiel `@ag-ui/client` (`scripts/ia/agui-client`) et le banc de démonstration pour
+le navigateur étaient lancés par des tests du backend Java (`FluxAgUiIntegrationTest`, `BancAssistantTest`), retirés en E2
+(KAN-50) : leurs lanceurs sont à reconstruire côté API Python (suivi Jira). Le client TypeScript lui-même reste valide et
+refuse toute URL autre que `http://127.0.0.1:<port>/agui`.
 
 ## Image et exploitation
 

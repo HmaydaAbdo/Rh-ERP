@@ -27,6 +27,8 @@ dependencies = [
     "weasyprint==70.0",
     "pillow>=13.0.0",
     "matplotlib==3.11.2",
+    "prometheus-client>=0.26.0",
+    "python-json-logger>=4.2.0",
 ]
 
 [tool.uv.sources]

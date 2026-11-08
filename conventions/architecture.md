@@ -68,6 +68,16 @@ requêtes multi-sauts apportent un besoin mesuré. Les données métier demeuren
 domaines ; le graphe est une projection dérivée avec provenance, fraîcheur, contrôle d'accès et
 cycle de mise à jour/suppression définis. Il ne devient pas une seconde source de vérité.
 
+## Montants
+
+Tout montant d'argent est **arrondi automatiquement à deux décimales** (demi supérieur : 0,005 → 0,01), partout
+dans le projet et jamais à la main : saisie d'un formulaire, API, import Excel, MCP. L'arrondi est posé une seule
+fois, au bord du système, par le type partagé du schéma (`Montant`, `common/montant.py` côté API) avant les
+contraintes (positif ou nul, borne maximale, nombre de chiffres). Un montant n'est donc jamais refusé pour avoir trop de
+décimales ; il l'est s'il est négatif ou hors capacité. Une exception est une règle métier écrite et décidée par le
+propriétaire (par exemple les montants entiers des heures supplémentaires, V43 et V44), jamais un oubli. Les
+quantités (jours, heures) ne sont pas des montants : elles ne sont pas arrondies.
+
 ## Décisions d'architecture
 
 Documenter une décision structurante dans `site/docs/decisions/NNNN-titre.md` avec le contexte, la décision,

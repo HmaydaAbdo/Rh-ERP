@@ -1,5 +1,5 @@
-# Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers le
-# backend), Spring Boot (backend), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
+# Stack de production : nginx inner (frontend, sert Angular + reverse-proxy interne vers
+# l'API), API FastAPI (api), PostgreSQL 18 + pgvector. Nginx outer (TLS, point d'entrée
 # public) est géré séparément sur le serveur de déploiement, hors de ce fichier — voir
 # site/docs/exploitation/deploiement.md pour l'architecture complète et conventions/deployment.md pour le pattern
 # générique.
@@ -211,6 +211,7 @@ services:
       MAIL_FROM: ${MAIL_FROM}
       CHANTIER_SYNC_BASE_URL: ${CHANTIER_SYNC_BASE_URL}
       LOGGING_FORMAT: json
+      LOGGING_FILE_PATH: /app/logs
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: erp-rh-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
@@ -221,6 +222,11 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp
+    volumes:
+      # Journaux JSON archivés chaque jour, compressés, gardés 30 jours ; le dossier doit être inscriptible par l'uid 10001.
+      - type: bind
+        source: ./logs
+        target: /app/logs
     networks:
       - db-net
       - web-net
@@ -436,7 +442,7 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
-      # Authentification de chaque requête de l'assistant auprès de Spring (/auth/me), par le réseau runtime-auth-net.
+      # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
       ERP_API_URL: http://api:8080
       # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
       OTEL_SDK_DISABLED: "false"

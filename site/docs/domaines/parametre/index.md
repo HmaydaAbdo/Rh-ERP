@@ -32,10 +32,10 @@ Le backend garde les valeurs en mémoire sur son instance et les invalide après
 | `securite.lien-reinitialisation.minutes` | 60 minutes | Validité d'un lien de réinitialisation à usage unique ; de 5 à 1 440 minutes. |
 | `securite.mot-de-passe.longueur-minimale` | 10 caractères | Minimum à la création et lors des réinitialisations ; de 8 à 100. Les mots de passe existants ne changent pas. |
 | `paie.analytique.pas-tranche` | 500 DH | Pas et largeur minimale des tranches de répartition des salaires ; de 1 à 100 000 DH. |
-| `chantier.synchronisation.cron` | `0 0 23 * * *` | Cron Spring à six champs, secondes comprises ; planifie la synchronisation quotidienne à 23 h. |
+| `chantier.synchronisation.cron` | `0 0 23 * * *` | Expression cron à six champs, secondes comprises, lue en UTC ; planifie la synchronisation quotidienne à 23 h. Relue avant chaque exécution. |
 
 La définition complète (libellé, description, type et bornes) appartient à `CleParametre`. Une valeur entière est normalisée
-et bornée côté serveur. Une expression cron est validée par Spring. Une valeur invalide répond `400` et n'est pas enregistrée.
+et bornée côté serveur. Une expression cron est validée par APScheduler (jours de semaine par noms `MON` à `SUN` ou `*`, jamais en chiffres). Une valeur invalide répond `400` et n'est pas enregistrée.
 
 La saisie entière utilise des chiffres décimaux et un signe éventuel. La notation exponentielle (`1e2`),
 hexadécimale (`0x10`) ou une valeur composée seulement d'espaces est refusée, y compris à l'écran.
@@ -120,7 +120,7 @@ L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de l
 
 - [README Paramètres](index.md) : règles, catalogue, modèle, DTO et scénarios.
 - [Permissions](droits.md).
-- `conventions/configuration.md`, `conventions/jpa.md` et `conventions/audit.md`.
+- `conventions/configuration.md`, `site/docs/conventions/backend-python/persistance.md` et `conventions/audit.md`.
 
 ### Garde-fous
 
@@ -131,7 +131,7 @@ L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de l
   ne s'invalident qu'après validation de la transaction.
 - `PARAMETRE_READ` ouvre l'écran ; `PARAMETRE_WRITE` rend la saisie et l'enregistrement disponibles.
 - Aligner validation API et formulaire : entier décimal, bornes inclusives, valeur non blanche et
-  taille maximale de 255 caractères. Spring valide l'expression cron.
+  taille maximale de 255 caractères. Le serveur valide l'expression cron.
 - Chaque ligne garde son enregistrement indépendant ; ne pas écraser une saisie voisine lors d'un succès.
 
 ### Vérification

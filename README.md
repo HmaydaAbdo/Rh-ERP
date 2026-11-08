@@ -18,12 +18,12 @@ affectation fonction/chantier), **Paie** (bulletins mensuels, export Excel, rapp
 
 | Composant | Techno |
 |---|---|
-| Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA/Hibernate, Spring Security (JWT), MapStruct |
+| Backend | Python 3.14, FastAPI, Pydantic, SQLAlchemy 2 (asynchrone), Alembic, authentification par jetons JWT, serveur MCP FastMCP |
 | Base de données | PostgreSQL 18 + pgvector + pgAudit (migration logique depuis PostgreSQL 17 ; l'ancien volume reste conservé comme retour arrière) |
-| Migrations | [Flyway](https://flywaydb.org/) — voir `conventions/database.md` et [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
+| Migrations | [Flyway](https://flywaydb.org/) (V1 à V44, `api/src/staport/migrations/flyway_v44`) et [Alembic](https://alembic.sqlalchemy.org/) pour la suite — voir `conventions/database.md` et [`site/docs/architecture/modele-de-donnees.md`](site/docs/architecture/modele-de-donnees.md) |
 | Frontend | Angular 22.2.2 (standalone, OnPush, Signals, zoneless), kit Staport sur Angular Aria/CDK, Lucide, Tailwind CSS 4 ; tests Vitest et E2E Playwright |
-| Imports / exports | Apache POI (Excel), jsoup + openhtmltopdf + Batik (rapport PDF) |
-| Documentation API | springdoc-openapi (Swagger UI) |
+| Imports / exports | openpyxl (Excel), WeasyPrint (rapport PDF) |
+| Documentation API | OpenAPI générée par FastAPI (Swagger UI) |
 | Conteneurisation | Docker Compose de production (images publiées, pas de build local) — nginx inner sert le frontend et relaie les appels API au backend, voir [`site/docs/exploitation/deploiement.md`](site/docs/exploitation/deploiement.md) |
 
 ---
@@ -39,23 +39,24 @@ chaque changement) pendant que Docker ne fournit que la base de données :
 ```bash
 docker compose up -d postgres        # seule la base tourne en Docker (ports liés à 127.0.0.1)
 
-cd backend
-cp .env.example .env                 # adapter DB_HOST/DB_PORT si besoin
-./mvnw spring-boot:run
+cd api
+uv sync                              # dépendances Python (uv)
+uv run alembic upgrade head          # migrations (compte propriétaire de la base)
+# variables : voir .env.example à la racine et site/docs/exploitation/developpement-local.md
+# lancer le serveur : de préférence le conteneur `api` (Linux), voir site/docs/exploitation/developpement-local.md
 
 cd ../frontend
 npm install
 npm start                            # proxy vers http://localhost:8080 par défaut (proxy.conf.js)
 ```
 
-Frontend sur http://localhost:4200, backend (API ; Swagger UI sur `/swagger-ui.html` si activé, voir
-`backend/.env.example`) sur http://localhost:8080. Toutes les variables d'environnement sont décrites dans
+Frontend sur http://localhost:4200, API (documentation OpenAPI sur `/docs`) sur http://localhost:8080. Toutes les variables d'environnement sont décrites dans
 [`site/docs/exploitation/configuration.md`](site/docs/exploitation/configuration.md).
 
 ### Tests
 
 ```bash
-cd backend && ./mvnw test                                           # nécessite PostgreSQL (docker compose up -d postgres)
+cd api && uv run pytest                                              # PostgreSQL réel démarré par testcontainers (Docker requis)
 cd frontend && npm test                                             # tests frontend (Vitest)
 cd frontend && npm run e2e                                          # parcours E2E (Playwright)
 cd frontend && npx ng build --configuration production              # le bundle de production compile
@@ -109,13 +110,13 @@ docker compose down -v       # supprime aussi les données PostgreSQL
 ## Structure du dépôt
 
 ```
-backend/      API Spring Boot (staport.rh.<domaine> : auth, chantier, employee, equipe, function, paie, common)
+api/          API FastAPI (staport.domains.<domaine> : auth, chantier, employee, equipe, function, paie, heuresupp, audit, mcp…)
 frontend/     Application Angular (migration vers Angular Aria/CDK + composants Staport), nginx.conf (nginx de production)
 conventions/  Conventions du projet — source de vérité, génériques et réutilisables entre projets
 site/         Site de documentation (Docusaurus) : architecture, modèle de données, domaines, RBAC, IA, décisions, déploiement
 .github/workflows/  CI (tests + build + publication des images Docker)
 docker-compose.yml  Stack de production (images publiées uniquement, voir site/docs/exploitation/deploiement.md)
-backend/Dockerfile, frontend/Dockerfile
+api/Dockerfile, frontend/Dockerfile
 CLAUDE.md, AGENTS.md  Point d'entrée du projet et ordre de lecture des conventions (contenu identique)
 ```
 
@@ -152,10 +153,8 @@ les variables attendues :
 
 - [`.env.example`](.env.example) (racine) — variables du Compose de production (Postgres, ports,
   images Docker Hub, JWT/RBAC, SMTP).
-- [`backend/.env.example`](backend/.env.example) — variables backend pour un lancement local hors
-  Docker (connexion base, endpoint ERP).
 
-Copier chacun en `.env` (jamais commité, voir `.gitignore`) et renseigner de vraies valeurs. Catalogue
+Copier-le en `.env` (jamais commité, voir `.gitignore`) et renseigner de vraies valeurs. Catalogue
 complet : [`site/docs/exploitation/configuration.md`](site/docs/exploitation/configuration.md).
 
 ---
@@ -182,7 +181,7 @@ la première fois, puis changer le mot de passe via l'UI.
 
 ## État du projet
 
-- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [site/docs/domaines/audit/index.md](site/docs/domaines/audit/index.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
+- L'audit (historique des entités par écouteurs de session SQLAlchemy + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [site/docs/domaines/audit/index.md](site/docs/domaines/audit/index.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
 - Domaine Pointage non construit : KAN-171.
 - Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-177 et KAN-160.
 
