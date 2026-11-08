@@ -48,6 +48,11 @@ dev = [
     "psutil>=7.2.2",
 ]
 
+[tool.uv]
+# litellm borne filelock à < 4.0 alors que les 13 avis publiés (OSV, dont GHSA-v4x8-3wr5-3wq8) ne sont corrigés qu'en 4.x ;
+# l'API de FileLock est identique. À retirer quand litellm lève la borne.
+override-dependencies = ["filelock>=4.2.1"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
