@@ -75,7 +75,7 @@ dans le projet et jamais à la main : saisie d'un formulaire, API, import Excel,
 fois, au bord du système, par le type partagé du schéma (`Montant`, `common/montant.py` côté API) avant les
 contraintes (positif ou nul, borne maximale, nombre de chiffres). Un montant n'est donc jamais refusé pour avoir trop de
 décimales ; il l'est s'il est négatif ou hors capacité. Une exception est une règle métier écrite et décidée par le
-propriétaire (par exemple les montants entiers des heures supplémentaires, V43 et V44), jamais un oubli. Les
+propriétaire, jamais un oubli (les montants entiers des heures supplémentaires, V43 et V44, ont été retirés par la révision `0003`, KAN-239 : plus aucune exception). Les
 quantités (jours, heures) ne sont pas des montants : elles ne sont pas arrondies.
 
 ## Décisions d'architecture

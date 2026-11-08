@@ -31,7 +31,7 @@ from .schemas import (
 ENTITE = "HeureSupp"
 DEFINITIONS = Definitions(
     heures="Somme des P/H du mois, en heures décimales.",
-    montant_dh="Somme de S/H × P/H, chaque ligne arrondie à l'entier de dirham (HALF_DOWN).",  # noqa: RUF001
+    montant_dh="Somme de S/H × P/H, chaque ligne arrondie à deux décimales.",  # noqa: RUF001
     stc_dh="Somme du Montant pour les bulletins du même mois marqués exactement STC ou sortie.",
     forfait_dh="Somme des forfaits saisis séparément des heures ; interdit pour un employé STC/sortie.",
     net_a_payer_dh="Somme de Montant − STC (DH) + Forfait.",  # noqa: RUF001

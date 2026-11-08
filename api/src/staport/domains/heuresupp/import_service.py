@@ -138,8 +138,8 @@ def _verifier_forfait(d: _Dossier) -> None:
         return
     if d.stc_ou_sortie:
         d.erreurs.append("le forfait est interdit car la paie du même mois est marquée STC/sortie.")
-    if d.forfait is None or d.forfait < 0 or d.forfait != d.forfait.to_integral_value():
-        d.erreurs.append("le forfait doit être un montant en DH entier de dirhams, positif ou nul (sans décimales).")
+    if d.forfait is None or d.forfait < 0:
+        d.erreurs.append("le forfait doit être un montant en DH positif ou nul.")
 
 
 async def _dossiers(

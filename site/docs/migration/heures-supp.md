@@ -15,8 +15,8 @@ lots couvrent les lignes, leur analytique et l'assistant d'import Excel ; l'expo
 | `DELETE /heures-supp/{id}` | `HEURES_SUP_DELETE` + `PAIE_READ` |
 | `POST /heures-supp/suppression-mois` | `HEURES_SUP_PURGE` + `PAIE_READ` |
 
-Règles reprises à l'identique : S/H = salaire journalier / 10 ou salaire mensuel / 260 arrondi à l'entier (HALF_DOWN,
-un demi descend), montant = S/H × P/H arrondi de même, STC = montant pour un bulletin du mois marqué exactement
+Règles reprises à l'identique : S/H = salaire journalier / 10 ou salaire mensuel / 260 arrondi à deux décimales
+(demi supérieur, règle commune `arrondir_montant` ; l'ancien arrondi à l'entier est retiré, KAN-239), montant = S/H × P/H arrondi de même, STC = montant pour un bulletin du mois marqué exactement
 « STC » ou « sortie », net = montant − STC + forfait. Les refus de saisie sont des 400 (y compris « ligne
 introuvable » et version périmée, comme `HeuresSuppImportException`) ; le décompte périmé d'une suppression de mois
 est un 409. Les quatre écritures sont auditées (`HEURES_SUP_CREATION_UNITAIRE`, `_MODIFICATION`, `_SUPPRESSION`,
