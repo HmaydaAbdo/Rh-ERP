@@ -130,16 +130,16 @@ Index complet et glossaire : [`docs/README.md`](docs/README.md).
 | Vue d'ensemble, dépendances entre domaines, flux d'une requête | [`docs/architecture.md`](docs/architecture.md) |
 | Schéma de base, contraintes, migrations | [`docs/data-model.md`](docs/data-model.md) |
 | Variables d'environnement et démarrage | [`docs/configuration.md`](docs/configuration.md) |
-| Imports Excel (règles communes) | [`docs/imports.md`](docs/imports.md) |
-| Authentification, comptes, rôles | [`docs/auth/README.md`](docs/auth/README.md) |
-| Permissions par endpoint et par écran | [`docs/rbac/README.md`](docs/rbac/README.md) |
+| Imports Excel (règles communes) | [`site/docs/domaines/imports.md`](site/docs/domaines/imports.md) |
+| Authentification, comptes, rôles | [`site/docs/domaines/auth/index.md`](site/docs/domaines/auth/index.md) |
+| Permissions par endpoint et par écran | [`site/docs/domaines/rbac/index.md`](site/docs/domaines/rbac/index.md) |
 | Interface (routes, guards, composants, tableaux) | [`docs/frontend/README.md`](docs/frontend/README.md) |
 | Tests | [`docs/testing.md`](docs/testing.md) |
 | Déploiement (Docker, nginx, CI, backup) | [`docs/deployment.md`](docs/deployment.md) |
 
-Par domaine : [fonctions](docs/function/README.md) · [chantiers](docs/chantier/README.md) ·
-[équipes](docs/equipe/README.md) · [employés](docs/employee/README.md) · [paie](docs/paie/README.md) ·
-[export Excel et rapport PDF](docs/report/README.md).
+Par domaine : [fonctions](site/docs/domaines/function/index.md) · [chantiers](site/docs/domaines/chantier/index.md) ·
+[équipes](site/docs/domaines/equipe/index.md) · [employés](site/docs/domaines/employee/index.md) · [paie](site/docs/domaines/paie/index.md) ·
+[export Excel et rapport PDF](site/docs/domaines/rapport/index.md).
 
 ---
 
@@ -166,7 +166,7 @@ Authentification par JWT (jeton d'accès de 15 minutes en mémoire, jeton de raf
 cookie `httpOnly`, rotation à usage unique avec révocation de toute la session en cas de réutilisation) avec
 RBAC dynamique : 24 permissions fixes, rôles administrables via l'UI (`/admin/roles`, `/admin/users`), refus
 individuels prioritaires sur les rôles. Chaque écran et chaque bouton d'action est conditionné par une
-permission. Détail : [`docs/auth/README.md`](docs/auth/README.md) et [`docs/rbac/README.md`](docs/rbac/README.md).
+permission. Détail : [`site/docs/domaines/auth/index.md`](site/docs/domaines/auth/index.md) et [`site/docs/domaines/rbac/index.md`](site/docs/domaines/rbac/index.md).
 
 Au premier démarrage, un compte `SYSTEM_ADMIN` est créé automatiquement depuis
 `ADMIN_USERNAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (voir `.env.example`) — à utiliser pour se connecter
@@ -176,13 +176,13 @@ la première fois, puis changer le mot de passe via l'UI.
 
 - Les fichiers Excel **ajoutent** des données (fonctions, employés, bulletins) ; ils ne modifient jamais
   l'existant. Toute modification se fait depuis l'interface. Import atomique : une ligne invalide rejette tout le
-  fichier ([`docs/imports.md`](docs/imports.md)).
+  fichier ([`site/docs/domaines/imports.md`](site/docs/domaines/imports.md)).
 - La synchronisation des chantiers avec l'ERP **ajoute** les chantiers manquants, sans rien modifier.
 - La paie **n'est pas calculée** : le total est saisi ou importé tel quel.
 
 ## État du projet
 
-- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [docs/audit/README.md](docs/audit/README.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
+- L'audit (Hibernate Envers + journal unique + événements de sécurité et consultations métier HTTP) est en place : voir [site/docs/domaines/audit/index.md](site/docs/domaines/audit/index.md). Les options restantes et leurs déclencheurs sont suivies dans Jira (projet `KAN`).
 - Domaine Pointage non construit : KAN-171.
 - Prochaine tâche d'exploitation : qualité des données (tous champs obligatoires, aucun doublon) : KAN-177 et KAN-160.
 

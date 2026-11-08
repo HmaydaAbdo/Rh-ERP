@@ -1,12 +1,12 @@
 // Contrôle doc ↔ code des domaines : chaque permission d'un routeur FastAPI et chaque outil MCP de l'API doit figurer dans la
-// documentation de son domaine (README du domaine ou catalogue RBAC). Une permission ou un outil ajouté sans documentation
-// fait échouer le contrôle, pour que README et skills restent la source de lecture fiable (AGENTS.md, « synchronisés »).
+// documentation de son domaine (page du domaine, droits ou contrats sur le site). Une permission ou un outil ajouté sans documentation
+// fait échouer le contrôle, pour que pages de domaine et guides agent restent la source de lecture fiable (AGENTS.md, « synchronisés »).
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const racine = resolve(process.argv[2] ?? '.');
 const source = join(racine, 'api/src/staport/domains');
-const docs = join(racine, 'docs');
+const docs = join(racine, 'site/docs/domaines');
 
 // Dossier du domaine Python → dossier de documentation.
 const domaines = {
@@ -51,7 +51,7 @@ function lire(chemin) {
 }
 
 function documentation(domaine) {
-  return lire(join(docs, domaine, 'README.md')) + lire(join(docs, 'rbac', `${domaine}.md`)) + lire(join(docs, domaine, 'contrats.md'));
+  return lire(join(docs, domaine, 'index.md')) + lire(join(docs, domaine, 'droits.md')) + lire(join(docs, domaine, 'contrats.md'));
 }
 
 const manques = [];
@@ -66,7 +66,7 @@ for (const [dossier, doc] of Object.entries(domaines)) {
     }
   }
   for (const permission of permissions) {
-    if (!texte.includes(permission)) manques.push(`permission ${permission} (api/${dossier}) absente de docs/${doc}`);
+    if (!texte.includes(permission)) manques.push(`permission ${permission} (api/${dossier}) absente de site/docs/domaines/${doc}`);
   }
 }
 
@@ -77,7 +77,7 @@ for (const f of fichiers(join(source, 'mcp'), (chemin) => chemin.endsWith('.py')
     if (!domaine) {
       manques.push(`outil MCP ${nom} : préfixe sans domaine documenté (scripts/check-docs-domaines.mjs)`);
     } else if (!documentation(domaine).includes(nom)) {
-      manques.push(`outil MCP ${nom} absent de docs/${domaine}`);
+      manques.push(`outil MCP ${nom} absent de site/docs/domaines/${domaine}`);
     }
   }
 }

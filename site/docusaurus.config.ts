@@ -29,6 +29,8 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   markdown: {
+    // Les .md restent du Markdown standard (les < et { du texte repris ne sont pas du JSX) ; seuls les .mdx sont du MDX.
+    format: 'detect',
     mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'throw',
