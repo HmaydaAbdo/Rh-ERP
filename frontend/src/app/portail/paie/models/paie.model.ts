@@ -306,9 +306,18 @@ export interface PaieImportAnalyse {
   retours: { employeId: number; cin: string; nomPrenom: string }[];
   /** Période du mois en cours ou à venir, ou fichier déjà importé sous un autre mois : à confirmer pour importer. */
   controlesPeriode: PaieImportControlePeriode[];
+  /** Fonctions du fichier absentes du référentiel : l'import les crée (droit FUNCTION_WRITE). */
+  fonctionsACreer?: PaieImportFonctionACreer[];
+  /** Chantiers clôturés cités par le fichier : l'import les rouvre (droit CHANTIER_WRITE). */
+  chantiersARouvrir?: { chantierId: number; code: string; designation: string | null; lignes: number[] }[];
   /** Mois déjà importé, ou plus ancien que la dernière paie : importer est impossible, un seul message. */
   blocagesPeriode: PaieImportControlePeriode[];
   pret: boolean;
+}
+
+export interface PaieImportFonctionACreer {
+  libelle: string;
+  lignes: number[];
 }
 
 export interface PaieImportControlePeriode {
@@ -335,6 +344,8 @@ export interface PaieImportResult {
   crees: number;
   departs: number;
   retours: number;
+  fonctionsCreees?: number;
+  chantiersRouverts?: number;
 }
 
 /** Corps de POST /paie/report/pdf — rapport BI RH/Paie (voir site/docs/domaines/rapport/index.md), pas un export

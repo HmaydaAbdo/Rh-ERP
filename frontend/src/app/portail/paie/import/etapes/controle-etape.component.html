@@ -22,6 +22,21 @@
       </p>
     }
 
+    @if ((analyse.fonctionsACreer ?? []).length > 0 || (analyse.chantiersARouvrir ?? []).length > 0) {
+      <div class="app-controle__auto" role="status">
+        <stp-icon name="circle-check" />
+        <div>
+          <strong>À l'import, sans rien à faire de votre part</strong>
+          @if ((analyse.fonctionsACreer ?? []).length > 0) {
+            <p>{{ (analyse.fonctionsACreer ?? []).length }} fonction(s) inconnue(s) seront créées : {{ nomsFonctions() }}.</p>
+          }
+          @if ((analyse.chantiersARouvrir ?? []).length > 0) {
+            <p>{{ (analyse.chantiersARouvrir ?? []).length }} chantier(s) clôturé(s) seront rouverts : {{ codesChantiers() }}.</p>
+          }
+        </div>
+      </div>
+    }
+
     @if (store.categories().length > 0) {
       <ol class="app-controle__fil" aria-label="Catégories de problèmes">
         @for (categorie of store.categories(); track categorie.cle) {
@@ -56,19 +71,24 @@
       @if (analyse.erreurs.length > seuilGroupes) {
         <p class="app-wizard__legende">Les erreurs sont regroupées par type : ouvrez un groupe pour voir chaque ligne.</p>
         <ul class="app-controle__cartes">
-          @for (groupe of groupesErreurs(); track groupe.champ) {
+          @for (groupe of groupesErreurs(); track groupe.cle) {
             <li class="app-controle__carte">
               <div class="app-controle__qui">
                 <strong>{{ groupe.libelle }} <span class="app-wizard__nombre">{{ groupe.erreurs.length }}</span></strong>
                 <span>Exemple, ligne {{ groupe.exemple.numeroLigne }} : {{ groupe.exemple.raison }}</span>
+                @if (groupe.valeurs.length > 0) {
+                  <span>Valeurs reçues : {{ groupe.valeurs.join(', ') }}@if (groupe.erreurs.length > groupe.valeurs.length) { … }</span>
+                }
               </div>
               <div class="app-controle__saisie">
-                <button stp-button variant="secondary" type="button" [attr.aria-expanded]="groupeOuvert(groupe.champ)" (click)="basculerGroupe(groupe.champ)">{{ groupeOuvert(groupe.champ) ? 'Masquer le détail' : 'Voir le détail' }}</button>
+                <button stp-button variant="secondary" type="button" [attr.aria-expanded]="groupeOuvert(groupe.cle)" (click)="basculerGroupe(groupe.cle)">{{ groupeOuvert(groupe.cle) ? 'Masquer le détail' : 'Voir le détail' }}</button>
               </div>
-              @if (groupeOuvert(groupe.champ)) {
+              @if (groupeOuvert(groupe.cle)) {
+                <div class="app-controle__detail">
                 <stp-table [label]="'Erreurs : ' + groupe.libelle" [value]="groupe.erreurs" [columns]="colonnesErreurs" [paginated]="groupe.erreurs.length > 50" [reorderable]="false" [rowActionsVisible]="false">
                   <ng-template stpCell let-erreur let-col="col">{{ erreur[col.field] ?? '—' }}</ng-template>
                 </stp-table>
+                </div>
               }
             </li>
           }

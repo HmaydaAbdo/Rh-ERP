@@ -37,7 +37,7 @@ VIDE = Ligne(scalar_one_or_none=lambda: None, scalar_one=lambda: None, scalars=l
 async def test_ignorer_salaire_zero_ne_confirme_pas_un_changement_de_salaire(monkeypatch: pytest.MonkeyPatch) -> None:
     service = ServiceImportPaie(cast(Auditeur, object()))
 
-    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int) -> PaieImportAnalyse:
+    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int, **_droits: bool) -> PaieImportAnalyse:
         return PaieImportAnalyse(
             periode=202610,
             total_lignes=2,
@@ -259,7 +259,7 @@ async def test_import_met_a_jour_les_affectations_sans_supprimer_une_equipe_abse
     session = SessionImport()
     service = ServiceImportPaie(AuditeurJournal())
 
-    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int) -> PaieImportAnalyse:
+    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int, **_droits: bool) -> PaieImportAnalyse:
         return PaieImportAnalyse(
             periode=202610,
             total_lignes=2,
@@ -321,7 +321,7 @@ async def test_importer_refuse_une_periode_non_confirmee_et_l_accepte_confirmee(
 ) -> None:
     service = ServiceImportPaie(cast(Auditeur, object()))
 
-    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int) -> PaieImportAnalyse:
+    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int, **_droits: bool) -> PaieImportAnalyse:
         return PaieImportAnalyse(
             periode=202611,
             total_lignes=0,
@@ -434,7 +434,7 @@ def test_un_mois_deja_importe_ou_anterieur_au_dernier_est_bloque_une_seule_fois(
 async def test_importer_refuse_un_mois_bloque_meme_confirme(monkeypatch: pytest.MonkeyPatch) -> None:
     service = _service()
 
-    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int) -> PaieImportAnalyse:
+    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int, **_droits: bool) -> PaieImportAnalyse:
         return PaieImportAnalyse(
             periode=202610,
             total_lignes=0,
