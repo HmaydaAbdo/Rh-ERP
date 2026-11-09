@@ -8,7 +8,8 @@ import { DateInputComponent } from '../../../../shared/ui/date-input/date-input.
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { SelectComponent } from '../../../../shared/ui/select/select.component';
 import { TypeSalaire } from '../../../employee/models/employee.model';
-import { PaieImportChamp, PaieImportErreur } from '../../models/paie.model';
+import { PaieImportChamp, PaieImportEcart, PaieImportErreur } from '../../models/paie.model';
+import { sousCategoriesAvertissements } from '../paie-import-categories';
 import { fichierChoisi, PaieImportStore } from '../paie-import.store';
 
 const LIBELLES_CHAMPS: Record<PaieImportChamp, string> = {
@@ -87,6 +88,27 @@ export class PaieImportEtapeControleComponent {
   protected readonly typesSalaire = TYPES_SALAIRE;
   protected readonly seuilGroupes = SEUIL_GROUPES;
   private readonly groupesOuverts = signal<string[]>([]);
+  /** La liste complète des lignes de la sous-étape est dépliée. */
+  protected readonly listeOuverte = signal(false);
+
+  /** Les points à confirmer rangés par motif (équipe vide, salaire différent, salaire nul). */
+  protected readonly sousAvertissements = computed(() => sousCategoriesAvertissements(this.store.analyse()?.avertissements ?? []));
+
+  /** Numéro du cas affiché : les cas réglés ont disparu de la liste, donc total plus haut moins restants plus un. */
+  protected position(cle: string, restants: number): number {
+    return Math.max(1, (this.store.totauxCas()[cle] ?? restants) - restants + 1);
+  }
+
+  protected idsEcarts(ecarts: PaieImportEcart[]): number[] {
+    return ecarts.map((e) => e.employeId);
+  }
+
+  /** Une ligne pour la liste : « Chantier C168 → C057 · Équipe — → TER ». */
+  protected resume(ecart: PaieImportEcart): string {
+    return ecart.champs
+      .map((c) => `${LIBELLES_CHAMPS[c.champ]} ${this.valeur(c.champ, c.base)} → ${this.valeur(c.champ, c.fichier)}`)
+      .join(' · ');
+  }
 
   /** Les erreurs du fichier par type (champ en cause), du plus fréquent au moins fréquent. */
   protected readonly groupesErreurs = computed<GroupeErreurs[]>(() => {
@@ -105,11 +127,6 @@ export class PaieImportEtapeControleComponent {
       }))
       .sort((a, b) => b.erreurs.length - a.erreurs.length);
   });
-
-  protected readonly nomsFonctions = computed(() =>
-    (this.store.analyse()?.fonctionsACreer ?? []).map((f) => `${f.libelle} (${f.lignes.length} ligne(s))`).join(', ')
-  );
-  protected readonly codesChantiers = computed(() => (this.store.analyse()?.chantiersARouvrir ?? []).map((c) => c.code).join(', '));
 
   protected readonly avertissementsRegles = computed(
     () => this.store.categories().find((c) => c.cle === 'avertissements')?.nombre === 0
