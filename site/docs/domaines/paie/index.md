@@ -87,9 +87,14 @@ règles détaillées suivent dans les sections suivantes.
 - **Import.** L'assistant analyse le fichier, signale les problèmes (chantiers clôturés avec « Rouvrir le chantier »,
   références Fonction/Chantier/Équipe inconnues, fiches à corriger, départs à confirmer), applique les corrections des fiches puis importe.
   **Le mois se choisit librement** (le frontend propose le mois civil précédent : la RH importe en novembre la paie d'octobre).
-  Une période égale ou postérieure au mois civil en cours, ou un fichier dont au moins 90 % des bulletins sont identiques à ceux
-  d'un des trois derniers autres mois (même fichier importé deux fois), demande une **confirmation explicite** (`controlesPeriode`
-  dans l'analyse, champ `periode_confirmee` à l'import, vérifié aussi par le serveur).
+  Une période égale ou postérieure au mois civil en cours, un rattrapage d'un mois plus ancien que l'attendu, des mois sautés
+  depuis la dernière paie, ou un fichier dont au moins 90 % des bulletins sont identiques à ceux d'un des trois derniers autres
+  mois (même fichier importé deux fois), demande une **confirmation explicite** (`controlesPeriode` dans l'analyse, champ
+  `periode_confirmee` à l'import, vérifié aussi par le serveur). Un mois qui a déjà des bulletins, ou plus ancien que la dernière
+  paie importée, est **bloqué** par un seul message (`blocagesPeriode`).
+  Le contrôle se déroule **catégorie par catégorie**, dans l'ordre des dépendances (mois impossible, période, erreurs du fichier,
+  chantiers clôturés, CIN sans fiche, fiches différentes, avertissements) : la suivante s'ouvre quand la précédente est réglée, et
+  les erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).
 - **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
   d'export, formulaire de bulletin, parcours d'un employé.

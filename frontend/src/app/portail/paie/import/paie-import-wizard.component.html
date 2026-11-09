@@ -120,10 +120,10 @@
             <span class="app-wizard__indice">Choisissez le fichier pour lancer l'analyse.</span>
           }
           @case ('controle') {
-            @if (!store.pret()) {
-              <span class="app-wizard__indice">Réglez chaque problème pour continuer.</span>
+            @if (!store.controleTermine()) {
+              <span class="app-wizard__indice">Réglez chaque catégorie de problèmes pour continuer.</span>
             }
-            <button stp-button icon="arrow-right" type="button" [disabled]="!store.pret() || store.occupe()" (click)="store.suivant()">Continuer</button>
+            <button stp-button icon="arrow-right" type="button" [disabled]="!store.controleTermine() || store.occupe()" (click)="store.suivant()">Continuer</button>
           }
           @case ('departs') {
             @if (!store.departsValides()) {

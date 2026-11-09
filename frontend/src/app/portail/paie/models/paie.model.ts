@@ -306,11 +306,19 @@ export interface PaieImportAnalyse {
   retours: { employeId: number; cin: string; nomPrenom: string }[];
   /** Période du mois en cours ou à venir, ou fichier déjà importé sous un autre mois : à confirmer pour importer. */
   controlesPeriode: PaieImportControlePeriode[];
+  /** Mois déjà importé, ou plus ancien que la dernière paie : importer est impossible, un seul message. */
+  blocagesPeriode: PaieImportControlePeriode[];
   pret: boolean;
 }
 
 export interface PaieImportControlePeriode {
-  code: 'PERIODE_COURANTE_OU_FUTURE' | 'CONTENU_DEJA_IMPORTE';
+  code:
+    | 'PERIODE_COURANTE_OU_FUTURE'
+    | 'MOIS_HORS_CYCLE'
+    | 'MOIS_SAUTE'
+    | 'CONTENU_DEJA_IMPORTE'
+    | 'MOIS_DEJA_IMPORTE'
+    | 'MOIS_ANTERIEUR_AU_DERNIER';
   message: string;
   periodeReference: string | null;
 }
