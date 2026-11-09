@@ -57,7 +57,6 @@ COLONNES = (
     ("Employé", ""),
     ("CIN", ""),
     ("Fonction", ""),
-    ("Salaire réf.", "num"),
     ("S/H", "num"),
     ("P/H", "num"),
     ("Montant", "num"),
@@ -70,10 +69,7 @@ LIBELLE_EMARGEMENT = {"signature": "Signature", "signature_empreinte": "Signatur
 
 def _cellule_emargement(mode: str) -> str:
     if mode == "signature_empreinte":
-        return (
-            '<td class="emargement signature_empreinte">'
-            '<div class="zone-signature"></div><div class="zone-empreinte"></div></td>'
-        )
+        return '<td class="emargement signature_empreinte"></td>'
     return '<td class="emargement signature"></td>'
 
 
@@ -180,7 +176,6 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + _td(ligne.nom_prenom)
             + _td(ligne.cin)
             + _td(ligne.fonction)
-            + _td(nombre(ligne.salaire_reference_dh, 2), "num")
             + _td(nombre(ligne.salaire_horaire_dh, 0), "num")
             + _td(nombre(ligne.heures_supplementaires, 1), "num")
             + _td(nombre(ligne.montant_dh, 0), "num")
@@ -195,7 +190,7 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
     corps.append(
         '<tr class="total">'
         + f'<td colspan="3">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
-        + '<td class="num"></td><td class="num"></td>'
+        + '<td class="num"></td>'
         + _td(nombre(heures, 1), "num")
         + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 0), "num")
         + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero), 0), "num")
