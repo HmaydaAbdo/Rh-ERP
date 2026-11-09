@@ -460,6 +460,8 @@ class PaieImportAnalyse(ModeleApi):
     ecarts: list[PaieImportEcart]
     departs: list[PaieImportDepart]
     retours: list[PaieImportRetour]
+    fonctions_a_creer: list[PaieImportFonctionACreer] = Field(default_factory=lambda: [])
+    chantiers_a_rouvrir: list[PaieImportChantierCloture] = Field(default_factory=lambda: [])
     controles_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
     blocages_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
     pret: bool
@@ -514,6 +516,13 @@ class PaieImportChantierCloture(ModeleApi):
     lignes: list[int]
 
 
+class PaieImportFonctionACreer(ModeleApi):
+    """Fonction citée par le fichier et absente du référentiel : créée par l'import pour qui a `FUNCTION_WRITE`."""
+
+    libelle: str
+    lignes: list[int]
+
+
 class PaieImportCinInconnu(ModeleApi):
     numero_ligne: int
     cin: str
@@ -561,3 +570,5 @@ class PaieImportResult(ModeleApi):
     crees: int
     departs: int
     retours: int
+    fonctions_creees: int = 0
+    chantiers_rouverts: int = 0

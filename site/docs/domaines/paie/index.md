@@ -310,15 +310,19 @@ reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `Lecteu
 
 | Sorte | Exemples | Se règle |
 |---|---|---|
-| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier inconnu ; équipe inconnue ; bulletin déjà présent pour l'employé ce mois-ci | Dans le fichier, puis réimport |
-| **Chantier clôturé** | Une ou plusieurs lignes citent un chantier clôturé (le message liste les lignes) | Ici : « Rouvrir le chantier » (droits `CHANTIER_READ` et `CHANTIER_WRITE`), le fichier est réanalysé tel quel — ou corriger le chantier dans le fichier |
+| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier introuvable ; équipe introuvable ; fonction introuvable pour qui n'a pas `FUNCTION_WRITE` | Dans le fichier, puis réimport. Les groupes d'erreurs disent le problème exact (« Chantier introuvable », « Chantier clôturé », « Fonction introuvable ») |
+| **Chantier clôturé** | Une ou plusieurs lignes citent un chantier clôturé (le message liste les lignes). **Avec `CHANTIER_WRITE`, ce n'est plus un problème** : l'analyse l'annonce (`chantiersARouvrir`) et l'import le rouvre dans sa transaction | Sans `CHANTIER_WRITE` : « Rouvrir le chantier » ici (droits `CHANTIER_READ` et `CHANTIER_WRITE`), le fichier est réanalysé tel quel — ou corriger le chantier dans le fichier |
 | **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 
 Le **type de salaire** (mensuel ou journalier) n'est pas dans le fichier : quand le salaire change, l'assistant propose
 celui de la fiche ; il est obligatoire si la fiche n'en a pas encore. Pour la migration Python,
-une **fonction**, un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent
-l'import ; aucune de ces références n'est créée par la Paie.
+un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent l'import (les chantiers viennent de
+l'ERP, les équipes ont leur propre domaine). Une **fonction** inconnue est **créée par l'import** pour qui a `FUNCTION_WRITE`
+(`fonctionsACreer` dans l'analyse, qui n'écrit rien ; libellé tel que dans le fichier, 100 caractères au plus) ; de même, un
+chantier clôturé est **rouvert par l'import** pour qui a `CHANTIER_WRITE` (`chantiersARouvrir`). Les deux opérations ont lieu
+dans la transaction de l'import, sont tracées dans le journal d'audit (`fonctions_creees`, `chantiers_rouverts`) et comptées
+dans le bilan. Sans le droit, le comportement est le blocage décrit ci-dessus.
 Les corrections demandent `PAIE_IMPORT`, `EMPLOYEE_WRITE` et `PAIE_READ` ; sans `EMPLOYEE_WRITE`, l'assistant n'offre que de
 corriger le fichier.
 

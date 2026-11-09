@@ -32,6 +32,7 @@ from .schemas import (
     PaieImportDeparts,
     PaieImportEcart,
     PaieImportErreur,
+    PaieImportFonctionACreer,
     PaieImportResult,
     PaieImportRetour,
 )
@@ -284,8 +285,20 @@ class ServiceImportPaie:
                 )
         return None
 
-    async def analyser(self, session: AsyncSession, contenu: bytes, periode: int) -> PaieImportAnalyse:
+    async def analyser(
+        self,
+        session: AsyncSession,
+        contenu: bytes,
+        periode: int,
+        *,
+        rouvrir_chantiers: bool = False,
+        creer_fonctions: bool = False,
+    ) -> PaieImportAnalyse:
+        """Analyse sans écriture. Avec `rouvrir_chantiers` / `creer_fonctions` (droits CHANTIER_WRITE / FUNCTION_WRITE),
+        un chantier clôturé et une fonction inconnue ne bloquent plus : l'import les rouvre et les crée."""
         erreurs: list[PaieImportErreur] = []
+        fonctions_a_creer: dict[str, PaieImportFonctionACreer] = {}
+        chantiers_a_rouvrir: dict[int, PaieImportChantierCloture] = {}
         avertissements: list[PaieImportErreur] = []
         cins_vus: set[str] = set()
         clotures: dict[int, PaieImportChantierCloture] = {}
@@ -346,7 +359,12 @@ class ServiceImportPaie:
             chantier = str(ligne[11]).strip() if len(ligne) > 11 and ligne[11] is not None else None
             equipe = str(ligne[12]).strip() if len(ligne) > 12 and ligne[12] is not None else None
             observation = str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None
-            for champ, valeur, limite in (("nomPrenom", nom, 150), ("cin", cin, 30), ("observation", observation, 255)):
+            for champ, valeur, limite in (
+                ("nomPrenom", nom, 150),
+                ("cin", cin, 30),
+                ("fonction", fonction, 100),
+                ("observation", observation, 255),
+            ):
                 if valeur is not None and len(valeur) > limite:
                     erreurs.append(
                         PaieImportErreur(
@@ -396,7 +414,12 @@ class ServiceImportPaie:
                 cins_vus.add(cle_cin)
             if cin and cin.upper() in employees and employees[cin.upper()].id in employes_avec_bulletin:
                 lignes_existantes += 1  # signalé une seule fois pour le mois (MOIS_DEJA_IMPORTE), pas ligne par ligne
-            if fonction and fonction.upper() not in fonctions:
+            if fonction and fonction.upper() not in fonctions and creer_fonctions and len(fonction) <= 100:
+                a_creer = fonctions_a_creer.setdefault(
+                    fonction.upper(), PaieImportFonctionACreer(libelle=fonction, lignes=[])
+                )
+                a_creer.lignes.append(numero)
+            elif fonction and fonction.upper() not in fonctions and len(fonction) <= 100:
                 erreurs.append(
                     PaieImportErreur(
                         numero_ligne=numero,
@@ -420,24 +443,26 @@ class ServiceImportPaie:
                 )
             elif chantier and not chantiers[chantier.upper()].actif:
                 chantier_entite = chantiers[chantier.upper()]
-                if chantier_entite.id not in clotures:
-                    clotures[chantier_entite.id] = PaieImportChantierCloture(
+                cible = chantiers_a_rouvrir if rouvrir_chantiers else clotures
+                if chantier_entite.id not in cible:
+                    cible[chantier_entite.id] = PaieImportChantierCloture(
                         chantier_id=chantier_entite.id,
                         code=chantier_entite.code,
                         designation=chantier_entite.designation,
                         lignes=[],
                     )
-                clotures[chantier_entite.id].lignes.append(numero)
-                erreurs.append(
-                    PaieImportErreur(
-                        numero_ligne=numero,
-                        cin=cin,
-                        nom_prenom=nom,
-                        champ="chantier",
-                        valeur=chantier,
-                        raison="chantier clôturé : rouvrir le chantier avant l'import",
+                cible[chantier_entite.id].lignes.append(numero)
+                if not rouvrir_chantiers:
+                    erreurs.append(
+                        PaieImportErreur(
+                            numero_ligne=numero,
+                            cin=cin,
+                            nom_prenom=nom,
+                            champ="chantier",
+                            valeur=chantier,
+                            raison="chantier clôturé : rouvrir le chantier avant l'import",
+                        )
                     )
-                )
             if equipe and equipe.upper() not in equipes:
                 erreurs.append(
                     PaieImportErreur(
@@ -678,6 +703,8 @@ class ServiceImportPaie:
             erreurs=erreurs,
             avertissements=avertissements,
             chantiers_clotures=list(clotures.values()),
+            fonctions_a_creer=list(fonctions_a_creer.values()),
+            chantiers_a_rouvrir=list(chantiers_a_rouvrir.values()),
             cin_inconnus=cin_inconnus,
             ecarts=ecarts,
             departs=departs,
@@ -696,8 +723,13 @@ class ServiceImportPaie:
         departs_confirmes: PaieImportDeparts,
         decisions_equipe: PaieImportDecisionsEquipe | None = None,
         periode_confirmee: bool = False,
+        *,
+        rouvrir_chantiers: bool = False,
+        creer_fonctions: bool = False,
     ) -> PaieImportResult:
-        analyse = await self.analyser(session, contenu, periode)
+        analyse = await self.analyser(
+            session, contenu, periode, rouvrir_chantiers=rouvrir_chantiers, creer_fonctions=creer_fonctions
+        )
         decisions = {d.employe_id: d.action for d in (decisions_equipe or PaieImportDecisionsEquipe()).decisions}
         avertissements_non_confirmes = [
             avertissement
@@ -749,6 +781,9 @@ class ServiceImportPaie:
             fonctions = {x.libelle.strip().upper(): x.id for x in (await session.execute(select(Fonction))).scalars()}
             chantiers = {x.code.strip().upper(): x.id for x in (await session.execute(select(Chantier))).scalars()}
             equipes = {x.code.strip().upper(): x.id for x in (await session.execute(select(Equipe))).scalars()}
+            await self._preparer_referentiels(
+                session, analyse.fonctions_a_creer, analyse.chantiers_a_rouvrir, fonctions
+            )
             employes_mis_a_jour = 0
             retours_cins = {retour.cin.strip().upper() for retour in analyse.retours}
             for _, ligne in lignes:
@@ -833,19 +868,51 @@ class ServiceImportPaie:
             audit_import.perimetre["employes_mis_a_jour"] = employes_mis_a_jour
             audit_import.perimetre["departs"] = len(departs_confirmes.departs)
             audit_import.perimetre["retours"] = len(analyse.retours)
+            audit_import.perimetre["fonctions_creees"] = [f.libelle for f in analyse.fonctions_a_creer]
+            audit_import.perimetre["chantiers_rouverts"] = [c.code for c in analyse.chantiers_a_rouvrir]
             await session.flush()
         return PaieImportResult(
             periode=afficher_periode(periode),
             crees=len(lignes),
             departs=len(departs_confirmes.departs),
             retours=len(analyse.retours),
+            fonctions_creees=len(analyse.fonctions_a_creer),
+            chantiers_rouverts=len(analyse.chantiers_a_rouvrir),
         )
 
+    async def _preparer_referentiels(
+        self,
+        session: AsyncSession,
+        fonctions_a_creer: list[PaieImportFonctionACreer],
+        chantiers_a_rouvrir: list[PaieImportChantierCloture],
+        fonctions: dict[str, int],
+    ) -> None:
+        """Crée les fonctions inconnues et rouvre les chantiers clôturés annoncés par l'analyse (même transaction)."""
+        for a_creer in fonctions_a_creer:
+            fonction = Fonction(libelle=a_creer.libelle)
+            session.add(fonction)
+            await session.flush()
+            fonctions[a_creer.libelle.strip().upper()] = fonction.id
+        if chantiers_a_rouvrir:
+            ids = [c.chantier_id for c in chantiers_a_rouvrir]
+            for chantier in (await session.execute(select(Chantier).where(Chantier.id.in_(ids)))).scalars():
+                chantier.actif = True
+            await session.flush()
+
     async def corriger_et_reanalyser(
-        self, session: AsyncSession, contenu: bytes, periode: int, corrections: PaieImportCorrections
+        self,
+        session: AsyncSession,
+        contenu: bytes,
+        periode: int,
+        corrections: PaieImportCorrections,
+        *,
+        rouvrir_chantiers: bool = False,
+        creer_fonctions: bool = False,
     ) -> PaieImportAnalyse:
         """Aligne les fiches citées par le fichier joint, puis recalcule l'analyse."""
-        analyse = await self.analyser(session, contenu, periode)
+        analyse = await self.analyser(
+            session, contenu, periode, rouvrir_chantiers=rouvrir_chantiers, creer_fonctions=creer_fonctions
+        )
         # La lecture du classeur occupe le processeur : dans un fil, la boucle d'événements reste libre (KAN-233).
         lignes = await asyncio.to_thread(lire_lignes_paie, contenu)
         par_cin = {
@@ -872,6 +939,18 @@ class ServiceImportPaie:
             fonctions = {x.libelle.strip().upper(): x.id for x in (await session.execute(select(Fonction))).scalars()}
             chantiers = {x.code.strip().upper(): x.id for x in (await session.execute(select(Chantier))).scalars()}
             equipes = {x.code.strip().upper(): x.id for x in (await session.execute(select(Equipe))).scalars()}
+            citees = lignes_alignees | lignes_creees
+            a_creer = [f for f in analyse.fonctions_a_creer if citees & set(f.lignes)]
+            a_rouvrir = [c for c in analyse.chantiers_a_rouvrir if citees & set(c.lignes)]
+            if a_creer or a_rouvrir:
+                audit_referentiels = self._auditeur.auditer(
+                    session, "PAIE_IMPORT_REFERENTIELS", TypeOperation.UPDATE, "Referentiel"
+                )
+                async with audit_referentiels as journal_referentiels:
+                    await self._preparer_referentiels(session, a_creer, a_rouvrir, fonctions)
+                    journal_referentiels.nombre_elements = len(a_creer) + len(a_rouvrir)
+                    journal_referentiels.perimetre["fonctions_creees"] = [f.libelle for f in a_creer]
+                    journal_referentiels.perimetre["chantiers_rouverts"] = [c.code for c in a_rouvrir]
             par_id = {employe.id: (cin, ligne) for cin, ligne in par_cin.items() if (employe := employees.get(cin))}
             if len(ids) != len(set(ids)) or any(
                 identifiant not in par_id or identifiant not in employes_proposes for identifiant in ids

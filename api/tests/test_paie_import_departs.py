@@ -181,7 +181,14 @@ def test_import_enregistre_les_departs_confirmes_et_repasse_les_retours_actifs(
     reponse = _importer(plateforme, _entetes(connecter), jeu, _classeur(jeu), departs)
 
     assert reponse.status_code == 200, reponse.text
-    assert reponse.json() == {"periode": jeu.periode, "crees": 3, "departs": 2, "retours": 1}
+    assert reponse.json() == {
+        "periode": jeu.periode,
+        "crees": 3,
+        "departs": 2,
+        "retours": 1,
+        "fonctionsCreees": 0,
+        "chantiersRouverts": 0,
+    }
     assert _bulletins(plateforme, jeu) == 3
     assert _statut(plateforme, jeu.stc) == ("INACTIF", None)
     assert _statut(plateforme, jeu.absent) == ("INACTIF", None)

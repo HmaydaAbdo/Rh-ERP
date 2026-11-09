@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from staport.domains.auth.dependencies import Contexte, exiger
+from staport.domains.auth.dependencies import Authentifie, Contexte, exiger
 from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
@@ -177,14 +177,21 @@ async def modele_import(contexte: Contexte) -> StreamingResponse:
     )
 
 
+def _droits_referentiels(acces: Authentifie) -> dict[str, bool]:
+    """Rouvrir un chantier clôturé et créer une fonction inconnue demandent les droits d'écriture de leur domaine."""
+    autorites = acces.permissions | acces.roles
+    return {"rouvrir_chantiers": "CHANTIER_WRITE" in autorites, "creer_fonctions": "FUNCTION_WRITE" in autorites}
+
+
 @paies.post("/import/analyse", dependencies=[Depends(exiger("PAIE_IMPORT")), Depends(exiger("PAIE_READ"))])
 async def analyser_import(
     periode: PeriodeImport,
     session: Session,
     contexte: Contexte,
+    acces: Authentifie,
     file: UploadFile = File(...),  # noqa: B008
 ) -> PaieImportAnalyse:
-    return await contexte.import_paie.analyser(session, await file.read(), periode)
+    return await contexte.import_paie.analyser(session, await file.read(), periode, **_droits_referentiels(acces))
 
 
 @paies.post("/import", dependencies=[Depends(exiger("PAIE_IMPORT"))])
@@ -192,6 +199,7 @@ async def importer(
     periode: PeriodeImport,
     session: Session,
     contexte: Contexte,
+    acces: Authentifie,
     ignorer_salaires_zero: Annotated[bool, Form()] = False,
     departs: Annotated[str | None, Form()] = None,
     equipes: Annotated[str | None, Form()] = None,
@@ -204,7 +212,14 @@ async def importer(
     except ValidationError as erreur:
         raise RequestValidationError(erreur.errors()) from erreur
     return await contexte.import_paie.importer(
-        session, await file.read(), periode, ignorer_salaires_zero, confirmes, decisions, periode_confirmee
+        session,
+        await file.read(),
+        periode,
+        ignorer_salaires_zero,
+        confirmes,
+        decisions,
+        periode_confirmee,
+        **_droits_referentiels(acces),
     )
 
 
@@ -217,13 +232,16 @@ async def corriger_import(
     corrections: Annotated[str, Form()],
     session: Session,
     contexte: Contexte,
+    acces: Authentifie,
     file: UploadFile = File(...),  # noqa: B008
 ) -> PaieImportAnalyse:
     try:
         corps = PaieImportCorrections.model_validate_json(corrections)
     except ValidationError as erreur:
         raise RequestValidationError(erreur.errors()) from erreur
-    return await contexte.import_paie.corriger_et_reanalyser(session, await file.read(), periode, corps)
+    return await contexte.import_paie.corriger_et_reanalyser(
+        session, await file.read(), periode, corps, **_droits_referentiels(acces)
+    )
 
 
 @paies.put("/{identifiant}", dependencies=[Depends(exiger("PAIE_WRITE")), Depends(exiger("EMPLOYEE_WRITE"))])

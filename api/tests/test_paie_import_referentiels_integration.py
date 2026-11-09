@@ -157,3 +157,72 @@ async def _verifier_referentiels(url: str) -> None:
             assert equipe_absente.scalar_one() == 0
     finally:
         await moteur.dispose()
+
+
+def test_import_cree_les_fonctions_et_rouvre_les_chantiers_avec_les_droits(creer_base: Callable[[str], str]) -> None:
+    url = creer_base("paie_import_automatique")
+    command.upgrade(configuration_alembic(url), "head")
+    installer_ecouteurs()
+    asyncio.run(_verifier_automatique(url), loop_factory=asyncio.SelectorEventLoop)
+
+
+async def _verifier_automatique(url: str) -> None:
+    moteur = create_async_engine(url)
+    sessions = async_sessionmaker(moteur, expire_on_commit=False)
+    service = ServiceImportPaie(AuditeurJournal(), aujourd_hui=lambda: date(2026, 12, 1))
+    try:
+        async with sessions() as session, session.begin():
+            fonction = (
+                await session.execute(text("INSERT INTO fonction (libelle) VALUES ('Ancienne') RETURNING id"))
+            ).scalar_one()
+            chantier = (
+                await session.execute(text("INSERT INTO chantier (code, actif) VALUES ('FERME', false) RETURNING id"))
+            ).scalar_one()
+            await session.execute(
+                text(
+                    "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
+                    "salaire, type_salaire, statut) VALUES ('Nom corrigé', 'CIN-REF', "
+                    "CAST(:n AS date), CAST(:e AS date), "
+                    ":f, :c, 1000, 'MENSUEL', 'ACTIF')"
+                ),
+                {"n": date(1990, 1, 1), "e": date(2020, 1, 1), "f": fonction, "c": chantier},
+            )
+        fichier = _fichier("Nouvelle fonction", "FERME", "")
+
+        async with sessions() as session:
+            sans_droit = await service.analyser(session, fichier, 202611)
+            assert {(e.champ, e.raison.split(" :")[0]) for e in sans_droit.erreurs} == {
+                ("fonction", "fonction introuvable"),
+                ("chantier", "chantier clôturé"),
+            }
+            assert [c.code for c in sans_droit.chantiers_clotures] == ["FERME"]
+            assert not sans_droit.fonctions_a_creer
+            assert not sans_droit.chantiers_a_rouvrir
+            with pytest.raises(ErreurImportPaie, match="Le fichier n'est pas prêt"):
+                await service.importer(session, fichier, 202611, False, PaieImportDeparts())
+
+        async with sessions() as session:
+            avec_droits = await service.analyser(session, fichier, 202611, rouvrir_chantiers=True, creer_fonctions=True)
+            assert avec_droits.erreurs == []
+            assert [f.libelle for f in avec_droits.fonctions_a_creer] == ["Nouvelle fonction"]
+            assert [c.code for c in avec_droits.chantiers_a_rouvrir] == ["FERME"]
+            assert not avec_droits.chantiers_clotures
+            nombre = (await session.execute(text("SELECT count(*) FROM fonction"))).scalar_one()
+            assert nombre == 1, "l'analyse n'écrit rien"
+
+        async with sessions() as session:
+            bilan = await service.importer(
+                session, fichier, 202611, False, PaieImportDeparts(), rouvrir_chantiers=True, creer_fonctions=True
+            )
+            assert (bilan.crees, bilan.fonctions_creees, bilan.chantiers_rouverts) == (1, 1, 1)
+
+        async with sessions() as session:
+            assert (await session.execute(text("SELECT actif FROM chantier WHERE code = 'FERME'"))).scalar_one() is True
+            creee = (
+                await session.execute(text("SELECT id FROM fonction WHERE libelle = 'Nouvelle fonction'"))
+            ).scalar_one()
+            assert (
+                await session.execute(text("SELECT fonction_id FROM paie WHERE periode = 202611"))
+            ).scalar_one() == creee
+    finally:
+        await moteur.dispose()
