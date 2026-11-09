@@ -8,12 +8,12 @@
     "@copilotkit/runtime": "1.85.0",
     "@copilotkit/sqlite-runner": "1.85.0",
     "@opentelemetry/api": "1.10.0",
-    "@opentelemetry/exporter-trace-otlp-proto": "0.300.0",
-    "@opentelemetry/instrumentation-http": "0.300.0",
-    "@opentelemetry/instrumentation-undici": "0.34.0",
-    "@opentelemetry/sdk-node": "0.300.0",
-    "better-sqlite3": "12.11.1",
-    "rxjs": "7.8.1"
+    "@opentelemetry/exporter-trace-otlp-proto": "0.301.0",
+    "@opentelemetry/instrumentation-http": "0.301.0",
+    "@opentelemetry/instrumentation-undici": "0.35.0",
+    "@opentelemetry/sdk-node": "0.301.0",
+    "better-sqlite3": "13.0.3",
+    "rxjs": "7.8.2"
   },
   "scripts": {
     "start": "node --import ./src/hook.mjs --import ./src/traces.mjs src/serveur.mjs",
@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "eslint": "10.13.0",
-    "globals": "17.13.0"
+    "eslint": "10.14.0",
+    "globals": "17.14.0"
   }
 }
