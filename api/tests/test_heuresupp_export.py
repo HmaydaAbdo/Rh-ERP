@@ -105,7 +105,8 @@ def test_le_mode_signature_et_empreinte_elargit_l_emargement() -> None:
     html = export_pdf.construire_html(requete, [_ligne()], datetime(2026, 11, 5, 14, 7))
 
     assert '<th class="emargement signature_empreinte">Signature et empreinte</th>' in html
-    assert '<div class="zone-signature"></div><div class="zone-empreinte"></div>' in html
+    assert '<td class="emargement signature_empreinte"></td>' in html
+    assert "Salaire réf." not in html
     assert requete.criteres().model_dump().get("mode") is None
 
 
