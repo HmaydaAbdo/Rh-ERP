@@ -1063,6 +1063,219 @@
   }
 }
 
+// ---- Parcours du contrôle : une étape par type de problème, un cas à la fois ----
+.app-parcours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+
+  &__etape {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+
+    &--active {
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    &--ok {
+      color: var(--color-success);
+    }
+  }
+
+  &__pastille {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-xs);
+  }
+
+  &__etape--active &__pastille {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary, #fff);
+  }
+
+  &__etape--ok &__pastille {
+    border-color: var(--color-success);
+  }
+}
+
+.app-controle {
+  &__bloc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-block-end: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  &__puces {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      font-size: var(--text-sm);
+    }
+
+    small {
+      color: var(--color-text-muted);
+    }
+  }
+}
+
+// Un cas à la fois : en-tête et progression, carte du cas, actions, raccourcis, liste complète à la demande.
+.app-cas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  animation: stp-entree var(--duration-base) var(--ease-out);
+
+  &__entete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  &__position {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__progres {
+    inline-size: 100%;
+    block-size: 0.375rem;
+    accent-color: var(--color-primary);
+  }
+
+  &__sous {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__sous-bouton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+
+    &--actif {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+      font-weight: 600;
+    }
+  }
+
+  &__carte {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  &__identite {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+
+    strong {
+      font-size: var(--text-lg);
+    }
+
+    span {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+  }
+
+  &__champs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+  }
+
+  &__gain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  &__liste {
+    display: flex;
+    flex-direction: column;
+    max-block-size: 14rem;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    list-style: none;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding: var(--space-xs) var(--space-sm);
+      border-block-end: 1px solid var(--color-border);
+      font-size: var(--text-sm);
+    }
+
+    small {
+      color: var(--color-text-muted);
+    }
+  }
+}
+
 // ---- Pointage d'heures : totaux, forfaits, corrections (assistant d'import) ----
 .app-wizard {
   &__totaux {

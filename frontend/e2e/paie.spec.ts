@@ -198,11 +198,11 @@ test.describe('Paie', () => {
     await expect(dialogue.getByText('09/2026')).toBeVisible();
     await dialogue.locator('input[type="file"]').setInputFiles({ name: 'paie-09.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });
 
-    await expect(dialogue.getByText('Fiches différentes du fichier')).toBeVisible();
+    await expect(dialogue.getByText('Mutations de chantier')).toBeVisible();
     await expect(dialogue.getByRole('button', { name: 'Continuer' })).toBeDisabled();
     const accessibilite = await new AxeBuilder({ page }).include('.app-wizard').analyze();
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
-    await dialogue.getByRole('button', { name: 'Mettre à jour la fiche de ALAMI Karim' }).click();
+    await dialogue.getByRole('button', { name: 'Mettre à jour et passer au suivant' }).click();
     await expect(dialogue.getByText('Aucun problème')).toBeVisible();
     await dialogue.getByRole('button', { name: 'Continuer' }).click();
 

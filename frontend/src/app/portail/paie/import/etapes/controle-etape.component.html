@@ -14,44 +14,50 @@
           <p>Les {{ analyse.totalLignes }} ligne(s) concordent avec les fiches des employés. Passez aux départs.</p>
         </div>
       </div>
-    } @else {
-      <p class="app-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer, une catégorie après l'autre.
-        @if (!store.peutCorriger()) {
-          Vous ne pouvez pas modifier les fiches des employés : corrigez le fichier, puis réimportez-le.
-        }
-      </p>
-    }
-
-    @if ((analyse.fonctionsACreer ?? []).length > 0 || (analyse.chantiersARouvrir ?? []).length > 0) {
-      <div class="app-controle__auto" role="status">
-        <stp-icon name="circle-check" />
-        <div>
-          <strong>À l'import, sans rien à faire de votre part</strong>
-          @if ((analyse.fonctionsACreer ?? []).length > 0) {
-            <p>{{ (analyse.fonctionsACreer ?? []).length }} fonction(s) inconnue(s) seront créées : {{ nomsFonctions() }}.</p>
-          }
-          @if ((analyse.chantiersARouvrir ?? []).length > 0) {
-            <p>{{ (analyse.chantiersARouvrir ?? []).length }} chantier(s) clôturé(s) seront rouverts : {{ codesChantiers() }}.</p>
-          }
-        </div>
-      </div>
+    } @else if (!store.peutCorriger()) {
+      <p class="app-wizard__consigne">Vous ne pouvez pas modifier les fiches des employés : corrigez le fichier, puis réimportez-le.</p>
     }
 
     @if (store.categories().length > 0) {
-      <ol class="app-controle__fil" aria-label="Catégories de problèmes">
-        @for (categorie of store.categories(); track categorie.cle) {
-          <li class="app-controle__fil-etape" [class.app-controle__fil-etape--active]="categorie.cle === store.categorieActive()" [class.app-controle__fil-etape--ok]="categorie.resolue" [attr.aria-current]="categorie.cle === store.categorieActive() ? 'step' : null">
-            <stp-icon [name]="categorie.resolue ? 'circle-check' : 'circle'" />
-            {{ categorie.libelle }}
-            @if (!categorie.resolue) {
+      <ol class="app-parcours" aria-label="Étapes du contrôle">
+        @for (categorie of store.categories(); track categorie.cle; let i = $index) {
+          <li class="app-parcours__etape" [class.app-parcours__etape--active]="categorie.cle === store.categorieActive()" [class.app-parcours__etape--ok]="categorie.resolue" [attr.aria-current]="categorie.cle === store.categorieActive() ? 'step' : null">
+            <span class="app-parcours__pastille">
+              @if (categorie.resolue) { <stp-icon name="check" size="0.875rem" /> } @else { {{ i + 1 }} }
+            </span>
+            <span class="app-parcours__libelle">{{ categorie.libelle }}</span>
+            @if (!categorie.resolue && categorie.nombre > 0 && categorie.cle !== 'info') {
               <span class="app-wizard__nombre">{{ categorie.nombre }}</span>
             }
           </li>
         }
       </ol>
-      @if (store.categorieActive() !== null) {
-        <p class="app-wizard__legende">Catégorie {{ store.positionCategorie().courante }} sur {{ store.positionCategorie().total }} : les suivantes s'ouvrent quand celle-ci est réglée.</p>
+    }
+
+    @if (store.categorieActive() === 'info') {
+      <h3 class="app-wizard__titre"><stp-icon name="info" /> Ce que l'import fera pour vous</h3>
+      <p class="app-wizard__legende">Rien à régler ici : lisez, puis continuez. Tout est enregistré à la dernière étape.</p>
+      @if ((analyse.fonctionsACreer ?? []).length > 0) {
+        <div class="app-controle__bloc">
+          <strong>{{ (analyse.fonctionsACreer ?? []).length }} fonction(s) inconnue(s) seront créées</strong>
+          <ul class="app-controle__puces">
+            @for (fonction of analyse.fonctionsACreer ?? []; track fonction.libelle) {
+              <li><span>{{ fonction.libelle }}</span><small>ligne(s) {{ fonction.lignes.join(', ') }}</small></li>
+            }
+          </ul>
+        </div>
       }
+      @if ((analyse.chantiersARouvrir ?? []).length > 0) {
+        <div class="app-controle__bloc">
+          <strong>{{ (analyse.chantiersARouvrir ?? []).length }} chantier(s) clôturé(s) seront rouverts</strong>
+          <ul class="app-controle__puces">
+            @for (chantier of analyse.chantiersARouvrir ?? []; track chantier.chantierId) {
+              <li><span>{{ chantier.code }}@if (chantier.designation) { · {{ chantier.designation }} }</span><small>ligne(s) {{ chantier.lignes.join(', ') }}</small></li>
+            }
+          </ul>
+        </div>
+      }
+      <button stp-button icon="arrow-right" type="button" (click)="store.validerCategorie('info')">J'ai compris, continuer</button>
     }
 
     @if (store.categorieActive() === 'blocages') {
@@ -101,25 +107,36 @@
     }
 
     @if (store.categorieActive() === 'avertissements') {
-      <h3 class="app-wizard__titre"><stp-icon name="triangle-alert" /> Avertissements à confirmer <span class="app-wizard__nombre">{{ analyse.avertissements.length }}</span></h3>
-      <ul class="app-controle__cartes">
-        @for (avertissement of analyse.avertissements; track avertissement.numeroLigne + (avertissement.codeAvertissement ?? '')) {
-          <li class="app-controle__carte">
-            <strong>Ligne {{ avertissement.numeroLigne }} · {{ avertissement.nomPrenom ?? avertissement.cin }}</strong>
-            <span>{{ avertissement.raison }}</span>
-            @if (avertissement.codeAvertissement === 'EQUIPE_VIDE' && avertissement.employeId !== null && avertissement.employeId !== undefined) {
-              <div class="app-controle__saisie">
-                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'CONSERVER'" (change)="store.decider(avertissement.employeId, 'CONSERVER')" /> Conserver l'équipe</label>
-                <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'VIDER'" (change)="store.decider(avertissement.employeId, 'VIDER')" /> Vider l'équipe</label>
-              </div>
+      <h3 class="app-wizard__titre"><stp-icon name="triangle-alert" /> Points à confirmer <span class="app-wizard__nombre">{{ analyse.avertissements.length }}</span></h3>
+      @for (section of sousAvertissements(); track section.cle) {
+        <div class="app-controle__bloc">
+          <strong>{{ section.libelle }} <span class="app-wizard__nombre">{{ section.elements.length }}</span></strong>
+          @if (section.consigne) {
+            <span class="app-wizard__legende">{{ section.consigne }}</span>
+          }
+          <ul class="app-controle__cartes">
+            @for (avertissement of section.elements; track avertissement.numeroLigne + (avertissement.codeAvertissement ?? '')) {
+              <li class="app-controle__carte">
+                <div class="app-controle__qui">
+                  <strong>{{ avertissement.nomPrenom ?? avertissement.cin }}</strong>
+                  <span>CIN {{ avertissement.cin }} · ligne {{ avertissement.numeroLigne }}</span>
+                </div>
+                <span>{{ avertissement.raison }}</span>
+                @if (avertissement.codeAvertissement === 'EQUIPE_VIDE' && avertissement.employeId !== null && avertissement.employeId !== undefined) {
+                  <div class="app-controle__saisie">
+                    <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'CONSERVER'" (change)="store.decider(avertissement.employeId, 'CONSERVER')" /> Conserver l'équipe</label>
+                    <label><input type="radio" [name]="'equipe-' + avertissement.employeId" [checked]="store.decisionsEquipe()[avertissement.employeId] === 'VIDER'" (change)="store.decider(avertissement.employeId, 'VIDER')" /> Vider l'équipe</label>
+                  </div>
+                }
+              </li>
             }
-          </li>
-        }
-      </ul>
+          </ul>
+        </div>
+      }
       @if (store.avertissementSalaireZero()) {
         <label><input type="checkbox" [checked]="store.confirmerSalaireZero()" (change)="confirmerZero($event)" /> Ignorer et conserver 0</label>
       }
-      <button stp-button icon="arrow-right" type="button" [disabled]="!avertissementsRegles()" (click)="store.validerCategorie('avertissements')">Avertissements réglés, continuer</button>
+      <button stp-button icon="arrow-right" type="button" [disabled]="!avertissementsRegles()" (click)="store.validerCategorie('avertissements')">Points réglés, continuer</button>
     }
 
     @if (store.categorieActive() === 'periode') {
@@ -162,45 +179,80 @@
       </ul>
     }
 
-    @if (store.categorieActive() === 'cin') {
-      <h3 class="app-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="app-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
-      <p class="app-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
-      <ul class="app-controle__cartes">
-        @for (inconnu of analyse.cinInconnus; track inconnu.numeroLigne) {
-          <li class="app-controle__carte">
-            <div class="app-controle__qui">
-              <strong>{{ inconnu.nomPrenom ?? 'Sans nom' }}</strong>
-              <span>CIN {{ inconnu.cin }} · ligne {{ inconnu.numeroLigne }}</span>
-              <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.0-0' }}</span>
+    @if (store.categorieActive() === 'cin' && store.embaucheCourante(); as inconnu) {
+      <div class="app-cas">
+        <header class="app-cas__entete">
+          <h3 class="app-wizard__titre"><stp-icon name="user-plus" /> Nouvelles embauches</h3>
+          <span class="app-cas__position">Embauche {{ position('cin', analyse.cinInconnus.length) }} sur {{ store.totauxCas()['cin'] }}</span>
+        </header>
+        <progress class="app-cas__progres" [max]="store.totauxCas()['cin']" [value]="store.totauxCas()['cin'] - analyse.cinInconnus.length" aria-label="Avancement des embauches"></progress>
+        <p class="app-wizard__legende">Ces CIN n'ont pas de fiche : le salarié est nouveau. Créez sa fiche avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
+        <article class="app-cas__carte">
+          <div class="app-cas__identite">
+            <strong>{{ inconnu.nomPrenom ?? 'Sans nom' }}</strong>
+            <span>CIN {{ inconnu.cin }} · ligne {{ inconnu.numeroLigne }}</span>
+            <span>{{ inconnu.fonction }} · {{ inconnu.chantier }}@if (inconnu.equipe) { · {{ inconnu.equipe }} } · {{ inconnu.salaire | number: '1.0-0' }} DH</span>
+          </div>
+          @if (store.peutCorriger()) {
+            <div class="app-cas__champs">
+              <label class="app-controle__champ"><span>Date de naissance</span>
+              <stp-date-input [ariaLabel]="'Date de naissance de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateNaissance ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateNaissance: $event })" /></label>
+              <label class="app-controle__champ"><span>Date d’embauche</span>
+              <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
+              <label class="app-controle__champ"><span>Type de salaire</span>
+              <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? store.typeSalairePropose(inconnu.salaire)" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
             </div>
-            @if (store.peutCorriger()) {
-              <div class="app-controle__saisie">
-                <label class="app-controle__champ"><span>Date de naissance</span>
-                <stp-date-input [ariaLabel]="'Date de naissance de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateNaissance ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateNaissance: $event })" /></label>
-                <label class="app-controle__champ"><span>Date d’embauche</span>
-                <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
-                <label class="app-controle__champ"><span>Type de salaire</span>
-                <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? store.typeSalairePropose(inconnu.salaire)" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
-                <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne, inconnu.salaire) || store.occupe()" (click)="store.creer(inconnu.numeroLigne, inconnu.salaire)">Créer l'employé</button>
-              </div>
+          }
+        </article>
+        <div class="app-cas__actions">
+          @if (analyse.cinInconnus.length > 1) {
+            <button stp-button variant="text" icon="arrow-left" type="button" (click)="store.reculer()">Précédent</button>
+            <button stp-button variant="secondary" icon="chevrons-right" type="button" (click)="store.passer()">Passer</button>
+          }
+          @if (store.peutCorriger()) {
+            <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne, inconnu.salaire) || store.occupe()" (click)="store.creer(inconnu.numeroLigne, inconnu.salaire)">Créer et passer au suivant</button>
+          }
+        </div>
+        @if (store.peutCorriger() && analyse.cinInconnus.length > 1) {
+          <div class="app-cas__gain">
+            <span>Gagner du temps : la date d'embauche et le type de salaire sont souvent les mêmes.</span>
+            <button stp-button variant="secondary" type="button" [disabled]="!store.creations()[inconnu.numeroLigne]?.dateEmbauche" (click)="store.propagerCreation(inconnu.numeroLigne)">Recopier sur les {{ analyse.cinInconnus.length - 1 }} autres</button>
+            @if (store.embauchesCompletes().length > 1) {
+              <button stp-button variant="secondary" icon="check-check" type="button" [disabled]="store.occupe()" (click)="store.creerCompletes()">Créer les {{ store.embauchesCompletes().length }} fiches complètes</button>
             }
-          </li>
+          </div>
         }
-      </ul>
-    }
-
-    @if (store.categorieActive() === 'ecarts') {
-      <div class="app-controle__entete-section">
-        <h3 class="app-wizard__titre"><stp-icon name="git-compare" /> Fiches différentes du fichier <span class="app-wizard__nombre">{{ analyse.ecarts.length }}</span></h3>
-        @if (store.peutCorriger() && analyse.ecarts.length > 1) {
-          <button stp-button variant="secondary" icon="check-check" type="button" [disabled]="store.occupe()" (click)="store.alignerTout()">Tout mettre à jour</button>
+        <button stp-button variant="text" type="button" [attr.aria-expanded]="listeOuverte()" (click)="listeOuverte.set(!listeOuverte())">{{ listeOuverte() ? 'Masquer la liste' : 'Voir toutes les lignes (' + analyse.cinInconnus.length + ')' }}</button>
+        @if (listeOuverte()) {
+          <ul class="app-cas__liste">
+            @for (item of analyse.cinInconnus; track item.numeroLigne) {
+              <li><span>Ligne {{ item.numeroLigne }} · {{ item.nomPrenom ?? 'Sans nom' }} · CIN {{ item.cin }}</span><small>{{ item.fonction }} · {{ item.chantier }} · {{ item.salaire | number: '1.0-0' }}</small></li>
+            }
+          </ul>
         }
       </div>
-      <p class="app-wizard__legende">Mettez la fiche à jour avec les valeurs du fichier — ou corrigez le fichier si l'erreur vient de lui.</p>
-      <ul class="app-controle__cartes">
-        @for (ecart of analyse.ecarts; track ecart.employeId) {
-          <li class="app-controle__carte">
-            <div class="app-controle__qui">
+    }
+
+    @if (store.categorieActive() === 'ecarts' && store.sousEcartActive(); as sous) {
+      <div class="app-cas">
+        <header class="app-cas__entete">
+          <h3 class="app-wizard__titre"><stp-icon name="git-compare" /> Mises à jour de fiches</h3>
+        </header>
+        <ul class="app-cas__sous" aria-label="Types de mises à jour">
+          @for (item of store.sousEcarts(); track item.cle) {
+            <li>
+              <button type="button" class="app-cas__sous-bouton" [class.app-cas__sous-bouton--actif]="item.cle === sous.cle" [attr.aria-pressed]="item.cle === sous.cle" (click)="store.choisirSousEcart(item.cle)">
+                {{ item.libelle }} <span class="app-wizard__nombre">{{ item.elements.length }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+        <p class="app-wizard__legende">{{ sous.consigne }} Mettez la fiche à jour avec les valeurs du fichier — ou corrigez le fichier si l'erreur vient de lui.</p>
+        <progress class="app-cas__progres" [max]="store.totauxCas()[sous.cle]" [value]="store.totauxCas()[sous.cle] - sous.elements.length" [attr.aria-label]="'Avancement : ' + sous.libelle"></progress>
+        @if (store.ecartCourant(); as ecart) {
+          <article class="app-cas__carte">
+            <div class="app-cas__identite">
+              <span class="app-cas__position">Cas {{ position(sous.cle, sous.elements.length) }} sur {{ store.totauxCas()[sous.cle] }}</span>
               <strong>{{ ecart.nomPrenom }}</strong>
               <span>CIN {{ ecart.cin }} · ligne {{ ecart.numeroLigne }}</span>
             </div>
@@ -212,17 +264,38 @@
                 </div>
               }
             </dl>
-            @if (store.peutCorriger()) {
-              <div class="app-controle__saisie">
-                @if (salaireChange(ecart.champs)) {
-                  <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typeSalairePourEcart(ecart.employeId, ecart.typeSalaire)" (valueChange)="store.choisirType(ecart.employeId, $any($event))" />
-                }
-                <button stp-button icon="check" type="button" [disabled]="store.occupe()" [attr.aria-label]="'Mettre à jour la fiche de ' + ecart.nomPrenom" (click)="store.aligner([ecart.employeId])">Mettre à jour la fiche</button>
+            @if (store.peutCorriger() && salaireChange(ecart.champs)) {
+              <div class="app-cas__champs">
+                <label class="app-controle__champ"><span>Type de salaire</span>
+                <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typeSalairePourEcart(ecart.employeId, ecart.typeSalaire)" (valueChange)="store.choisirType(ecart.employeId, $any($event))" /></label>
               </div>
             }
-          </li>
+          </article>
+          <div class="app-cas__actions">
+            @if (sous.elements.length > 1) {
+              <button stp-button variant="text" icon="arrow-left" type="button" (click)="store.reculer()">Précédent</button>
+              <button stp-button variant="secondary" icon="chevrons-right" type="button" (click)="store.passer()">Passer</button>
+            }
+            @if (store.peutCorriger()) {
+              <button stp-button icon="check" type="button" [disabled]="store.occupe()" (click)="store.aligner([ecart.employeId])">Mettre à jour et passer au suivant</button>
+            }
+          </div>
         }
-      </ul>
+        <div class="app-cas__gain">
+          @if (store.peutCorriger() && sous.elements.length > 1) {
+            <span>Même décision pour tous ?</span>
+            <button stp-button variant="secondary" icon="check-check" type="button" [disabled]="store.occupe()" (click)="store.aligner(idsEcarts(sous.elements))">Mettre à jour les {{ sous.elements.length }} fiches</button>
+          }
+          <button stp-button variant="text" type="button" [attr.aria-expanded]="listeOuverte()" (click)="listeOuverte.set(!listeOuverte())">{{ listeOuverte() ? 'Masquer la liste' : 'Voir toutes les lignes (' + sous.elements.length + ')' }}</button>
+        </div>
+        @if (listeOuverte()) {
+          <ul class="app-cas__liste">
+            @for (item of sous.elements; track item.employeId) {
+              <li><span>Ligne {{ item.numeroLigne }} · {{ item.nomPrenom }}</span><small>{{ resume(item) }}</small></li>
+            }
+          </ul>
+        }
+      </div>
     }
   </section>
 }

@@ -83,10 +83,8 @@ describe('PaieImportWizardComponent', () => {
     await analyser();
 
     let texte = dialogue().textContent ?? '';
-    expect(texte).toContain('4 problème(s) à régler');
-    expect(texte).toContain('Catégorie 1 sur 4');
-    expect(Array.from(dialogue().querySelectorAll('.app-controle__fil-etape')).map((e) => e.textContent?.replace(/\s+/g, ' ').trim()))
-      .toEqual(['Fichier 1', 'Chantiers 1', 'CIN sans fiche 1', 'Fiches 1']);
+    expect(Array.from(dialogue().querySelectorAll('.app-parcours__etape')).map((e) => e.textContent?.replace(/\s+/g, ' ').trim()))
+      .toEqual(['1 Erreurs du fichier1', '2 Chantiers clôturés1', '3 Nouvelles embauches1', '4 Mises à jour de fiches1']);
     expect(texte).toContain('Chantier introuvable : C999');
     expect(texte).not.toContain('Voirie');
     const continuer = () => Array.from(dialogue().querySelectorAll('button')).find((x) => x.textContent?.trim() === 'Continuer') as HTMLButtonElement;
@@ -94,7 +92,6 @@ describe('PaieImportWizardComponent', () => {
 
     regler({ erreurs: [] });
     texte = dialogue().textContent ?? '';
-    expect(texte).toContain('Catégorie 2 sur 4');
     expect(texte).toContain('Chantiers clôturés');
     expect(texte).not.toContain('Chantier introuvable');
     expect(dialogue().querySelector('button[aria-label="Rouvrir le chantier C059"]')).not.toBeNull();
@@ -102,11 +99,14 @@ describe('PaieImportWizardComponent', () => {
     regler({ chantiersClotures: [] });
     expect(dialogue().textContent).toContain('NOUVEAU');
 
+    expect(dialogue().textContent).toContain('Embauche 1 sur 1');
+
     regler({ cinInconnus: [] });
+    expect(dialogue().textContent).toContain('Mutations de chantier');
     expect(Array.from(dialogue().querySelectorAll('.app-controle__ecarts dd')).map((dd) => dd.textContent?.replace(/\s+/g, ' ').trim()))
       .toEqual(['C059 devient C168', '4 000 devient 4 500']);
 
-    (dialogue().querySelector('button[aria-label="Mettre à jour la fiche de ALI ALAOUI"]') as HTMLButtonElement).click();
+    (Array.from(dialogue().querySelectorAll('button')).find((x) => x.textContent?.includes('Mettre à jour et passer au suivant')) as HTMLButtonElement).click();
     expect(service.corrigerImport).toHaveBeenCalledWith(expect.any(File), '2026-10', { aligner: [{ employeId: 9, typeSalaire: 'MENSUEL' }], creer: [] });
   });
 
@@ -141,8 +141,14 @@ describe('PaieImportWizardComponent', () => {
     await analyser();
 
     const texte = dialogue().textContent ?? '';
-    expect(texte).toContain('1 fonction(s) inconnue(s) seront créées : TOPOGRAPHE (2 ligne(s))');
-    expect(texte).toContain('1 chantier(s) clôturé(s) seront rouverts : C168');
+    expect(texte).toContain('1 fonction(s) inconnue(s) seront créées');
+    expect(texte).toContain('TOPOGRAPHE');
+    expect(texte).toContain('1 chantier(s) clôturé(s) seront rouverts');
+    expect(texte).toContain('C168 · Nador');
+    expect(store().controleTermine()).toBe(false);
+
+    (Array.from(dialogue().querySelectorAll('button')).find((x) => x.textContent?.includes('J\'ai compris')) as HTMLButtonElement).click();
+    fixture.detectChanges();
     expect(store().controleTermine()).toBe(true);
   });
 
