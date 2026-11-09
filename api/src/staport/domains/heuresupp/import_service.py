@@ -125,8 +125,6 @@ async def _charger(s: AsyncSession, d: _Dossier, periode: int, chantier_id: int,
             )
         else:
             d.salaire_horaire = calcul.salaire_horaire(employe.salaire, TypeSalaire(employe.type_salaire))
-    if d.source is not None and _ecart(employe.nom_prenom, d.source.nom_prenom):
-        d.erreurs.append("le nom du fichier diffère de la fiche ; confirmez l'alignement dans l'étape de correction.")
     if not remplacement and await repository.existe(s, employe.id, periode, chantier_id):
         d.erreurs.append("une ligne existe déjà pour ce mois et ce chantier ; confirmez son remplacement explicite.")
     if d.stc_ou_sortie and await repository.forfait_sur_autre_chantier(s, employe.id, periode, chantier_id):
@@ -205,9 +203,7 @@ async def _analyser(
                 employe_id=None if d.employe is None else d.employe.id,
                 nom_fichier=None if d.source is None else d.source.nom_prenom,
                 fonction_fichier=None,
-                identite_ecart=d.source is not None
-                and d.employe is not None
-                and _ecart(d.employe.nom_prenom, d.source.nom_prenom),
+                identite_ecart=False,  # le rapprochement se fait par CIN uniquement, le nom n'est pas comparé
                 fonction_ecart=False,
                 forfait_seul=d.heures is None,
                 heures_supplementaires=d.heures,

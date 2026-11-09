@@ -142,12 +142,11 @@ def test_l_analyse_signale_les_ecarts_les_inconnus_et_les_forfaits(
 
     assert (corps["pret"], corps["lignesZero"], corps["totalLignes"]) == (False, 1, 3)
     assert corps["erreurs"] == [
-        f"CIN {cins[0]} : le nom du fichier diffère de la fiche ; confirmez l'alignement dans l'étape de correction.",
         "CIN ZZ0000 : aucune fiche employé ne correspond à ce CIN ; créez la fiche avant de relancer l'analyse.",
         f"CIN {cins[2]} : le forfait est interdit car la paie du même mois est marquée STC/sortie.",
     ]
     par_cin = {ligne["cin"]: ligne for ligne in corps["lignes"]}
-    assert par_cin[cins[0]]["identiteEcart"] is True
+    assert par_cin[cins[0]]["identiteEcart"] is False  # nom différent : ignoré, seul le CIN compte
     assert par_cin["ZZ0000"]["employeId"] is None
     seul = par_cin[cins[1].upper()]
     assert (seul["forfaitSeul"], seul["numeroLigne"], seul["forfaitDh"], seul["netAPayerDh"]) == (True, 0, 70.0, 70.0)
