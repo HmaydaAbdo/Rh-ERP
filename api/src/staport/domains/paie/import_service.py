@@ -50,7 +50,8 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
         feuille = classeur.worksheets[0]
         lignes: list[tuple[int, list[Any]]] = []
         for numero, cellules in enumerate(feuille.iter_rows(min_row=4, values_only=True), start=4):
-            ligne = cast(list[Any], list(cellules))
+            # Une cellule vide d'apparence (texte vide ou espaces, fréquent après une formule) vaut une cellule absente.
+            ligne = [None if isinstance(valeur, str) and not valeur.strip() else valeur for valeur in cellules]
             if any(valeur is not None and str(valeur).strip() for valeur in ligne):
                 lignes.append((numero, ligne))
         return lignes

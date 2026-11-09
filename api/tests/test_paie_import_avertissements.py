@@ -454,3 +454,21 @@ async def test_importer_refuse_un_mois_bloque_meme_confirme(monkeypatch: pytest.
         await service.importer(
             cast(AsyncSession, object()), b"", 202610, False, PaieImportDeparts(), periode_confirmee=True
         )
+
+
+def test_lecteur_traite_une_cellule_en_texte_vide_comme_absente() -> None:
+    """Après une formule ou une saisie d'espaces, une cellule « vide » est du texte : elle ne doit pas être refusée."""
+    classeur = Workbook()
+    feuille = classeur.active
+    assert feuille is not None
+    feuille["A4"] = "Alice"
+    feuille["D4"] = 26
+    feuille["E4"] = " "
+    feuille["F4"] = '=""'
+    feuille["G4"] = 4000
+    sortie = BytesIO()
+    classeur.save(sortie)
+    ligne = lire_lignes_paie(sortie.getvalue())[0][1]
+    assert ligne[3] == 26
+    assert ligne[4] is None
+    assert ligne[6] == 4000
