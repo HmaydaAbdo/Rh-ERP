@@ -342,17 +342,9 @@ model_list:
       max_parallel_requests: 1
       tags: [code, medium, "id:nvidia-minimax-m31-flash"]
 
-  - model_name: ai-gateway-complex
-    model_info: { id: nvidia-nemotron-3-ultra-550b--complex }
-    litellm_params:
-      model: openai/nvidia/nemotron-3-ultra-550b-a55b
-      api_base: https://integrate.api.nvidia.com/v1
-      api_key: os.environ/NVIDIA_API_KEY
-      weight: 4
-      rpm: 10
-      timeout: 90
-      max_parallel_requests: 1
-      tags: [complex, code, "id:nvidia-nemotron-3-ultra-550b"]
+  # nemotron-3-ultra-550b n'est plus dans le groupe complex (2026-11-09) : un appel d'outil forcé au schéma imbriqué
+  # (`render_a2ui`, sous-appel de `generate_a2ui`) rend `components: [{}]` en flux. Le routage par latence le
+  # préférait parce qu'il répondait vite avec des arguments vides. Il reste disponible pour `code` et en test.
 
   - model_name: ai-gateway-code
     model_info: { id: nvidia-nemotron-3-ultra-550b--code }
