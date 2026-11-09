@@ -34,7 +34,7 @@ export const PROPRIETES_CHART = z.object({
   title: z.string().optional(),
   type: z.enum(['bar', 'line', 'doughnut']),
   labels: z.array(z.string()),
-  series: z.array(z.object({ name: z.string(), values: z.array(z.number()), format: z.enum(['nombre', 'montant']).optional() }))
+  series: z.array(z.object({ name: z.string(), values: z.array(z.number()), format: z.string().describe('montant, ou nombre par défaut').optional() }))
 });
 
 export const DESCRIPTIONS = {

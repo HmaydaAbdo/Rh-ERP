@@ -111,6 +111,8 @@ export class SurfaceA2uiErpComponent {
     } catch (erreur) {
       // Le formatage des erreurs de validation d'A2UI plante sous zod 4 : on garde un repli lisible au lieu de casser le fil.
       this.erreur.set(true);
+      // Le message de validation d'A2UI est masqué par son plantage sous zod 4 (web_core 0.14 lit `error.errors`) : on garde les opérations refusées pour diagnostiquer.
+      console.warn('[A2UI ERP] surface refusée', operations);
       this.error.emit({ error: erreur, message: erreur instanceof Error ? erreur.message : 'Surface A2UI invalide' });
     }
   }

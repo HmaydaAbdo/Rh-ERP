@@ -150,6 +150,8 @@ CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
   pourcentage. Une valeur absente des outils n'apparaît pas.
 - Utilise uniquement les composants du catalogue fourni : KpiGrid pour des indicateurs, Chart pour un graphique,
   DataTable pour un tableau (lignes données en littéral dans « rows »), Text, Row, Column et Card pour la mise en page.
+- Les propriétés à valeurs fixes (format, type, tone) prennent exactement une valeur du catalogue, en français
+  (« nombre », « montant »), jamais traduite ni inventée.
 - Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
 
 # Seuil de déclenchement du résumé. Mesuré le 2026-10-27 : à 12 000 jetons, le résumé remplaçait en cours de réponse les
@@ -212,6 +214,13 @@ _COMPOSANTS_SURFACE = (
 )
 
 
+def _nom_avec_valeurs(nom: str, definition: Any) -> str:
+    """Le nom d'une propriété d'élément suivi de ses valeurs admises (« format=a|b ») : le validateur
+    officiel ne contrôle pas les valeurs, seul ce guide les apprend au sous-agent."""
+    valeurs = cast(list[str], definition.get("enum", [])) if isinstance(definition, dict) else []
+    return f"{nom}={'|'.join(valeurs)}" if valeurs else nom
+
+
 def _guide_composition(composants: dict[str, Any]) -> str:
     """Le guide de composition du sous-agent, lu dans le catalogue : chaque composant de présentation, ses propriétés
     (requises marquées) et leurs valeurs admises ; quelques centaines de jetons au lieu du schéma complet."""
@@ -232,7 +241,7 @@ def _guide_composition(composants: dict[str, Any]) -> str:
             elements = cast(dict[str, Any], articles.get("properties", {}))
             libelle = f"{cle} (requis)" if cle in requises else cle
             if elements:
-                libelle = f"{libelle} [{', '.join(elements)}]"
+                libelle = f"{libelle} [{', '.join(_nom_avec_valeurs(k, d) for k, d in elements.items())}]"
             details.append(f"{libelle} : {', '.join(valeurs)}" if valeurs else libelle)
         description = f" — {schema['description']}" if "description" in schema else ""
         lignes.append(f"- {nom}{description} : {' ; '.join(details)}")

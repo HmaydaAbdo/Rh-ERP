@@ -64,7 +64,10 @@
             "properties": {
               "name": { "type": "string" },
               "values": { "type": "array", "items": { "type": "number" } },
-              "format": { "type": "string", "enum": ["nombre", "montant"] }
+              "format": {
+            "type": "string",
+            "description": "montant, ou nombre par défaut"
+          }
             },
             "required": ["name", "values"]
           }
