@@ -1359,3 +1359,44 @@
     cursor: pointer;
   }
 }
+
+// Forfaits repris du mois précédent (import des heures supplémentaires) : un employé, un montant modifiable, un bouton de retrait.
+.app-forfaits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+
+  &__ligne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 11rem auto;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  &__employe {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    small {
+      color: var(--color-text-muted);
+    }
+  }
+}
+
+// Modes de l'export PDF (colonne d'émargement) : un groupe de choix avec une consigne courte.
+.app-wizard__modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  border: none;
+}

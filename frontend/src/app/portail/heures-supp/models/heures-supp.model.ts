@@ -114,6 +114,10 @@ export interface HeuresSuppImportResult {
 }
 
 export interface HeuresSuppImportForfait { cin: string; montantDh: number; }
+/** Forfait du dernier mois du chantier qui en comptait, proposé à l'étape Forfaits. */
+export interface HeuresSuppForfaitPrecedent { cin: string; nomPrenom: string; montantDh: number; periode: string; }
+/** Colonne d'émargement du PDF : signature seule (étroite) ou signature et empreinte (large). */
+export type HeuresSuppExportMode = 'signature' | 'signature_empreinte';
 export interface HeuresSuppCreationEmploye {
   numeroLigne: number;
   dateNaissance: string;
