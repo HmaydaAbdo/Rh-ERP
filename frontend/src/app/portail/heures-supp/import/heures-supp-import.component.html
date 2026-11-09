@@ -1,106 +1,167 @@
+<stp-dialog header="Importer les heures supplémentaires" width="860px" [open]="true" [closable]="!chargement()" (closed)="fermer()">
+  <div class="app-wizard">
+    <p class="app-wizard__sous-titre">{{ sousTitre() }}</p>
 
-    <stp-dialog header="Importer les heures supplémentaires" width="860px" [open]="true" (closed)="fermer()">
-    <div class="app-wizard">
-      <stp-stepper ariaLabel="Étapes de l’import" [etapes]="etapes" [courante]="'' + etape()" [indexCourant]="etape() - 1" [termine]="resultat() !== null" (choisir)="allerEtape($event)" />
+    <stp-stepper ariaLabel="Étapes de l’import" [etapes]="etapes" [courante]="'' + etape()" [indexCourant]="etape() - 1" [termine]="resultat() !== null" (choisir)="allerEtape($event)" />
 
-      @if (erreur()) { <stp-message severity="error" [text]="erreur()!" /> }
+    <div class="app-wizard__corps" [attr.aria-busy]="chargement()">
+      @if (erreur(); as message) {
+        <stp-message severity="error" class="app-wizard__alerte" role="alert" [text]="message" />
+      }
+
       @if (resultat(); as bilan) {
-        <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="bilan.lignesHeures + ' lignes importées · ' + bilan.lignesZero + ' à 0'">
+        <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Heures supplémentaires de ' + moisLibelle() + ' importées'">
+          <p class="m-0">{{ bilan.lignesHeures }} ligne(s) · {{ bilan.lignesZero }} à 0 · {{ bilan.forfaitsSeuls }} forfait(s) seul(s)</p>
           <p class="m-0">{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.0-0' }} DH</p>
-          <a stp-button variant="primary" routerLink="/heures-supp">Voir les heures supplémentaires</a>
-        </stp-wizard-state>
-      } @else if (etape() === 1) {
-        <section class="app-wizard__panneau" aria-labelledby="hs-context-title">
-          <h2 id="hs-context-title" class="app-wizard__titre">Chantier</h2>
-          <div class="app-form__grid">
-            <div class="field"><span>Mois de la paie</span><strong>{{ moisLibelle() || '…' }}</strong></div>
-            <label class="field" for="hs-import-chantier">Chantier <app-lazy-select inputId="hs-import-chantier" ariaLabel="Chantier à importer" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierId()" (valueChange)="choisirChantier($event)" /></label>
+          <div class="app-wizard__boutons-fin">
+            <a stp-button routerLink="/heures-supp">Voir les heures supplémentaires</a>
           </div>
-          <div class="app-wizard__pied"><button stp-button variant="primary" type="button" [loading]="chargement()" [disabled]="!periode() || !chantierId()" (click)="verifierContexte()">Suivant</button></div>
-        </section>
-      } @else if (etape() === 2) {
-        <section class="app-wizard__panneau" aria-labelledby="hs-file-title">
-          <p class="app-wizard__legende">{{ periode() }} · {{ chantierLibelle() }}</p><h2 id="hs-file-title" class="app-wizard__titre">Pointage heures supp</h2>
-          <div><button stp-button variant="text" icon="file-spreadsheet" type="button" (click)="modeleOuvert.set(true)">Voir le modèle Excel</button></div>
-          <label class="field">Fichier Excel (.xlsx)<input class="stp-input" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="choisirFichier($event)" /></label>
-          <div class="app-wizard__pied"><button stp-button variant="secondary" type="button" (click)="etape.set(1)">Retour</button><button stp-button variant="primary" type="button" [disabled]="!fichier()" (click)="etape.set(3)">Continuer</button></div>
-        </section>
-      } @else if (etape() === 3) {
-        <section class="app-wizard__panneau" aria-labelledby="hs-forfaits-title">
-          <p class="app-wizard__legende">{{ periode() }} · {{ chantierLibelle() }}</p><h2 id="hs-forfaits-title" class="app-wizard__titre">Forfaits</h2>
-          <p>Choisissez un employé pour ajouter un forfait. Un employé peut recevoir un forfait sans ligne de pointage ; le forfait est refusé si sa paie du mois est marquée STC/sortie.</p>
-          <label class="field">Rechercher un employé
-            <app-lazy-select ariaLabel="Employé pour le forfait" inputId="hs-forfait-employe" [source]="employes" optionLabel="displayLabel" dataKey="id" placeholder="Nom ou CIN" [value]="employeForfaitSelectionne()" (valueChange)="choisirEmployeForfait($event)" />
-          </label>
-          @if (forfaits().length) {
-            <div class="app-wizard__forfaits" aria-label="Forfaits ajoutés">
-              @for (forfait of forfaits(); track forfait.cin) {
-                <article class="app-wizard__forfait"><div><strong>{{ forfait.nomPrenom }}</strong><span>{{ forfait.cin }}</span></div><strong>{{ forfait.montantDh | number:'1.0-0' }} DH</strong><button stp-button variant="text" icon="trash-2" iconOnly type="button" [attr.aria-label]="'Retirer le forfait de ' + forfait.nomPrenom" (click)="retirerForfait(forfait.cin)"></button></article>
-              }
-            </div>
-          } @else {
-            <p class="app-wizard__vide">Aucun forfait ajouté. Cette étape est facultative.</p>
+        </stp-wizard-state>
+      } @else {
+        @switch (etape()) {
+          @case (1) {
+            <section class="app-wizard__panneau" aria-labelledby="hs-context-title">
+              <h2 id="hs-context-title" class="app-wizard__consigne">Choisissez le chantier dont vous importez le pointage. Le mois est celui de la dernière paie.</h2>
+              <div class="app-form__grid">
+                <div class="field"><span>Mois de la paie</span><strong>{{ moisLibelle() || '…' }}</strong></div>
+                <label class="field" for="hs-import-chantier">Chantier <app-lazy-select inputId="hs-import-chantier" ariaLabel="Chantier à importer" placeholder="Rechercher un chantier" optionLabel="code" dataKey="id" [source]="chantiers" [value]="chantierId()" (valueChange)="choisirChantier($event)" /></label>
+              </div>
+            </section>
           }
-          <div class="app-wizard__pied"><button stp-button variant="secondary" type="button" (click)="etape.set(2)">Retour au pointage</button><button stp-button variant="primary" type="button" [loading]="chargement()" (click)="analyser()">Analyser le pointage</button></div>
-        </section>
-      } @else if (analyse(); as a) {
-        <section class="app-wizard__panneau" aria-labelledby="hs-review-title">
-          <p class="app-wizard__legende">{{ a.periode }} · {{ chantierLibelle() }}</p><h2 id="hs-review-title" class="app-wizard__titre">Contrôler avant import</h2>
-          <div class="app-wizard__totaux"><span>{{ a.totalLignes }} lignes lues</span><span>{{ a.lignesZero }} lignes HS = 0 conservées</span><span>{{ a.lignes.length }} employés / forfaits</span><strong>Import {{ a.pret ? 'prêt' : 'bloqué' }}</strong></div>
-          @if (a.erreurs.length) { <stp-message severity="error"><p>Corrigez les éléments suivants avant l’import :</p><ul>@for (message of a.erreurs; track $index) { <li>{{ message }}</li> }</ul></stp-message> }
-          @for (ligne of a.lignes; track ligne.cin) {
-            @if (ligne.employeId === null) {
-              <article class="app-wizard__correction">
-                <div><strong>{{ ligne.nomFichier }}</strong><span>{{ ligne.cin }}</span></div>
-                <p>Aucune fiche Employé ne correspond à ce CIN. Complétez les informations nécessaires à sa création.</p>
-                <div class="app-form__grid">
-                  <label class="field" for="hs-naissance-{{ ligne.numeroLigne }}">Date de naissance <stp-date-input inputId="hs-naissance-{{ ligne.numeroLigne }}" [ariaLabel]="'Date de naissance de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateNaissance')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateNaissance', $event)" /></label>
-                  <label class="field" for="hs-embauche-{{ ligne.numeroLigne }}">Date d’embauche <stp-date-input inputId="hs-embauche-{{ ligne.numeroLigne }}" [ariaLabel]="'Date d’embauche de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateEmbauche')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateEmbauche', $event)" /></label>
-                  <label class="field" for="hs-fonction-{{ ligne.numeroLigne }}">Fonction <app-lazy-select inputId="hs-fonction-{{ ligne.numeroLigne }}" ariaLabel="Fonction du nouvel employé" placeholder="Rechercher une fonction" optionLabel="libelle" dataKey="id" [source]="fonctions" [value]="creation(ligne.numeroLigne).fonctionId || null" (valueChange)="choisirFonction(ligne.numeroLigne, $event)" /></label>
-                  <label class="field" for="hs-salaire-{{ ligne.numeroLigne }}">Salaire de référence (DH) <stp-number-input inputId="hs-salaire-{{ ligne.numeroLigne }}" ariaLabel="Salaire de référence en DH" [value]="valeurSalaire(ligne.numeroLigne)" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" (valueChange)="saisirSalaire(ligne.numeroLigne, $event)" /></label>
-                  <label class="field" for="hs-type-salaire-{{ ligne.numeroLigne }}">Type de salaire <stp-select inputId="hs-type-salaire-{{ ligne.numeroLigne }}" ariaLabel="Type de salaire" [options]="typesSalaire" placeholder="Choisir un type" [value]="creation(ligne.numeroLigne).typeSalaire || null" (valueChange)="choisirTypeSalaire(ligne.numeroLigne, $event)" /></label>
-                </div>
-              </article>
-            } @else if (ligne.identiteEcart || ligne.fonctionEcart) {
-              <label class="app-wizard__aligner"><input type="checkbox" [checked]="estAligne(ligne.employeId)" (change)="basculerAlignement(ligne.employeId)" />
-                Aligner {{ ligne.cin }} depuis le fichier : {{ ligne.nomFichier }}
+
+          @case (2) {
+            <section class="app-wizard__panneau" aria-labelledby="hs-file-title">
+              <h2 id="hs-file-title" class="app-wizard__consigne">Déposez le classeur de pointage : nom, CIN et heures. Les employés sont reconnus par leur CIN, jamais par leur nom.</h2>
+              <label class="app-wizard__depot" [class.app-wizard__depot--inactif]="chargement()">
+                <stp-icon name="file-spreadsheet" size="2rem" />
+                <strong>{{ fichier() ? fichier()!.name : 'Choisir le fichier Excel de pointage' }}</strong>
+                <span>Le fichier est analysé à l’étape de contrôle : rien n’est enregistré avant la dernière étape.</span>
+                <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" [disabled]="chargement()" (change)="choisirFichier($event)" />
               </label>
+              <div><button stp-button variant="text" icon="file-spreadsheet" type="button" (click)="modeleOuvert.set(true)">Voir le modèle Excel</button></div>
+            </section>
+          }
+
+          @case (3) {
+            <section class="app-wizard__panneau" aria-labelledby="hs-forfaits-title">
+              <h2 id="hs-forfaits-title" class="app-wizard__consigne">
+                @if (periodeForfaitsRepris(); as precedent) {
+                  Forfaits repris de {{ libelleMois(precedent) }}. Modifiez un montant, retirez une ligne ou ajoutez un employé.
+                } @else {
+                  Aucun forfait précédent pour ce chantier. Ajoutez-en si besoin : l’étape est facultative.
+                }
+              </h2>
+              <label class="field">Ajouter un employé
+                <app-lazy-select ariaLabel="Employé pour le forfait" inputId="hs-forfait-employe" [source]="employes" optionLabel="displayLabel" dataKey="id" placeholder="Nom, prénom ou CIN" [value]="employeForfaitSelectionne()" (valueChange)="choisirEmployeForfait($event)" />
+              </label>
+              @if (forfaits().length) {
+                <ul class="app-forfaits" aria-label="Forfaits du mois">
+                  @for (forfait of forfaits(); track forfait.cin) {
+                    <li class="app-forfaits__ligne">
+                      <span class="app-forfaits__employe"><strong>{{ forfait.nomPrenom }}</strong> <small>CIN {{ forfait.cin }}</small></span>
+                      <stp-number-input [inputId]="'hs-forfait-' + forfait.cin" [ariaLabel]="'Montant du forfait de ' + forfait.nomPrenom" [value]="forfait.montantDh" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="0" (valueChange)="modifierMontantForfait(forfait.cin, $event)" />
+                      <button stp-button variant="text" icon="trash-2" iconOnly type="button" [attr.aria-label]="'Retirer le forfait de ' + forfait.nomPrenom" (click)="retirerForfait(forfait.cin)"></button>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="app-wizard__legende">Aucun forfait pour l’instant. Le forfait est refusé si la paie du mois de l’employé est marquée STC ou sortie.</p>
+              }
+            </section>
+          }
+
+          @case (4) {
+            @if (analyse(); as a) {
+              <section class="app-wizard__panneau" aria-labelledby="hs-review-title">
+                <h2 id="hs-review-title" class="app-wizard__consigne">Vérifiez le contrôle avant d’importer. Complétez les employés inconnus et alignez les écarts de nom ou de fonction.</h2>
+                <dl class="app-wizard__bilan">
+                  <div><dt>Lignes lues</dt><dd>{{ a.totalLignes }}</dd></div>
+                  <div><dt>Lignes HS = 0</dt><dd>{{ a.lignesZero }}</dd></div>
+                  <div><dt>Employés et forfaits</dt><dd>{{ a.lignes.length }}</dd></div>
+                  <div><dt>Import</dt><dd>{{ a.pret ? 'prêt' : 'bloqué' }}</dd></div>
+                </dl>
+                @if (a.erreurs.length) { <stp-message severity="error"><p>Corrigez les éléments suivants avant l’import :</p><ul>@for (message of a.erreurs; track $index) { <li>{{ message }}</li> }</ul></stp-message> }
+                @for (ligne of a.lignes; track ligne.cin) {
+                  @if (ligne.employeId === null) {
+                    <article class="app-wizard__correction">
+                      <div><strong>{{ ligne.nomFichier }}</strong><span>{{ ligne.cin }}</span></div>
+                      <p>Aucune fiche Employé ne correspond à ce CIN. Complétez les informations nécessaires à sa création.</p>
+                      <div class="app-form__grid">
+                        <label class="field" for="hs-naissance-{{ ligne.numeroLigne }}">Date de naissance <stp-date-input inputId="hs-naissance-{{ ligne.numeroLigne }}" [ariaLabel]="'Date de naissance de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateNaissance')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateNaissance', $event)" /></label>
+                        <label class="field" for="hs-embauche-{{ ligne.numeroLigne }}">Date d’embauche <stp-date-input inputId="hs-embauche-{{ ligne.numeroLigne }}" [ariaLabel]="'Date d’embauche de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateEmbauche')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateEmbauche', $event)" /></label>
+                        <label class="field" for="hs-fonction-{{ ligne.numeroLigne }}">Fonction <app-lazy-select inputId="hs-fonction-{{ ligne.numeroLigne }}" ariaLabel="Fonction du nouvel employé" placeholder="Rechercher une fonction" optionLabel="libelle" dataKey="id" [source]="fonctions" [value]="creation(ligne.numeroLigne).fonctionId || null" (valueChange)="choisirFonction(ligne.numeroLigne, $event)" /></label>
+                        <label class="field" for="hs-salaire-{{ ligne.numeroLigne }}">Salaire de référence (DH) <stp-number-input inputId="hs-salaire-{{ ligne.numeroLigne }}" ariaLabel="Salaire de référence en DH" [value]="valeurSalaire(ligne.numeroLigne)" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" (valueChange)="saisirSalaire(ligne.numeroLigne, $event)" /></label>
+                        <label class="field" for="hs-type-salaire-{{ ligne.numeroLigne }}">Type de salaire <stp-select inputId="hs-type-salaire-{{ ligne.numeroLigne }}" ariaLabel="Type de salaire" [options]="typesSalaire" placeholder="Choisir un type" [value]="creation(ligne.numeroLigne).typeSalaire || null" (valueChange)="choisirTypeSalaire(ligne.numeroLigne, $event)" /></label>
+                      </div>
+                    </article>
+                  } @else if (ligne.identiteEcart || ligne.fonctionEcart) {
+                    <label class="app-wizard__aligner"><input type="checkbox" [checked]="estAligne(ligne.employeId)" (change)="basculerAlignement(ligne.employeId)" />
+                      Aligner {{ ligne.cin }} depuis le fichier : {{ ligne.nomFichier }}
+                    </label>
+                  }
+                }
+                <details>
+                  <summary>Voir le récapitulatif détaillé</summary>
+                  <stp-table label="Récapitulatif détaillé de l’import" [value]="a.lignes" [columns]="colonnesRecap" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
+                    <ng-template stpCell let-ligne let-col="col">
+                      @switch (col.field) {
+                        @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
+                        @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
+                        @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') }} }
+                        @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.0-0') }} }
+                        @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.0-0' }}</strong> }
+                        @case ('montantDh') { {{ ligne.montantDh | number:'1.0-0' }} }
+                        @case ('stcDh') { {{ ligne.stcDh | number:'1.0-0' }} }
+                        @default { {{ ligne[col.field] }} }
+                      }
+                    </ng-template>
+                  </stp-table>
+                </details>
+              </section>
             }
           }
-          <details ><summary>Voir le récapitulatif détaillé</summary>
-            <stp-table label="Récapitulatif détaillé de l’import" [value]="a.lignes" [columns]="colonnesRecap" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
-              <ng-template stpCell let-ligne let-col="col">
-                @switch (col.field) {
-                  @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
-                  @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
-                  @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') }} }
-                  @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.0-0') }} }
-                  @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.0-0' }}</strong> }
-                  @case ('montantDh') { {{ ligne.montantDh | number:'1.0-0' }} }
-                  @case ('stcDh') { {{ ligne.stcDh | number:'1.0-0' }} }
-                  @default { {{ ligne[col.field] }} }
-                }
-              </ng-template>
-            </stp-table>
-          </details>
-          <div class="app-wizard__pied"><button stp-button variant="secondary" type="button" (click)="etape.set(3)">Modifier les forfaits</button><button stp-button variant="text" type="button" (click)="etape.set(2)">Modifier le fichier</button>
-            @if (!a.pret) { <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="corriger()">Enregistrer les corrections puis réanalyser</button> }
-            @if (peutRemplacer()) { <button stp-button variant="danger" type="button" [loading]="chargement()" (click)="demanderRemplacement()">Remplacer les lignes existantes</button> }
-            <button stp-button variant="primary" type="button" [disabled]="!a.pret" [loading]="chargement()" (click)="importer()">Confirmer l’import</button></div>
-        </section>
+        }
       }
-      <stp-dialog header="Modèle Excel" width="34rem" [(open)]="modeleOuvert">
-        <stp-table label="Modèle du classeur de pointage" [value]="lignesModele" [columns]="colonnesModele" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
-        <div stpDialogFooter><button stp-button variant="primary" icon="download" type="button" [loading]="telechargementModele()" (click)="telechargerModele()">Télécharger le modèle</button></div>
-      </stp-dialog>
-      <stp-dialog header="Montant du forfait" width="30rem" [(open)]="forfaitDialogueOuvert" (closed)="annulerForfait()">
-        @if (forfaitEmploye(); as employe) { <p><strong>{{ employe.nomPrenom }}</strong><br /><span>{{ employe.cin }}</span></p> }
-        @if (forfaitEmploye()) {
-          <label class="field" for="hs-forfait-montant">Montant du forfait (DH) <stp-number-input inputId="hs-forfait-montant" ariaLabel="Montant du forfait en DH" [value]="montantForfait()" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="0" (valueChange)="montantForfait.set($event)" /></label>
-        }
-        @if (forfaitEmploye()) {
-          <div stpDialogFooter><button stp-button variant="secondary" type="button" (click)="annulerForfait()">Annuler</button><button stp-button variant="primary" type="button" [disabled]="montantForfait() === null || montantForfait()! < 0" (click)="enregistrerForfait()">Ajouter le forfait</button></div>
-        }
-      </stp-dialog>
     </div>
+
+    @if (resultat() === null) {
+      <footer class="app-wizard__pied">
+        <button stp-button variant="text" icon="arrow-left" type="button" [disabled]="chargement()" (click)="reculer()" [style.visibility]="etape() > 1 ? 'visible' : 'hidden'">Retour</button>
+        @switch (etape()) {
+          @case (1) {
+            @if (!chantierId()) { <span class="app-wizard__indice">Choisissez le chantier pour continuer.</span> }
+            <button stp-button icon="arrow-right" type="button" [loading]="chargement()" [disabled]="!periode() || !chantierId()" (click)="verifierContexte()">Continuer</button>
+          }
+          @case (2) {
+            @if (!fichier()) { <span class="app-wizard__indice">Choisissez le fichier pour continuer.</span> }
+            <button stp-button icon="arrow-right" type="button" [disabled]="!fichier()" (click)="etape.set(3)">Continuer</button>
+          }
+          @case (3) {
+            <button stp-button icon="arrow-right" type="button" [loading]="chargement()" (click)="analyser()">Analyser le pointage</button>
+          }
+          @case (4) {
+            @if (analyse(); as a) {
+              <span class="app-wizard__boutons-fin">
+                @if (peutRemplacer()) { <button stp-button variant="danger" type="button" [loading]="chargement()" (click)="demanderRemplacement()">Remplacer les lignes existantes</button> }
+                @if (!a.pret) { <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="corriger()">Enregistrer les corrections puis réanalyser</button> }
+                <button stp-button icon="upload" type="button" [disabled]="!a.pret" [loading]="chargement()" (click)="importer()">Confirmer l’import</button>
+              </span>
+            }
+          }
+        }
+      </footer>
+    }
+
+    <stp-dialog header="Modèle Excel" width="34rem" [(open)]="modeleOuvert">
+      <stp-table label="Modèle du classeur de pointage" [value]="lignesModele" [columns]="colonnesModele" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
+      <div stpDialogFooter><button stp-button variant="primary" icon="download" type="button" [loading]="telechargementModele()" (click)="telechargerModele()">Télécharger le modèle</button></div>
     </stp-dialog>
+    <stp-dialog header="Montant du forfait" width="30rem" [(open)]="forfaitDialogueOuvert" (closed)="annulerForfait()">
+      @if (forfaitEmploye(); as employe) {
+        <p><strong>{{ employe.nomPrenom }}</strong><br /><span>{{ employe.cin }}</span></p>
+        <label class="field" for="hs-forfait-montant">Montant du forfait (DH) <stp-number-input inputId="hs-forfait-montant" ariaLabel="Montant du forfait en DH" [value]="montantForfait()" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="0" (valueChange)="montantForfait.set($event)" /></label>
+      }
+      <div stpDialogFooter><button stp-button variant="secondary" type="button" (click)="annulerForfait()">Annuler</button><button stp-button variant="primary" type="button" [disabled]="montantForfait() === null || montantForfait()! < 0" (click)="enregistrerForfait()">Ajouter le forfait</button></div>
+    </stp-dialog>
+  </div>
+</stp-dialog>

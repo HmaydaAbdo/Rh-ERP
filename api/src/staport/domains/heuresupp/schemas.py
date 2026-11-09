@@ -2,7 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BeforeValidator, Field
 
@@ -121,6 +121,15 @@ class ImportPrerequis(ModeleApi):
     message: str | None
 
 
+class ForfaitPrecedent(ModeleApi):
+    """Forfait du dernier mois qui en comptait pour le chantier : proposé, modifiable, à l'étape Forfaits."""
+
+    cin: str
+    nom_prenom: str
+    montant_dh: Nombre
+    periode: PeriodePaie
+
+
 class ImportLigne(ModeleApi):
     numero_ligne: int
     cin: str
@@ -199,6 +208,8 @@ class HeuresSuppExportRequete(HeuresSuppRecherche):
     """Filtres, recherche et tri de la vue Tabulaire : l'export couvre toutes les lignes du périmètre."""
 
     tri: Annotated[str, Field(max_length=60)] | None = None
+    # « signature » : émargement étroit (direction) ; « signature_empreinte » : colonne large avec une zone d'empreinte.
+    mode: Literal["signature", "signature_empreinte"] = "signature"
 
     def mois_demandes(self) -> list[int]:
         """La liste `periodes` si elle est fournie, sinon le mois unique."""
@@ -207,4 +218,4 @@ class HeuresSuppExportRequete(HeuresSuppRecherche):
         return [] if self.periode is None else [self.periode]
 
     def criteres(self) -> HeuresSuppRecherche:
-        return HeuresSuppRecherche.model_validate(self.model_dump(exclude={"tri"}))
+        return HeuresSuppRecherche.model_validate(self.model_dump(exclude={"tri", "mode"}))

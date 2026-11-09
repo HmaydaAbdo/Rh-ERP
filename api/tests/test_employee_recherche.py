@@ -94,6 +94,17 @@ def test_les_filtres_de_recherche_se_combinent(jeu: dict[str, Any]) -> None:
     assert _noms(jeu, nomPrenom="   ", cin="  ", statut="INACTIF") >= {n["sorti"]}
 
 
+def test_la_zone_unique_cherche_le_nom_ou_le_cin_dans_n_importe_quel_ordre(jeu: dict[str, Any]) -> None:
+    n, motif = jeu["noms"], jeu["motif"].lower()
+    cin_sans = jeu["sans"]["cin"].lower()
+    assert _noms(jeu, recherche=cin_sans) == {n["sans"]}  # le CIN seul
+    assert _noms(jeu, recherche=f"sans {motif}") == {n["sans"]}  # mots inversés
+    assert _noms(jeu, recherche=f"  {motif}   {cin_sans}  ") == {n["sans"]}  # nom et CIN ensemble, espaces multiples
+    assert _noms(jeu, recherche=motif) == set(n.values())
+    assert _noms(jeu, recherche="   ") >= set(n.values())  # vide : sans effet
+    assert _noms(jeu, recherche="100%") == set()  # les jokers sont échappés
+
+
 def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
     base = jeu["corps"]("Invalide", f"CIN-INV-{uuid.uuid4().hex[:6]}", None)
     for variante in (

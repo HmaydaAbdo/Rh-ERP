@@ -69,6 +69,15 @@ def filtres(c: EmployeeRecherche) -> list[ColumnElement[bool]]:
         f.append(func.lower(Employee.nom_prenom).like(motif_contient(c.nom_prenom), escape=ECHAPPEMENT))
     if c.cin and c.cin.strip():
         f.append(func.lower(Employee.cin).like(motif_contient(c.cin), escape=ECHAPPEMENT))
+    if c.recherche:
+        for mot in c.recherche.split():
+            motif = motif_contient(mot)
+            f.append(
+                or_(
+                    func.lower(Employee.nom_prenom).like(motif, escape=ECHAPPEMENT),
+                    func.lower(Employee.cin).like(motif, escape=ECHAPPEMENT),
+                )
+            )
     if c.fonction_ids:
         f.append(Employee.fonction_id.in_(c.fonction_ids))
     if c.chantier_ids:

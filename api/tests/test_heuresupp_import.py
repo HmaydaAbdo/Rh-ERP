@@ -219,6 +219,39 @@ def test_un_forfait_seul_est_importe_et_une_analyse_bloquee_n_ecrit_rien(
     assert sorted(ligne["montantDh"] for ligne in liste) == [0.0, 0.0]
 
 
+def test_les_forfaits_du_dernier_mois_du_chantier_sont_proposes(
+    plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
+) -> None:
+    cins = _cins(plateforme, jeu)
+    importe = _appel(
+        plateforme,
+        entetes,
+        "",
+        _classeur([["Heures 1", cins[1], 0]]),
+        jeu,
+        forfaits={"forfaits": [{"cin": cins[0], "montantDh": 400}]},
+    )
+
+    def precedents(mois: str, chantier: int) -> Any:
+        return plateforme.client.get(
+            "/heures-supp/import/forfaits-precedents",
+            headers=entetes,
+            params={"periode": mois, "chantierId": chantier},
+        )
+
+    suivant = precedents("2098-09", jeu.chantier)
+    meme_mois = precedents(MOIS, jeu.chantier)
+    autre_chantier = precedents("2098-09", jeu.autre_chantier)
+
+    assert importe.status_code == 200, importe.text
+    assert importe.json()["forfaitsSeuls"] == 1
+    assert suivant.status_code == 200, suivant.text
+    assert [(f["cin"], f["montantDh"], f["periode"]) for f in suivant.json()] == [(cins[0], 400.0, MOIS)]
+    assert suivant.json()[0]["nomPrenom"]
+    assert meme_mois.json() == []  # strictement avant le mois importé
+    assert autre_chantier.json() == []  # le chantier choisi seulement
+
+
 def test_les_fichiers_invalides_sont_refuses_avec_les_messages_de_spring(
     plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
 ) -> None:
