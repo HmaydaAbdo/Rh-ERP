@@ -36,9 +36,9 @@ py openai 3.46.0
 npm frontend @copilotkit/angular 0.6.0
 npm frontend @a2ui/angular 0.13.0
 npm frontend @a2ui/web_core 0.14.0
-npm frontend @ag-ui/client 1.0.3
+npm frontend @ag-ui/client 1.0.4
 npm frontend typescript 6.0.3
-npm copilot-runtime @copilotkit/runtime 1.83.0
+npm copilot-runtime @copilotkit/runtime 1.85.0
 seuil resume_jetons 40000
 seuil resume_messages 12
 seuil appels_modele 8

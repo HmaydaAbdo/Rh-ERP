@@ -1,5 +1,5 @@
-# Mises à jour de dépendances (conventions/security.md, chaîne d'approvisionnement) : une proposition groupée par trimestre et
-# par écosystème, y compris les images Docker (la balise et l'empreinte) et les actions GitHub. Les alertes de sécurité
+# Mises à jour de dépendances (conventions/security.md, chaîne d'approvisionnement) : une proposition groupée par mois et
+# par écosystème (décision du propriétaire du 2026-11-09 : tout est mensuel, rien ne reste en retard), y compris les images Docker (la balise et l'empreinte) et les actions GitHub. Les alertes de sécurité
 # (Dependabot alerts) se règlent dans les paramètres du dépôt, pas ici.
 version: 2
 updates:
@@ -16,7 +16,7 @@ updates:
   - package-ecosystem: npm
     directory: /frontend
     schedule:
-      interval: quarterly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
       npm:
@@ -33,7 +33,7 @@ updates:
   - package-ecosystem: docker
     directory: /frontend
     schedule:
-      interval: quarterly
+      interval: monthly
   # Composants IA (plan de travail IA, E5.2, couche 3) : un rythme mensuel, parce que ces bibliothèques publient souvent.
   # Les PR Dependabot lancent la CI automatiquement : décision du propriétaire du 2026-10-31.
   - package-ecosystem: uv
@@ -63,11 +63,36 @@ updates:
   - package-ecosystem: docker
     directory: /backup
     schedule:
-      interval: quarterly
+      interval: monthly
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: quarterly
+      interval: monthly
     groups:
       actions:
+        patterns: ["*"]
+  # Écosystèmes ajoutés le 2026-11-09 : images Docker de l'ERP et du site de documentation, dépendances npm du site.
+  - package-ecosystem: docker
+    directory: /litellm
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /phoenix
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /database
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /site
+    schedule:
+      interval: monthly
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      site:
         patterns: ["*"]
