@@ -124,23 +124,50 @@ describe('PaieImportWizardComponent', () => {
     expect(continuer.disabled).toBe(true);
   });
 
+  it('annonce ce que l’import fait seul : fonctions créées, chantiers rouverts', async () => {
+    await ouvrir(['PAIE_IMPORT', 'PAIE_READ', 'EMPLOYEE_WRITE', 'CHANTIER_WRITE', 'FUNCTION_WRITE']);
+    service.analyserImport.mockReturnValue(
+      of({
+        ...ANALYSE,
+        erreurs: [],
+        chantiersClotures: [],
+        cinInconnus: [],
+        ecarts: [],
+        pret: true,
+        fonctionsACreer: [{ libelle: 'TOPOGRAPHE', lignes: [4, 9] }],
+        chantiersARouvrir: [{ chantierId: 3, code: 'C168', designation: 'Nador', lignes: [5] }]
+      })
+    );
+    await analyser();
+
+    const texte = dialogue().textContent ?? '';
+    expect(texte).toContain('1 fonction(s) inconnue(s) seront créées : TOPOGRAPHE (2 ligne(s))');
+    expect(texte).toContain('1 chantier(s) clôturé(s) seront rouverts : C168');
+    expect(store().controleTermine()).toBe(true);
+  });
+
   it('groupe les erreurs du fichier par type quand elles sont nombreuses, détail à la demande', async () => {
     await ouvrir(['PAIE_IMPORT', 'PAIE_READ']);
     const erreurs = Array.from({ length: 12 }, (_, i) => ({
       numeroLigne: 4 + i,
       cin: `C${i}`,
       nomPrenom: `N${i}`,
-      champ: i < 9 ? 'chantier' : 'fonction',
-      raison: i < 9 ? 'Chantier introuvable : C999' : 'Fonction introuvable : X'
+      champ: i < 5 ? 'chantier' : i < 9 ? 'chantier' : 'fonction',
+      valeur: i < 5 ? `C10${i}` : i < 9 ? `C20${i}` : 'MACON',
+      raison: i < 5 ? 'chantier clôturé : rouvrir le chantier avant l’import' : i < 9 ? 'chantier introuvable' : 'fonction introuvable'
     }));
     service.analyserImport.mockReturnValue(of({ ...ANALYSE, erreurs, chantiersClotures: [], cinInconnus: [], ecarts: [] }));
     await analyser();
 
     const cartes = Array.from(dialogue().querySelectorAll('.app-controle__carte'));
-    expect(cartes).toHaveLength(2);
-    expect(cartes[0].textContent).toContain('Chantier absent, inconnu ou clôturé');
-    expect(cartes[0].textContent).toContain('9');
+    expect(cartes).toHaveLength(3);
+    expect(cartes.map((x) => x.querySelector('strong')?.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Chantier clôturé 5',
+      'Chantier introuvable 4',
+      'Fonction introuvable 3'
+    ]);
     expect(cartes[0].textContent).toContain('Exemple, ligne 4');
+    expect(cartes[0].textContent).toContain('Valeurs reçues : C100, C101, C102, C103, C104');
     expect(dialogue().querySelector('stp-table')).toBeNull();
     (cartes[0].querySelector('button') as HTMLButtonElement).click();
     fixture.detectChanges();

@@ -104,6 +104,9 @@
         @if (store.bilan(); as bilan) {
           <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Paie de ' + store.libellePeriode(bilan.periode) + ' importée'">
             <p class="m-0">{{ bilan.crees }} bulletin(s) · {{ bilan.departs }} départ(s) · {{ bilan.retours }} retour(s)</p>
+            @if ((bilan.fonctionsCreees ?? 0) > 0 || (bilan.chantiersRouverts ?? 0) > 0) {
+              <p class="m-0">{{ bilan.fonctionsCreees ?? 0 }} fonction(s) créée(s) · {{ bilan.chantiersRouverts ?? 0 }} chantier(s) rouvert(s)</p>
+            }
             <div class="app-wizard__boutons-fin">
               <button stp-button type="button" (click)="setVisible(false)">Fermer</button>
             </div>
