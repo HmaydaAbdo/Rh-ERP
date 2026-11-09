@@ -1,6 +1,6 @@
 # Image staport-intelligence-phoenix : traces OpenTelemetry et observabilité de l'IA (site/docs/ia, T18). Arize Phoenix officiel,
 # épinglé par version et digest ; un seul conteneur, traces dans la base `phoenix` du PostgreSQL de l'ERP (sauvegardée avec lui).
-FROM arizephoenix/phoenix:version-20.26.1@sha256:623813cbf1bbd4811456bb4936f21666ae50a1fbf862cf59ea0e3ca824b6b114
+FROM arizephoenix/phoenix:version-21.0.0@sha256:1f9a144a5357b4973e93a15718f050247cb7a4ee7b7c6c06ecb91b5eed3fbaad
 # Aucune télémétrie vers Arize ; /data ne sert qu'aux exports. Conservation SANS LIMITE (0 = aucune purge automatique) :
 # les traces servent à analyser ce qui s'est passé et à améliorer l'agent ; seul le propriétaire les supprime, depuis l'interface.
 ENV PHOENIX_TELEMETRY_ENABLED=false \
