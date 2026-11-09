@@ -55,4 +55,5 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
         erreur["champ"]
         for erreur in analyse["erreurs"]
         if erreur["numeroLigne"] == 6 and "introuvable" in erreur["raison"]
-    } == {"fonction", "chantier", "equipe"}
+    } == {"chantier", "equipe"}, "l'administrateur a FUNCTION_WRITE : la fonction inconnue est créée, non bloquante"
+    assert [f["libelle"] for f in analyse["fonctionsACreer"]] == ["Fonction absente"]

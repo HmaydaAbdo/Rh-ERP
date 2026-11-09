@@ -19,25 +19,42 @@ const LIBELLES_CHAMPS: Record<PaieImportChamp, string> = {
   salaire: 'Salaire'
 };
 
-/** Libellés des types d'erreur du fichier, par champ en cause ; un champ inconnu s'affiche tel quel. */
-const LIBELLES_ERREURS: Record<string, string> = {
-  nomPrenom: 'Nom absent ou trop long',
-  cin: 'CIN absent, trop long ou inconnu',
-  fonction: 'Fonction absente ou inconnue',
-  chantier: 'Chantier absent, inconnu ou clôturé',
-  equipe: 'Équipe inconnue',
-  observation: 'Observation trop longue',
-  autre: 'Autres erreurs'
+/** Nom de la colonne du fichier, par champ en cause ; un champ inconnu s'affiche tel quel. */
+const LIBELLES_COLONNES: Record<string, string> = {
+  nomPrenom: 'Nom',
+  cin: 'CIN',
+  fonction: 'Fonction',
+  chantier: 'Chantier',
+  equipe: 'Équipe',
+  observation: 'Observation',
+  nombreJoursTravailles: 'Jours travaillés',
+  joursRecuperationOuvrable: 'J.R.O',
+  joursRecuperationDimanche: 'J.R.D',
+  salaireMensuel: 'Salaire',
+  primeRoulageOrdinaire: 'Prime RO',
+  primeRoulageDimanche: 'Prime RD',
+  salaireTotal: 'Total',
+  autre: 'Autre'
 };
+
+/** Le problème, dit exactement : « Chantier clôturé », « Chantier introuvable », « Fonction introuvable »… */
+export function titreErreur(champ: string | null | undefined, raison: string): string {
+  const colonne = LIBELLES_COLONNES[champ ?? 'autre'] ?? champ ?? 'Autre';
+  const motif = raison.split(' : ')[0];
+  const texte = motif.toLowerCase().includes(colonne.toLowerCase()) ? motif : `${colonne} : ${motif}`;
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
 
 /** Au-delà de ce nombre, les erreurs du fichier se regroupent par type, détail à l'ouverture. */
 const SEUIL_GROUPES = 8;
 
 export interface GroupeErreurs {
-  champ: string;
+  cle: string;
   libelle: string;
   erreurs: PaieImportErreur[];
   exemple: PaieImportErreur;
+  /** Valeurs reçues distinctes (au plus 5), pour repérer d'un coup d'œil les codes en cause. */
+  valeurs: string[];
 }
 
 const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
@@ -75,24 +92,35 @@ export class PaieImportEtapeControleComponent {
   protected readonly groupesErreurs = computed<GroupeErreurs[]>(() => {
     const groupes = new Map<string, PaieImportErreur[]>();
     for (const erreur of this.store.analyse()?.erreurs ?? []) {
-      const cle = erreur.champ ?? 'autre';
+      const cle = titreErreur(erreur.champ, erreur.raison);
       groupes.set(cle, [...(groupes.get(cle) ?? []), erreur]);
     }
     return [...groupes.entries()]
-      .map(([champ, erreurs]) => ({ champ, libelle: LIBELLES_ERREURS[champ] ?? champ, erreurs, exemple: erreurs[0] }))
+      .map(([cle, erreurs]) => ({
+        cle,
+        libelle: cle,
+        erreurs,
+        exemple: erreurs[0],
+        valeurs: [...new Set(erreurs.map((e) => e.valeur).filter((v): v is string => !!v))].slice(0, 5)
+      }))
       .sort((a, b) => b.erreurs.length - a.erreurs.length);
   });
+
+  protected readonly nomsFonctions = computed(() =>
+    (this.store.analyse()?.fonctionsACreer ?? []).map((f) => `${f.libelle} (${f.lignes.length} ligne(s))`).join(', ')
+  );
+  protected readonly codesChantiers = computed(() => (this.store.analyse()?.chantiersARouvrir ?? []).map((c) => c.code).join(', '));
 
   protected readonly avertissementsRegles = computed(
     () => this.store.categories().find((c) => c.cle === 'avertissements')?.nombre === 0
   );
 
-  protected groupeOuvert(champ: string): boolean {
-    return this.groupesOuverts().includes(champ);
+  protected groupeOuvert(cle: string): boolean {
+    return this.groupesOuverts().includes(cle);
   }
 
-  protected basculerGroupe(champ: string): void {
-    this.groupesOuverts.update((ouverts) => (ouverts.includes(champ) ? ouverts.filter((c) => c !== champ) : [...ouverts, champ]));
+  protected basculerGroupe(cle: string): void {
+    this.groupesOuverts.update((ouverts) => (ouverts.includes(cle) ? ouverts.filter((c) => c !== cle) : [...ouverts, cle]));
   }
 
   protected surFichier(evenement: Event): void {
