@@ -6,7 +6,7 @@
       <input #fichierCorrige class="hidden" type="file" accept=".xlsx" tabindex="-1" aria-hidden="true" (change)="surFichier($event)" />
     </div>
 
-    @if (analyse.pret) {
+    @if (store.controleTermine()) {
       <div class="app-controle__ok" role="status">
         <stp-icon name="circle-check" size="1.5rem" />
         <div>
@@ -15,21 +15,72 @@
         </div>
       </div>
     } @else {
-      <p class="app-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer.
+      <p class="app-wizard__consigne">{{ store.nombreProblemes() }} problème(s) à régler avant d'importer, une catégorie après l'autre.
         @if (!store.peutCorriger()) {
           Vous ne pouvez pas modifier les fiches des employés : corrigez le fichier, puis réimportez-le.
         }
       </p>
     }
 
-    @if (analyse.erreurs.length > 0) {
+    @if (store.categories().length > 0) {
+      <ol class="app-controle__fil" aria-label="Catégories de problèmes">
+        @for (categorie of store.categories(); track categorie.cle) {
+          <li class="app-controle__fil-etape" [class.app-controle__fil-etape--active]="categorie.cle === store.categorieActive()" [class.app-controle__fil-etape--ok]="categorie.resolue" [attr.aria-current]="categorie.cle === store.categorieActive() ? 'step' : null">
+            <stp-icon [name]="categorie.resolue ? 'circle-check' : 'circle'" />
+            {{ categorie.libelle }}
+            @if (!categorie.resolue) {
+              <span class="app-wizard__nombre">{{ categorie.nombre }}</span>
+            }
+          </li>
+        }
+      </ol>
+      @if (store.categorieActive() !== null) {
+        <p class="app-wizard__legende">Catégorie {{ store.positionCategorie().courante }} sur {{ store.positionCategorie().total }} : les suivantes s'ouvrent quand celle-ci est réglée.</p>
+      }
+    }
+
+    @if (store.categorieActive() === 'blocages') {
+      <h3 class="app-wizard__titre"><stp-icon name="ban" /> Ce mois ne peut pas être importé</h3>
+      <ul class="app-controle__cartes">
+        @for (blocage of analyse.blocagesPeriode; track blocage.code) {
+          <li class="app-controle__carte" role="alert">
+            <div class="app-controle__qui"><span>{{ blocage.message }}</span></div>
+          </li>
+        }
+      </ul>
+      <p class="app-wizard__legende">Revenez au choix du mois pour sélectionner le bon mois, puis réimportez le fichier.</p>
+    }
+
+    @if (store.categorieActive() === 'erreurs') {
       <h3 class="app-wizard__titre"><stp-icon name="file-x" /> À corriger dans le fichier <span class="app-wizard__nombre">{{ analyse.erreurs.length }}</span></h3>
+      @if (analyse.erreurs.length > seuilGroupes) {
+        <p class="app-wizard__legende">Les erreurs sont regroupées par type : ouvrez un groupe pour voir chaque ligne.</p>
+        <ul class="app-controle__cartes">
+          @for (groupe of groupesErreurs(); track groupe.champ) {
+            <li class="app-controle__carte">
+              <div class="app-controle__qui">
+                <strong>{{ groupe.libelle }} <span class="app-wizard__nombre">{{ groupe.erreurs.length }}</span></strong>
+                <span>Exemple, ligne {{ groupe.exemple.numeroLigne }} : {{ groupe.exemple.raison }}</span>
+              </div>
+              <div class="app-controle__saisie">
+                <button stp-button variant="secondary" type="button" [attr.aria-expanded]="groupeOuvert(groupe.champ)" (click)="basculerGroupe(groupe.champ)">{{ groupeOuvert(groupe.champ) ? 'Masquer le détail' : 'Voir le détail' }}</button>
+              </div>
+              @if (groupeOuvert(groupe.champ)) {
+                <stp-table [label]="'Erreurs : ' + groupe.libelle" [value]="groupe.erreurs" [columns]="colonnesErreurs" [paginated]="groupe.erreurs.length > 50" [reorderable]="false" [rowActionsVisible]="false">
+                  <ng-template stpCell let-erreur let-col="col">{{ erreur[col.field] ?? '—' }}</ng-template>
+                </stp-table>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
       <stp-table label="Erreurs du fichier" [value]="analyse.erreurs" [columns]="colonnesErreurs" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false">
         <ng-template stpCell let-erreur let-col="col">{{ erreur[col.field] ?? '—' }}</ng-template>
       </stp-table>
+      }
     }
 
-    @if (analyse.avertissements.length > 0) {
+    @if (store.categorieActive() === 'avertissements') {
       <h3 class="app-wizard__titre"><stp-icon name="triangle-alert" /> Avertissements à confirmer <span class="app-wizard__nombre">{{ analyse.avertissements.length }}</span></h3>
       <ul class="app-controle__cartes">
         @for (avertissement of analyse.avertissements; track avertissement.numeroLigne + (avertissement.codeAvertissement ?? '')) {
@@ -48,9 +99,10 @@
       @if (store.avertissementSalaireZero()) {
         <label><input type="checkbox" [checked]="store.confirmerSalaireZero()" (change)="confirmerZero($event)" /> Ignorer et conserver 0</label>
       }
+      <button stp-button icon="arrow-right" type="button" [disabled]="!avertissementsRegles()" (click)="store.validerCategorie('avertissements')">Avertissements réglés, continuer</button>
     }
 
-    @if (analyse.controlesPeriode.length > 0) {
+    @if (store.categorieActive() === 'periode') {
       <h3 class="app-wizard__titre"><stp-icon name="calendar" /> Période à confirmer <span class="app-wizard__nombre">{{ analyse.controlesPeriode.length }}</span></h3>
       <ul class="app-controle__cartes">
         @for (controle of analyse.controlesPeriode; track controle.code) {
@@ -62,9 +114,10 @@
         }
       </ul>
       <label><input type="checkbox" [checked]="store.periodeConfirmee()" (change)="confirmerPeriode($event)" /> Je confirme la période {{ store.libellePeriode(store.mois()) }}</label>
+      <button stp-button icon="arrow-right" type="button" [disabled]="!store.periodeConfirmee()" (click)="store.validerCategorie('periode')">Période confirmée, continuer</button>
     }
 
-    @if (analyse.chantiersClotures.length > 0) {
+    @if (store.categorieActive() === 'chantiers') {
       <h3 class="app-wizard__titre"><stp-icon name="archive" /> Chantiers clôturés <span class="app-wizard__nombre">{{ analyse.chantiersClotures.length }}</span></h3>
       <p class="app-wizard__legende">Le fichier paie des employés sur ces chantiers clôturés : rouvrez le chantier — ou corrigez le chantier dans le fichier.
         @if (!store.peutRouvrir()) {
@@ -89,7 +142,7 @@
       </ul>
     }
 
-    @if (analyse.cinInconnus.length > 0) {
+    @if (store.categorieActive() === 'cin') {
       <h3 class="app-wizard__titre"><stp-icon name="user-plus" /> CIN sans fiche <span class="app-wizard__nombre">{{ analyse.cinInconnus.length }}</span></h3>
       <p class="app-wizard__legende">Créez l'employé avec les valeurs du fichier et les deux dates qu'il n'a pas — ou corrigez le CIN dans le fichier.</p>
       <ul class="app-controle__cartes">
@@ -116,7 +169,7 @@
       </ul>
     }
 
-    @if (analyse.ecarts.length > 0) {
+    @if (store.categorieActive() === 'ecarts') {
       <div class="app-controle__entete-section">
         <h3 class="app-wizard__titre"><stp-icon name="git-compare" /> Fiches différentes du fichier <span class="app-wizard__nombre">{{ analyse.ecarts.length }}</span></h3>
         @if (store.peutCorriger() && analyse.ecarts.length > 1) {

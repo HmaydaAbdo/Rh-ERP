@@ -12,6 +12,30 @@ import { PaieService } from '../services/paie.service';
 export type EtapeImport = 'fichier' | 'controle' | 'departs' | 'recap';
 export type EtatImport = 'saisie' | 'import' | 'termine';
 
+/** Catégories de problèmes du contrôle, dans l'ordre où elles se règlent : chacune suppose les précédentes réglées. */
+export type CategorieControle = 'blocages' | 'periode' | 'erreurs' | 'chantiers' | 'cin' | 'ecarts' | 'avertissements';
+
+const CATEGORIES: CategorieControle[] = ['blocages', 'periode', 'erreurs', 'chantiers', 'cin', 'ecarts', 'avertissements'];
+/** Catégories qui se règlent par une confirmation (et un bouton « Continuer »), non par une correction. */
+const CATEGORIES_CONFIRMEES: CategorieControle[] = ['periode', 'avertissements'];
+export const LIBELLES_CATEGORIES: Record<CategorieControle, string> = {
+  blocages: 'Mois impossible',
+  periode: 'Période',
+  erreurs: 'Fichier',
+  chantiers: 'Chantiers',
+  cin: 'CIN sans fiche',
+  ecarts: 'Fiches',
+  avertissements: 'Avertissements'
+};
+
+export interface EtatCategorie {
+  cle: CategorieControle;
+  libelle: string;
+  /** Éléments restant à régler dans la catégorie. */
+  nombre: number;
+  resolue: boolean;
+}
+
 const ETAPES: EtapeImport[] = ['fichier', 'controle', 'departs', 'recap'];
 const LIBELLES_ETAPES: Record<EtapeImport, string> = {
   fichier: 'Fichier',
@@ -85,6 +109,10 @@ export class PaieImportStore {
   readonly periodeConfirmee = signal(false);
   readonly fichier = signal<File | null>(null);
   readonly analyse = signal<PaieImportAnalyse | null>(null);
+  /** Catégories rencontrées dans le contrôle en cours : une catégorie réglée reste dans le fil, cochée. */
+  readonly categoriesVues = signal<CategorieControle[]>([]);
+  /** Catégories de confirmation que l'utilisateur a validées par « Continuer ». */
+  readonly categoriesValidees = signal<CategorieControle[]>([]);
   readonly bilan = signal<PaieImportResult | null>(null);
   readonly confirmerSalaireZero = signal(false);
 
@@ -108,16 +136,62 @@ export class PaieImportStore {
     // Le serveur déclare `pret` sans contrôle de période non confirmé : on le retrouve en ne comptant pas ce contrôle.
     const sansControle = analyse.pret || (analyse.controlesPeriode.length > 0 && analyse.erreurs.length === 0 && analyse.avertissements.length === 0 && analyse.ecarts.length === 0);
     const periodeAcceptee = analyse.controlesPeriode.length === 0 || this.periodeConfirmee();
-    return analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 && periodeAcceptee &&
+    return analyse.blocagesPeriode.length === 0 && analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 && periodeAcceptee &&
       (sansControle || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
   });
+  private readonly avertissementsNonConfirmes = computed(() =>
+    (this.analyse()?.avertissements ?? []).filter(
+      (a) =>
+        !(
+          (a.codeAvertissement === 'SALAIRE_ZERO' && this.confirmerSalaireZero()) ||
+          (a.codeAvertissement === 'EQUIPE_VIDE' && a.employeId != null && this.decisionsEquipe()[a.employeId] !== undefined)
+        )
+    )
+  );
+  /** État de chaque catégorie présente dans le contrôle, dans l'ordre de résolution. */
+  readonly categories = computed<EtatCategorie[]>(() => {
+    const analyse = this.analyse();
+    if (!analyse) return [];
+    const nombres: Record<CategorieControle, number> = {
+      blocages: analyse.blocagesPeriode.length,
+      periode: this.periodeConfirmee() ? 0 : analyse.controlesPeriode.length,
+      erreurs: analyse.erreurs.length,
+      chantiers: analyse.chantiersClotures.length,
+      cin: analyse.cinInconnus.length,
+      ecarts: analyse.ecarts.length,
+      avertissements: this.avertissementsNonConfirmes().length
+    };
+    const vues = this.categoriesVues();
+    const validees = this.categoriesValidees();
+    const totaux: Partial<Record<CategorieControle, number>> = {
+      periode: analyse.controlesPeriode.length,
+      avertissements: analyse.avertissements.length
+    };
+    return CATEGORIES.filter((cle) => vues.includes(cle) || nombres[cle] > 0).map((cle) => {
+      const total = totaux[cle] ?? 0;
+      // Une catégorie de confirmation n'est réglée qu'une fois validée par « Continuer » ; un mois bloqué ne se règle jamais ici.
+      const resolue = CATEGORIES_CONFIRMEES.includes(cle)
+        ? total === 0 || (nombres[cle] === 0 && validees.includes(cle))
+        : nombres[cle] === 0;
+      return { cle, libelle: LIBELLES_CATEGORIES[cle], nombre: nombres[cle], resolue };
+    });
+  });
+  /** La catégorie à traiter : la première non réglée ; `null` quand le contrôle est terminé. */
+  readonly categorieActive = computed<CategorieControle | null>(() => this.categories().find((c) => !c.resolue)?.cle ?? null);
+  /** Position de la catégorie active parmi celles du contrôle (« 2 sur 4 »). */
+  readonly positionCategorie = computed(() => {
+    const categories = this.categories();
+    const index = categories.findIndex((c) => !c.resolue);
+    return { courante: index < 0 ? categories.length : index + 1, total: categories.length };
+  });
+  readonly controleTermine = computed(() => this.pret() && this.categorieActive() === null);
   readonly avertissementSalaireZero = computed(() => {
     const avertissements = this.analyse()?.avertissements ?? [];
     return avertissements.some((a) => a.codeAvertissement === 'SALAIRE_ZERO');
   });
   readonly nombreProblemes = computed(() => {
     const a = this.analyse();
-    return a ? a.erreurs.length + a.avertissements.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
+    return a ? a.blocagesPeriode.length + a.erreurs.length + a.avertissements.length + a.chantiersClotures.length + a.cinInconnus.length + a.ecarts.length : 0;
   });
   readonly decisionsEquipeEnvoyees = computed(() =>
     Object.entries(this.decisionsEquipe()).map(([id, action]) => ({ employeId: Number(id), action }))
@@ -160,6 +234,8 @@ export class PaieImportStore {
     this.periodeConfirmee.set(false);
     this.fichier.set(null);
     this.analyse.set(null);
+    this.categoriesVues.set([]);
+    this.categoriesValidees.set([]);
     this.bilan.set(null);
     this.confirmerSalaireZero.set(false);
     this.typesChoisis.set({});
@@ -174,6 +250,14 @@ export class PaieImportStore {
 
   confirmerPeriode(confirmee: boolean): void {
     this.periodeConfirmee.set(confirmee);
+    if (!confirmee) {
+      this.categoriesValidees.update((c) => c.filter((x) => x !== 'periode'));
+    }
+  }
+
+  /** Valide une catégorie de confirmation (période, avertissements) : le contrôle passe à la suivante. */
+  validerCategorie(cle: CategorieControle): void {
+    this.categoriesValidees.update((c) => (c.includes(cle) ? c : [...c, cle]));
   }
 
   /** Analyse un fichier (premier choix ou fichier corrigé) : rien n'est enregistré. */
@@ -185,7 +269,7 @@ export class PaieImportStore {
     }
     this.fichier.set(fichier);
     this.envoyer(this.paieService.analyserImport(fichier, mois), (analyse) => {
-      this.recevoir(analyse);
+      this.recevoir(analyse, true);
       this.etape.set('controle');
     });
   }
@@ -332,8 +416,23 @@ export class PaieImportStore {
   }
 
   /** Nouvelle analyse : les départs gardent ce que l'utilisateur a déjà saisi, les nouveaux sont cochés d'office. */
-  private recevoir(analyse: PaieImportAnalyse): void {
+  private recevoir(analyse: PaieImportAnalyse, nouveauFichier = false): void {
     this.analyse.set(analyse);
+    const presentes: CategorieControle[] = [
+      ...(analyse.blocagesPeriode.length > 0 ? (['blocages'] as const) : []),
+      ...(analyse.controlesPeriode.length > 0 ? (['periode'] as const) : []),
+      ...(analyse.erreurs.length > 0 ? (['erreurs'] as const) : []),
+      ...(analyse.chantiersClotures.length > 0 ? (['chantiers'] as const) : []),
+      ...(analyse.cinInconnus.length > 0 ? (['cin'] as const) : []),
+      ...(analyse.ecarts.length > 0 ? (['ecarts'] as const) : []),
+      ...(analyse.avertissements.length > 0 ? (['avertissements'] as const) : [])
+    ];
+    if (nouveauFichier) {
+      this.categoriesVues.set(presentes);
+      this.categoriesValidees.set([]);
+    } else {
+      this.categoriesVues.update((vues) => [...new Set([...vues, ...presentes])]);
+    }
     if (!analyse.avertissements.some((a) => a.codeAvertissement === 'SALAIRE_ZERO')) {
       this.confirmerSalaireZero.set(false);
     }
