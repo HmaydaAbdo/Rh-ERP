@@ -5,27 +5,29 @@ import { Observable, finalize, switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierService } from '../../chantier/services/chantier.service';
 import { TypeSalaire } from '../../employee/models/employee.model';
-import { PaieImportAnalyse, PaieImportResult } from '../models/paie.model';
+import { PaieImportAnalyse, PaieImportEcart, PaieImportResult } from '../models/paie.model';
 import { libellePeriode, moisCivilPrecedent } from '../paie-format';
+import { SousCategorie, sousCategoriesEcarts } from './paie-import-categories';
 import { PaieService } from '../services/paie.service';
 
 export type EtapeImport = 'fichier' | 'controle' | 'departs' | 'recap';
 export type EtatImport = 'saisie' | 'import' | 'termine';
 
 /** Catégories de problèmes du contrôle, dans l'ordre où elles se règlent : chacune suppose les précédentes réglées. */
-export type CategorieControle = 'blocages' | 'periode' | 'erreurs' | 'chantiers' | 'cin' | 'ecarts' | 'avertissements';
+export type CategorieControle = 'info' | 'blocages' | 'periode' | 'erreurs' | 'chantiers' | 'cin' | 'ecarts' | 'avertissements';
 
-const CATEGORIES: CategorieControle[] = ['blocages', 'periode', 'erreurs', 'chantiers', 'cin', 'ecarts', 'avertissements'];
+const CATEGORIES: CategorieControle[] = ['info', 'blocages', 'periode', 'erreurs', 'chantiers', 'cin', 'ecarts', 'avertissements'];
 /** Catégories qui se règlent par une confirmation (et un bouton « Continuer »), non par une correction. */
-const CATEGORIES_CONFIRMEES: CategorieControle[] = ['periode', 'avertissements'];
+const CATEGORIES_CONFIRMEES: CategorieControle[] = ['info', 'periode', 'avertissements'];
 export const LIBELLES_CATEGORIES: Record<CategorieControle, string> = {
+  info: 'À savoir',
   blocages: 'Mois impossible',
-  periode: 'Période',
-  erreurs: 'Fichier',
-  chantiers: 'Chantiers',
-  cin: 'CIN sans fiche',
-  ecarts: 'Fiches',
-  avertissements: 'Avertissements'
+  periode: 'Mois à confirmer',
+  erreurs: 'Erreurs du fichier',
+  chantiers: 'Chantiers clôturés',
+  cin: 'Nouvelles embauches',
+  ecarts: 'Mises à jour de fiches',
+  avertissements: 'Points à confirmer'
 };
 
 export interface EtatCategorie {
@@ -115,6 +117,12 @@ export class PaieImportStore {
   readonly categoriesValidees = signal<CategorieControle[]>([]);
   readonly bilan = signal<PaieImportResult | null>(null);
   readonly confirmerSalaireZero = signal(false);
+  /** Nombre de cas qu'avait chaque sous-étape à son plus haut, pour dire « cas 12 sur 140 » quand les cas réglés disparaissent. */
+  readonly totauxCas = signal<Record<string, number>>({});
+  /** Sous-étape choisie des mises à jour de fiches ; par défaut, la première qui a encore des cas. */
+  readonly sousEcartChoisie = signal<string | null>(null);
+  /** Décalage du cas affiché dans la sous-étape : « Passer » avance, « Précédent » recule. */
+  readonly decalage = signal(0);
 
   /** Type de salaire choisi pour une fiche en écart (par identifiant d'employé) ; absent = celui de la fiche. */
   readonly typesChoisis = signal<Record<number, TypeSalaire | null>>({});
@@ -139,6 +147,27 @@ export class PaieImportStore {
     return analyse.blocagesPeriode.length === 0 && analyse.erreurs.length === 0 && avertissementsNonConfirmes.length === 0 && periodeAcceptee &&
       (sansControle || (analyse.avertissements.length > 0 && avertissementsNonConfirmes.length === 0));
   });
+  /** Ce que l'import fera seul : fonctions à créer, chantiers à rouvrir. */
+  readonly nombreInfos = computed(() => {
+    const a = this.analyse();
+    return (a?.fonctionsACreer?.length ?? 0) + (a?.chantiersARouvrir?.length ?? 0);
+  });
+  /** Les mises à jour de fiches rangées par nature (mutations, équipes, fonctions, salaires, noms). */
+  readonly sousEcarts = computed<SousCategorie<PaieImportEcart>[]>(() => sousCategoriesEcarts(this.analyse()?.ecarts ?? []));
+  readonly sousEcartActive = computed(() => {
+    const sous = this.sousEcarts();
+    return sous.find((s) => s.cle === this.sousEcartChoisie()) ?? sous[0] ?? null;
+  });
+  /** Le cas affiché des mises à jour de fiches. */
+  readonly ecartCourant = computed(() => {
+    const elements = this.sousEcartActive()?.elements ?? [];
+    return elements.length === 0 ? null : elements[((this.decalage() % elements.length) + elements.length) % elements.length];
+  });
+  /** Les nouvelles embauches : le cas affiché suit le même décalage. */
+  readonly embaucheCourante = computed(() => {
+    const elements = this.analyse()?.cinInconnus ?? [];
+    return elements.length === 0 ? null : elements[((this.decalage() % elements.length) + elements.length) % elements.length];
+  });
   private readonly avertissementsNonConfirmes = computed(() =>
     (this.analyse()?.avertissements ?? []).filter(
       (a) =>
@@ -153,6 +182,7 @@ export class PaieImportStore {
     const analyse = this.analyse();
     if (!analyse) return [];
     const nombres: Record<CategorieControle, number> = {
+      info: this.categoriesValidees().includes('info') ? 0 : this.nombreInfos(),
       blocages: analyse.blocagesPeriode.length,
       periode: this.periodeConfirmee() ? 0 : analyse.controlesPeriode.length,
       erreurs: analyse.erreurs.length,
@@ -164,6 +194,7 @@ export class PaieImportStore {
     const vues = this.categoriesVues();
     const validees = this.categoriesValidees();
     const totaux: Partial<Record<CategorieControle, number>> = {
+      info: this.nombreInfos(),
       periode: analyse.controlesPeriode.length,
       avertissements: analyse.avertissements.length
     };
@@ -253,6 +284,56 @@ export class PaieImportStore {
     if (!confirmee) {
       this.categoriesValidees.update((c) => c.filter((x) => x !== 'periode'));
     }
+  }
+
+  choisirSousEcart(cle: string): void {
+    this.sousEcartChoisie.set(cle);
+    this.decalage.set(0);
+  }
+
+  passer(): void {
+    this.decalage.update((d) => d + 1);
+  }
+
+  reculer(): void {
+    this.decalage.update((d) => d - 1);
+  }
+
+  /** Recopie la date d'embauche et le type de salaire d'une embauche saisie sur les autres qui n'en ont pas encore. */
+  propagerCreation(numeroLigneSource: number): void {
+    const source = this.creations()[numeroLigneSource];
+    if (!source) return;
+    this.creations.update((creations) => {
+      const suite = { ...creations };
+      for (const inconnu of this.analyse()?.cinInconnus ?? []) {
+        const actuelle = suite[inconnu.numeroLigne] ?? { dateNaissance: null, dateEmbauche: null, typeSalaire: null };
+        suite[inconnu.numeroLigne] = {
+          ...actuelle,
+          dateEmbauche: actuelle.dateEmbauche ?? source.dateEmbauche,
+          typeSalaire: actuelle.typeSalaire ?? source.typeSalaire
+        };
+      }
+      return suite;
+    });
+  }
+
+  /** Embauches dont les trois valeurs sont saisies (ou proposées) : prêtes à créer d'un seul envoi. */
+  readonly embauchesCompletes = computed(() =>
+    (this.analyse()?.cinInconnus ?? []).filter((i) => this.creationComplete(i.numeroLigne, i.salaire))
+  );
+
+  creerCompletes(): void {
+    const creer = this.embauchesCompletes().flatMap((inconnu) => {
+      const saisie = this.creations()[inconnu.numeroLigne];
+      if (!saisie?.dateNaissance || !saisie.dateEmbauche) return [];
+      return [{
+        numeroLigne: inconnu.numeroLigne,
+        dateNaissance: dateIso(saisie.dateNaissance),
+        dateEmbauche: dateIso(saisie.dateEmbauche),
+        typeSalaire: saisie.typeSalaire ?? this.typeSalairePropose(inconnu.salaire)
+      }];
+    });
+    if (creer.length > 0) this.corriger({ aligner: [], creer });
   }
 
   /** Valide une catégorie de confirmation (période, avertissements) : le contrôle passe à la suivante. */
@@ -419,6 +500,7 @@ export class PaieImportStore {
   private recevoir(analyse: PaieImportAnalyse, nouveauFichier = false): void {
     this.analyse.set(analyse);
     const presentes: CategorieControle[] = [
+      ...((analyse.fonctionsACreer?.length ?? 0) + (analyse.chantiersARouvrir?.length ?? 0) > 0 ? (['info'] as const) : []),
       ...(analyse.blocagesPeriode.length > 0 ? (['blocages'] as const) : []),
       ...(analyse.controlesPeriode.length > 0 ? (['periode'] as const) : []),
       ...(analyse.erreurs.length > 0 ? (['erreurs'] as const) : []),
@@ -427,7 +509,16 @@ export class PaieImportStore {
       ...(analyse.ecarts.length > 0 ? (['ecarts'] as const) : []),
       ...(analyse.avertissements.length > 0 ? (['avertissements'] as const) : [])
     ];
+    const totaux: Record<string, number> = nouveauFichier ? {} : { ...this.totauxCas() };
+    const maj = (cle: string, n: number): void => {
+      totaux[cle] = Math.max(totaux[cle] ?? 0, n);
+    };
+    maj('cin', analyse.cinInconnus.length);
+    for (const sous of sousCategoriesEcarts(analyse.ecarts)) maj(sous.cle, sous.elements.length);
+    this.totauxCas.set(totaux);
     if (nouveauFichier) {
+      this.sousEcartChoisie.set(null);
+      this.decalage.set(0);
       this.categoriesVues.set(presentes);
       this.categoriesValidees.set([]);
     } else {

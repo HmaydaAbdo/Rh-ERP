@@ -42,6 +42,8 @@ La date de la dernière revue, ses sources et ses conclusions sont consignées e
 tâche du mois), jamais dans ce document : l'état des candidats et le journal des revues vivent dans Jira. La veille ne se
 limite pas aux noms de modèles déjà inscrits ici, à une seule famille d'IA, ni aux fournisseurs actuellement configurés.
 
+**Passage global du 2026-11-09.** Toutes les couches Python (verrous `api` et `ia`, image `python:3.14-slim` à jour) et les paquets IA npm (`@ag-ui/client` et `@ag-ui/core` 1.0.4, `@copilotkit/runtime` et `@copilotkit/sqlite-runner` 1.85.0) ont été montés ensemble ; Dependabot passe à un rythme mensuel pour tous les écosystèmes (Python, npm, images Docker, actions GitHub, site de documentation). Retards déclarés : Python 3.15 (pas de wheel `cp315` pour `onnxruntime`, requis par `fastembed`) et `@a2ui/angular` 0.14 avec `@a2ui/web_core` 0.15 (incompatibles avec `@a2ui/markdown-it`, qui exige `web_core` ^0.14, et avec zod 4, voir `scripts/ia/verrous.txt`). Le reste (npm du frontend hors IA, infrastructure et CI, PostgreSQL 18) est suivi dans Jira.
+
 **Une routine, pas une option.** Chaque mois, une tâche Jira « Veille mensuelle IA » est créée automatiquement (règle
 d'automatisation planifiée du projet `KAN`) et la revue est faite en entier, qu'il y ait du nouveau ou non. Elle
 couvre à chaque fois **toutes** les fonctions du point 2 ci-dessous : conversation, voix (ASR et TTS) en arabe, Darija

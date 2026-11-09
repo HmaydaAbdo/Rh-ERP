@@ -72,6 +72,22 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | LangGraph : checkpointer PostgreSQL | ✅ en place | — |
 | LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ⬜ | T25, J4 |
 
+## Middlewares officiels d'AG-UI et d'A2UI : inventaire (2026-11-09)
+
+Inventaire des points d'extension officiels lus dans les paquets installés (`@ag-ui/client` 1.0.3, `@ag-ui/a2ui-middleware` 0.0.10, `@ag-ui/mcp-apps-middleware` 0.1.2, `@ag-ui/mcp-middleware` 0.0.2, `ag-ui-langgraph` 0.0.47, `ag_ui_a2ui_toolkit` 0.0.6). Un middleware AG-UI s'enregistre par `agent.use(...)` et transforme le flux d'événements d'un run.
+
+| Middleware | Rôle | État |
+|---|---|---|
+| `FunctionMiddleware` (`agent.use(fn)`) | Fonction `(input, next) => Observable<événements>` : filtre ou transforme le flux | ✅ utilisé : masque les messages `<skill name=…>` de `MESSAGES_SNAPSHOT` (`copilot-runtime/src/serveur.mjs`) |
+| `FilterToolCallsMiddleware` | Retire des appels d'outils du flux | ⬜ non nécessaire : les outils sont déjà bornés par les permissions des compétences |
+| `A2UIMiddleware` (`@ag-ui/a2ui-middleware`) | Fait offrir `generate_a2ui` et transforme son flux en surfaces | ✅ activé par `a2ui: { injectA2UITool: true }` du runtime |
+| `MCPAppsMiddleware` | Applications MCP rendues dans le chat | ⬜ à évaluer avec le catalogue MCP |
+| `MCPMiddleware` | Expose des outils MCP côté client | ⬜ inutile : les outils MCP sont servis par le service IA |
+| Compatibilité ascendante (`BackwardCompatibility_0_0_*`) | Adaptation d'anciens clients | ⬜ sans objet |
+| `CopilotKitMiddleware` (Python) | Outils du navigateur et paramètres A2UI (`a2ui_params`) | ✅ en place |
+
+Cause de la bulle `<skill …>` : les compétences épinglées de Deep Agents sont des `HumanMessage` marqués `lc_source: pinned_skill`, que `ag-ui-langgraph` convertit en messages utilisateur sans le marqueur. Le signalement amont est publié ([ag-ui-protocol/ag-ui#3343](https://github.com/ag-ui-protocol/ag-ui/issues/3343)) ; le middleware ci-dessus est le contournement par la voie officielle, à retirer quand le correctif amont existe.
+
 Autres points non terminés, gardés ouverts :
 
 | Point | État |

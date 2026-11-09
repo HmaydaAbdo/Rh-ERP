@@ -7,6 +7,8 @@
 // quiconque. Chaque requête est donc authentifiée auprès de Spring (`/auth/me`, droit IA_UTILISER), seules les routes de
 // l'assistant sont servies, et un fil n'est lu ou prolongé que par son propriétaire (identifiant `u<id>-…`).
 import { HttpAgent } from '@ag-ui/client';
+import { EventType } from '@ag-ui/core';
+import { map } from 'rxjs';
 import { CopilotRuntime } from '@copilotkit/runtime/v2';
 import { SqliteAgentRunner } from '@copilotkit/sqlite-runner';
 import { createCopilotNodeListener } from '@copilotkit/runtime/v2/node';
@@ -21,6 +23,19 @@ const cheminBase = process.env.THREADS_DB_PATH;
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, transcription, débogage) répondent 404. */
 const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop']);
 
+// Les skills épinglés par Deep Agents sont des messages utilisateur `<skill name=…>` ajoutés à l'état du fil : ils sont
+// destinés au modèle, pas à l'utilisateur. `ag-ui-langgraph` ne transmet pas le marqueur `lc_source` qui les distingue
+// (signalement amont à faire) ; en attendant, le middleware officiel d'AG-UI les retire de l'instantané des messages.
+const estSkillEpingle = (message) => message.role === 'user' && typeof message.content === 'string' && message.content.startsWith('<skill name=');
+const masquerSkills = (input, next) =>
+  next.run(input).pipe(
+    map((evenement) =>
+      evenement.type === EventType.MESSAGES_SNAPSHOT
+        ? { ...evenement, messages: evenement.messages.filter((message) => !estSkillEpingle(message)) }
+        : evenement
+    )
+  );
+
 const runtime = new CopilotRuntime({
   // Un agent par requête (fabrique officielle) : il porte le jeton de l'utilisateur jusqu'au service IA, qui le fait
   // valider par Spring.
@@ -33,7 +48,7 @@ const runtime = new CopilotRuntime({
         // Le runtime fixe ce marqueur selon la route officielle. Les suggestions n'ont pas de fil persistant.
         'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false'
       }
-    })
+    }).use(masquerSkills)
   }),
   a2ui: { injectA2UITool: true },
   ...(cheminBase ? { runner: new SqliteAgentRunner({ dbPath: cheminBase }) } : {})
