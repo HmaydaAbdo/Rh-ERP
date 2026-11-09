@@ -1,7 +1,7 @@
 # Image staport-intelligence-litellm : passerelle de modèles de Staport Intelligence. Version ET digest épinglés : un tag repoussé
 # ne peut pas changer ce qui tourne. Le routage de litellm_config.yaml a été vérifié pour cette version ;
 # relancer test_providers.py (--providers, suite complète, --production-key) avant toute mise à jour.
-FROM ghcr.io/berriai/litellm:v1.109.0-dev.2@sha256:8a1e132563ef9cae391f0518f652eb7c643fac39ded5c40a0106ee3e06945986
+FROM ghcr.io/berriai/litellm:v1.110.0-dev.2@sha256:47350b93fa4e8590a6fea60055397afbed018764a845dbdda067f0a02672941e
 
 # Configuration intégrée à l'image (aucun secret : uniquement des références os.environ/…).
 COPY --chmod=0444 litellm_config.yaml /app/config.yaml
