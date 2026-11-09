@@ -56,6 +56,8 @@ class EmployeeModificationRequete(_EmployeeBase):
 class EmployeeRecherche(ModeleApi):
     nom_prenom: Annotated[str | None, Field(max_length=150)] = None
     cin: Annotated[str | None, Field(max_length=30)] = None
+    # Zone unique : chaque mot se retrouve dans le nom, le prénom ou le CIN, dans n'importe quel ordre.
+    recherche: Annotated[str | None, Field(max_length=150)] = None
     fonction_ids: list[int] | None = None
     chantier_ids: list[int] | None = None
     equipe_ids: list[int] | None = None

@@ -57,6 +57,7 @@ interface ImportApi {
   enregistrerForfait(): void;
   annulerForfait(): void;
   retirerForfait(cin: string): void;
+  modifierMontantForfait(cin: string, montant: number | null): void;
   verifierContexte(): void;
   analyser(): void;
   corriger(): void;
@@ -83,7 +84,7 @@ describe('HeuresSuppImportComponent', () => {
 
   beforeEach(() => {
     service = {
-      verifierPrerequis: vi.fn(),
+      verifierPrerequis: vi.fn(), forfaitsPrecedents: vi.fn().mockReturnValue(of([])),
       analyserImport: vi.fn(), corrigerImport: vi.fn(), importer: vi.fn(), remplacer: vi.fn()
     };
     confirmation = { confirm: vi.fn() };
@@ -114,7 +115,7 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.etape()).toBe(1);
     expect(api.periode()).toBe('2026-10');
     expect(document.body.textContent).toContain('Mois de la paie');
-    expect(document.body.textContent).toContain('Suivant');
+    expect(document.body.textContent).toContain('Continuer');
     expect(document.body.textContent).not.toContain('Retour aux heures supplémentaires');
     expect(document.body.querySelector('stp-month-input')).toBeNull();
   });
@@ -130,7 +131,7 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirChantier(4);
     service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
     fixture.detectChanges();
-    const boutonContexte = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Suivant')) as HTMLButtonElement;
+    const boutonContexte = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Continuer')) as HTMLButtonElement;
     boutonContexte.click();
     fixture.detectChanges();
     expect(api.etape()).toBe(2);
@@ -152,7 +153,7 @@ describe('HeuresSuppImportComponent', () => {
     const boutonImporter = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Confirmer l’import')) as HTMLButtonElement;
     boutonImporter.click();
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('lignes importées');
+    expect(document.body.textContent).toContain('importées');
   });
 
   it('ne lance pas les actions avant la sélection du mois, du chantier et du fichier', () => {
@@ -251,10 +252,55 @@ describe('HeuresSuppImportComponent', () => {
     expect(chantierReference.fetchById).toHaveBeenCalledWith(4);
   });
 
+  it('reprend les forfaits du dernier mois du chantier, modifiables, retirables et enrichis', () => {
+    service['forfaitsPrecedents'].mockReturnValue(of([
+      { cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 400, periode: '2026-09' },
+      { cin: 'CD456', nomPrenom: 'Omar Idrissi', montantDh: 250, periode: '2026-09' }
+    ]));
+    service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
+    api.periode.set('2026-10');
+    api.choisirChantier(4);
+
+    api.verifierContexte();
+    api.etape.set(3);
+    fixture.detectChanges();
+
+    expect(service['forfaitsPrecedents']).toHaveBeenCalledWith('2026-10', 4);
+    expect(api.forfaits().map((f) => f.cin)).toEqual(['AB123', 'CD456']);
+    expect(document.body.textContent).toContain('Forfaits repris de');
+    expect(document.body.textContent).toContain('Salma Alaoui');
+
+    api.modifierMontantForfait('AB123', 450);
+    api.modifierMontantForfait('CD456', -3);
+    api.retirerForfait('CD456');
+    expect(api.forfaits()).toEqual([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 450 }]);
+
+    api.forfaitEmploye.set({ id: 9, nomPrenom: 'Nadia Zahri', cin: 'EF789', displayLabel: 'Nadia Zahri — EF789' });
+    api.montantForfait.set(300);
+    api.enregistrerForfait();
+    expect(api.forfaits().map((f) => [f.cin, f.montantDh])).toEqual([['AB123', 450], ['EF789', 300]]);
+  });
+
+  it('ne reprend pas deux fois les forfaits du même chantier et tolère un échec de chargement', () => {
+    service['verifierPrerequis'].mockReturnValue(of({ pret: true, message: null }));
+    service['forfaitsPrecedents'].mockReturnValue(throwError(() => new Error('indisponible')));
+    api.periode.set('2026-10');
+    api.choisirChantier(4);
+
+    api.verifierContexte();
+
+    expect(api.etape()).toBe(2);
+    expect(api.forfaits()).toEqual([]);
+    fixture.detectChanges();
+    api.etape.set(3);
+    fixture.detectChanges();
+    expect(document.body.textContent).toContain('Aucun forfait précédent');
+  });
+
   it('propose de voir le modèle Excel sans le décrire dans l’étape du pointage', () => {
     api.etape.set(2);
     fixture.detectChanges();
-    expect(document.body.textContent).toContain('Pointage heures supp');
+    expect(document.body.textContent).toContain('Déposez le classeur de pointage');
     expect(document.body.textContent).toContain('Voir le modèle Excel');
     expect(document.body.textContent).not.toContain('Excel attendu');
     api.modeleOuvert.set(true);

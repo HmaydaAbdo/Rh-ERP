@@ -40,8 +40,9 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 | `DELETE /heures-supp/{id}` | Supprime une ligne avec audit. |
 | `POST /heures-supp/suppression-mois` | Supprime toutes les lignes d'un mois, tous chantiers confondus, si le nombre correspond à celui confirmé. |
 | `GET /heures-supp/periodes` | Mois ayant au moins un import. |
-| `POST /heures-supp/export/pdf` | Rapport PDF A4 paysage sans nombre de lignes fixé par page (le tableau s'écoule, en-tête de colonnes répété, « Page n / N ») : bandeau réparti sur la largeur (logo, titre « Heures supplémentaires — mois », une ligne de contenu, puis à droite uniquement les filtres appliqués), pied « Édité le … », colonne finale « Émargement » vide pour les signatures, totaux en dernière ligne, de TOUTES les lignes du périmètre filtré, recherché et trié de la vue Tabulaire ; tri limité aux colonnes de l'écran, 5 000 lignes au plus, action d'audit `HEURES_SUP_EXPORT_PDF` (catégorie `ACCES`). |
+| `POST /heures-supp/export/pdf` | Rapport PDF A4 paysage pour UN mois et UN chantier obligatoires (sinon refus) : le mois et le chantier figurent dans l'en-tête et non en colonnes ; classé par employé de A à Z sauf tri explicite ; champ `mode` : `signature` (colonne Émargement étroite, direction) ou `signature_empreinte` (colonne large avec zone d'empreinte) ; totaux de toutes les lignes du périmètre, 5 000 lignes au plus, action d'audit `HEURES_SUP_EXPORT_PDF` (catégorie `ACCES`). |
 | `GET /heures-supp/import/prerequis?periode=aaaa-MM&chantierId=…` | Confirme que le mois de paie et le chantier permettent d'ouvrir l'étape du fichier. |
+| `GET /heures-supp/import/forfaits-precedents?periode=aaaa-MM&chantierId=…` | Forfaits du dernier mois antérieur ayant des forfaits pour ce chantier, repris à l'étape Forfaits (modifiables, rapprochés par CIN). |
 | `GET /heures-supp/import/modele` | Télécharge le modèle Excel `.xlsx`. |
 | `POST /heures-supp/import/analyse` | Lit le fichier et les forfaits sans écrire ; retourne lignes, erreurs, calculs et indicateur `pret`. |
 | `POST /heures-supp/import/corrections` | Crée les fiches manquantes demandées et renvoie l'analyse actualisée. |
@@ -161,3 +162,5 @@ outils MCP sont décrits dans [docs/ia.md](../../ia/vue-d-ensemble.md) ; ne pas 
 Le domaine identifie les employés par CIN, exige une paie du même mois, importe par chantier, conserve les taux calculés
 à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser `ObservationStc.estStcOuSortie`. Ses capacités IA passent par MCP, avec définitions
 et unités explicites ; Spring reste la source de tous les calculs.
+
+Une ligne par employé, mois et chantier : toute création ou import qui la dupliquerait est refusé avec le message « Une ligne existe déjà pour cet employé, ce mois et ce chantier ». La recherche employé (champ unique) cherche chaque mot dans le nom, le prénom et le CIN, dans n'importe quel ordre.

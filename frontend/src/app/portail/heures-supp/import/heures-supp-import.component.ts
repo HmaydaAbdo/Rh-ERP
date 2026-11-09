@@ -10,6 +10,7 @@ import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { StepperComponent, StepperEtape } from '../../../shared/ui/stepper/stepper.component';
 import { WizardStateComponent } from '../../../shared/ui/wizard-state/wizard-state.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
@@ -30,7 +31,7 @@ const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionI
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent],
+  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent, IconComponent],
   templateUrl: './heures-supp-import.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -50,14 +51,17 @@ export class HeuresSuppImportComponent {
   protected readonly employes = inject(EmployeeReferenceService);
   protected readonly etape = signal(1);
   protected readonly etapes: readonly StepperEtape[] = [
-    { id: '1', libelle: 'Période et chantier' },
+    { id: '1', libelle: 'Chantier' },
     { id: '2', libelle: 'Pointage' },
     { id: '3', libelle: 'Forfaits' },
-    { id: '4', libelle: 'Contrôle et import' }
+    { id: '4', libelle: 'Contrôle' }
   ];
   /** Mois de la dernière paie : figé, jamais choisi par l'utilisateur. */
   protected readonly periode = signal('');
   protected readonly moisLibelle = computed(() => (this.periode() ? libellePeriode(this.periode()) : ''));
+  protected readonly sousTitre = computed(() => [this.moisLibelle(), this.chantierLibelle()].filter(Boolean).join(' · ') || 'Choisissez le chantier à importer');
+  /** Mois dont les forfaits ont été repris à l'étape Forfaits (vide : aucun forfait précédent pour ce chantier). */
+  protected readonly periodeForfaitsRepris = signal('');
   protected readonly modeleOuvert = signal(false);
   protected readonly telechargementModele = signal(false);
   protected readonly colonnesModele: TableColumn[] = [
@@ -100,6 +104,12 @@ export class HeuresSuppImportComponent {
   }
 
   protected fermer(): void { void this.router.navigate(['/heures-supp']); }
+  protected libelleMois(periode: string): string { return libellePeriode(periode); }
+  protected reculer(): void { this.erreur.set(null); this.etape.update((courante) => Math.max(1, courante - 1)); }
+  protected modifierMontantForfait(cin: string, montant: number | null): void {
+    if (montant === null || !Number.isFinite(montant) || montant < 0) return;
+    this.forfaits.update((liste) => liste.map((forfait) => (forfait.cin === cin ? { ...forfait, montantDh: montant } : forfait)));
+  }
   protected telechargerModele(): void {
     if (this.telechargementModele()) return;
     this.telechargementModele.set(true);
@@ -167,6 +177,7 @@ export class HeuresSuppImportComponent {
     this.lancer(this.service.verifierPrerequis(this.periode(), chantierId), (prerequis) => {
       if (!prerequis.pret) { this.erreur.set(prerequis.message ?? 'La paie de ce mois est absente.'); return; }
       this.chantiers.fetchById(chantierId).subscribe((chantier: ChantierReference) => this.chantierLibelle.set(`${chantier.code} · ${chantier.nom ?? chantier.designation}`));
+      this.chargerForfaitsPrecedents(chantierId);
       this.etape.set(2);
     });
   }
@@ -204,6 +215,20 @@ export class HeuresSuppImportComponent {
     const forfaits = this.lireForfaits();
     this.lancer(this.service.remplacer(file, this.periode(), id, forfaits), (resultat) => this.resultat.set(resultat));
   }
+
+  /** Reprend les forfaits du dernier mois du chantier, une seule fois par chantier ; l'échec n'empêche pas l'import. */
+  private chargerForfaitsPrecedents(chantierId: number): void {
+    if (this.forfaitsPourChantier === chantierId) return;
+    this.service.forfaitsPrecedents(this.periode(), chantierId).subscribe({
+      next: (precedents) => {
+        this.forfaitsPourChantier = chantierId;
+        this.forfaits.set(precedents.map(({ cin, nomPrenom, montantDh }) => ({ cin, nomPrenom, montantDh })));
+        this.periodeForfaitsRepris.set(precedents[0]?.periode ?? '');
+      },
+      error: () => { this.forfaits.set([]); this.periodeForfaitsRepris.set(''); }
+    });
+  }
+  private forfaitsPourChantier: number | null = null;
 
   private lireForfaits(): HeuresSuppImportForfait[] { return this.forfaits().map(({ cin, montantDh }) => ({ cin, montantDh })); }
   private lancer<T>(source: import('rxjs').Observable<T>, succes: (valeur: T) => void): void {

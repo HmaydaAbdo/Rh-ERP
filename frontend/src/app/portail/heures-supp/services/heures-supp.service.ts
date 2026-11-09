@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Page } from '../../../shared/models/page.model';
-import { HeuresSupp, HeuresSuppAnalytique, HeuresSuppImportAnalyse, HeuresSuppImportCorrections, HeuresSuppImportForfait, HeuresSuppImportPrerequis, HeuresSuppImportResult, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
+import { HeuresSupp, HeuresSuppAnalytique, HeuresSuppImportAnalyse, HeuresSuppImportCorrections, HeuresSuppExportMode, HeuresSuppForfaitPrecedent, HeuresSuppImportForfait, HeuresSuppImportPrerequis, HeuresSuppImportResult, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
 
 @Injectable({ providedIn: 'root' })
 export class HeuresSuppService {
@@ -41,9 +41,14 @@ export class HeuresSuppService {
     return this.http.get<HeuresSuppImportPrerequis>(`${this.baseUrl}/import/prerequis`, { params: { periode, chantierId } });
   }
 
+  /** Forfaits du dernier mois qui en comptait pour le chantier, avant le mois importé. */
+  forfaitsPrecedents(periode: string, chantierId: number): Observable<HeuresSuppForfaitPrecedent[]> {
+    return this.http.get<HeuresSuppForfaitPrecedent[]>(`${this.baseUrl}/import/forfaits-precedents`, { params: { periode, chantierId } });
+  }
+
   /** Rapport PDF de toutes les lignes du périmètre filtré, recherché et trié de la vue Tabulaire. */
-  exporterPdf(criteria: HeuresSuppSearchCriteria, sort: string): Observable<Blob> {
-    return this.http.post(`${this.baseUrl}/export/pdf`, { ...criteria, tri: sort }, { responseType: 'blob' });
+  exporterPdf(criteria: HeuresSuppSearchCriteria, sort: string | undefined, mode: HeuresSuppExportMode): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/export/pdf`, { ...criteria, tri: sort, mode }, { responseType: 'blob' });
   }
 
   telechargerModele(): Observable<Blob> {

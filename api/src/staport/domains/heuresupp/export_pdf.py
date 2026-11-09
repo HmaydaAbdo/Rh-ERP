@@ -54,8 +54,6 @@ LIBELLES_TRI = {
     "netAPayer": "Net à payer",
 }
 COLONNES = (
-    ("Mois", ""),
-    ("Chantier", ""),
     ("Employé", ""),
     ("CIN", ""),
     ("Fonction", ""),
@@ -66,14 +64,23 @@ COLONNES = (
     ("STC", "num"),
     ("Forfait", "num"),
     ("Net à payer", "num"),
-    ("Émargement", ""),
 )
+LIBELLE_EMARGEMENT = {"signature": "Signature", "signature_empreinte": "Signature et empreinte"}
+
+
+def _cellule_emargement(mode: str) -> str:
+    if mode == "signature_empreinte":
+        return (
+            '<td class="emargement signature_empreinte">'
+            '<div class="zone-signature"></div><div class="zone-empreinte"></div></td>'
+        )
+    return '<td class="emargement signature"></td>'
 
 
 def trier(tri: str | None) -> tuple[tuple[str, bool], ...]:
-    """Le tri de la vue Tabulaire : « propriété,asc|desc » ; sans tri, le mois décroissant puis l'employé."""
+    """Le tri de la vue Tabulaire : « propriété,asc|desc » ; sans tri, l'employé (nom prénom) de A à Z."""
     if tri is None or not tri.strip():
-        return (("periode", False),)
+        return (("employee.nomPrenom", True),)
     parties = tri.split(",")
     propriete = parties[0].strip()
     sens_valide = len(parties) == 1 or (len(parties) == 2 and parties[1].strip().lower() in {"asc", "desc"})
@@ -112,11 +119,11 @@ def contexte(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSuppReponse
         return "Aucune ligne pour ce périmètre."
     employes = len({ligne.employee_id for ligne in lignes})
     trie = requete.tri is not None and bool(requete.tri.strip())
-    propriete = requete.tri.split(",")[0].strip() if trie and requete.tri else "periode"
-    decroissant = not trie or bool(requete.tri and requete.tri.lower().endswith(",desc"))
+    propriete = requete.tri.split(",")[0].strip() if trie and requete.tri else "employee.nomPrenom"
+    decroissant = trie and bool(requete.tri and requete.tri.lower().endswith(",desc"))
     return (
         f"{_pluriel(len(lignes), 'ligne', 'lignes')} · {_pluriel(employes, 'employé', 'employés')}"
-        f" · classées par {LIBELLES_TRI.get(propriete, 'Mois').lower()}"
+        f" · classées par {LIBELLES_TRI.get(propriete, 'Employé').lower()}"
         f" {'décroissant' if decroissant else 'croissant'}"
     )
 
@@ -124,12 +131,13 @@ def contexte(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSuppReponse
 def filtres(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSuppReponse]) -> list[tuple[str, str]]:
     """Uniquement les filtres réellement appliqués, un par ligne."""
     resultat: list[tuple[str, str]] = []
+    if lignes:
+        resultat.append(("Mois", afficher_periode(lignes[0].periode)))
+        resultat.append(("Chantier", " · ".join(x for x in (lignes[0].code_chantier, lignes[0].chantier) if x)))
     if requete.nom_prenom and requete.nom_prenom.strip():
         resultat.append(("Nom", requete.nom_prenom.strip()))
     if requete.cin and requete.cin.strip():
         resultat.append(("CIN", requete.cin.strip()))
-    if requete.chantier_ids:
-        resultat.append(("Chantiers", _liste(sorted({ligne.code_chantier for ligne in lignes}), "chantiers")))
     if requete.equipe_ids:
         resultat.append(("Équipes", _pluriel(len(requete.equipe_ids), "équipe", "équipes")))
     if requete.fonction_ids:
@@ -162,14 +170,13 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
         "".join(
             f'<th class="{classe}">{escape(nom)}</th>' if classe else f"<th>{escape(nom)}</th>"
             for nom, classe in COLONNES
-        ),
+        )
+        + f'<th class="emargement {requete.mode}">{escape(LIBELLE_EMARGEMENT[requete.mode])}</th>',
         "</tr></thead><tbody>",
     ]
     for ligne in lignes:
         corps.append(
             "<tr>"
-            + _td(afficher_periode(ligne.periode))
-            + _td(" · ".join(x for x in (ligne.code_chantier, ligne.chantier) if x))
             + _td(ligne.nom_prenom)
             + _td(ligne.cin)
             + _td(ligne.fonction)
@@ -180,13 +187,14 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + _td(nombre(ligne.stc_dh, 0), "num")
             + _td(nombre(ligne.forfait_dh, 0), "num")
             + _td(nombre(ligne.net_a_payer_dh, 0), "num")
-            + '<td class="emargement"></td></tr>'
+            + _cellule_emargement(requete.mode)
+            + "</tr>"
         )
     zero = Decimal(0)
     heures = sum((ligne.heures_supplementaires or zero for ligne in lignes), zero)
     corps.append(
         '<tr class="total">'
-        + f'<td colspan="5">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
+        + f'<td colspan="3">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
         + '<td class="num"></td><td class="num"></td>'
         + _td(nombre(heures, 1), "num")
         + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 0), "num")
@@ -210,6 +218,10 @@ def nom_fichier(requete: HeuresSuppExportRequete) -> str:
 class ServiceExportPdfHeuresSupp:
     async def generer(self, s: AsyncSession, requete: HeuresSuppExportRequete) -> bytes:
         tri = trier(requete.tri)
+        if len(requete.mois_demandes()) != 1 or len(set(requete.chantier_ids or [])) != 1:
+            raise HeuresSuppInvalide(
+                "L'export PDF porte sur un seul mois et un seul chantier : filtrez-les avant d'exporter."
+            )
         async with s.begin():
             fiches = await repository.toutes(s, requete.criteres(), tri)
         if len(fiches) > LIGNES_MAX:
