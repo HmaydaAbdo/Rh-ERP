@@ -92,9 +92,15 @@ règles détaillées suivent dans les sections suivantes.
   mois (même fichier importé deux fois), demande une **confirmation explicite** (`controlesPeriode` dans l'analyse, champ
   `periode_confirmee` à l'import, vérifié aussi par le serveur). Un mois qui a déjà des bulletins, ou plus ancien que la dernière
   paie importée, est **bloqué** par un seul message (`blocagesPeriode`).
-  Le contrôle se déroule **catégorie par catégorie**, dans l'ordre des dépendances (mois impossible, période, erreurs du fichier,
-  chantiers clôturés, CIN sans fiche, fiches différentes, avertissements) : la suivante s'ouvre quand la précédente est réglée, et
-  les erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
+  Le contrôle est un **parcours d'étapes dynamiques**, une par type de problème réellement trouvé, dans l'ordre des dépendances :
+  À savoir (ce que l'import fera seul : fonctions créées, chantiers rouverts), Mois impossible, Mois à confirmer, Erreurs du
+  fichier, Chantiers clôturés, Nouvelles embauches (CIN sans fiche), Mises à jour de fiches, Points à confirmer. La suivante s'ouvre
+  quand la précédente est réglée. Les embauches et les mises à jour de fiches se règlent **un cas à la fois** : une fois le cas réglé,
+  l'écran passe au suivant (« Passer » et « Précédent » pour garder un cas pour plus tard, liste complète à la demande, barre de
+  progression). Les mises à jour sont nommées selon ce qui change : Mutations de chantier, Changements d'équipe, Changements de
+  fonction, Révisions de salaire, Noms écrits autrement ; chacune a son action « mettre à jour les N fiches ». Pour les embauches, la
+  date d'embauche et le type de salaire se recopient sur les autres cas, puis les fiches complètes se créent d'un seul envoi. Les
+  erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).
 - **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
   d'export, formulaire de bulletin, parcours d'un employé.
