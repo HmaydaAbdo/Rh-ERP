@@ -6,7 +6,7 @@ from io import BytesIO
 from typing import Any, cast
 
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -19,7 +19,7 @@ from staport.domains.function.models import Fonction
 from .exceptions import ErreurImportPaie
 from .models import Paie
 from .observation import est_stc_ou_sortie
-from .periode import afficher_periode
+from .periode import afficher_periode, mois_precedent, mois_suivant
 from .schemas import (
     PaieImportAnalyse,
     PaieImportChamp,
@@ -170,20 +170,88 @@ class ServiceImportPaie:
         sortie.seek(0)
         return sortie
 
-    def _controle_calendrier(self, periode: int) -> PaieImportControlePeriode | None:
-        """Une paie n'existe qu'à la fin de son mois : la période courante ou future demande confirmation."""
+    def _controle_calendrier(self, periode: int, derniere: int | None = None) -> PaieImportControlePeriode | None:
+        """Le mois attendu est le mois civil précédent (en novembre, la paie d'octobre) ; tout autre mois se confirme.
+
+        Mois en cours ou à venir : la paie n'existe pas encore. Mois plus ancien que l'attendu : rattrapage. Mois
+        attendu mais précédé d'un trou depuis la dernière paie importée : mois sautés. Rien à signaler sinon.
+        """
         aujourd_hui = self._aujourd_hui()
         courant = aujourd_hui.year * 100 + aujourd_hui.month
-        if periode < courant:
-            return None
-        return PaieImportControlePeriode(
-            code="PERIODE_COURANTE_OU_FUTURE",
-            message=(
-                f"La période {afficher_periode(periode)} est le mois en cours ou un mois à venir : la paie d'un mois "
-                "n'existe qu'à sa fin (en novembre, on importe la paie d'octobre). Confirmez si ce choix est voulu."
-            ),
-            periode_reference=None,
-        )
+        attendu = mois_precedent(courant)
+        if periode >= courant:
+            return PaieImportControlePeriode(
+                code="PERIODE_COURANTE_OU_FUTURE",
+                message=(
+                    f"La période {afficher_periode(periode)} est le mois en cours ou un mois à venir : la paie d'un "
+                    f"mois n'existe qu'à sa fin (le mois attendu est {afficher_periode(attendu)}). Confirmez si ce "
+                    "choix est voulu."
+                ),
+                periode_reference=attendu,
+            )
+        sautes = self._mois_sautes(periode, derniere)
+        detail = f" Mois non importés entre-temps : {', '.join(afficher_periode(m) for m in sautes)}." if sautes else ""
+        if periode < attendu:
+            return PaieImportControlePeriode(
+                code="MOIS_HORS_CYCLE",
+                message=(
+                    f"Le mois attendu est {afficher_periode(attendu)} (le mois précédent) ; vous importez "
+                    f"{afficher_periode(periode)}, un rattrapage.{detail} Confirmez si ce choix est voulu."
+                ),
+                periode_reference=attendu,
+            )
+        if sautes:
+            return PaieImportControlePeriode(
+                code="MOIS_SAUTE",
+                message=(
+                    f"La dernière paie importée est {afficher_periode(derniere or 0)} : "
+                    f"{', '.join(afficher_periode(m) for m in sautes)} n'a pas été importé avant "
+                    f"{afficher_periode(periode)}. Confirmez si ces mois n'ont pas de paie à importer."
+                ),
+                periode_reference=derniere,
+            )
+        return None
+
+    @staticmethod
+    def _mois_sautes(periode: int, derniere: int | None) -> list[int]:
+        """Les mois strictement compris entre la dernière paie importée et le mois choisi."""
+        if derniere is None or periode <= derniere:
+            return []
+        sautes: list[int] = []
+        mois = mois_suivant(derniere)
+        while mois < periode:
+            sautes.append(mois)
+            mois = mois_suivant(mois)
+        return sautes
+
+    @staticmethod
+    def _blocage_mois(
+        periode: int, derniere: int | None, bulletins_du_mois: int, lignes_existantes: int, total_lignes: int
+    ) -> PaieImportControlePeriode | None:
+        """Un mois déjà importé, ou plus ancien que la dernière paie, ne s'importe pas : un seul problème."""
+        if bulletins_du_mois:
+            return PaieImportControlePeriode(
+                code="MOIS_DEJA_IMPORTE",
+                message=(
+                    f"La paie de {afficher_periode(periode)} existe déjà : {bulletins_du_mois} bulletin(s) en base, "
+                    f"dont {lignes_existantes} concernent des employés de ce fichier ({total_lignes} lignes). Un mois "
+                    "n'est jamais écrasé : choisissez un autre mois, ou supprimez d'abord la paie de ce mois "
+                    "(suppression en groupe, droit PAIE_PURGE) si elle doit être refaite."
+                ),
+                periode_reference=periode,
+            )
+        if derniere is not None and periode < derniere:
+            return PaieImportControlePeriode(
+                code="MOIS_ANTERIEUR_AU_DERNIER",
+                message=(
+                    f"{afficher_periode(periode)} est plus ancien que la dernière paie importée "
+                    f"({afficher_periode(derniere)}) : les fiches Employé suivent le dernier mois de paie, "
+                    "importer un mois ancien les ferait régresser. Choisissez le bon mois, ou supprimez d'abord "
+                    "les paies plus récentes si elles sont erronées."
+                ),
+                periode_reference=derniere,
+            )
+        return None
 
     @staticmethod
     def _controle_doublon(
@@ -222,6 +290,7 @@ class ServiceImportPaie:
         clotures: dict[int, PaieImportChantierCloture] = {}
         cin_inconnus: list[PaieImportCinInconnu] = []
         ecarts: list[PaieImportEcart] = []
+        lignes_existantes = 0
         async with session.begin():
             employees = {x.cin.strip().upper(): x for x in (await session.execute(select(Employee))).scalars()}
             fonctions_lues = list((await session.execute(select(Fonction))).scalars())
@@ -233,6 +302,7 @@ class ServiceImportPaie:
             employes_avec_bulletin = set(
                 (await session.execute(select(Paie.employee_id).where(Paie.periode == periode))).scalars()
             )
+            derniere_periode = (await session.execute(select(func.max(Paie.periode)))).scalar_one()
             autres_periodes = list(
                 (
                     await session.execute(
@@ -324,18 +394,7 @@ class ServiceImportPaie:
                     )
                 cins_vus.add(cle_cin)
             if cin and cin.upper() in employees and employees[cin.upper()].id in employes_avec_bulletin:
-                erreurs.append(
-                    PaieImportErreur(
-                        numero_ligne=numero,
-                        cin=cin,
-                        nom_prenom=nom,
-                        champ="bulletin",
-                        valeur=str(periode),
-                        raison=(
-                            "bulletin déjà existant pour cet employé et cette période : écrasement automatique refusé"
-                        ),
-                    )
-                )
+                lignes_existantes += 1  # signalé une seule fois pour le mois (MOIS_DEJA_IMPORTE), pas ligne par ligne
             if fonction and fonction.upper() not in fonctions:
                 erreurs.append(
                     PaieImportErreur(
@@ -602,12 +661,16 @@ class ServiceImportPaie:
                         )
         departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
         controles_periode: list[PaieImportControlePeriode] = []
-        controle_calendrier = self._controle_calendrier(periode)
+        controle_calendrier = self._controle_calendrier(periode, derniere_periode)
         if controle_calendrier is not None:
             controles_periode.append(controle_calendrier)
         controle_doublon = self._controle_doublon(lignes, employees, bulletins_voisins)
         if controle_doublon is not None:
             controles_periode.append(controle_doublon)
+        blocage = self._blocage_mois(
+            periode, derniere_periode, len(employes_avec_bulletin), lignes_existantes, len(lignes)
+        )
+        blocages_periode = [blocage] if blocage is not None else []
         return PaieImportAnalyse(
             periode=periode,
             total_lignes=len(lignes),
@@ -619,7 +682,8 @@ class ServiceImportPaie:
             departs=departs,
             retours=retours,
             controles_periode=controles_periode,
-            pret=not erreurs and not avertissements and not ecarts and not controles_periode,
+            blocages_periode=blocages_periode,
+            pret=not erreurs and not avertissements and not ecarts and not controles_periode and not blocages_periode,
         )
 
     async def importer(
@@ -642,6 +706,10 @@ class ServiceImportPaie:
                 or (avertissement.code_avertissement == "EQUIPE_VIDE" and avertissement.employe_id in decisions)
             )
         ]
+        if analyse.blocages_periode:
+            raise ErreurImportPaie(
+                "Le mois ne peut pas être importé : " + " ".join(b.message for b in analyse.blocages_periode)
+            )
         if analyse.erreurs or analyse.ecarts or analyse.cin_inconnus or analyse.chantiers_clotures:
             raise ErreurImportPaie(
                 f"Le fichier n'est pas prêt : {len(analyse.erreurs)} erreur(s), {len(analyse.chantiers_clotures)} "

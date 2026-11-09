@@ -30,7 +30,7 @@ from staport.domains.paie.schemas import (
     PaieImportErreur,
 )
 
-VIDE = Ligne(scalar_one_or_none=lambda: None, scalars=lambda: iter(()), all=list)
+VIDE = Ligne(scalar_one_or_none=lambda: None, scalar_one=lambda: None, scalars=lambda: iter(()), all=list)
 
 
 @pytest.mark.asyncio
@@ -171,7 +171,8 @@ async def test_analyse_signale_un_bulletin_deja_present_avant_import(
     service = ServiceImportPaie(cast(Auditeur, object()))
     analyse = await service.analyser(cast(AsyncSession, SessionAnalyse()), sortie.getvalue(), 202610)
     assert analyse.total_lignes == 1
-    attendus = [(4, "bulletin")] if chantier_actif else [(4, "bulletin"), (4, "chantier")]
+    attendus = [] if chantier_actif else [(4, "chantier")]
+    assert [x.code for x in analyse.blocages_periode] == ["MOIS_DEJA_IMPORTE"], "un seul message pour le mois"
     assert [(erreur.numero_ligne, erreur.champ) for erreur in analyse.erreurs] == attendus
     codes = {avertissement.code_avertissement for avertissement in analyse.avertissements}
     assert codes == {"SALAIRE_DIFFERENT"}, "0 sur une fiche à salaire différent : un seul avertissement"
@@ -301,7 +302,7 @@ def _classeur_vide() -> bytes:
 @pytest.mark.parametrize(
     ("periode", "attendu"),
     [
-        (202509, []),  # un mois passé : aucun contrôle
+        (202509, ["MOIS_HORS_CYCLE"]),  # un mois passé autre que l'attendu : rattrapage à confirmer
         (202610, []),  # le mois civil précédent (octobre en novembre) : l'import normal
         (202611, ["PERIODE_COURANTE_OU_FUTURE"]),  # le mois en cours : la paie n'existe pas encore
         (202612, ["PERIODE_COURANTE_OU_FUTURE"]),  # un mois à venir
@@ -378,3 +379,78 @@ def test_les_montants_sont_arrondis_automatiquement_a_l_entier(brut: str, arrond
 def test_un_depart_sans_motif_a_son_motif_par_defaut() -> None:
     assert PaieImportDepartConfirme(employe_id=1, sans_motif=True).motif == ""
     assert MOTIF_ABSENT_DU_FICHIER == "Absent du fichier"
+
+
+def _service() -> ServiceImportPaie:
+    return ServiceImportPaie(cast(Auditeur, object()), aujourd_hui=lambda: date(2026, 11, 8))
+
+
+@pytest.mark.parametrize(
+    ("periode", "derniere", "code"),
+    [
+        (202610, 202609, None),  # le mois attendu, à la suite de la dernière paie : l'import normal
+        (202610, None, None),  # premier import : rien à comparer
+        (202610, 202608, "MOIS_SAUTE"),  # septembre n'a pas été importé
+        (202608, 202607, "MOIS_HORS_CYCLE"),  # rattrapage d'un mois ancien, à la suite de la dernière paie
+        (202606, 202607, "MOIS_HORS_CYCLE"),  # plus ancien que l'attendu (les blocages sont à part)
+        (202611, 202610, "PERIODE_COURANTE_OU_FUTURE"),
+        (202701, 202610, "PERIODE_COURANTE_OU_FUTURE"),
+    ],
+)
+def test_le_calendrier_du_mois_distingue_cycle_rattrapage_et_trou(
+    periode: int, derniere: int | None, code: str | None
+) -> None:
+    controle = _service()._controle_calendrier(periode, derniere)  # pyright: ignore[reportPrivateUsage]
+    assert (controle.code if controle else None) == code
+
+
+def test_les_mois_sautes_sont_ceux_entre_la_derniere_paie_et_le_mois_choisi() -> None:
+    sautes = ServiceImportPaie._mois_sautes  # pyright: ignore[reportPrivateUsage]
+    assert sautes(202610, 202608) == [202609]
+    assert sautes(202602, 202511) == [202512, 202601]  # à cheval sur deux années
+    assert sautes(202610, 202609) == []
+    assert sautes(202610, None) == []
+    assert sautes(202608, 202610) == []
+
+
+@pytest.mark.parametrize(
+    ("periode", "derniere", "existants", "code"),
+    [
+        (202610, 202609, 0, None),
+        (202610, None, 0, None),
+        (202610, 202610, 3, "MOIS_DEJA_IMPORTE"),  # le mois existe déjà, même en partie
+        (202609, 202610, 0, "MOIS_ANTERIEUR_AU_DERNIER"),  # plus ancien que la dernière paie importée
+        (202609, 202610, 5, "MOIS_DEJA_IMPORTE"),  # un seul blocage, le plus parlant
+    ],
+)
+def test_un_mois_deja_importe_ou_anterieur_au_dernier_est_bloque_une_seule_fois(
+    periode: int, derniere: int | None, existants: int, code: str | None
+) -> None:
+    blocage = ServiceImportPaie._blocage_mois(periode, derniere, existants, min(existants, 2), 10)  # pyright: ignore[reportPrivateUsage]
+    assert (blocage.code if blocage else None) == code
+
+
+@pytest.mark.asyncio
+async def test_importer_refuse_un_mois_bloque_meme_confirme(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = _service()
+
+    async def analyser(_session: AsyncSession, _contenu: bytes, _periode: int) -> PaieImportAnalyse:
+        return PaieImportAnalyse(
+            periode=202610,
+            total_lignes=0,
+            erreurs=[],
+            avertissements=[],
+            chantiers_clotures=[],
+            cin_inconnus=[],
+            ecarts=[],
+            departs=[],
+            retours=[],
+            blocages_periode=[PaieImportControlePeriode(code="MOIS_DEJA_IMPORTE", message="Déjà là.")],
+            pret=False,
+        )
+
+    monkeypatch.setattr(service, "analyser", analyser)
+    with pytest.raises(ErreurImportPaie, match=r"Le mois ne peut pas être importé : Déjà là."):
+        await service.importer(
+            cast(AsyncSession, object()), b"", 202610, False, PaieImportDeparts(), periode_confirmee=True
+        )

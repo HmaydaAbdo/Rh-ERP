@@ -135,12 +135,23 @@ exact du champ, la valeur reçue et la règle violée; le message générique re
 salaires et primes n'est pas un contrat suffisant.
 
 Le mois d'import est choisi par l'utilisateur (le frontend propose le mois civil précédent) : le serveur
-n'impose plus « dernier mois + 1 ». Il signale en revanche, dans `controlesPeriode`, une période égale
-ou postérieure au mois civil en cours (`PERIODE_COURANTE_OU_FUTURE`) et un fichier qui reprend au moins
-90 % des bulletins identiques (jours, récupérations, salaire, primes, total, observation) d'un des trois
-derniers autres mois (`CONTENU_DEJA_IMPORTE`, avec le mois de référence). Tant qu'un contrôle n'est pas
+n'impose plus « dernier mois + 1 ». Il contrôle le mois choisi selon les scénarios suivants (le mois attendu est
+le mois civil précédent) :
+
+| Scénario | Code | Effet |
+|---|---|---|
+| Des bulletins existent déjà pour ce mois | `MOIS_DEJA_IMPORTE` | **Bloque**, un seul message (jamais une erreur par ligne), `blocagesPeriode` |
+| Mois plus ancien que la dernière paie importée | `MOIS_ANTERIEUR_AU_DERNIER` | **Bloque**, `blocagesPeriode` |
+| Mois égal ou postérieur au mois civil en cours | `PERIODE_COURANTE_OU_FUTURE` | À confirmer, `controlesPeriode` |
+| Mois plus ancien que l'attendu (rattrapage) | `MOIS_HORS_CYCLE` | À confirmer, `controlesPeriode` |
+| Mois attendu mais des mois sont sautés depuis la dernière paie | `MOIS_SAUTE` | À confirmer, `controlesPeriode` |
+| Fichier repris à au moins 90 % (jours, récupérations, salaire, primes, total, observation) d'un des trois derniers autres mois | `CONTENU_DEJA_IMPORTE` | À confirmer, avec le mois de référence |
+
+Tant qu'un contrôle n'est pas
 confirmé, l'analyse n'est pas `pret` et `POST /paie/import` refuse avec un `400` sauf si
-`periode_confirmee` vaut `true`. Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le
+`periode_confirmee` vaut `true`. Un blocage (`blocagesPeriode` non vide) est refusé par `POST /paie/import`
+même confirmé : le mois ne peut être importé qu'après avoir été purgé (`PAIE_PURGE`) pour un mois existant,
+ou en choisissant le bon mois. Le fichier multipart `.xlsx` et la période accompagnent chaque étape; le
 serveur relit le fichier à chaque appel. Les erreurs empêchent la création des bulletins. Une cellule numérique invalide est
 refusée, même si sa colonne est facultative.
 
@@ -159,8 +170,8 @@ Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois l
 
 | Contrat | Champs et types | Description |
 |---|---|---|
-| `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `controlesPeriode:ControlePeriode[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu, écart et contrôle de période non confirmé. |
-| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|CONTENU_DEJA_IMPORTE`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
+| `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `controlesPeriode:ControlePeriode[]`, `blocagesPeriode:ControlePeriode[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu, écart et contrôle de période non confirmé. |
+| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|MOIS_HORS_CYCLE|MOIS_SAUTE|CONTENU_DEJA_IMPORTE|MOIS_DEJA_IMPORTE|MOIS_ANTERIEUR_AU_DERNIER`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
 | `Erreur` | `numeroLigne:integer`, `cin:string|null`, `nomPrenom:string|null`, `raison:string` | Numéro réel Excel et correction attendue. |
 | `ChantierCloture` | `chantierId:integer`, `code:string`, `designation:string|null`, `lignes:integer[]` | Marché cité à rouvrir ou à corriger dans le fichier. |
 | `CinInconnu` | `numeroLigne:integer`, `cin:string`, `nomPrenom:string|null`, `fonction:string`, `chantier:string`, `equipe:string|null`, `salaire:number` | Données disponibles pour créer une fiche. |
