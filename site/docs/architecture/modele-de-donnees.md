@@ -4,10 +4,10 @@ sidebar_position: 3
 ---
 
 :::note Page reprise de l'ancien dossier docs
-Texte repris tel quel (état au 2026-11-08). Les mentions de Spring, Java et Flyway décrivent l'architecture avant la bascule vers FastAPI et Alembic : le comportement fait foi dans le code, le suivi dans Jira. À actualiser épopée par épopée.
+Mis à jour à la clôture d'E2 (KAN-245) : le schéma est créé par Alembic (FastAPI, SQLAlchemy). Les révisions `V*` du tableau des migrations sont l'historique Flyway, figé dans la révision de base ; le comportement fait foi dans le code, le suivi dans Jira.
 :::
 
-> Schéma PostgreSQL complet, tel que créé par les migrations Flyway (`api/src/staport/migrations/flyway_v44`).
+> Schéma PostgreSQL complet, tel que créé par les migrations Alembic (`api/src/staport/migrations/versions` : `0001_base_v44` reprend l'historique Flyway V1 à V44, dont les scripts figés restent dans `api/src/staport/migrations/flyway_v44`).
 > Le détail colonne par colonne de chaque domaine métier est dans son README (`docs/<domaine>/README.md`) ;
 > ce document donne la vue d'ensemble, les contraintes d'intégrité et l'historique des migrations.
 
@@ -38,7 +38,7 @@ erDiagram
 ```
 
 Les clés primaires sont toutes des `BIGINT GENERATED ALWAYS AS IDENTITY`. Les noms de table sont au
-singulier et en français, sauf `fonction` (la classe Java s'appelle `Function`), `employe` (classe
+singulier et en français, sauf `fonction` (le modèle s'appelle `Function`), `employe` (modèle
 `Employee`) et `utilisateur` (jamais `user`, mot réservé PostgreSQL).
 
 ---
@@ -65,8 +65,8 @@ Détail et règles métier : [function](../domaines/function/index.md), [chantie
 |---|---|
 | `permission` | Catalogue **fixe** des permissions (une ligne par domaine × action), alimenté par migration, jamais modifié depuis l'interface. Code unique, `version` |
 | `role` | Rôles administrables via l'interface. Nom unique après trim et comparaison sans casse (V27), `version` |
-| `role_permission` | Association rôle ↔ permission (`ON DELETE RESTRICT` des deux côtés depuis `V13` : Hibernate retire d'abord les liaisons d'un rôle supprimé, ce que l'audit voit) |
-| `utilisateur` | Compte de connexion : `username` et `email` uniques après trim et comparaison sans casse (V27), `mot_de_passe_hash` (BCrypt), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
+| `role_permission` | Association rôle ↔ permission (`ON DELETE RESTRICT` des deux côtés depuis `V13` : l'application retire d'abord les liaisons d'un rôle supprimé, ce que l'audit voit) |
+| `utilisateur` | Compte de connexion : `username` et `email` uniques après trim et comparaison sans casse (V27), `mot_de_passe_hash` (haché avec pwdlib : Argon2 pour les nouveaux hachages, BCrypt toujours vérifié), `actif`, `employee_id` optionnel, `version`, compteurs et échéance de verrouillage temporaire après échecs de connexion |
 | `utilisateur_role` | Association utilisateur ↔ rôle (`ON DELETE RESTRICT` depuis `V13`) |
 | `utilisateur_permission_refusee` | Refus individuel : une ligne = permission retirée à cet utilisateur, quels que soient ses rôles (`ON DELETE RESTRICT` depuis `V13`) |
 | `refresh_token` | Jeton de rafraîchissement **haché** (jamais en clair), `expire_le`, `revoque`, `famille`, `version` (identifiant de session, voir [auth/README.md](../domaines/auth/index.md)) |
@@ -74,8 +74,8 @@ Détail et règles métier : [function](../domaines/function/index.md), [chantie
 | `accueil_preference` | Choix des indicateurs de l'accueil d'un utilisateur : `utilisateur_id` unique (clé étrangère), codes séparés par des virgules dans l'ordre d'affichage, `version` ; détails dans [accueil/README.md](../domaines/accueil/index.md) |
 | `parametre` | Catalogue de valeurs de fonctionnement administrables, clé fixe et valeur unique, `version` ; détails dans [parametre/README.md](../domaines/parametre/index.md) |
 
-Toutes les entités persistées modifiables portent `version` (`@Version`, migration `V18`) ; le client la renvoie pour
-une modification. Une version périmée est refusée avec `409 Conflict`. Les instantanés Envers et le journal append-only
+Toutes les entités persistées modifiables portent `version` (verrou optimiste SQLAlchemy `version_id_col`, migration `V18`) ; le client la renvoie pour
+une modification. Une version périmée est refusée avec `409 Conflict`. Les instantanés d'audit et le journal append-only
 restent immuables et ne portent pas de version.
 
 Détail : [auth/README.md](../domaines/auth/index.md).
@@ -84,7 +84,7 @@ Détail : [auth/README.md](../domaines/auth/index.md).
 
 ## Tables d'audit
 
-Écrites par Hibernate Envers et par l'aspect d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
+Écrites par les écouteurs de session SQLAlchemy (`api/src/staport/domains/audit/ecouteur.py`, qui remplace Hibernate Envers) et par le service d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
 `conventions/database.md` (`conventions/database.md`)). Description fonctionnelle : [audit/README.md](../domaines/audit/index.md).
 
 | Table | Rôle |
@@ -141,8 +141,7 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 ### Valeurs monétaires et périodes
 
 - Montants en `NUMERIC(10,0)` (entiers de dirham, révision `0003_montants_entiers`), jours travaillés et jours de récupération en `NUMERIC(5,2)`.
-- La période est un `YearMonth` Java stocké en entier `aaaaMM` (ex. `202609`) par
-  `YearMonthAttributeConverter` (`common/`, partagé avec `employe_sortie.periode`) ; l'API l'expose au format `aaaa-MM`.
+- La période est stockée en entier `aaaaMM` (ex. `202609`, comme `employe_sortie.periode`) ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.
 
 ---
@@ -191,12 +190,12 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V34` | Supprime l'équipe `CH+OP` après reclassement de ses bulletins selon leur fonction (`CH.`/`COURSIER` → `CH`, `OP.` → `OP`, `CHEF DE POSTE` → `EE`) et des fiches actives selon la même règle. Une fonction non classée fait échouer la migration. La suppression et les mises à jour sont auditées. |
 | `V35` | Reprise auditée des chantiers actifs absents de la dernière période de paie enregistrée : ils sont clôturés même s'ils ont des bulletins historiques; sans paie en base, aucune donnée ne change. |
 | `V36` | Permission auditée `IA_UTILISER` (assistant IA), attribuée à `SYSTEM_ADMIN` seulement. |
-| `V37` | Nature, localisation, coordonnées et affichage cartographique de Chantier et Envers ; contraintes de nature, bornes, paire et qualification requise pour affichage. |
+| `V37` | Nature, localisation, coordonnées et affichage cartographique de Chantier et de son historique d'audit ; contraintes de nature, bornes, paire et qualification requise pour affichage. |
 | `V38` | Reprise auditée de la qualification du référentiel par code ; conserve les statuts et toute qualification manuelle déjà présente. |
 | `V39` | Table `heures_supp`, contraintes d'unicité/intégrité et instantanés audités `heures_supp_aud`. |
 | `V40` | Permissions `HEURES_SUP_READ` et `HEURES_SUP_IMPORT`, attribuées et auditées pour `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
 | `V41` | Permissions auditées `HEURES_SUP_DELETE` et `HEURES_SUP_PURGE` pour la suppression unitaire et la purge mensuelle, attribuées à `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
-| `afterMigrate.sql` | Rappel Flyway, rejoué après **chaque** migration : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
+| `afterMigrate.sql` (Flyway) → `migrations/droits.py` | Rappel Flyway, remplacé par `recalculer_droits` appelé après **chaque** montée de version Alembic : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
 
