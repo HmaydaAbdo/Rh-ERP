@@ -180,3 +180,19 @@ async def toutes(s: AsyncSession, c: HeuresSuppRecherche, tri: tuple[tuple[str, 
         q = q.order_by(colonne.asc() if croissant else colonne.desc())
     q = q.order_by(Employee.nom_prenom.asc(), HeureSupp.id.asc())
     return cast(list[Fiche], [tuple(ligne) for ligne in (await s.execute(q)).all()])
+
+
+async def forfaits_precedents(s: AsyncSession, periode: int, chantier_id: int) -> list[tuple[HeureSupp, Employee]]:
+    """Forfaits du mois le plus récent, antérieur à `periode`, qui en compte pour le chantier (stable sur le CIN)."""
+    dernier = (
+        select(func.max(HeureSupp.periode))
+        .where(HeureSupp.chantier_id == chantier_id, HeureSupp.periode < periode, HeureSupp.forfait.is_not(None))
+        .scalar_subquery()
+    )
+    q = (
+        select(HeureSupp, Employee)
+        .join(Employee, Employee.id == HeureSupp.employee_id)
+        .where(HeureSupp.chantier_id == chantier_id, HeureSupp.periode == dernier, HeureSupp.forfait.is_not(None))
+        .order_by(Employee.nom_prenom.asc(), HeureSupp.id.asc())
+    )
+    return [(ligne[0], ligne[1]) for ligne in (await s.execute(q)).all()]

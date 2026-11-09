@@ -4,6 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
+import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppVuesComponent } from './heures-supp-vues.component';
@@ -17,7 +18,7 @@ describe('HeuresSuppVuesComponent', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({ providers: [provideRouter([{ path: 'heures-supp', component: HeuresSuppVuesComponent, children: [
       { path: '', component: ChildView }, { path: 'cartes', component: ChildView }, { path: 'analytique', component: ChildView }
-    ] }]), { provide: HeuresSuppService, useValue: { periodes: vi.fn().mockReturnValue(of(['2026-10', '2026-09'])), telechargerModele: vi.fn().mockReturnValue(of(new Blob(['modele']))) } }] });
+    ] }]), { provide: ChantierReferenceService, useValue: { fetchById: vi.fn().mockReturnValue(of({ code: 'C4' })) } }, { provide: HeuresSuppService, useValue: { periodes: vi.fn().mockReturnValue(of(['2026-10', '2026-09'])), telechargerModele: vi.fn().mockReturnValue(of(new Blob(['modele']))) } }] });
     harness = await RouterTestingHarness.create();
   });
 
@@ -72,15 +73,25 @@ describe('HeuresSuppVuesComponent', () => {
 
     TestBed.inject(HeuresSuppExportEtat).tri.set('montant,desc');
     const component = harness.routeDebugElement!.componentInstance as HeuresSuppVuesComponent & Record<string, (...args: unknown[]) => unknown>;
-    Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!.click();
-    expect(component['exportOuvert']()).toBe(true);
-    expect(component['moisExport']()).toEqual(['2026-10']);
-    component['exporterPdf']();
-    expect(service.exporterPdf).not.toHaveBeenCalled();
-    component['choisirMoisExport'](['2026-10', '2026-09']);
-    component['choisirChantiersExport']([4, 5]);
-    component['exporterPdf']();
-    expect(service.exporterPdf).toHaveBeenCalledWith({ periodes: ['2026-09', '2026-10'], chantierIds: [4, 5] }, 'montant,desc');
+    const exporter = (): HTMLButtonElement => Array.from((harness.routeNativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Exporter')!;
+
+    // Un mois sans chantier : l'export reste inactif et ne s'ouvre pas.
+    expect(exporter().disabled).toBe(true);
+    component['ouvrirExport']();
     expect(component['exportOuvert']()).toBe(false);
+
+    // Un seul mois et un seul chantier : l'étape « mode » s'ouvre, le PDF suit le tri changé du tableau.
+    await harness.navigateByUrl('/heures-supp?periode=2026-10&chantierIds=4', HeuresSuppVuesComponent);
+    expect(exporter().disabled).toBe(false);
+    exporter().click();
+    expect(component['exportOuvert']()).toBe(true);
+    (component['modeExport'] as unknown as { set(valeur: string): void }).set('signature_empreinte');
+    component['exporterPdf']();
+    expect(service.exporterPdf).toHaveBeenCalledWith({ periode: '2026-10', chantierIds: [4] }, 'montant,desc', 'signature_empreinte');
+    expect(component['exportOuvert']()).toBe(false);
+
+    // Deux chantiers : l'export n'est plus possible.
+    await harness.navigateByUrl('/heures-supp?periode=2026-10&chantierIds=4,5', HeuresSuppVuesComponent);
+    expect(exporter().disabled).toBe(true);
   });
 });

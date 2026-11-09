@@ -102,7 +102,7 @@ describe('sources des sélecteurs (référentiels)', () => {
   });
 
   describe('EmployeeReferenceService', () => {
-    it('cherche par nom, trié par nom, et ajoute le nom et le CIN au libellé pour distinguer les homonymes', () => {
+    it('cherche par nom, prénom ou CIN (zone unique), trié par nom, et ajoute le nom et le CIN au libellé pour distinguer les homonymes', () => {
       let rendu: { items: { displayLabel: string }[]; totalRecords: number } | undefined;
 
       TestBed.inject(EmployeeReferenceService)
@@ -111,7 +111,7 @@ describe('sources des sélecteurs (référentiels)', () => {
 
       const r = requete(http, 'POST', 'employees/search');
       r.flush(page([{ id: 1, nomPrenom: 'Ali Alaoui', cin: 'AB123' }], 1));
-      expect(r.request.body).toEqual({ nomPrenom: 'ali' });
+      expect(r.request.body).toEqual({ recherche: 'ali' });
       expect(r.request.params.get('sort')).toBe('nomPrenom,asc');
       expect(rendu!.items[0].displayLabel).toBe('Ali Alaoui — AB123');
       expect(rendu!.totalRecords).toBe(1);

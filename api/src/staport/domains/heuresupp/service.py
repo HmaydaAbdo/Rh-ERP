@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -29,6 +30,7 @@ from .schemas import (
 )
 
 ENTITE = "HeureSupp"
+MESSAGE_DOUBLON = "Une ligne existe déjà pour cet employé, ce mois et ce chantier."
 DEFINITIONS = Definitions(
     heures="Somme des P/H du mois, en heures décimales.",
     montant_dh="Somme de S/H × P/H, chaque ligne arrondie à l'entier de dirham (HALF_DOWN).",  # noqa: RUF001
@@ -176,7 +178,7 @@ class ServiceHeuresSupp:
             if await s.get(Chantier, r.chantier_id) is None:
                 raise HeuresSuppInvalide("Le chantier sélectionné n'existe plus.")
             if await repository.existe(s, r.employee_id, r.periode, r.chantier_id):
-                raise HeuresSuppInvalide("Une ligne existe déjà pour cet employé, ce mois et ce chantier.")
+                raise HeuresSuppInvalide(MESSAGE_DOUBLON)
             stc = est_stc_ou_sortie(bulletin.observation)
             if stc and r.forfait_dh is not None:
                 raise HeuresSuppInvalide("Le forfait est interdit car la paie est marquée STC/sortie.")
@@ -209,7 +211,10 @@ class ServiceHeuresSupp:
                 net_a_payer=calcul.net_a_payer(montant, stc_dh, r.forfait_dh),
             )
             s.add(ligne)
-            await s.flush()
+            try:
+                await s.flush()
+            except IntegrityError as erreur:  # deux saisies simultanées : la contrainte d'unicité tranche
+                raise HeuresSuppInvalide(MESSAGE_DOUBLON) from erreur
             cible.identifiant = ligne.id
             fiche = await repository.fiche(s, ligne.id)
             if fiche is None:

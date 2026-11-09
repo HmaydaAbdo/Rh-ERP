@@ -17,6 +17,7 @@ from .export_pdf import nom_fichier
 from .import_fichier import generer_modele
 from .repository import TRIS
 from .schemas import (
+    ForfaitPrecedent,
     HeuresSuppAnalytique,
     HeuresSuppCreationRequete,
     HeuresSuppExportRequete,
@@ -152,6 +153,16 @@ def _partie[T: BaseModel](modele: type[T], brut: str | None) -> T | None:
 )
 async def prerequis(periode: str, chantier_id: ChantierId, session: Session, contexte: Contexte) -> ImportPrerequis:
     return await contexte.import_heures_supp.prerequis(session, _periode(periode), chantier_id)
+
+
+@imports.get(
+    "/forfaits-precedents",
+    dependencies=[Depends(exiger("HEURES_SUP_IMPORT")), Depends(exiger("PAIE_READ")), Depends(exiger("CHANTIER_READ"))],
+)
+async def forfaits_precedents(
+    periode: str, chantier_id: ChantierId, session: Session, contexte: Contexte
+) -> list[ForfaitPrecedent]:
+    return await contexte.import_heures_supp.forfaits_precedents(session, _periode(periode), chantier_id)
 
 
 @imports.post(

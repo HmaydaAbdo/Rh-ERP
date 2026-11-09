@@ -27,12 +27,22 @@ describe('HeuresSuppService', () => {
   });
 
   it('exporte le PDF avec les filtres, la recherche et le tri de la vue', () => {
-    service.exporterPdf({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal' }, 'montant,desc').subscribe();
+    service.exporterPdf({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal' }, 'montant,desc', 'signature_empreinte').subscribe();
     const request = http.expectOne('heures-supp/export/pdf');
     expect(request.request.method).toBe('POST');
     expect(request.request.responseType).toBe('blob');
-    expect(request.request.body).toEqual({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal', tri: 'montant,desc' });
+    expect(request.request.body).toEqual({ periode: '2026-10', chantierIds: [4], cin: 'AB1', nomPrenom: 'Sal', tri: 'montant,desc', mode: 'signature_empreinte' });
     request.flush(new Blob(['%PDF']));
+  });
+
+  it('charge les forfaits du dernier mois du chantier', () => {
+    let recu: unknown;
+    service.forfaitsPrecedents('2026-10', 4).subscribe((forfaits) => (recu = forfaits));
+    const request = http.expectOne((r) => r.url === 'heures-supp/import/forfaits-precedents');
+    expect(request.request.params.get('periode')).toBe('2026-10');
+    expect(request.request.params.get('chantierId')).toBe('4');
+    request.flush([{ cin: 'AB1', nomPrenom: 'Amal', montantDh: 400, periode: '2026-09' }]);
+    expect(recu).toEqual([{ cin: 'AB1', nomPrenom: 'Amal', montantDh: 400, periode: '2026-09' }]);
   });
 
   it('crée, modifie et supprime les lignes avec leurs contrats dédiés', () => {

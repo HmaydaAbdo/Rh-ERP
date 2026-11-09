@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
@@ -24,6 +25,7 @@ from .exceptions import HeuresSuppInvalide
 from .import_fichier import Fichier, LigneFichier
 from .models import HeureSupp
 from .schemas import (
+    ForfaitPrecedent,
     ImportAnalyse,
     ImportCorrections,
     ImportForfaits,
@@ -240,6 +242,18 @@ class ServiceImportHeuresSupp:
     async def prerequis(self, s: AsyncSession, periode: int, chantier_id: int) -> ImportPrerequis:
         async with s.begin():
             return await _prerequis(s, periode, chantier_id)
+
+    async def forfaits_precedents(self, s: AsyncSession, periode: int, chantier_id: int) -> list[ForfaitPrecedent]:
+        async with s.begin():
+            return [
+                ForfaitPrecedent(
+                    cin=employe.cin,
+                    nom_prenom=employe.nom_prenom,
+                    montant_dh=ligne.forfait if ligne.forfait is not None else Decimal(0),
+                    periode=ligne.periode,
+                )
+                for ligne, employe in await repository.forfaits_precedents(s, periode, chantier_id)
+            ]
 
     async def analyser(
         self,
@@ -473,7 +487,12 @@ class ServiceImportHeuresSupp:
             forfait_total += calcul.ZERO if d.forfait is None else d.forfait
             net_total += net
         s.add_all(nouvelles)
-        await s.flush()
+        try:
+            await s.flush()
+        except IntegrityError as erreur:  # un import concurrent a écrit la même ligne : la contrainte d'unicité tranche
+            raise HeuresSuppInvalide(
+                "Une ligne existe déjà pour un employé de ce lot, ce mois et ce chantier ; relancez l'analyse."
+            ) from erreur
         return ImportResultat(
             periode=periode,
             chantier_id=chantier_id,

@@ -24,7 +24,8 @@ export class EmployeeReferenceService implements LazySelectSource<EmployeeRefere
 
   fetchPage(page: number, size: number, search: string): Observable<LazySelectPage<EmployeeReferenceOption>> {
     const params = new HttpParams().set('page', page).set('size', size).set('sort', 'nomPrenom,asc');
-    const criteria = { nomPrenom: search || undefined };
+    // Zone unique : le nom, le prénom ou le CIN, dans n'importe quel ordre (filtre `recherche` de l'API).
+    const criteria = { recherche: search.trim() || undefined };
 
     return this.http
       .post<Page<EmployeeReference>>(`${this.baseUrl}/search`, criteria, { params })

@@ -40,6 +40,11 @@ table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
 /* Émargement : cellule vide ; openhtmltopdf compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
-table.heures th.emargement, table.heures td.emargement { width: 90pt; }
+table.heures th.emargement.signature, table.heures td.emargement.signature { width: 90pt; }
+table.heures th.emargement.signature_empreinte, table.heures td.emargement.signature_empreinte { width: 170pt; }
 table.heures td.emargement { height: 14pt; }
+/* Mode « signature et empreinte » : deux zones côte à côte, la signature puis l'empreinte. */
+td.emargement .zone-signature, td.emargement .zone-empreinte { display: inline-block; height: 14pt; vertical-align: top; }
+td.emargement .zone-signature { width: 100pt; border-right: 0.5pt solid #999; }
+td.emargement .zone-empreinte { width: 60pt; }
 .vide { margin-top: 30pt; font-size: 11pt; }
