@@ -22,6 +22,7 @@ const PRETE: PaieImportAnalyse = {
   ],
   retours: [{ employeId: 3, cin: 'EF3', nomPrenom: 'ZAHRA' }],
   controlesPeriode: [],
+  blocagesPeriode: [],
   pret: true
 };
 
@@ -96,6 +97,43 @@ describe('PaieImportStore', () => {
 
     store.choisirMois(new Date(2026, 9, 1));
     expect(store.periodeConfirmee()).toBe(false);
+  });
+
+  it('ouvre les catégories du contrôle une à une, la période demandant une validation', () => {
+    service.analyserImport.mockReturnValue(of({
+      ...PRETE,
+      erreurs: [{ numeroLigne: 4, cin: 'X', nomPrenom: null, champ: 'cin', raison: 'CIN inconnu' }],
+      controlesPeriode: [{ code: 'MOIS_HORS_CYCLE' as const, message: 'Mois hors cycle.', periodeReference: '2026-10' }],
+      pret: false
+    }));
+    store.ouvrir();
+    store.analyser(fichier);
+
+    expect(store.categories().map((c) => c.cle)).toEqual(['periode', 'erreurs']);
+    expect(store.categorieActive()).toBe('periode');
+    store.confirmerPeriode(true);
+    expect(store.categorieActive()).toBe('periode'); // confirmée, pas encore validée
+    store.validerCategorie('periode');
+    expect(store.categorieActive()).toBe('erreurs');
+    expect(store.positionCategorie()).toEqual({ courante: 2, total: 2 });
+
+    store.analyse.set({ ...store.analyse()!, erreurs: [] });
+    expect(store.categorieActive()).toBeNull();
+    expect(store.controleTermine()).toBe(true);
+  });
+
+  it('un mois bloqué empêche tout passage, même confirmé', () => {
+    service.analyserImport.mockReturnValue(of({
+      ...PRETE,
+      blocagesPeriode: [{ code: 'MOIS_DEJA_IMPORTE' as const, message: 'Déjà importé.', periodeReference: null }],
+      pret: false
+    }));
+    store.ouvrir();
+    store.analyser(fichier);
+
+    expect(store.categorieActive()).toBe('blocages');
+    expect(store.pret()).toBe(false);
+    expect(store.controleTermine()).toBe(false);
   });
 
   it('envoie la confirmation de période à l’import', () => {

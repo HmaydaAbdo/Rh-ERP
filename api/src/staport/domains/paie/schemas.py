@@ -436,9 +436,16 @@ class PaieImportErreur(ModeleApi):
 
 
 class PaieImportControlePeriode(ModeleApi):
-    """Contrôle de la période choisie, à confirmer explicitement pour importer (mois en cours ou doublon)."""
+    """Contrôle du mois choisi : à confirmer (`controles_periode`) ou bloquant (`blocages_periode`)."""
 
-    code: Literal["PERIODE_COURANTE_OU_FUTURE", "CONTENU_DEJA_IMPORTE"]
+    code: Literal[
+        "PERIODE_COURANTE_OU_FUTURE",
+        "MOIS_HORS_CYCLE",
+        "MOIS_SAUTE",
+        "CONTENU_DEJA_IMPORTE",
+        "MOIS_DEJA_IMPORTE",
+        "MOIS_ANTERIEUR_AU_DERNIER",
+    ]
     message: str
     periode_reference: PeriodePaie | None = None
 
@@ -454,6 +461,7 @@ class PaieImportAnalyse(ModeleApi):
     departs: list[PaieImportDepart]
     retours: list[PaieImportRetour]
     controles_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
+    blocages_periode: list[PaieImportControlePeriode] = Field(default_factory=lambda: [])
     pret: bool
 
 
