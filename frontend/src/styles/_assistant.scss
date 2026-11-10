@@ -207,3 +207,52 @@ html .copilot-sidebar-host .copilot-sidebar-window {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-strong) transparent;
 }
+
+/* Frise chronologique du catalogue A2UI (composant Timeline) : trait vertical, pastille par événement. */
+.app-timeline {
+  position: relative;
+  display: grid;
+  gap: var(--space-sm-md);
+  margin: 0;
+  padding: 0 0 0 var(--space-md);
+  list-style: none;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: 0.4rem;
+    inset-inline-start: 0.3rem;
+    border-inline-start: 2px solid var(--color-border);
+  }
+}
+
+.app-timeline__item {
+  position: relative;
+  display: grid;
+  gap: 0.125rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0.35rem;
+    inset-inline-start: calc(-1 * var(--space-md) - 0.0625rem);
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+  }
+
+  &--positive::before { border-color: var(--color-success); }
+  &--negative::before { border-color: var(--color-danger); }
+}
+
+.app-timeline__date {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.app-timeline__detail {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}

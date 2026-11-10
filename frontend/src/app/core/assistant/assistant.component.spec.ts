@@ -1,13 +1,20 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { COPILOT_KIT_CONFIG } from '@copilotkit/angular';
 
 import { AssistantComponent } from './assistant.component';
+import { FilAssistant } from './fil-assistant.service';
 
 describe('AssistantComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: COPILOT_KIT_CONFIG, useValue: { enableInspector: false } }]
+      providers: [
+        provideRouter([]),
+        { provide: COPILOT_KIT_CONFIG, useValue: { enableInspector: false } },
+        // Fourni en production par la racine de l'assistant ; seul l'état « agrandi » sert ici.
+        { provide: FilAssistant, useValue: { agrandi: signal(false) } }
+      ]
     });
   });
 

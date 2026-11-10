@@ -114,6 +114,27 @@ describe('catalogue ERP', () => {
     expect(page.querySelector('stp-chart')).not.toBeNull();
   });
 
+  it('rend une frise chronologique : événements dans l’ordre reçu, ton inconnu en neutre', async () => {
+    const { page } = await monter(
+      surface([
+        {
+          id: 'root',
+          component: 'Timeline',
+          title: 'Parcours',
+          items: [
+            { date: '2019-02-06', title: 'Embauche', detail: 'ACHETEUR PDR', tone: 'positif' },
+            { date: '2026-08', title: 'Paie', tone: 'inconnu' }
+          ]
+        }
+      ])
+    );
+
+    const evenements = Array.from(page.querySelectorAll('.app-timeline__item'));
+    expect(evenements.map((e) => e.querySelector('strong')?.textContent)).toEqual(['Embauche', 'Paie']);
+    expect(evenements[0].classList.contains('app-timeline__item--positive')).toBe(true);
+    expect(evenements[1].className).toBe('app-timeline__item');
+  });
+
   it('renvoie à l’agent l’action déclenchée par l’utilisateur', async () => {
     const { fixture, hote, page } = await monter(
       surface([
