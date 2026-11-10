@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, Nombre, NonVide, Page
+from staport.domains.common.schemas import Coordonnee, ModeleApi, Nombre, NonVide, Page
 
 from .models import NatureChantier
 
@@ -13,8 +13,8 @@ class ChantierCreationRequete(ModeleApi):
     nom: Annotated[str | None, Field(max_length=255)] = None
     nature: NatureChantier
     localisation: Annotated[str | None, Field(max_length=2048)] = None
-    latitude: Nombre | None = Field(default=None, ge=-90, le=90, max_digits=11, decimal_places=8)
-    longitude: Nombre | None = Field(default=None, ge=-180, le=180, max_digits=11, decimal_places=8)
+    latitude: Coordonnee | None = Field(default=None, ge=-90, le=90, max_digits=11, decimal_places=8)
+    longitude: Coordonnee | None = Field(default=None, ge=-180, le=180, max_digits=11, decimal_places=8)
     afficher_sur_carte: bool
 
 

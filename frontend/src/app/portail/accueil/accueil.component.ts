@@ -10,7 +10,7 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { EmployeeAnalytique } from '../employee/models/employee.model';
 import { EmployeeService } from '../employee/services/employee.service';
 import { PaieAnalytique } from '../paie/models/paie.model';
-import { formaterBulletins, formaterDirhams, formaterEcart } from '../paie/paie-format';
+import { formaterBulletins, formaterDirhams, formaterEcart, formaterPart } from '../paie/paie-format';
 import { PaieService } from '../paie/services/paie.service';
 import { AccueilEditeurComponent } from './editeur/accueil-editeur.component';
 import { Accueil, AccueilService } from './services/accueil.service';
@@ -23,7 +23,6 @@ interface Tuile {
 }
 
 const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const FORMAT_DECIMAL = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 /**
  * L'accueil de l'utilisateur connecté : les indicateurs que son administrateur ou lui-même ont choisis, parmi ceux que ses
@@ -168,11 +167,11 @@ export class AccueilComponent implements OnInit {
       case 'employe.effectif':
         return { valeur: FORMAT_ENTIER.format(employes.effectif), variation: null };
       case 'employe.en-poste':
-        return { valeur: FORMAT_ENTIER.format(employes.actifs), variation: employes.effectif ? `${FORMAT_DECIMAL.format((employes.actifs / employes.effectif) * 100)} % de l’effectif` : null };
+        return { valeur: FORMAT_ENTIER.format(employes.actifs), variation: employes.effectif ? `${formaterPart((employes.actifs / employes.effectif) * 100)} de l’effectif` : null };
       case 'employe.age-moyen':
-        return { valeur: employes.ageMoyen === null ? '—' : `${FORMAT_DECIMAL.format(employes.ageMoyen)} ans`, variation: null };
+        return { valeur: employes.ageMoyen === null ? '—' : `${FORMAT_ENTIER.format(employes.ageMoyen)} ans`, variation: null };
       case 'employe.anciennete-moyenne':
-        return { valeur: employes.ancienneteMoyenne === null ? '—' : `${FORMAT_DECIMAL.format(employes.ancienneteMoyenne)} ans`, variation: null };
+        return { valeur: employes.ancienneteMoyenne === null ? '—' : `${FORMAT_ENTIER.format(employes.ancienneteMoyenne)} ans`, variation: null };
       case 'employe.embauches':
         return { valeur: FORMAT_ENTIER.format(employes.embauchesDouzeMois), variation: null };
       default:

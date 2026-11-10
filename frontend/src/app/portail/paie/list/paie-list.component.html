@@ -23,13 +23,13 @@
           {{ paie.employee?.cin || '-' }}
         }
         @case ('nombreJoursTravailles') {
-          {{ paie.nombreJoursTravailles === null ? '-' : (paie.nombreJoursTravailles | number:'1.0-2') }}
+          {{ paie.nombreJoursTravailles === null ? '-' : (paie.nombreJoursTravailles | number:'1.0-0') }}
         }
         @case ('joursRecuperationOuvrable') {
-          {{ paie.joursRecuperationOuvrable === null ? '-' : (paie.joursRecuperationOuvrable | number:'1.0-2') }}
+          {{ paie.joursRecuperationOuvrable === null ? '-' : (paie.joursRecuperationOuvrable | number:'1.0-0') }}
         }
         @case ('joursRecuperationDimanche') {
-          {{ paie.joursRecuperationDimanche === null ? '-' : (paie.joursRecuperationDimanche | number:'1.0-2') }}
+          {{ paie.joursRecuperationDimanche === null ? '-' : (paie.joursRecuperationDimanche | number:'1.0-0') }}
         }
         @case ('salaireMensuel') {
           {{ paie.salaireMensuel !== null && paie.salaireMensuel !== undefined ? (paie.salaireMensuel | number: '1.0-0') : '-' }}

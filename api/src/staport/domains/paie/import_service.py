@@ -85,7 +85,7 @@ def _nombre_ligne(ligne: list[Any], index: int) -> Decimal | None:
         nombre = Decimal(str(valeur).strip())
     except InvalidOperation, ValueError:
         return None
-    return nombre.normalize() if nombre.is_finite() else None
+    return arrondir_montant(nombre) if nombre.is_finite() else None
 
 
 def signature_ligne(ligne: list[Any]) -> tuple[Any, ...]:
@@ -594,13 +594,11 @@ class ServiceImportPaie:
                     nombre = Decimal(str(valeur).strip())
                 except InvalidOperation, ValueError:
                     nombre = None
-                exposant = nombre.as_tuple().exponent if nombre is not None else None
                 if (
                     nombre is None
                     or not nombre.is_finite()
                     or nombre < 0
-                    or nombre > Decimal("999.99")
-                    or (isinstance(exposant, int) and exposant < -2)
+                    or arrondir_montant(nombre) > Decimal("99999")
                 ):
                     erreurs.append(
                         PaieImportErreur(
@@ -609,7 +607,7 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="jours attendus entre 0 et 999,99 avec deux décimales au plus",
+                            raison="jours attendus entre 0 et 99 999, arrondis à l'entier",
                         )
                     )
             for index, champ in (
@@ -832,11 +830,11 @@ class ServiceImportPaie:
                         fonction_id=fonction_id,
                         chantier_id=chantier_id,
                         equipe_id=equipe,
-                        nombre_jours_travailles=Decimal(str(ligne[3] or 0)),
-                        jours_recuperation_ouvrable=Decimal(str(ligne[4]))
+                        nombre_jours_travailles=arrondir_montant(Decimal(str(ligne[3] or 0))),
+                        jours_recuperation_ouvrable=arrondir_montant(Decimal(str(ligne[4])))
                         if len(ligne) > 4 and ligne[4] is not None
                         else None,
-                        jours_recuperation_dimanche=Decimal(str(ligne[5]))
+                        jours_recuperation_dimanche=arrondir_montant(Decimal(str(ligne[5])))
                         if len(ligne) > 5 and ligne[5] is not None
                         else None,
                         salaire_mensuel=montant_ligne(ligne, 6) or Decimal(0),

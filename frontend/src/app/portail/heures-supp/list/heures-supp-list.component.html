@@ -24,7 +24,7 @@
           @case ('fonction') { {{ ligne.fonction }} }
           @case ('salaireReferenceDh') { {{ ligne.salaireReferenceDh === null ? '—' : (ligne.salaireReferenceDh | number:'1.0-0') + ' DH' }} }
           @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') + ' DH/h' }} }
-          @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? '—' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
+          @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? '—' : (ligne.heuresSupplementaires | number:'1.0-0') + ' h' }} }
           @case ('montantDh') { {{ ligne.montantDh | number:'1.0-0' }} DH }
           @case ('stcDh') { {{ ligne.stcDh | number:'1.0-0' }} DH }
           @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.0-0') + ' DH' }} }

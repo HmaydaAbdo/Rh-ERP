@@ -50,10 +50,10 @@ singulier et en français, sauf `fonction` (le modèle s'appelle `Function`), `e
 | `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
 | `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `nature` (30, nullable avant qualification), `localisation` (2048), `latitude`/`longitude` (`NUMERIC(11,8)`, paire nullable), `afficher_sur_carte` (booléen non nul, faux), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
 | `equipe` | Voir le [modèle du domaine Équipe](../domaines/equipe/index.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,2)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md) | `fonction_id` non nul ; `chantier_id` non nul si actif, nul si inactif ; `equipe_id` facultatif si actif, nul si inactif |
+| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,0)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md) |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC », saisi ou « Absent du fichier »), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
-| `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles`, `salaire_mensuel`, `salaire_total` (non nuls) ; `jours_recuperation_ouvrable`, `jours_recuperation_dimanche`, `prime_roulage_ordinaire`, `prime_roulage_dimanche`, `observation` (nullables), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
-| `heures_supp` | `(employee_id, periode, chantier_id)` | `periode` (`aaaaMM`), `salaire_reference`, `type_salaire_reference`, `s_h` (entier de dirhams, instantanés, nuls pour un forfait seul), `p_h` (heures, 1 décimale au plus), `montant`, `est_stc_ou_sortie`, `stc_dh`, `forfait`, `net_a_payer` (montants `NUMERIC(16,0)` : entiers de dirhams, migration V44), `version` | `employee_id`, `paie_id`, `fonction_id`, `chantier_id` (non nuls) |
+| `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles` (`NUMERIC(5,0)`), `jours_recuperation_ouvrable` et `jours_recuperation_dimanche` (`NUMERIC(5,0)`), salaires/primes entiers, `observation` (nullable), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
+| `heures_supp` | `(employee_id, periode, chantier_id)` | `periode` (`aaaaMM`), `salaire_reference`, `type_salaire_reference`, `s_h` (entier de dirhams, instantanés, nuls pour un forfait seul), `p_h` (heures entières), `montant`, `est_stc_ou_sortie`, `stc_dh`, `forfait`, `net_a_payer` (entiers, montant en `NUMERIC(16,0)`), `version` | `employee_id`, `paie_id`, `fonction_id`, `chantier_id` (non nuls) |
 
 Détail et règles métier : [function](../domaines/function/index.md), [chantier](../domaines/chantier/index.md),
 [equipe](../domaines/equipe/index.md), [employee](../domaines/employee/index.md), [paie](../domaines/paie/index.md),
@@ -140,7 +140,8 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 
 ### Valeurs monétaires et périodes
 
-- Montants en `NUMERIC(10,0)` (entiers de dirham, révision `0003_montants_entiers`), jours travaillés et jours de récupération en `NUMERIC(5,2)`.
+- Toute valeur numérique métier est entière et arrondie à la saisie, à l'import et dans les calculs avec `HALF_DOWN` (7,5 → 7 ; 7,51 → 8). Les coordonnées latitude/longitude (`NUMERIC(11,8)`) restent décimales.
+- Montants en `NUMERIC(10,0)`, jours travaillés/récupération en `NUMERIC(5,0)` et P/H en `NUMERIC(8,0)` (révisions `0003_montants_entiers` et `0004_nombres_metier_entiers`). Les instantanés d'audit déjà écrits ne sont pas réécrits ; les lignes actives migrées reçoivent une nouvelle révision système.
 - La période est stockée en entier `aaaaMM` (ex. `202609`, comme `employe_sortie.periode`) ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.
 

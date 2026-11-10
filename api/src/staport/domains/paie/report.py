@@ -2,7 +2,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from html import escape
 from io import BytesIO
 from math import ceil
@@ -18,6 +18,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.common.pdf import rendre_pdf
 from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
@@ -922,7 +923,7 @@ def _entier(valeur: int) -> str:
 
 
 def _masse(valeur: Decimal) -> str:
-    arrondie = valeur.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    arrondie = arrondir_montant(valeur)
     return f"{arrondie:,.0f}".replace(",", "\u00a0")
 
 
@@ -946,9 +947,9 @@ def _ecart_montant(actuel: Decimal, precedent: Decimal | None, *, decimales: boo
     montant = f"{signe}{_montant(abs(ecart)) if decimales else _masse(abs(ecart))} DH"
     if precedent == 0:
         return f"Écart : {montant} (base à 0)"
-    pourcentage = (ecart * Decimal(100) / precedent).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    pourcentage = arrondir_montant(ecart * Decimal(100) / precedent)
     signe_pourcentage = "+" if pourcentage > 0 else _MOINS if pourcentage < 0 else ""
-    return f"Écart : {montant} ({signe_pourcentage}{abs(pourcentage):.1f} %)".replace(".", ",")
+    return f"Écart : {montant} ({signe_pourcentage}{abs(pourcentage):.0f} %)"
 
 
 def _graphique_distribution(
@@ -1053,10 +1054,10 @@ def _montant(valeur: Decimal | None) -> str:
 
 
 def _quantite(valeur: Decimal | None) -> str:
-    """Même présentation sans zéros décimaux superflus que le tableau Spring."""
+    """Valeur métier entière, séparateur de milliers insécable."""
     if valeur is None:
         return "-"
-    return format(valeur, ",.2f").rstrip("0").rstrip(".").replace(",", "\u00a0").replace(".", ",")
+    return format(arrondir_montant(valeur), ",.0f").replace(",", "\u00a0")
 
 
 def _signature(role: str, nom: str, *, derniere: bool = False) -> str:

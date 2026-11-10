@@ -5,8 +5,8 @@ sidebar_position: 2
 
 Les routes et règles d'utilisation sont dans [le README](index.md). Les contrats d'export PDF et
 Excel sont dans [Rapport](../rapport/index.md). Les types ci-dessous décrivent les corps JSON : les
-identifiants et versions sont des entiers sur 64 bits; les montants et quantités sont des nombres
-décimaux; une période est une chaîne `aaaa-MM`.
+identifiants, versions, montants et quantités métier sont des entiers; toute valeur fractionnaire
+est arrondie automatiquement selon `HALF_DOWN` (7,5 → 7, 7,51 → 8). Une période est une chaîne `aaaa-MM`.
 
 ## Saisie et réponse d’un bulletin
 
@@ -18,9 +18,9 @@ décimaux; une période est une chaîne `aaaa-MM`.
 | `fonctionId` | `integer(int64)`, obligatoire | Fonction existante du bulletin. |
 | `chantierId` | `integer(int64)`, obligatoire | Chantier existant du bulletin. |
 | `equipeId` | `integer(int64)|null` | Équipe existante; `null` signifie sans équipe. La valeur synthétique de filtre `0` n'est pas une référence. |
-| `nombreJoursTravailles` | `number`, obligatoire, 0 à 999,99, deux décimales au plus | Quantité travaillée. |
-| `joursRecuperationOuvrable` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération ouvrables. |
-| `joursRecuperationDimanche` | `number|null`, 0 à 999,99, deux décimales au plus | Jours de récupération du dimanche. |
+| `nombreJoursTravailles` | `integer`, obligatoire, 0 à 99 999 après arrondi | Quantité travaillée entière. |
+| `joursRecuperationOuvrable` | `integer|null`, 0 à 99 999 après arrondi | Jours de récupération ouvrables entiers. |
+| `joursRecuperationDimanche` | `integer|null`, 0 à 99 999 après arrondi | Jours de récupération du dimanche entiers. |
 | `salaireMensuel` | `number`, obligatoire, 0 à 9 999 999 999, arrondi automatiquement à l'entier de dirham | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
 | `primeRoulageOrdinaire` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime ordinaire. |
 | `primeRoulageDimanche` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime dimanche. |
@@ -31,7 +31,7 @@ Ces champs forment `PaieCreateRequestDto` et `PaieUpdateRequestDto`. Une validat
 refusée en `400`; les références inconnues suivent le même refus. Un doublon employé/mois est
 refusé en `409`.
 
-`PaieResponseDto` restitue `id`, `version`, `periode` et les mêmes champs décimaux/observation.
+`PaieResponseDto` restitue `id`, `version`, `periode` et les mêmes champs numériques entiers/observation.
 Les références y sont développées :
 
 | Champ de réponse | Structure | Description |

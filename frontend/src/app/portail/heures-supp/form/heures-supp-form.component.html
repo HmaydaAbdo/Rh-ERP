@@ -12,7 +12,7 @@
         <div><dt>Fonction</dt><dd>{{ actuelle.fonction }}</dd></div><div><dt>Chantier</dt><dd>{{ actuelle.codeChantier }} · {{ actuelle.chantier }}</dd></div>
         <div><dt>Salaire de référence</dt><dd>{{ actuelle.salaireReferenceDh === null ? '—' : (actuelle.salaireReferenceDh | number:'1.0-0') + ' DH' }}</dd></div>
         <div><dt>S/H</dt><dd>{{ actuelle.salaireHoraireDh === null ? '—' : (actuelle.salaireHoraireDh | number:'1.0-0') + ' DH/h' }}</dd></div>
-        <div><dt>P/H actuel</dt><dd>{{ actuelle.heuresSupplementaires === null ? '—' : (actuelle.heuresSupplementaires | number:'1.0-1') + ' h' }}</dd></div>
+        <div><dt>P/H actuel</dt><dd>{{ actuelle.heuresSupplementaires === null ? '—' : (actuelle.heuresSupplementaires | number:'1.0-0') + ' h' }}</dd></div>
         <div><dt>Montant actuel</dt><dd>{{ actuelle.montantDh | number:'1.0-0' }} DH</dd></div>
         <div><dt>STC actuel</dt><dd>{{ actuelle.stcDh | number:'1.0-0' }} DH</dd></div>
         <div><dt>Forfait actuel</dt><dd>{{ actuelle.forfaitDh === null ? '—' : (actuelle.forfaitDh | number:'1.0-0') + ' DH' }}</dd></div>
@@ -30,7 +30,7 @@
       } @else {
         <div class="app-form__section"><h2>Valeurs à modifier</h2></div>
       }
-      <div class="field"><label for="hs-heures">Heures supplémentaires (P/H)</label><stp-number-input inputId="hs-heures" ariaLabel="Heures supplémentaires (P/H)" [maxFractionDigits]="1" [formField]="form.heuresSupplementaires" /><stp-field-error [field]="form.heuresSupplementaires" /></div>
+      <div class="field"><label for="hs-heures">Heures supplémentaires (P/H)</label><stp-number-input inputId="hs-heures" ariaLabel="Heures supplémentaires (P/H)" [formField]="form.heuresSupplementaires" /><stp-field-error [field]="form.heuresSupplementaires" /></div>
       <div class="field"><label for="hs-forfait">Forfait (DH)</label><stp-number-input inputId="hs-forfait" ariaLabel="Forfait en dirhams" [minFractionDigits]="0" [maxFractionDigits]="0" [formField]="form.forfaitDh" /><stp-field-error [field]="form.forfaitDh" /></div>
       <p class="app-form__wide app-muted">Saisissez des heures supplémentaires, un forfait, ou les deux.</p>
       <div class="app-form__actions app-form__wide"><a stp-button variant="secondary" routerLink="/heures-supp">Annuler</a><button stp-button variant="primary" type="button" [loading]="saving()" (click)="enregistrer()">{{ edition() ? 'Enregistrer' : 'Ajouter' }}</button></div>

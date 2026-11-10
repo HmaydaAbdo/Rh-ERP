@@ -1,4 +1,4 @@
-"""Règle commune des montants : entiers de dirham, 0,5 inclus on descend, au-delà on monte (HALF_DOWN), partout."""
+"""Arrondi HALF_DOWN partagé : montants en dirhams et valeurs numériques métier entières."""
 
 from decimal import ROUND_HALF_DOWN, Decimal, InvalidOperation
 from typing import Any
@@ -15,6 +15,16 @@ def arrondir_montant(valeur: Decimal) -> Decimal:
     return valeur.quantize(UN, rounding=ROUND_HALF_DOWN)
 
 
+def arrondir_entier(valeur: Decimal) -> Decimal:
+    """Arrondit tout nombre métier fini à l'entier, sans limite de capacité propre aux montants."""
+    if not valeur.is_finite():
+        return valeur
+    try:
+        return valeur.quantize(UN, rounding=ROUND_HALF_DOWN)
+    except InvalidOperation:
+        return valeur
+
+
 def arrondir_si_nombre(valeur: Any) -> Any:
     """Validateur « avant » des types pydantic : arrondit un nombre ou un texte numérique, le reste va à pydantic."""
     if isinstance(valeur, bool) or not isinstance(valeur, int | float | Decimal | str):
@@ -23,4 +33,4 @@ def arrondir_si_nombre(valeur: Any) -> Any:
         nombre = valeur if isinstance(valeur, Decimal) else Decimal(str(valeur).strip())
     except InvalidOperation:
         return valeur
-    return arrondir_montant(nombre)
+    return arrondir_entier(nombre)

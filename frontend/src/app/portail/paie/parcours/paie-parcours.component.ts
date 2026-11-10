@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions } from 'chart.js';
 
+import { arrondirDemiBas } from '../../../shared/utils/arrondi-nombre';
 import { TableColumn } from '../../../shared/table/table-columns';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
 import { ThemeService } from '../../../core/theme/theme.service';
@@ -26,7 +27,7 @@ const ICONES: Record<PaieParcoursEvenementType, string> = {
   RETOUR: 'user-check'
 };
 
-const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
 /**
  * Parcours d'un employé tel que sa paie le raconte (voir `PaieParcoursService` côté serveur) : quelques chiffres, la
@@ -40,6 +41,7 @@ const FORMAT_ENTIER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieParcoursComponent {
+  protected readonly arrondirJoursMoyens = arrondirDemiBas;
   protected readonly colonnesBulletins: TableColumn[] = [
     { field: 'periode', header: 'Mois' },
     { field: 'chantier', header: 'Chantier' },

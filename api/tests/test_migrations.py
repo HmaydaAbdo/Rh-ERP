@@ -234,8 +234,7 @@ def _echelles(connexion: Connection) -> set[tuple[str, str, int]]:
         text(
             "SELECT table_name, column_name, numeric_scale FROM information_schema.columns "
             "WHERE table_name IN ('employe', 'employe_aud', 'paie', 'paie_aud', 'heures_supp', 'heures_supp_aud') "
-            "AND numeric_scale IS NOT NULL AND column_name NOT IN ('nombre_jours_travailles', 'p_h', "
-            "'jours_recuperation_ouvrable', 'jours_recuperation_dimanche', 'latitude', 'longitude')"
+            "AND numeric_scale IS NOT NULL AND column_name NOT IN ('latitude', 'longitude')"
         )
     )
     return {(table, colonne, echelle) for table, colonne, echelle in lignes}
@@ -254,7 +253,18 @@ def test_tous_les_montants_sont_des_entiers_de_dirham_et_le_retour_arriere_rend_
         for table, colonnes in COLONNES_MONTANTS.items():
             for colonne in colonnes:
                 assert (table, colonne, 0) in echelles, (table, colonne)
-        assert all(echelle == 0 for _, _, echelle in echelles)
+        for table, colonne in (
+            ("paie", "nombre_jours_travailles"),
+            ("paie", "jours_recuperation_ouvrable"),
+            ("paie", "jours_recuperation_dimanche"),
+            ("heures_supp", "p_h"),
+        ):
+            assert (table, colonne, 0) in echelles, (table, colonne)
+        # Les anciennes traces restent append-only et conservent leur échelle historique.
+        assert ("paie_aud", "nombre_jours_travailles", 2) in echelles
+        assert ("paie_aud", "jours_recuperation_ouvrable", 2) in echelles
+        assert ("paie_aud", "jours_recuperation_dimanche", 2) in echelles
+        assert ("heures_supp_aud", "p_h", 1) in echelles
         # Expression de conversion de la révision : 0,5 descend, 0,51 monte (HALF_DOWN, comme `arrondir_montant`).
         assert connexion.execute(text("SELECT CEIL(4500.5 - 0.5), CEIL(4500.51 - 0.5), CEIL(0.4 - 0.5)")).one() == (
             4500,

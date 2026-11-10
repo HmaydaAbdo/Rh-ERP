@@ -45,10 +45,12 @@ rouvrir le trafic. Garder l'ancien volume intact comme retour arrière ; après 
 sur la nouvelle majeure, un retour arrière exige une réconciliation des nouvelles écritures. Voir
 `conventions/deployment.md` et la procédure propre au projet dans `site/docs/exploitation/deploiement.md`.
 
-Utiliser un type décimal exact pour les quantités monétaires ou les mesures décimales qui exigent
-une précision déterministe ; ne pas représenter ces valeurs par des nombres flottants. Stocker les
-instants dans un type avec fuseau horaire en UTC et convertir vers l'heure locale uniquement pour
-l'affichage. Préciser les précisions, échelles et unités dans le modèle et les contraintes.
+Les valeurs numériques métier sont des entiers dans les domaines et dans les interfaces : la saisie, l'import et les
+calculs appliquent l'arrondi `HALF_DOWN` (0,5 inclus vers zéro ; 0,51 vers l'entier supérieur pour les valeurs positives).
+Les coordonnées latitude/longitude restent des décimaux exacts et ne suivent pas cette règle. Utiliser `Decimal` et un
+type décimal SQL exact pour les calculs métier avant arrondi ; ne pas représenter ces calculs par des flottants. Stocker
+les instants dans un type avec fuseau horaire en UTC et convertir vers l'heure locale uniquement pour l'affichage.
+Préciser les unités et capacités dans le modèle et les contraintes.
 
 Les migrations se vérifient sur PostgreSQL réel, pas uniquement sur H2 ou des repositories mockés :
 tester une base vierge, une mise à niveau depuis la version de schéma prise en charge et la

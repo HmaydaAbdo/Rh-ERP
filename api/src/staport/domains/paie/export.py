@@ -215,7 +215,7 @@ def _ecrire(
             )
             cellule.alignment = Alignment(horizontal=alignement, vertical="center")
             if cellule.column in (7, 8, 9, 10):
-                cellule.number_format = "#,##0.00"
+                cellule.number_format = "#,##0"
             modeles[cellule.column or 0] = copy(cellule._style)  # pyright: ignore[reportPrivateUsage]
     total_ligne = 5 + len(ordonnees)
     precedent_ligne = total_ligne + 1
@@ -229,7 +229,7 @@ def _ecrire(
         valeur.font = _police(bold=True)
         valeur.border = bordure
         valeur.alignment = Alignment(horizontal="right", vertical="center")
-        valeur.number_format = "#,##0.00"
+        valeur.number_format = "#,##0"
     cast(Cell, feuille.cell(total_ligne, 10)).value = (
         f"=SUBTOTAL(9,J5:J{4 + len(ordonnees)})" if ordonnees else "=SUBTOTAL(9,J1:J1)-SUBTOTAL(9,J1:J1)"
     )
@@ -273,8 +273,8 @@ def _ecrire(
 
 
 def _largeur_texte(valeur: object, format_nombre: str) -> float:
-    if isinstance(valeur, float) and format_nombre == "#,##0.00":
-        valeur = f"{valeur:,.2f}"
+    if isinstance(valeur, float) and format_nombre == "#,##0":
+        valeur = f"{valeur:,.0f}"
     elif isinstance(valeur, float):
         valeur = f"{valeur:g}"
     # Calibri 11 : majuscule ≈ 1,1 chiffre, minuscule ≈ 0,9, espace ≈ 0,5 (approximation des métriques de POI)

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any, cast
 
 from sqlalchemy.exc import IntegrityError
@@ -132,8 +132,8 @@ DEFINITIONS_COMPARAISON = {
     "masseReference": "Masse salariale du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
     "variationMasse": "Masse du mois récent moins masse du mois de comparaison, en dirhams (négative = baisse) ; "
     "absente si un mois manque",
-    "variationPourcentage": "Variation de masse divisée par la masse du mois de comparaison, en pourcentage à une "
-    "décimale ; absente si la masse de référence est nulle",
+    "variationPourcentage": "Variation de masse divisée par la masse du mois de comparaison, en pourcentage entier "
+    "arrondi HALF_DOWN ; absente si la masse de référence est nulle",
     "effectif": "Employés payés dans le mois récent (un bulletin par employé)",
     "variationEffectif": "Effectif du mois récent moins effectif du mois de comparaison ; absent si un mois manque",
     "coutMoyen": "Masse divisée par l'effectif du mois récent, en dirhams ; absent sans bulletin",
@@ -192,7 +192,7 @@ def _cout_moyen(masse: Decimal, effectif: int) -> Decimal | None:
 
 
 def _pourcentage(variation: Decimal, reference: Decimal) -> Decimal:
-    return (variation * CENT / reference).quantize(Decimal("0.1"), ROUND_HALF_UP)
+    return arrondir_montant(variation * CENT / reference)
 
 
 @dataclass(frozen=True)

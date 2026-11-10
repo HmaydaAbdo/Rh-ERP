@@ -76,19 +76,19 @@
 
     <div class="field">
       <label for="nombreJoursTravailles">Jours travaillés <span class="field__req" aria-hidden="true">*</span></label>
-      <stp-number-input inputId="nombreJoursTravailles" [formField]="form.nombreJoursTravailles" [maxFractionDigits]="2" />
+      <stp-number-input inputId="nombreJoursTravailles" [formField]="form.nombreJoursTravailles" />
       <stp-field-error [field]="form.nombreJoursTravailles" />
     </div>
 
     <div class="field">
       <label for="joursRecuperationOuvrable">Jours récup. ouvrable (facultatifs)</label>
-      <stp-number-input inputId="joursRecuperationOuvrable" [formField]="form.joursRecuperationOuvrable" [maxFractionDigits]="2" />
+      <stp-number-input inputId="joursRecuperationOuvrable" [formField]="form.joursRecuperationOuvrable" />
       <stp-field-error [field]="form.joursRecuperationOuvrable" />
     </div>
 
     <div class="field">
       <label for="joursRecuperationDimanche">Jours récup. dimanche (facultatifs)</label>
-      <stp-number-input inputId="joursRecuperationDimanche" [formField]="form.joursRecuperationDimanche" [maxFractionDigits]="2" />
+      <stp-number-input inputId="joursRecuperationDimanche" [formField]="form.joursRecuperationDimanche" />
       <stp-field-error [field]="form.joursRecuperationDimanche" />
     </div>
 

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from io import BytesIO
 from typing import Any, cast
 
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
@@ -65,7 +66,7 @@ def _annees_moyennes(jours: int, effectif: int) -> Decimal | None:
     """Moyenne de jours en années à une décimale (HALF_UP sur 365,2425 jours) ; `None` sans employé."""
     if effectif == 0:
         return None
-    return (Decimal(jours) / (Decimal(effectif) * Decimal("365.2425"))).quantize(Decimal("0.1"), ROUND_HALF_UP)
+    return arrondir_montant(Decimal(jours) / (Decimal(effectif) * Decimal("365.2425")))
 
 
 def _valeur_texte(valeur: str | None) -> str:
