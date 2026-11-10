@@ -35,6 +35,7 @@ export interface HeuresSuppGroupe {
   id: number;
   code: string | null;
   libelle: string;
+  nombreLignes: number;
   lignesHeures: number;
   effectif: number;
   heures: number;
@@ -55,6 +56,7 @@ export interface HeuresSuppAnalytique {
     forfaitDh: number;
     netAPayerDh: number;
   };
+  parPeriode: HeuresSuppGroupe[];
   parChantier: HeuresSuppGroupe[];
   parEquipe: HeuresSuppGroupe[];
   parFonction: HeuresSuppGroupe[];

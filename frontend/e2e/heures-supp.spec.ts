@@ -100,12 +100,14 @@ test('les vues Cartes et Analytique affichent les heures supplémentaires et sui
 
 test('sans mois dans l’URL, Cartes et Analytique prennent le dernier mois d’heures supplémentaires', async ({ page }) => {
   const groupe = { id: 4, code: 'C4', libelle: 'Site', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 };
+  const mois = { id: 202610, code: '2026-10', libelle: '2026-10', nombreLignes: 1, lignesHeures: 1, effectif: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 };
   const api = await mockApi(page, { username: 'rh', permissions }, {
-    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
+    'POST /heures-supp/analytique': () => ({ periode: '2026-10', indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 30, stcDh: 0, forfaitDh: 100, netAPayerDh: 130 }, parPeriode: [mois], parChantier: [groupe], parEquipe: [groupe], parFonction: [groupe], definitions: {} }),
     'GET /heures-supp/periodes': () => ['2026-10', '2026-09']
   });
 
   await page.goto('/heures-supp/cartes');
+  await page.getByRole('button', { name: /Ouvrir.*octobre 2026/i }).click();
   await expect(page.getByText('C4', { exact: true })).toBeVisible();
   expect(api.bodies['POST /heures-supp/analytique']?.at(-1)).toMatchObject({ periode: '2026-10' });
 

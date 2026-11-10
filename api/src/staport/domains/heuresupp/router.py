@@ -23,6 +23,7 @@ from .schemas import (
     HeuresSuppExportRequete,
     HeuresSuppModificationRequete,
     HeuresSuppRecherche,
+    HeuresSuppSuppressionGroupe,
     HeuresSuppSuppressionMois,
     HeureSuppReponse,
     ImportAnalyse,
@@ -96,6 +97,13 @@ async def supprimer(identifiant: int, session: Session, contexte: Contexte) -> N
 @heures_supp.post("/suppression-mois", dependencies=[Depends(exiger("HEURES_SUP_PURGE")), Depends(exiger("PAIE_READ"))])
 async def supprimer_mois(corps: HeuresSuppSuppressionMois, session: Session, contexte: Contexte) -> int:
     return await contexte.heures_supp.supprimer_mois(session, corps.periode, corps.nombre_attendu)
+
+
+@heures_supp.post(
+    "/suppression-groupe", dependencies=[Depends(exiger("HEURES_SUP_PURGE")), Depends(exiger("PAIE_READ"))]
+)
+async def supprimer_groupe(corps: HeuresSuppSuppressionGroupe, session: Session, contexte: Contexte) -> int:
+    return await contexte.heures_supp.supprimer_groupe(session, corps)
 
 
 imports = APIRouter(prefix="/heures-supp/import", tags=["Heures supplémentaires — import"])

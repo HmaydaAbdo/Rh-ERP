@@ -1,7 +1,7 @@
 import { EmployeeRegroupement } from '../employee/models/employee.model';
 import { PaieAnalytique } from '../paie/models/paie.model';
 import { HeuresSuppAnalytique, HeuresSuppGroupe } from '../heures-supp/models/heures-supp.model';
-import { formaterBulletins, formaterDirhams, formaterEcart } from '../paie/paie-format';
+import { formaterBulletins, formaterDirhams, formaterEcart, libellePeriode } from '../paie/paie-format';
 import { ItemCatalogue } from './perimetre-module';
 import { Dimension } from './perimetre';
 
@@ -16,6 +16,7 @@ export interface ChiffresPaie {
 }
 
 export interface ChiffresHeuresSupp {
+  nombreLignes: number;
   effectif: number;
   heures: number;
   montantDh: number;
@@ -94,6 +95,29 @@ export function lignesHeuresSupp(dimension: Dimension, analyse: HeuresSuppAnalyt
   return analyse.parFonction;
 }
 
+export function groupesMoisHeuresSupp(analyse: HeuresSuppAnalytique): GroupeCarte[] {
+  return analyse.parPeriode.map((groupe) => ({
+    id: groupe.id,
+    code: groupe.code,
+    libelle: groupe.code ? libellePeriode(groupe.code) : groupe.libelle ?? '',
+    detail: null,
+    statut: null,
+    lien: null,
+    fiches: null,
+    paie: null,
+    precedent: null,
+    heuresSupp: {
+      nombreLignes: groupe.nombreLignes,
+      effectif: groupe.effectif,
+      heures: groupe.heures,
+      montantDh: groupe.montantDh,
+      stcDh: groupe.stcDh,
+      forfaitDh: groupe.forfaitDh,
+      netAPayerDh: groupe.netAPayerDh
+    }
+  }));
+}
+
 /**
  * Fusionne les trois sources en une carte par groupe. Avec un référentiel exhaustif, toute ligne du référentiel est une carte
  * (même sans fiche ni bulletin : les chiffres valent alors zéro, ils ne sont jamais inventés). Sinon, une carte existe pour
@@ -130,7 +154,7 @@ export function fusionnerGroupes(dimension: Dimension, sources: SourcesGroupes):
   for (const ligne of sources.heuresSupp ?? []) {
     if (!exhaustif || parId.has(ligne.id) || (dimension === 'EQUIPE' && ligne.id === 0)) {
       const groupe = carte(ligne.id, ligne.code, ligne.libelle);
-      groupe.heuresSupp = { effectif: ligne.effectif, heures: ligne.heures, montantDh: ligne.montantDh, stcDh: ligne.stcDh, forfaitDh: ligne.forfaitDh, netAPayerDh: ligne.netAPayerDh };
+      groupe.heuresSupp = { nombreLignes: ligne.nombreLignes, effectif: ligne.effectif, heures: ligne.heures, montantDh: ligne.montantDh, stcDh: ligne.stcDh, forfaitDh: ligne.forfaitDh, netAPayerDh: ligne.netAPayerDh };
     }
   }
   for (const element of sources.catalogue ?? []) {

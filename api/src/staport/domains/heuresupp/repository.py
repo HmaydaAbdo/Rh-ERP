@@ -151,6 +151,12 @@ async def du_mois(s: AsyncSession, periode: int) -> list[HeureSupp]:
     return list((await s.execute(q)).scalars().all())
 
 
+async def pour_suppression(s: AsyncSession, criteres: HeuresSuppRecherche) -> list[HeureSupp]:
+    q = _filtrer(select(HeureSupp).join(Employee, Employee.id == HeureSupp.employee_id), criteres)
+    q = q.order_by(HeureSupp.id.asc()).with_for_update(of=HeureSupp)
+    return list((await s.execute(q)).scalars().all())
+
+
 async def du_bulletin(s: AsyncSession, paie_id: int) -> list[HeureSupp]:
     return list((await s.execute(select(HeureSupp).where(HeureSupp.paie_id == paie_id))).scalars().all())
 

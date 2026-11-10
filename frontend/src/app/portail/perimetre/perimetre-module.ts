@@ -96,6 +96,8 @@ export interface ModulePerimetre {
   periodePaieRecenteFixe?: boolean;
   /** Vrai pour le module Paie : tant qu'aucun mois n'est choisi, le premier niveau des Cartes est la liste des mois (et le mois se choisit dans la barre du module). */
   niveauPeriode?: boolean;
+  /** Vrai pour le module Heures supplémentaires : le premier niveau des Cartes regroupe les mois disponibles. */
+  niveauPeriodeHeuresSupp?: boolean;
 }
 
 /** Charge toutes les pages d'une recherche de référentiel (200 éléments par appel) et les concatène. */
