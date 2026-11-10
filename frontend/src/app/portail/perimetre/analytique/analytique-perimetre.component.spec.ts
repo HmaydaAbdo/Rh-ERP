@@ -302,7 +302,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const tuiles = Array.from(page.querySelectorAll('.app-kpi')).map((t) => t.textContent ?? '');
 
     expect(page.textContent).toContain('Paie · août 2026');
-    expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500\sDH\s*\+12,5 % sur le mois précédent/);
+    expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500\sDH\s*\+12 % sur le mois précédent/);
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);

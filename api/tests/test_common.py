@@ -159,8 +159,8 @@ def test_les_types_pydantic_frequents_sont_traduits_et_sans_anglais() -> None:
     assert message_fr({"type": "inconnu", "msg": "original"}) == "original"
 
 
-def test_nombre_reste_decimal_en_python_et_devient_un_nombre_json() -> None:
-    """Jackson écrit un `BigDecimal` comme un nombre ; Pydantic écrit un `Decimal` en chaîne sans cette annotation."""
+def test_nombre_metier_est_un_entier_en_python_et_devient_un_nombre_json() -> None:
+    """Les valeurs métier sont arrondies à l'entier HALF_DOWN et sérialisées comme nombre JSON."""
     from decimal import Decimal
 
     from staport.domains.common.schemas import ModeleApi, Nombre
@@ -170,8 +170,8 @@ def test_nombre_reste_decimal_en_python_et_devient_un_nombre_json() -> None:
 
     montant = Montant(total=Decimal("600.50"))
 
-    assert montant.model_dump()["total"] == Decimal("600.50")
-    assert montant.model_dump(mode="json", by_alias=True) == {"total": 600.5}
+    assert montant.model_dump()["total"] == Decimal("600")
+    assert montant.model_dump(mode="json", by_alias=True) == {"total": 600}
 
 
 def test_en_tetes_de_securite_comme_spring_security(client: TestClient) -> None:

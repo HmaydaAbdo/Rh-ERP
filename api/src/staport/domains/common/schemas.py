@@ -9,7 +9,7 @@ from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Pla
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
-from .montant import arrondir_si_nombre
+from .montant import arrondir_si_nombre, serialiser_entier
 
 _COURRIEL = re.compile(r"^[^@\s]+@[^@\s]+$")
 
@@ -39,7 +39,7 @@ Courriel = Annotated[str, AfterValidator(_non_vide), AfterValidator(_courriel)]
 
 
 Nombre = Annotated[
-    Decimal, BeforeValidator(arrondir_si_nombre), PlainSerializer(int, return_type=int, when_used="json")
+    Decimal, BeforeValidator(arrondir_si_nombre), PlainSerializer(serialiser_entier, return_type=int, when_used="json")
 ]
 """Valeur numérique métier arrondie à l'entier (HALF_DOWN) à l'entrée et à la sortie."""
 

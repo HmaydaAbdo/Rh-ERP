@@ -102,7 +102,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003_montants_entiers"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0004_nombres_metier_entiers"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         assert c.execute(text("SELECT count(*) FROM permission")).scalar_one() > 0
@@ -156,7 +156,8 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     moteur = create_engine(url)
     with moteur.connect() as connexion:
         assert (
-            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003_montants_entiers"
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0004_nombres_metier_entiers"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -196,7 +197,8 @@ def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
     moteur = create_engine(url)
     with moteur.connect() as connexion:
         assert (
-            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0003_montants_entiers"
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0004_nombres_metier_entiers"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
         assert not connexion.execute(

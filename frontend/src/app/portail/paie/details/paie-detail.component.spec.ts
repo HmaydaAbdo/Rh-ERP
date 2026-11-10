@@ -66,7 +66,7 @@ describe('PaieDetailComponent', () => {
       'C196',
       'Chauffeurs (CH)',
       '26',
-      '1,5 / 0',
+      '1 / 0',
       '4 000',
       '121 / 0',
       '4 351',

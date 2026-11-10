@@ -85,7 +85,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<div class="valeur montant">500 DH</div>' in html
     pages_rapport = html.split('<div class="page">')[1:]
     assert any('table class="recap fonction"' in page and "4. Liste des employés" in page for page in pages_rapport)
-    assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
+    assert "Écart : +2\u00a0500 DH (+500 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
@@ -178,7 +178,7 @@ def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> Non
     rapport = cast(Any, report)
     assert rapport._montant(Decimal("1234567.80")) == "1\u00a0234\u00a0568"
     assert rapport._montant(None) == "-"
-    assert rapport._quantite(Decimal("23.50")) == "23,5"
+    assert rapport._quantite(Decimal("23.50")) == "23"
     assert rapport._quantite(Decimal("0.00")) == "0"
     assert rapport._quantite(None) == "-"
 
