@@ -34,11 +34,26 @@ export const PROPRIETES_CHART = z.object({
   title: z.string().optional(),
   type: z.enum(['bar', 'line', 'doughnut']),
   labels: z.array(z.string()),
-  series: z.array(z.object({ name: z.string(), values: z.array(z.number()), format: z.enum(['nombre', 'montant']).optional() }))
+  series: z.array(z.object({ name: z.string(), values: z.array(z.number()), format: z.string().describe('montant, ou nombre par défaut').optional() }))
+});
+
+export const PROPRIETES_TIMELINE = z.object({
+  weight: z.number().optional(),
+  title: z.string().optional(),
+  items: z.array(
+    z.object({
+      date: z.string(),
+      title: z.string(),
+      detail: z.string().optional(),
+      // Indication de présentation : toute valeur autre que « positif » ou « negatif » s'affiche en neutre.
+      tone: z.string().describe('positif, negatif, ou neutre par défaut').optional()
+    })
+  )
 });
 
 export const DESCRIPTIONS = {
   DataTable: 'Tableau de données : tri, recherche, export CSV et plein écran.',
   KpiGrid: "Grille d'indicateurs clés.",
-  Chart: 'Graphique en barres, courbe ou anneau.'
+  Chart: 'Graphique en barres, courbe ou anneau.',
+  Timeline: 'Frise chronologique : événements datés, du plus ancien au plus récent.'
 } as const;

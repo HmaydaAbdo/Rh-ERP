@@ -3,7 +3,8 @@ import { createAngularCatalog } from '@copilotkit/angular/a2ui';
 import { A2uiChartComponent } from './a2ui-chart.component';
 import { A2uiDataTableComponent } from './a2ui-data-table.component';
 import { A2uiKpiGridComponent } from './a2ui-kpi-grid.component';
-import { DESCRIPTIONS, PROPRIETES_CHART, PROPRIETES_DATA_TABLE, PROPRIETES_KPI_GRID } from './definitions-catalogue';
+import { A2uiTimelineComponent } from './a2ui-timeline.component';
+import { DESCRIPTIONS, PROPRIETES_CHART, PROPRIETES_DATA_TABLE, PROPRIETES_KPI_GRID, PROPRIETES_TIMELINE } from './definitions-catalogue';
 import { CHAMP_CATALOGUE_ERP } from './identifiant-catalogue';
 import { SurfaceA2uiErpComponent } from './surface-a2ui-erp.component';
 
@@ -18,9 +19,10 @@ export const catalogueErp = Object.assign(
     {
       DataTable: { description: DESCRIPTIONS.DataTable, props: PROPRIETES_DATA_TABLE },
       KpiGrid: { description: DESCRIPTIONS.KpiGrid, props: PROPRIETES_KPI_GRID },
-      Chart: { description: DESCRIPTIONS.Chart, props: PROPRIETES_CHART }
+      Chart: { description: DESCRIPTIONS.Chart, props: PROPRIETES_CHART },
+      Timeline: { description: DESCRIPTIONS.Timeline, props: PROPRIETES_TIMELINE }
     },
-    { DataTable: A2uiDataTableComponent, KpiGrid: A2uiKpiGridComponent, Chart: A2uiChartComponent },
+    { DataTable: A2uiDataTableComponent, KpiGrid: A2uiKpiGridComponent, Chart: A2uiChartComponent, Timeline: A2uiTimelineComponent },
     { catalogId: CHAMP_CATALOGUE_ERP, includeBasicCatalog: true }
   ),
   { surfaceComponent: SurfaceA2uiErpComponent }

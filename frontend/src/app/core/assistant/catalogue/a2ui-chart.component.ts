@@ -11,7 +11,8 @@ type TypeGraphique = 'bar' | 'line' | 'doughnut';
 interface Serie {
   name: string;
   values: number[];
-  format?: 'nombre' | 'montant';
+  /** « montant » ou, par défaut (toute autre valeur), « nombre ». */
+  format?: string;
 }
 
 const PALETTE = ['--color-primary', '--color-success', '--color-warning', '--color-danger', '--color-text-muted'];

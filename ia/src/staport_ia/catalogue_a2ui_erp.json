@@ -49,6 +49,28 @@
       },
       "required": ["component", "items"]
     },
+    "Timeline": {
+      "type": "object",
+      "description": "Frise chronologique : événements datés, du plus ancien au plus récent (historique d'un employé, d'un chantier).",
+      "properties": {
+        "component": { "const": "Timeline" },
+        "title": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string", "description": "Date ou mois repris d'un outil (2026-08, 06/02/2019)." },
+              "title": { "type": "string" },
+              "detail": { "type": "string", "description": "Valeurs reprises d'un outil, avec leur unité." },
+              "tone": { "type": "string", "description": "positif, negatif, ou neutre par défaut" }
+            },
+            "required": ["date", "title"]
+          }
+        }
+      },
+      "required": ["component", "items"]
+    },
     "Chart": {
       "type": "object",
       "description": "Graphique : barres, courbe ou anneau. Plusieurs séries se choisissent par des onglets.",
@@ -64,7 +86,10 @@
             "properties": {
               "name": { "type": "string" },
               "values": { "type": "array", "items": { "type": "number" } },
-              "format": { "type": "string", "enum": ["nombre", "montant"] }
+              "format": {
+            "type": "string",
+            "description": "montant, ou nombre par défaut"
+          }
             },
             "required": ["name", "values"]
           }

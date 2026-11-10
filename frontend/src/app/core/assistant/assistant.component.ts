@@ -1,3 +1,4 @@
+import { FilAssistant } from './fil-assistant.service';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
@@ -25,6 +26,7 @@ import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtil
       [(open)]="ouvert"
       mode="overlay"
       position="right"
+      [width]="fil.agrandi() ? 'min(56rem, 70vw)' : 480"
       title="Staport Intelligence"
       [chatComponent]="chat"
       [headerComponent]="entete"
@@ -34,6 +36,7 @@ import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtil
 export class AssistantComponent {
   private readonly router = inject(Router);
   protected readonly theme = inject(ThemeService);
+  protected readonly fil = inject(FilAssistant);
 
   protected readonly chat = AssistantChatComponent;
   protected readonly entete = AssistantEnteteComponent;

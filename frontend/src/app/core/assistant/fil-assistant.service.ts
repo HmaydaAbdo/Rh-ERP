@@ -14,6 +14,8 @@ const CLE_UTILISE = 'staport.assistant.fil-utilise';
 @Injectable()
 export class FilAssistant {
   private readonly auth = inject(AuthService);
+  /** Panneau agrandi (bouton de l'en-tête) : la barre CopilotKit prend alors `width` de `AssistantComponent`. */
+  readonly agrandi = signal(false);
   private readonly courant = signal<string | null>(null);
 
   readonly fil = computed(() => {

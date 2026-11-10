@@ -9,7 +9,7 @@ import httpx
 from doubles import INDICATEURS, appel, modele, outil
 from langchain_core.messages import AIMessage, HumanMessage
 
-from staport_ia.agent import SYSTEME, creer_agent
+from staport_ia.agent import SYSTEME, _parametres_a2ui, creer_agent  # pyright: ignore[reportPrivateUsage]
 from staport_ia.surfaces import OUTIL_A2UI
 
 
@@ -137,3 +137,15 @@ async def test_un_refus_n_est_pas_rejoue_et_le_modele_voit_une_erreur_sans_le_me
     assert "PermissionError" in retour.content
     assert "secret-interne" not in retour.content
     assert resultat["messages"][-1].content == "Je n'ai pas pu consulter la paie."
+
+
+def test_le_guide_du_sous_agent_donne_les_valeurs_admises_des_proprietes_imbriquees() -> None:
+    """Le validateur officiel ne contrôle pas les valeurs : sans elles dans le guide, le sous-agent écrit `number`
+    au lieu de `nombre` et le rendu refuse le graphique."""
+    guide: str = _parametres_a2ui()["guidelines"]["composition_guide"]
+    assert "format=texte|nombre|montant|periode" in guide
+
+
+def test_le_guide_du_sous_agent_propose_la_frise_chronologique() -> None:
+    guide: str = _parametres_a2ui()["guidelines"]["composition_guide"]
+    assert "- Timeline" in guide
