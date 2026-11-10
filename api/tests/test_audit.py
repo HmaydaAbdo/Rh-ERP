@@ -473,6 +473,7 @@ AUDITEES = {
     ("PUT", "/heures-supp/{identifiant}"): "HEURES_SUP_MODIFICATION",
     ("DELETE", "/heures-supp/{identifiant}"): "HEURES_SUP_SUPPRESSION",
     ("POST", "/heures-supp/suppression-mois"): "HEURES_SUP_SUPPRESSION_MOIS",
+    ("POST", "/heures-supp/suppression-groupe"): "HEURES_SUP_SUPPRESSION_GROUPE",
     ("POST", "/heures-supp/import"): "HEURES_SUP_IMPORT",
     ("POST", "/heures-supp/import/remplacement"): "HEURES_SUP_REMPLACEMENT",
     ("POST", "/heures-supp/import/corrections"): "HEURES_SUP_IMPORT_CORRECTION",

@@ -24,7 +24,7 @@ import {
   cleIds, DIMENSIONS, Dimension, etapeChoisie, LIBELLES_DIMENSIONS, LIBELLES_PLURIELS, lirePerimetre, Niveau, niveauAffiche,
   Portee, porteeDe, porteeVide
 } from '../perimetre';
-import { fusionnerGroupes, GroupeCarte, LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
+import { fusionnerGroupes, GroupeCarte, groupesMoisHeuresSupp, LIBELLE_EQUIPE_ORPHELINE, lignesHeuresSupp, lignesPaie, nomGroupe, variations } from '../perimetre-groupes';
 import { ItemCatalogue, ModulePerimetre } from '../perimetre-module';
 
 const TAILLE_PAGE = 24;
@@ -99,6 +99,9 @@ export class CartesPerimetreComponent implements OnInit {
   protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ') && !this.module().cartesHeuresSuppSeules);
   protected readonly voitPaie = computed(() => this.authService.hasPermission('PAIE_READ') && !this.module().cartesHeuresSuppSeules);
   protected readonly voitHeuresSupp = computed(() => this.authService.hasPermission('HEURES_SUP_READ') && !!this.module().critereHeuresSupp);
+  protected readonly niveauPeriodeActif = computed(() =>
+    (!!this.module().niveauPeriode && this.voitPaie()) || (!!this.module().niveauPeriodeHeuresSupp && this.voitHeuresSupp())
+  );
   private readonly fichesDansCartes = computed(() => this.voitEmployes() && !this.module().sansEffectifFichesDansCartes);
 
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
@@ -115,7 +118,9 @@ export class CartesPerimetreComponent implements OnInit {
     if (!this.voitPaie() && !this.voitHeuresSupp()) {
       return null;
     }
-    if (this.voitHeuresSupp()) return this.perimetre().periode ?? this.moisHeuresSupp()[0] ?? null;
+    if (this.voitHeuresSupp()) {
+      return this.module().niveauPeriodeHeuresSupp ? this.perimetre().periode : this.perimetre().periode ?? this.moisHeuresSupp()[0] ?? null;
+    }
     if (this.module().periodePaieRecenteFixe) {
       return this.mois()[0] ?? null;
     }
@@ -123,11 +128,11 @@ export class CartesPerimetreComponent implements OnInit {
   });
 
   protected readonly niveau = computed<Niveau>(() =>
-    niveauAffiche(this.perimetre(), this.module().ordre, !!this.module().niveauPeriode && this.voitPaie(), this.fichesDansCartes())
+    niveauAffiche(this.perimetre(), this.module().ordre, this.niveauPeriodeActif(), this.fichesDansCartes())
   );
   protected readonly progression = computed(() => {
     const niveau = this.niveau();
-    const decalageMois = this.module().niveauPeriode ? 1 : 0;
+    const decalageMois = this.niveauPeriodeActif() ? 1 : 0;
     const total = this.module().ordre.length + (this.fichesDansCartes() ? 1 : 0) + decalageMois;
     if (niveau === 'PERIODE') return { libelle: 'Mois', etape: 1, total };
     if (niveau === 'EMPLOYES') return { libelle: 'Employés', etape: this.module().ordre.length + decalageMois + 1, total };
@@ -214,7 +219,7 @@ export class CartesPerimetreComponent implements OnInit {
    */
   protected readonly couverturePaie = computed<string | null>(() => {
     const mois = this.groupes();
-    if (this.niveau() !== 'PERIODE' || !mois || mois.length === 0 || this.chargement()) {
+    if (!this.voitPaie() || this.niveau() !== 'PERIODE' || !mois || mois.length === 0 || this.chargement()) {
       return null;
     }
     const annees = Math.floor(mois.length / 12);
@@ -228,7 +233,7 @@ export class CartesPerimetreComponent implements OnInit {
     if (this.voitPaie()) {
       this.chargerPeriodes();
     }
-    if (this.voitHeuresSupp()) this.heuresSuppService.periodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (mois) => this.moisHeuresSupp.set(mois) });
+    if (this.voitHeuresSupp() && !this.module().niveauPeriodeHeuresSupp) this.heuresSuppService.periodes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (mois) => this.moisHeuresSupp.set(mois) });
     const requete = computed(() => ({ params: this.params(), niveau: this.niveau(), periode: this.periode(), periodes: this.mois(), module: this.module(), version: this.version() }));
     runInInjectionContext(this.environmentInjector, () => toObservable(requete)
       .pipe(
@@ -296,7 +301,7 @@ export class CartesPerimetreComponent implements OnInit {
   }
 
   protected toutRetirer(): void {
-    this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null, periode: this.module().niveauPeriode ? null : this.perimetre().periode, par: null });
+    this.naviguer({ chantierIds: null, equipeIds: null, fonctionIds: null, periode: this.niveauPeriodeActif() ? null : this.perimetre().periode, par: null });
   }
 
   protected changerPeriode(value: unknown): void {
@@ -387,6 +392,11 @@ export class CartesPerimetreComponent implements OnInit {
     }
 
     if (niveau === 'PERIODE') {
+      if (module.niveauPeriodeHeuresSupp && module.critereHeuresSupp) {
+        return this.heuresSuppService.analyser(module.critereHeuresSupp(params, vide.portee, null)).pipe(
+          map((analyse) => ({ ...vide, groupes: groupesMoisHeuresSupp(analyse) }))
+        );
+      }
       return this.paieService.rechercherPeriodes(module.criterePaie(params, vide.portee, null)).pipe(
         map((periodes) => ({ ...vide, groupes: this.groupesMois(periodes) }))
       );

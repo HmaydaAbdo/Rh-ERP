@@ -44,6 +44,16 @@ class HeuresSuppSuppressionMois(ModeleApi):
     nombre_attendu: Annotated[int, Field(ge=0)]
 
 
+class HeuresSuppSuppressionGroupe(ModeleApi):
+    periode: PeriodePaie
+    chantier_ids: Annotated[list[int], Field(max_length=500)] | None = None
+    equipe_ids: Annotated[list[int], Field(max_length=500)] | None = None
+    fonction_ids: Annotated[list[int], Field(max_length=500)] | None = None
+    cin: Annotated[str, Field(max_length=30)] | None = None
+    nom_prenom: Annotated[str, Field(max_length=150)] | None = None
+    nombre_attendu: Annotated[int, Field(ge=1)]
+
+
 class HeureSuppReponse(ModeleApi):
     id: int
     version: int
@@ -81,6 +91,7 @@ class Groupe(ModeleApi):
     id: int
     code: str | None
     libelle: str | None
+    nombre_lignes: int
     lignes_heures: int
     effectif: int
     heures: Nombre
@@ -101,6 +112,7 @@ class Definitions(ModeleApi):
 class HeuresSuppAnalytique(ModeleApi):
     periode: PeriodePaie | None
     indicateurs: Indicateurs
+    par_periode: list[Groupe]
     par_chantier: list[Groupe]
     par_fonction: list[Groupe]
     par_equipe: list[Groupe]
