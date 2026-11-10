@@ -12,6 +12,7 @@ sidebar_position: 3
 | `POST /heures-supp` | `HEURES_SUP_IMPORT`, `PAIE_READ`, `EMPLOYEE_READ` et `CHANTIER_READ` |
 | `DELETE /heures-supp/{id}` | `HEURES_SUP_DELETE` et `PAIE_READ` |
 | `POST /heures-supp/suppression-mois` | `HEURES_SUP_PURGE` et `PAIE_READ` |
+| `POST /heures-supp/suppression-groupe` | `HEURES_SUP_PURGE` et `PAIE_READ` |
 | `GET /heures-supp/import/prerequis` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ` |
 | `POST /heures-supp/export/pdf` | `HEURES_SUP_READ` **et** `PAIE_READ` |
 | `GET /heures-supp/import/modele` | `HEURES_SUP_IMPORT` **et** `PAIE_READ` |
@@ -26,11 +27,13 @@ Le serveur revérifie chaque permission ; masquer un bouton Angular ne constitue
 ## Interface
 
 - Le menu et les routes Tabulaire, Cartes et Analytique exigent `HEURES_SUP_READ` et `PAIE_READ`.
+- Les suppressions groupées depuis les cartes et la purge depuis le Tabulaire exigent `HEURES_SUP_PURGE` et `PAIE_READ` ; le serveur contrôle les deux droits sur chaque requête.
 - L'importateur et le modèle Excel exigent `HEURES_SUP_IMPORT` et `PAIE_READ`.
 - L'ajout depuis son écran dédié exige aussi `EMPLOYEE_READ` et `CHANTIER_READ` pour sélectionner les références ; la modification charge la ligne avec la permission de lecture.
 - La création ou la correction d'une fiche employé depuis l'assistant exige aussi `EMPLOYEE_WRITE` et `FUNCTION_READ` pour choisir sa fonction.
 - Les corrections suivent le même parcours explicite que l'import Paie ; sans `EMPLOYEE_WRITE`, l'utilisateur doit corriger la fiche avant de relancer l'analyse.
 
 La migration `V40__permissions_heures_supp.sql` ajoute les permissions de lecture et d'import au rôle `SYSTEM_ADMIN` et au rôle
-`PAIE_MANAGER`. La migration V41 ajoute les permissions distinctes de suppression unitaire et de purge mensuelle à ces rôles.
+`PAIE_MANAGER`. La migration V41 ajoute les permissions distinctes de suppression unitaire et de purge ; `HEURES_SUP_PURGE`
+protège la purge mensuelle et les suppressions groupées de la vue Cartes.
 Les droits restent ensuite administrables dans l'écran Rôles.

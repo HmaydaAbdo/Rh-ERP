@@ -1,0 +1,53 @@
+<app-cartes-perimetre [module]="module">
+  <ng-template #actionsCarte let-groupe let-niveau="niveau" let-periode="periode" let-portee="portee">
+    @if (peutSupprimer(groupe, niveau)) {
+      <button
+        stp-button
+        variant="danger-text"
+        icon="trash-2"
+        iconOnly
+        type="button"
+        [attr.aria-label]="libelleBouton(groupe, niveau)"
+        [title]="libelleBouton(groupe, niveau)"
+        (click)="demander(groupe, niveau, periode, portee)"
+      ></button>
+    }
+  </ng-template>
+</app-cartes-perimetre>
+
+<stp-dialog
+  header="Supprimer des heures supplémentaires"
+  width="34rem"
+  [open]="suppression() !== null"
+  [closable]="!suppressionEnCours()"
+  (openChange)="$event || annulerSuppression()"
+>
+  @if (suppression(); as s) {
+    <div class="app-stack">
+      <p>Vous allez supprimer <strong>{{ s.nombre }} ligne(s)</strong> d’heures supplémentaires :</p>
+      <ul>
+        <li>{{ s.cible }}</li>
+        @for (filtre of s.filtres; track filtre) {
+          <li>{{ filtre }}</li>
+        }
+      </ul>
+      <stp-message severity="error">Cette action est irréversible. Les lignes supprimées ne peuvent pas être restaurées.</stp-message>
+      <label for="confirmation-suppression-heures">
+        Pour confirmer, saisissez le nombre de lignes : <strong>{{ s.nombre }}</strong>
+      </label>
+      <input
+        id="confirmation-suppression-heures"
+        class="stp-input"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        [formField]="confirmationForm.nombre"
+        (keydown.enter)="confirmerSuppression()"
+      />
+    </div>
+  }
+  <div stpDialogFooter>
+    <button stp-button variant="text" type="button" [disabled]="suppressionEnCours()" (click)="annulerSuppression()">Annuler</button>
+    <button stp-button variant="danger" icon="trash-2" type="button" [disabled]="!confirmationValide()" [loading]="suppressionEnCours()" (click)="confirmerSuppression()">Supprimer</button>
+  </div>
+</stp-dialog>

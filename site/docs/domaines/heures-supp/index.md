@@ -9,7 +9,7 @@ Le domaine importe et restitue, par mois et par chantier, les heures supplément
 Il s'appuie sur les domaines Employé, Paie et Chantier pour identifier les personnes, calculer leur taux et qualifier
 les STC. Il ne modifie pas les données de Paie.
 
-Les vues sont **Tabulaire**, **Cartes** et **Analytique**. Cartes et Analytique étendent le socle partagé du périmètre et leurs agrégats sont calculés côté Spring.
+Les vues sont **Tabulaire**, **Cartes** et **Analytique**. Cartes et Analytique étendent le socle partagé du périmètre et leurs agrégats sont calculés côté API FastAPI du domaine.
 La vue Tabulaire filtre par période, chantier, équipe, fonction, CIN et nom/prénom. Elle affiche les champs conservés pour le calcul et le suivi métier, dont CIN, S/H, P/H, Montant, statut STC/sortie, STC, Forfait et Net à payer. Le total Net à payer porte sur tout le résultat filtré, indépendamment de la pagination ; le PDF exporte les mêmes lignes et ce total.
 L'ajout et la modification utilisent des écrans dédiés, selon le parcours des domaines Paie et Équipe. L'import se fait par un assistant multistep, un chantier à la fois.
 Le bouton fractionné « Importer un chantier » de la collection donne aussi accès au modèle Excel avant l'ouverture du wizard.
@@ -34,11 +34,12 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 |---|---|
 | `POST /heures-supp/search` | Recherche paginée selon période, chantier, équipe, fonction, CIN et nom ; renvoie les lignes détaillées. |
 | `GET /heures-supp/{id}` | Renvoie une ligne pour son écran de modification. |
-| `POST /heures-supp/analytique` | Indicateurs et répartitions par chantier, fonction et équipe selon les critères. |
+| `POST /heures-supp/analytique` | Indicateurs et répartitions par mois, chantier, fonction et équipe selon les critères. `parPeriode` fournit les totaux par mois ; `nombreLignes` compte toutes les lignes, tandis que `lignesHeures` compte celles qui portent des heures. |
 | `PUT /heures-supp/{id}` | Modifie les heures et/ou le forfait d'une ligne, avec contrôle de version et recalcul des montants. |
 | `POST /heures-supp` | Ajoute une ligne manuellement à partir d'un employé, d'une paie mensuelle et d'un chantier. |
 | `DELETE /heures-supp/{id}` | Supprime une ligne avec audit. |
 | `POST /heures-supp/suppression-mois` | Supprime toutes les lignes d'un mois, tous chantiers confondus, si le nombre correspond à celui confirmé. |
+| `POST /heures-supp/suppression-groupe` | Supprime les lignes d'un mois selon les filtres de chantier, équipe, fonction, CIN et nom ; le nombre confirmé doit correspondre au résultat verrouillé côté serveur. Permission `HEURES_SUP_PURGE`, action d'audit `HEURES_SUP_SUPPRESSION_GROUPE`. |
 | `GET /heures-supp/periodes` | Mois ayant au moins un import. |
 | `POST /heures-supp/export/pdf` | Rapport PDF A4 paysage pour UN mois et UN chantier obligatoires (sinon refus) : le mois et le chantier figurent dans l'en-tête et non en colonnes ; classé par employé de A à Z sauf tri explicite ; champ `mode` : `signature` (colonne Émargement étroite, direction) ou `signature_empreinte` (une seule cellule large pour signature et empreinte) ; lignes hautes (42 pt) ; sans colonne « Salaire réf. » ; totaux de toutes les lignes du périmètre, 5 000 lignes au plus, action d'audit `HEURES_SUP_EXPORT_PDF` (catégorie `ACCES`). |
 | `GET /heures-supp/import/prerequis?periode=aaaa-MM&chantierId=…` | Confirme que le mois de paie et le chantier permettent d'ouvrir l'étape du fichier. |
@@ -78,7 +79,7 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 
 ## Grandeurs métier
 
-Les montants sont produits par Spring ; l'assistant IA ne les recalcule pas.
+Les montants sont produits par l'API FastAPI du domaine ; l'assistant IA ne les recalcule pas.
 
 | Grandeur | Définition |
 |---|---|
@@ -103,9 +104,9 @@ Depuis l'écran dédié, les utilisateurs autorisés peuvent ajouter une ligne m
 
 ## Interface et composants partagés
 
-Les trois vues utilisent `app-collection-shell` pour leur titre, leurs onglets, leurs actions et leurs filtres, et `app-collection-table` pour la liste. La barre de filtres reprend la classe partagée `app-toolbar` déjà employée par Paie et Employés; le nom et le CIN se synchronisent après une courte pause de saisie. Les vues Cartes et Analytique réutilisent les composants communs de `portail/perimetre/`; leur configuration de domaine transporte aussi les filtres CIN et nom vers la liste du cockpit de recherche. Les contrôles disponibles dans le catalogue Staport (sélecteurs, nombres, dates, mois, dialogues, boutons, tableau et export PDF) sont réutilisés; seul le récapitulatif statique de l'étape de contrôle utilise le style partagé prévu pour les petits tableaux non interactifs.
+Les trois vues utilisent `app-collection-shell` pour leur titre, leurs onglets, leurs actions et leurs filtres, et `app-collection-table` pour la liste. La barre de filtres reprend la classe partagée `app-toolbar` déjà employée par Paie et Employés; le nom et le CIN se synchronisent après une courte pause de saisie. La vue Cartes suit les niveaux mois → chantier → équipe → fonction ; chaque carte affiche une action de suppression groupée lorsque l'utilisateur possède `HEURES_SUP_PURGE`. La confirmation décrit le périmètre et exige la saisie du nombre exact de lignes. Les vues Cartes et Analytique réutilisent les composants communs de `portail/perimetre/`; leur configuration de domaine transporte aussi les filtres CIN et nom vers la liste du cockpit de recherche. Les contrôles disponibles dans le catalogue Staport (sélecteurs, nombres, dates, mois, dialogues, boutons, tableau et export PDF) sont réutilisés; seul le récapitulatif statique de l'étape de contrôle utilise le style partagé prévu pour les petits tableaux non interactifs.
 
-Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. La purge d'un mois requiert la permission dédiée, la saisie du nombre de lignes à supprimer et une confirmation serveur du même compte ; elle couvre tous les chantiers du mois et conserve les instantanés Envers. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
+Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. Les suppressions groupées depuis Cartes utilisent `HEURES_SUP_PURGE`, présentent le nombre et le périmètre, et demandent la saisie du nombre exact. Le serveur verrouille les lignes ciblées, compare le nombre dans la transaction et audite l'opération avant de supprimer ; filtres de recherche et périmètre de carte s'appliquent tous deux. La purge d'un mois reste disponible depuis le Tabulaire et couvre tous les chantiers du mois. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
 
 ### Classeur reçu
 

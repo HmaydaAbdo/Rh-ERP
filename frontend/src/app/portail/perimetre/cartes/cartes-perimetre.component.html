@@ -1,11 +1,11 @@
 <div class="app-entitys" [class]="'app-entitys app-entitys--' + module().cle">
   <div class="app-bar-actions">
-    @if (etapes().length > 0 || (module().niveauPeriode && perimetre().periode)) {
+    @if (etapes().length > 0 || (niveauPeriodeActif() && perimetre().periode)) {
       <nav class="app-trail" [attr.aria-label]="'Position dans les ' + module().libellePluriel">
         <button type="button" class="app-trail__root" (click)="toutRetirer()">
           <stp-icon name="layout-grid" /> {{ module().libelleRacine }}
         </button>
-        @if (module().niveauPeriode && perimetre().periode) {
+        @if (niveauPeriodeActif() && perimetre().periode) {
           <stp-icon name="chevron-right" class="app-trail__sep" />
           <span class="app-trail__step">
             <span class="app-trail__dimension">Mois</span>
@@ -32,7 +32,7 @@
       @if (voitPaie() && module().periodePaieRecenteFixe && periode() && !module().resumeCartesPresDuNiveau) {
         <span class="app-tag">Paie · {{ libellePeriode(periode()!) }}</span>
       }
-      @if (voitPaie() && mois().length > 0 && !module().niveauPeriode && !module().periodePaieRecenteFixe) {
+      @if (voitPaie() && mois().length > 0 && !niveauPeriodeActif() && !module().periodePaieRecenteFixe) {
         <label class="app-field-label">Période Paie
           <stp-select ariaLabel="Période de paie" placeholder="Période de paie" [options]="optionsPeriodes()" [value]="periode()" (valueChange)="changerPeriode($event)" />
         </label>
@@ -177,7 +177,7 @@
                         }
                       }
                       @if (voitHeuresSupp() && groupe.heuresSupp; as heures) {
-                        <div class="app-entity__indicator"><dt>Heures supplémentaires</dt><dd><strong>{{ heures.heures | number: '1.0-1' }} h</strong><small>{{ heures.effectif }} employé(s)</small></dd></div>
+                        <div class="app-entity__indicator"><dt>Heures supplémentaires</dt><dd><strong>{{ heures.heures | number: '1.0-1' }} h</strong><small>{{ heures.effectif }} employé(s) · {{ heures.nombreLignes }} ligne(s)</small></dd></div>
                         <div class="app-entity__indicator"><dt>Montant</dt><dd><strong>{{ heures.montantDh | number: '1.0-0' }} DH</strong><small>avant STC</small></dd></div>
                         <div class="app-entity__indicator"><dt>Forfait</dt><dd><strong>{{ heures.forfaitDh | number: '1.0-0' }} DH</strong><small>séparé des heures</small></dd></div>
                         <div class="app-entity__indicator"><dt>Net à payer</dt><dd><strong>{{ heures.netAPayerDh | number: '1.0-0' }} DH</strong><small>après STC</small></dd></div>

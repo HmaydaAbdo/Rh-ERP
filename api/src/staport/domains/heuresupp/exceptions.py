@@ -10,9 +10,9 @@ class HeuresSuppInvalide(ErreurMetier):
 class HeuresSuppGroupeModifie(ErreurMetier):
     statut = HTTPStatus.CONFLICT
 
-    def __init__(self, actuel: int, confirme: int) -> None:
+    def __init__(self, actuel: int, confirme: int, sujet: str = "Le mois") -> None:
         super().__init__(
-            f"Le mois contient maintenant {actuel} lignes au lieu des {confirme} confirmées. "
+            f"{sujet} contient maintenant {actuel} lignes au lieu des {confirme} confirmées. "
             "Aucune ligne n'a été supprimée ; actualisez puis recommencez."
         )
 

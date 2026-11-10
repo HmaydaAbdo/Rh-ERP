@@ -31,6 +31,10 @@ export class HeuresSuppService {
     return this.http.post<number>(`${this.baseUrl}/suppression-mois`, { periode, nombreAttendu });
   }
 
+  supprimerGroupe(criteres: HeuresSuppSearchCriteria, nombreAttendu: number): Observable<number> {
+    return this.http.post<number>(`${this.baseUrl}/suppression-groupe`, { ...criteres, nombreAttendu });
+  }
+
   analyser(criteria: HeuresSuppSearchCriteria): Observable<HeuresSuppAnalytique> {
     return this.http.post<HeuresSuppAnalytique>(`${this.baseUrl}/analytique`, criteria);
   }

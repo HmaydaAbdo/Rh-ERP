@@ -220,7 +220,8 @@ describe('CartesPerimetreComponent', () => {
             analyser: () => of({
               periode: '2026-10',
               indicateurs: { employes: 1, lignesHeures: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 },
-              parChantier: [{ id: 1, code: 'C168', libelle: 'Nador', lignesHeures: 1, effectif: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 }],
+              parPeriode: [{ id: 202610, code: '2026-10', libelle: '2026-10', nombreLignes: 1, lignesHeures: 1, effectif: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 }],
+              parChantier: [{ id: 1, code: 'C168', libelle: 'Nador', nombreLignes: 1, lignesHeures: 1, effectif: 1, heures: 2, montantDh: 20, stcDh: 0, forfaitDh: 0, netAPayerDh: 20 }],
               parEquipe: [], parFonction: []
             })
           }

@@ -25,6 +25,7 @@ from .schemas import (
     HeuresSuppCreationRequete,
     HeuresSuppModificationRequete,
     HeuresSuppRecherche,
+    HeuresSuppSuppressionGroupe,
     HeureSuppReponse,
     Indicateurs,
 )
@@ -73,11 +74,13 @@ class _Cumul:
         self.identifiant, self.code = identifiant, code
         self.libelle = code if libelle is None else libelle
         self.lignes_heures = 0
+        self.nombre_lignes = 0
         self.heures = self.montant = self.stc = self.forfait = self.net = calcul.ZERO
         self.employes: set[int] = set()
 
     def ajouter(self, ligne: HeureSupp) -> None:
         self.employes.add(ligne.employee_id)
+        self.nombre_lignes += 1
         if ligne.heures is not None:
             self.lignes_heures += 1
             self.heures += ligne.heures
@@ -92,6 +95,7 @@ class _Cumul:
             id=self.identifiant,
             code=self.code,
             libelle=self.libelle,
+            nombre_lignes=self.nombre_lignes,
             lignes_heures=self.lignes_heures,
             effectif=len(self.employes),
             heures=self.heures,
@@ -109,6 +113,10 @@ def _groupes(lignes: list[FicheEquipe], cle: str) -> list[Groupe]:
             identifiant, code, libelle = chantier.id, chantier.code, chantier.nom or chantier.designation
         elif cle == "fonction":
             identifiant, code, libelle = fonction.id, fonction.libelle, fonction.libelle
+        elif cle == "periode":
+            identifiant = ligne.periode
+            code = afficher_periode(identifiant)
+            libelle = code
         else:
             identifiant = 0 if equipe is None else equipe.id
             code = None if equipe is None else equipe.code
@@ -158,6 +166,7 @@ class ServiceHeuresSupp:
         return HeuresSuppAnalytique(
             periode=criteres.periode,
             indicateurs=indicateurs,
+            par_periode=sorted(_groupes(lignes, "periode"), key=lambda groupe: groupe.id, reverse=True),
             par_chantier=_groupes(lignes, "chantier"),
             par_fonction=_groupes(lignes, "fonction"),
             par_equipe=_groupes(lignes, "equipe"),
@@ -269,6 +278,27 @@ class ServiceHeuresSupp:
             lignes = await repository.du_mois(s, periode)
             if len(lignes) != nombre_attendu:
                 raise HeuresSuppGroupeModifie(len(lignes), nombre_attendu)
+            for ligne in lignes:
+                await s.delete(ligne)
+            await s.flush()
+            cible.nombre_elements = len(lignes)
+            return len(lignes)
+
+    async def supprimer_groupe(self, s: AsyncSession, criteres: HeuresSuppSuppressionGroupe) -> int:
+        action = self._auditeur.auditer(s, "HEURES_SUP_SUPPRESSION_GROUPE", TypeOperation.DELETE, ENTITE)
+        async with s.begin(), action as cible:
+            cible.perimetre = {
+                "periode": afficher_periode(criteres.periode),
+                "chantierIds": criteres.chantier_ids,
+                "equipeIds": criteres.equipe_ids,
+                "fonctionIds": criteres.fonction_ids,
+                "filtreCin": bool(criteres.cin and criteres.cin.strip()),
+                "filtreNom": bool(criteres.nom_prenom and criteres.nom_prenom.strip()),
+            }
+            criteres_recherche = HeuresSuppRecherche.model_validate(criteres.model_dump(exclude={"nombre_attendu"}))
+            lignes = await repository.pour_suppression(s, criteres_recherche)
+            if len(lignes) != criteres.nombre_attendu:
+                raise HeuresSuppGroupeModifie(len(lignes), criteres.nombre_attendu, "Le périmètre")
             for ligne in lignes:
                 await s.delete(ligne)
             await s.flush()

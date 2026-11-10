@@ -13,6 +13,7 @@ export function moduleHeuresSupp(): ModulePerimetre {
     sourcesAnalytique: ['HEURES_SUP'],
     sansEffectifFichesDansCartes: true,
     cartesHeuresSuppSeules: true,
+    niveauPeriodeHeuresSupp: true,
     route: '/heures-supp',
     permission: 'HEURES_SUP_READ',
     introAnalytique: 'Montants, heures et forfaits consolidés sur le mois sélectionné.',
