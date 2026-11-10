@@ -110,7 +110,7 @@ export class PaieFormComponent {
       required(chemin.chantierId, { message: 'Le chantier est obligatoire.' });
       required(chemin.nombreJoursTravailles, { message: 'Le nombre de jours travaillés est obligatoire.' });
       for (const jours of [chemin.nombreJoursTravailles, chemin.joursRecuperationOuvrable, chemin.joursRecuperationDimanche]) {
-        max(jours, 99999, { message: 'Le maximum est de 99 999 jours.' });
+        max(jours, 1000, { message: 'Le maximum est de 1 000 jours.' });
       }
       required(chemin.salaireMensuel, { message: 'Le salaire mensuel est obligatoire.' });
       required(chemin.salaireTotal, { message: 'Le salaire total est obligatoire.' });

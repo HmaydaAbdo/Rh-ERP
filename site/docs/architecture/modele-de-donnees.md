@@ -141,7 +141,7 @@ ne suivent jamais les changements d'affectation de l'employé. Voir [paie/README
 ### Valeurs monétaires et périodes
 
 - Toute valeur numérique métier est entière et arrondie à la saisie, à l'import et dans les calculs avec `HALF_DOWN` (7,5 → 7 ; 7,51 → 8). Les coordonnées latitude/longitude (`NUMERIC(11,8)`) restent décimales.
-- Montants en `NUMERIC(10,0)`, jours travaillés/récupération en `NUMERIC(5,0)` et P/H en `NUMERIC(8,0)` (révisions `0003_montants_entiers` et `0004_nombres_metier_entiers`). Les instantanés d'audit déjà écrits ne sont pas réécrits ; les lignes actives migrées reçoivent une nouvelle révision système.
+- Montants en `NUMERIC(10,0)`, jours travaillés/récupération en `NUMERIC(5,0)` (0 à 1 000 après arrondi) et P/H en `NUMERIC(8,0)` (révisions `0003_montants_entiers` et `0004_nombres_metier_entiers`). Les instantanés d'audit déjà écrits ne sont pas réécrits ; les lignes actives migrées reçoivent une nouvelle révision système.
 - La période est stockée en entier `aaaaMM` (ex. `202609`, comme `employe_sortie.periode`) ; l'API l'expose au format `aaaa-MM`.
 - Aucun calcul de paie en base ni côté serveur : `salaire_total` est stocké tel que saisi ou importé.
 

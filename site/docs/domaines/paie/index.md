@@ -240,7 +240,7 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 - Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours). Les valeurs
   métier sont arrondies automatiquement à l'entier selon `HALF_DOWN` (0,5 inclus vers zéro ; au-delà vers l'entier
   supérieur pour les valeurs positives), à la saisie, à l'import et dans les calculs, puis contrôlées. Les jours
-  travaillés et de récupération sont stockés en `NUMERIC(5,0)` ; les montants en dirhams sont des entiers. `observation`
+  travaillés et de récupération sont stockés en `NUMERIC(5,0)` (de 0 à 1 000) ; les montants en dirhams sont des entiers. `observation`
   fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
   bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**

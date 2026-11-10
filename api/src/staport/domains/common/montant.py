@@ -25,6 +25,11 @@ def arrondir_entier(valeur: Decimal) -> Decimal:
         return valeur
 
 
+def serialiser_entier(valeur: Decimal) -> int:
+    """Sérialise aussi les nombres calculés en appliquant HALF_DOWN avant leur sortie JSON."""
+    return int(arrondir_entier(valeur))
+
+
 def arrondir_si_nombre(valeur: Any) -> Any:
     """Validateur « avant » des types pydantic : arrondit un nombre ou un texte numérique, le reste va à pydantic."""
     if isinstance(valeur, bool) or not isinstance(valeur, int | float | Decimal | str):

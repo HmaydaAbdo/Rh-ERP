@@ -56,7 +56,7 @@ def test_modification_accepte_le_corps_envoye_par_l_interface_sans_employe_ni_pe
         }
     )
     assert corps.version == 2
-    assert corps.nombre_jours_travailles == 26
+    assert corps.nombre_jours_travailles == 25
     assert corps.salaire_mensuel == 0
     assert "employee_id" not in corps.model_fields_set
     assert "periode" not in corps.model_fields_set

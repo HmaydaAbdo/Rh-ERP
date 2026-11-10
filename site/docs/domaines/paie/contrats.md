@@ -18,9 +18,9 @@ est arrondie automatiquement selon `HALF_DOWN` (7,5 → 7, 7,51 → 8). Une pér
 | `fonctionId` | `integer(int64)`, obligatoire | Fonction existante du bulletin. |
 | `chantierId` | `integer(int64)`, obligatoire | Chantier existant du bulletin. |
 | `equipeId` | `integer(int64)|null` | Équipe existante; `null` signifie sans équipe. La valeur synthétique de filtre `0` n'est pas une référence. |
-| `nombreJoursTravailles` | `integer`, obligatoire, 0 à 99 999 après arrondi | Quantité travaillée entière. |
-| `joursRecuperationOuvrable` | `integer|null`, 0 à 99 999 après arrondi | Jours de récupération ouvrables entiers. |
-| `joursRecuperationDimanche` | `integer|null`, 0 à 99 999 après arrondi | Jours de récupération du dimanche entiers. |
+| `nombreJoursTravailles` | `integer`, obligatoire, 0 à 1 000 après arrondi | Quantité travaillée entière. |
+| `joursRecuperationOuvrable` | `integer|null`, 0 à 1 000 après arrondi | Jours de récupération ouvrables entiers. |
+| `joursRecuperationDimanche` | `integer|null`, 0 à 1 000 après arrondi | Jours de récupération du dimanche entiers. |
 | `salaireMensuel` | `number`, obligatoire, 0 à 9 999 999 999, arrondi automatiquement à l'entier de dirham | Salaire de base ou tarif journalier selon la situation. À l'import, zéro exige un avertissement et une confirmation explicite. |
 | `primeRoulageOrdinaire` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime ordinaire. |
 | `primeRoulageDimanche` | `number|null`, mêmes bornes et même arrondi que le salaire | Prime dimanche. |

@@ -594,12 +594,7 @@ class ServiceImportPaie:
                     nombre = Decimal(str(valeur).strip())
                 except InvalidOperation, ValueError:
                     nombre = None
-                if (
-                    nombre is None
-                    or not nombre.is_finite()
-                    or nombre < 0
-                    or arrondir_montant(nombre) > Decimal("99999")
-                ):
+                if nombre is None or not nombre.is_finite() or nombre < 0 or arrondir_montant(nombre) > Decimal("1000"):
                     erreurs.append(
                         PaieImportErreur(
                             numero_ligne=numero,
@@ -607,7 +602,7 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="jours attendus entre 0 et 99 999, arrondis à l'entier",
+                            raison="jours attendus entre 0 et 1 000, arrondis à l'entier",
                         )
                     )
             for index, champ in (

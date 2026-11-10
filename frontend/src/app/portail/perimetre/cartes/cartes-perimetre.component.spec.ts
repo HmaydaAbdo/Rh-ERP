@@ -255,7 +255,7 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).toContain('+1 bulletin · vs juillet 2026');
     expect(cartes[0].textContent?.replace(/\s/g, ' ')).toContain('+1 000 DH · vs juillet 2026');
     expect(cartes[0].textContent).toMatch(/4\s500 DH/);
-    expect(cartes[0].textContent).toContain('+12,5 %');
+    expect(cartes[0].textContent).toContain('+12 %');
     expect(cartes[1].textContent).toContain('Clôturé');
     expect(cartes[1].textContent).toContain('0 DH');
     expect(page.textContent).toContain('2 chantiers');

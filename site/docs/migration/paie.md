@@ -57,7 +57,7 @@ Comme le lecteur Spring, l'analyse et l'import Python ignorent les lignes Excel 
 après les trois lignes d'en-tête et conservent le numéro d'origine de chaque ligne utile.
 L'analyse signale avant import un bulletin déjà présent pour l'employé et le mois, ainsi qu'un CIN
 en doublon dans le fichier ou un champ obligatoire absent. Elle nomme aussi le champ et la valeur
-si les jours dépassent `999,99`, ont plus de deux décimales ou sont invalides (les montants, eux, sont arrondis à l'entier) ; les longueurs du nom,
+si les jours dépassent `1 000` après arrondi `HALF_DOWN` ou sont invalides ; les longueurs du nom,
 du CIN et de l'observation sont contrôlées. Lors de la création, le nom, la fonction,
 le chantier et l'équipe renseignée mettent à jour la fiche Employé dans la même transaction que les
 nouveaux bulletins. Une équipe vide sur la ligne reste vide sur le bulletin mais ne supprime pas
