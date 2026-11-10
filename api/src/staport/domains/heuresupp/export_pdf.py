@@ -7,7 +7,7 @@ n'est interprété.
 
 from collections.abc import Sequence
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from html import escape
 from pathlib import Path
 
@@ -47,7 +47,7 @@ LIBELLES_TRI = {
     "fonction.libelle": "Fonction",
     "salaireReference": "Salaire référence",
     "salaireHoraire": "S/H",
-    "heures": "P/H",
+    "heures": "Nombre d'heures",
     "montant": "Montant",
     "stcDh": "STC",
     "forfait": "Forfait",
@@ -57,8 +57,8 @@ COLONNES = (
     ("Employé", ""),
     ("CIN", ""),
     ("Fonction", ""),
+    ("Nombre d'heures", "num"),
     ("S/H", "num"),
-    ("P/H", "num"),
     ("Montant", "num"),
     ("STC", "num"),
     ("Forfait", "num"),
@@ -95,6 +95,13 @@ def nombre(valeur: Decimal | None, decimales: int) -> str:
     if valeur is None:
         return "—"
     return f"{valeur:,.{decimales}f}".replace(",", " ").replace(".", ",")
+
+
+def nombre_heures(valeur: Decimal | None) -> str:
+    """Affiche les heures à l'entier inférieur, sans modifier leur valeur métier."""
+    if valeur is None:
+        return nombre(None, 0)
+    return nombre(valeur.to_integral_value(rounding=ROUND_DOWN), 0)
 
 
 def _td(texte: str, classe: str = "") -> str:
@@ -176,8 +183,8 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + _td(ligne.nom_prenom)
             + _td(ligne.cin)
             + _td(ligne.fonction)
+            + _td(nombre_heures(ligne.heures_supplementaires), "num")
             + _td(nombre(ligne.salaire_horaire_dh, 0), "num")
-            + _td(nombre(ligne.heures_supplementaires, 1), "num")
             + _td(nombre(ligne.montant_dh, 0), "num")
             + _td(nombre(ligne.stc_dh, 0), "num")
             + _td(nombre(ligne.forfait_dh, 0), "num")
@@ -186,12 +193,19 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + "</tr>"
         )
     zero = Decimal(0)
-    heures = sum((ligne.heures_supplementaires or zero for ligne in lignes), zero)
+    heures = sum(
+        (
+            valeur.to_integral_value(rounding=ROUND_DOWN)
+            for ligne in lignes
+            if (valeur := ligne.heures_supplementaires) is not None
+        ),
+        zero,
+    )
     corps.append(
         '<tr class="total">'
         + f'<td colspan="3">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
+        + _td(nombre(heures, 0), "num")
         + '<td class="num"></td>'
-        + _td(nombre(heures, 1), "num")
         + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 0), "num")
         + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero), 0), "num")
         + _td(nombre(sum((ligne.forfait_dh or zero for ligne in lignes), zero), 0), "num")
