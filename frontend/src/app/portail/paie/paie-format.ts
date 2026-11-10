@@ -1,3 +1,5 @@
+import { arrondirDemiBas } from '../../shared/utils/arrondi-nombre';
+
 const LIBELLES_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const FORMAT_MONTANT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
@@ -28,15 +30,15 @@ export function moisCivilPrecedent(date: Date): string {
   return `${precedent.getFullYear()}-${String(precedent.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Variation en pourcentage avec son signe et sa virgule française : `+3,1 %`, `-0,8 %`. */
+/** Variation en pourcentage entière avec son signe : `+3 %`, `-1 %`. */
 export function formaterVariation(variation: number): string {
-  const arrondie = Math.round(variation * 10) / 10;
-  return `${arrondie > 0 ? '+' : ''}${arrondie.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+  const arrondie = arrondirDemiBas(variation);
+  return `${arrondie > 0 ? '+' : ''}${arrondie.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} %`;
 }
 
-/** Part en pourcentage, une décimale : `34,8 %`. */
+/** Part en pourcentage entière. */
 export function formaterPart(part: number): string {
-  return `${part.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+  return `${arrondirDemiBas(part).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} %`;
 }
 
 /** Montant au format de l'application (`fr-FR`, dirhams entiers). */

@@ -22,7 +22,7 @@ const BULLETIN: Paie = {
   chantier: { id: 2, code: 'C196', designation: 'Marrakech' },
   equipe: { id: 3, code: 'CH', libelle: 'Chauffeurs' },
   nombreJoursTravailles: 26,
-  joursRecuperationOuvrable: 1.5,
+  joursRecuperationOuvrable: 1,
   joursRecuperationDimanche: null,
   salaireMensuel: 4000,
   primeRoulageOrdinaire: 120.5,

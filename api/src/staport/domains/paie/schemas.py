@@ -17,9 +17,9 @@ class PaieChampsBulletin(ModeleApi):
     fonction_id: int
     chantier_id: int
     equipe_id: int | None = None
-    nombre_jours_travailles: Annotated[Nombre, Field(ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_ouvrable: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
-    jours_recuperation_dimanche: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=2)]
+    nombre_jours_travailles: Annotated[Nombre, Field(ge=0, max_digits=5, decimal_places=0)]
+    jours_recuperation_ouvrable: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=0)]
+    jours_recuperation_dimanche: Annotated[Nombre | None, Field(default=None, ge=0, max_digits=5, decimal_places=0)]
     salaire_mensuel: MontantEntier
     prime_roulage_ordinaire: MontantEntier | None = None
     prime_roulage_dimanche: MontantEntier | None = None
