@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { LucideSquarePen, LucideSparkles } from '@lucide/angular';
+import { LucideMaximize2, LucideMinimize2, LucideSquarePen, LucideSparkles } from '@lucide/angular';
 
 import { FilAssistant } from './fil-assistant.service';
 
@@ -10,7 +10,7 @@ import { FilAssistant } from './fil-assistant.service';
 @Component({
   selector: 'app-assistant-entete',
   host: { class: 'flex min-w-0 items-center gap-2' },
-  imports: [LucideSparkles, LucideSquarePen],
+  imports: [LucideMaximize2, LucideMinimize2, LucideSparkles, LucideSquarePen],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span class="relative size-(--control-height) flex-none" aria-hidden="true">
@@ -21,6 +21,9 @@ import { FilAssistant } from './fil-assistant.service';
       <h2 class="m-0 text-md font-semibold text-text">Staport Intelligence</h2>
       <p class="m-0 text-xs text-muted">Votre assistant numérique</p>
     </div>
+    <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="fil.agrandi.set(!fil.agrandi())" [attr.aria-label]="fil.agrandi() ? 'Réduire le panneau' : 'Agrandir le panneau'" [attr.title]="fil.agrandi() ? 'Réduire le panneau' : 'Agrandir le panneau'" [attr.aria-pressed]="fil.agrandi()">
+      @if (fil.agrandi()) { <svg lucideMinimize2 class="size-4" aria-hidden="true"></svg> } @else { <svg lucideMaximize2 class="size-4" aria-hidden="true"></svg> }
+    </button>
     <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="fil.nouveau()" aria-label="Nouvelle conversation" title="Nouvelle conversation">
       <svg lucideSquarePen class="size-4" aria-hidden="true"></svg>
     </button>

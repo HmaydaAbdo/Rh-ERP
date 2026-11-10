@@ -116,7 +116,8 @@ Règles impératives :
    l'outil fournit, par exemple l'effectif du mois précédent et l'écart net à côté des entrées.
 8. Une liste rendue par un outil (quatre lignes ou plus) s'affiche d'elle-même à l'écran en tableau, avec une courbe
    pour une suite de mois : ne la recopie pas. Réponds en deux ou trois phrases qui citent les valeurs remarquables
-   telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, appelle
+   telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, ou quand
+   l'utilisateur demande une présentation (frise chronologique, historique daté, fiche à onglets, cartes), appelle
    `generate_a2ui` après avoir obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des
    valeurs des outils.
 9. Les montants sont en dirhams (MAD).
@@ -149,7 +150,8 @@ CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
   conversation, avec son unité : MAD pour les montants. Ne calcule rien : ni total, ni moyenne, ni écart, ni
   pourcentage. Une valeur absente des outils n'apparaît pas.
 - Utilise uniquement les composants du catalogue fourni : KpiGrid pour des indicateurs, Chart pour un graphique,
-  DataTable pour un tableau (lignes données en littéral dans « rows »), Text, Row, Column et Card pour la mise en page.
+  DataTable pour un tableau (lignes données en littéral dans « rows »), Timeline pour un historique (événements du
+  plus ancien au plus récent), Text, Row, Column et Card pour la mise en page.
 - Les propriétés à valeurs fixes (format, type, tone) prennent exactement une valeur du catalogue, en français
   (« nombre », « montant »), jamais traduite ni inventée.
 - Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
@@ -209,7 +211,7 @@ def _parametres_a2ui() -> dict[str, Any]:
 
 #: Composants de présentation proposés au sous-agent : les surfaces de l'ERP sont en lecture seule.
 _COMPOSANTS_SURFACE = (
-    *("KpiGrid", "Chart", "DataTable"),
+    *("KpiGrid", "Chart", "DataTable", "Timeline"),
     *("Text", "Row", "Column", "List", "Card", "Divider", "Icon", "Tabs"),
 )
 

@@ -9,10 +9,11 @@ import {
 import { ChangeDetectionStrategy, Component, InjectionToken, effect, inject, input, output, signal } from '@angular/core';
 import { renderMarkdown } from '@a2ui/markdown-it';
 
-import { ChartApi, DataTableApi, KpiGridApi } from './api-catalogue';
+import { ChartApi, DataTableApi, KpiGridApi, TimelineApi } from './api-catalogue';
 import { A2uiChartComponent } from './a2ui-chart.component';
 import { A2uiDataTableComponent } from './a2ui-data-table.component';
 import { A2uiKpiGridComponent } from './a2ui-kpi-grid.component';
+import { A2uiTimelineComponent } from './a2ui-timeline.component';
 import { CHAMP_CATALOGUE_ERP } from './identifiant-catalogue';
 
 /** Ce que le rendu renvoie à l'agent quand l'utilisateur déclenche une action (`a2uiAction`, comme le rendu intégré de CopilotKit). */
@@ -30,7 +31,8 @@ export function creerCatalogueRendu(): BasicCatalog {
     extraComponents: [
       createComponentImplementation(DataTableApi, A2uiDataTableComponent),
       createComponentImplementation(KpiGridApi, A2uiKpiGridComponent),
-      createComponentImplementation(ChartApi, A2uiChartComponent)
+      createComponentImplementation(ChartApi, A2uiChartComponent),
+      createComponentImplementation(TimelineApi, A2uiTimelineComponent)
     ]
   });
 }

@@ -144,3 +144,8 @@ def test_le_guide_du_sous_agent_donne_les_valeurs_admises_des_proprietes_imbriqu
     au lieu de `nombre` et le rendu refuse le graphique."""
     guide: str = _parametres_a2ui()["guidelines"]["composition_guide"]
     assert "format=texte|nombre|montant|periode" in guide
+
+
+def test_le_guide_du_sous_agent_propose_la_frise_chronologique() -> None:
+    guide: str = _parametres_a2ui()["guidelines"]["composition_guide"]
+    assert "- Timeline" in guide
