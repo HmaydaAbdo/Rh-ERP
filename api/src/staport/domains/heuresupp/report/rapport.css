@@ -36,6 +36,7 @@ table.heures { width: 802pt; border-collapse: collapse; font-size: 8pt; }
 table.heures thead { display: table-header-group; }
 table.heures tr { page-break-inside: avoid; }
 table.heures th, table.heures td { padding: 5pt 4pt; border: 0.5pt solid #9a9a9a; white-space: nowrap; }
+table.heures td:not(.emargement) { font-weight: 600; }
 table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
