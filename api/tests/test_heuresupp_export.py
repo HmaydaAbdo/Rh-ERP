@@ -89,6 +89,9 @@ def test_le_gabarit_echappe_les_donnees_et_totalise_le_perimetre() -> None:
     assert "<th>Chantier</th>" not in html
     assert "Édité le 05/11/2026 à 14:07" in html
     assert "Total · 2 lignes" in html
+    assert '<th class="num">Nombre d&#x27;heures</th><th class="num">S/H</th>' in html
+    assert '<td class="num">7</td><td class="num">10</td>' in html
+    assert '<td class="num">7</td><td class="num"></td>' in html  # total des valeurs P/H affichées
     assert "<td>—</td>" not in html  # les cellules vides portent la classe « num »
     assert '<td class="num">—</td>' in html
     assert '<td class="num">150</td>' in html  # montant total
