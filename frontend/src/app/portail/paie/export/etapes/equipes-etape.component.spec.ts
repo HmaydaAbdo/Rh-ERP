@@ -2,11 +2,14 @@ import { PaieExportEtapeEquipesComponent } from './equipes-etape.component';
 import { CHANTIERS, monterEtape, stabiliser } from './etapes.testing';
 
 describe('PaieExportEtapeEquipesComponent', () => {
-  const codes = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.app-wizard__chantier-tete .app-wizard__code')).map((c) => c.textContent?.trim());
-  const tete = (racine: HTMLElement, code: string) =>
-    Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__chantier-tete')).find((b) => b.textContent?.includes(code))!;
-  const pastille = (racine: HTMLElement, libelle: string) =>
-    Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__pastilles button[aria-pressed]')).find((b) => b.textContent?.includes(libelle))!;
+  const texte = (element: Element | null | undefined) => element?.textContent?.replace(/\s+/g, ' ').trim();
+  const equipes = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.app-presentation__nom')).map(texte);
+  const groupe = (racine: HTMLElement, equipe: string) =>
+    Array.from(racine.querySelectorAll<HTMLElement>('[role="radiogroup"]'))
+      .find((g) => racine.querySelector(`[id="${g.getAttribute('aria-labelledby')}"]`)?.textContent?.includes(equipe))!;
+  const option = (racine: HTMLElement, equipe: string, libelle: string) =>
+    Array.from(groupe(racine, equipe).querySelectorAll('label')).find((l) => texte(l) === libelle)!.querySelector('input') as HTMLInputElement;
+  const apercu = (racine: HTMLElement) => Array.from(racine.querySelectorAll('.app-presentation__apercu li')).map(texte);
 
   async function monter() {
     const etape = await monterEtape(PaieExportEtapeEquipesComponent);
@@ -15,133 +18,122 @@ describe('PaieExportEtapeEquipesComponent', () => {
     return etape;
   }
 
-  it('liste les chantiers du mois avec leur effectif et leurs équipes', async () => {
-    const { racine } = await monter();
+  it('affiche un chantier à la fois, avec sa position et ses équipes ; un chantier sans équipe est sauté', async () => {
+    const { fixture, store, racine } = await monter();
 
-    expect(codes(racine)).toEqual(['C168', 'C196', 'C057']);
-    const metas = Array.from(racine.querySelectorAll('.app-wizard__meta')).map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
-    expect(metas).toEqual(['Nador · 10 employés · 2 équipes', '5 employés · 1 équipes', 'Dépôt · 2 employés · aucune équipe']);
+    expect(texte(racine.querySelector('.app-presentation__chantier h3'))).toBe('C168 Nador');
+    expect(texte(racine.querySelector('.app-presentation__chantier p'))).toBe('10 employés · 2 équipes');
+    expect(texte(racine.querySelector('.app-cas__position'))).toBe('Chantier 1 sur 2');
+    expect(equipes(racine)).toEqual(['Chauffeurs 6 employés', 'Opérateurs 4 employés']);
+
+    store.etape.set('equipes');
+    store.suivant();
+    await stabiliser(fixture);
+
+    expect(texte(racine.querySelector('.app-presentation__chantier h3'))).toBe('C196');
+    expect(texte(racine.querySelector('.app-presentation__chantier p'))).toBe('5 employés · 1 équipe');
+    expect(texte(racine.querySelector('.app-cas__position'))).toBe('Chantier 2 sur 2');
+    expect(equipes(racine)).toEqual(['Labo 5 employés']);
   });
 
-  it('propose de réunir des équipes pour tous les chantiers, en PDF seulement', async () => {
+  it('propose trois présentations par équipe en PDF, deux en Excel, et laisse chaque équipe dans la liste par défaut', async () => {
     const { fixture, store, racine } = await monter();
-    const choix = () => Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__regroupement-choix button'));
+    const libelles = () => Array.from(groupe(racine, 'Chauffeurs').querySelectorAll('label')).map(texte);
 
-    expect(racine.querySelector('.app-wizard__regroupement')?.textContent).toContain('tous les chantiers');
-    expect(choix().map((b) => b.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      'Chauffeurs1 chantier', 'Labo1 chantier', 'Opérateurs1 chantier'
-    ]);
-
-    choix()[0].click();
-    choix()[2].click();
-    await stabiliser(fixture);
-    expect(store.regroupement()).toEqual(['Chauffeurs', 'Opérateurs']);
-    expect(racine.querySelector('.app-wizard__regroupement-resume')?.textContent).toContain('Chauffeurs + Opérateurs');
-
-    store.choisirFormat('EXCEL');
-    await stabiliser(fixture);
-    expect(racine.querySelector('.app-wizard__regroupement')).toBeNull();
-  });
-
-  it('adapte la consigne au format : PDF puis Excel', async () => {
-    const { fixture, store, racine } = await monter();
-    expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('graphique par équipe');
+    expect(libelles()).toEqual(['Dans la liste', 'Séparée', 'Réunie']);
+    expect(option(racine, 'Chauffeurs', 'Dans la liste').checked).toBe(true);
+    expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('sans colonne Équipe');
 
     store.choisirFormat('EXCEL');
     await stabiliser(fixture);
 
+    expect(libelles()).toEqual(['Feuille du chantier', 'Feuille à part']);
     expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('sa propre feuille');
   });
 
-  it('un chantier sans équipe ne se déplie pas', async () => {
-    const { racine } = await monter();
-
-    expect(tete(racine, 'C057').disabled).toBe(true);
-  });
-
-  it('déplie et replie les équipes d’un chantier en l’annonçant', async () => {
-    const { fixture, racine } = await monter();
-    expect(tete(racine, 'C168').getAttribute('aria-expanded')).toBe('false');
-
-    tete(racine, 'C168').click();
-    await stabiliser(fixture);
-    expect(tete(racine, 'C168').getAttribute('aria-expanded')).toBe('true');
-
-    tete(racine, 'C168').click();
-    await stabiliser(fixture);
-    expect(tete(racine, 'C168').getAttribute('aria-expanded')).toBe('false');
-  });
-
-  it('coche une équipe : elle est retenue, le chantier devient « détaillé » avec son compteur', async () => {
+  it('choisir une présentation la retient pour ce chantier seulement et met l’aperçu à jour', async () => {
     const { fixture, store, racine } = await monter();
+    expect(apercu(racine)).toEqual(['Liste de tout le chantier, avec la colonne Équipe 10 employés']);
 
-    pastille(racine, 'Chauffeurs').click();
+    option(racine, 'Chauffeurs', 'Séparée').click();
     await stabiliser(fixture);
 
-    expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs']);
-    expect(pastille(racine, 'Chauffeurs').getAttribute('aria-pressed')).toBe('true');
-    expect(racine.querySelector('.app-wizard__badge')?.textContent).toBe('1 / 2 équipes');
+    expect(store.traitement('C168', 'Chauffeurs')).toBe('separee');
+    expect(store.traitement('C196', 'Labo')).toBe('liste');
+    expect(option(racine, 'Chauffeurs', 'Séparée').checked).toBe(true);
+    expect(groupe(racine, 'Chauffeurs').querySelector('.app-segments__option--choisie')?.textContent).toContain('Séparée');
+    expect(apercu(racine)).toEqual(['Section Chauffeurs 6 employés', 'Liste des autres employés, sans colonne Équipe 4 employés']);
   });
 
-  it('« Toutes » puis « Aucune » cochent et décochent toutes les équipes du chantier', async () => {
+  it('réunit des équipes dans ce chantier ; une réunion d’une seule équipe bloque la suite et l’explique', async () => {
     const { fixture, store, racine } = await monter();
-    const boutons = (nom: string) => Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__equipes-tete button')).filter((b) => b.textContent === nom);
+    store.etape.set('equipes');
 
-    boutons('Toutes')[0].click();
+    option(racine, 'Chauffeurs', 'Réunie').click();
     await stabiliser(fixture);
-    expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs', 'Opérateurs']);
+    store.suivant();
+    await stabiliser(fixture);
 
-    boutons('Aucune')[0].click();
+    expect(store.positionChantier()).toBe(0);
+    expect(racine.querySelector('[role="alert"]')?.textContent).toContain('au moins deux');
+
+    option(racine, 'Opérateurs', 'Réunie').click();
     await stabiliser(fixture);
-    expect(store.equipesChoisies('C168')).toEqual([]);
+
+    expect(racine.querySelector('[role="alert"]')?.textContent).toBe('');
+    expect(apercu(racine)).toEqual(['Section Chauffeurs + Opérateurs 10 employés']);
+    store.suivant();
+    expect(store.positionChantier()).toBe(1);
   });
 
-  it('en Excel, propose de retirer une équipe cochée de la feuille du chantier ; pas en PDF', async () => {
+  it('« Appliquer à toutes » donne la même présentation à toutes les équipes du chantier', async () => {
     const { fixture, store, racine } = await monter();
-    store.basculerEquipe('C168', 'Chauffeurs');
+    const raccourci = (nom: string) =>
+      Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__equipes-tete button')).find((b) => b.textContent === nom)!;
+
+    raccourci('Séparée').click();
     await stabiliser(fixture);
-    expect(racine.querySelector('.app-wizard__retrait')).toBeNull();
+    expect(store.equipesSeparees(CHANTIERS[0])).toEqual(['Chauffeurs', 'Opérateurs']);
+
+    raccourci('Dans la liste').click();
+    await stabiliser(fixture);
+    expect(store.equipesSeparees(CHANTIERS[0])).toEqual([]);
+  });
+
+  it('en Excel, une équipe en feuille à part peut être retirée de la feuille du chantier ; pas en PDF', async () => {
+    const { fixture, store, racine } = await monter();
+    store.choisirTraitement('C168', 'Chauffeurs', 'separee');
+    await stabiliser(fixture);
+    expect(racine.querySelector('.app-presentation__retrait')).toBeNull();
 
     store.choisirFormat('EXCEL');
     await stabiliser(fixture);
-    const retrait = racine.querySelector('.app-wizard__retrait') as HTMLButtonElement;
-    expect(retrait.getAttribute('aria-label')).toBe('Retirer Chauffeurs de la feuille du chantier');
-    expect(retrait.getAttribute('aria-pressed')).toBe('false');
+    const retrait = racine.querySelector('.app-presentation__retrait input') as HTMLInputElement;
+    expect(texte(retrait.closest('label'))).toBe('Retirer ses employés de la feuille du chantier');
 
     retrait.click();
     await stabiliser(fixture);
+
     expect(store.estRetiree('C168', 'Chauffeurs')).toBe(true);
-    expect(retrait.getAttribute('aria-pressed')).toBe('true');
+    expect(apercu(racine)).toEqual(['Feuille du chantier C168 4 employés', 'Feuille de l\'équipe Chauffeurs 6 employés']);
   });
 
-  it('cherche un chantier par code ou libellé', async () => {
-    const { fixture, racine } = await monter();
-
-    const recherche = racine.querySelector('input[type="search"]') as HTMLInputElement;
-    recherche.value = 'c19';
-    recherche.dispatchEvent(new Event('input'));
-    await stabiliser(fixture);
-
-    expect(codes(racine)).toEqual(['C196']);
-  });
-
-  it('avec un marché choisi en PDF, ne propose que ce marché', async () => {
+  it('avec un marché choisi en PDF, ne parcourt que ce marché', async () => {
     const { fixture, store, racine } = await monter();
 
     store.choisirMarches(['C196']);
     await stabiliser(fixture);
 
-    expect(codes(racine)).toEqual(['C196']);
+    expect(texte(racine.querySelector('.app-cas__position'))).toBe('Chantier 1 sur 1');
+    expect(equipes(racine)).toEqual(['Labo 5 employés']);
   });
 
-  it('annonce l’absence de résultat', async () => {
-    const { fixture, racine } = await monter();
+  it('sans aucune équipe ce mois-ci, l’explique et laisse continuer', async () => {
+    const { fixture, store, racine } = await monter();
 
-    const recherche = racine.querySelector('input[type="search"]') as HTMLInputElement;
-    recherche.value = 'zzz';
-    recherche.dispatchEvent(new Event('input'));
+    store.chantiers.set([CHANTIERS[2]]);
     await stabiliser(fixture);
 
-    expect(racine.textContent).toContain('Aucun chantier ne correspond à cette recherche.');
+    expect(racine.querySelector('.app-wizard__vide')?.textContent).toContain('Aucun chantier de ce mois n\'a d\'équipe');
   });
 });

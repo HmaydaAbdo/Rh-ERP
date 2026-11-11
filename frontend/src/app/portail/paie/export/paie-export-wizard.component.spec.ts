@@ -125,74 +125,127 @@ describe('PaieExportWizardComponent', () => {
         expect(store.chantiers().length).toBe(2);
     });
 
-    it("ne coche aucune équipe d'office : ouvrir un chantier ne fait que déplier ses équipes", () => {
+    it("laisse d'office chaque équipe dans la liste de son chantier", () => {
         store.suivant();
-        store.basculerOuverture(CHANTIERS[0]);
-        expect(store.estOuvert('C168')).toBe(true);
-        expect(store.estDetaille('C168')).toBe(false);
-        expect(store.equipesChoisies('C168')).toEqual([]);
 
-        store.basculerOuverture(CHANTIERS[0]);
-        expect(store.estOuvert('C168')).toBe(false);
+        expect(store.traitement('C168', 'Chauffeurs')).toBe('liste');
+        expect(store.equipesSeparees(CHANTIERS[0])).toEqual([]);
+        expect(store.chantiersRegles()).toEqual([]);
     });
 
-    it("permet de cocher seulement quelques équipes d'un chantier, ou toutes / aucune d'un coup", () => {
+    it("règle chaque chantier à part : une équipe séparée dans l'un reste dans la liste de l'autre", () => {
         store.suivant();
 
-        store.basculerEquipe('C168', 'Chauffeurs');
-        expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs']);
-        expect(store.estDetaille('C168')).toBe(true);
+        store.choisirTraitement('C168', 'Chauffeurs', 'separee');
+        expect(store.equipesSeparees(CHANTIERS[0])).toEqual(['Chauffeurs']);
+        expect(store.equipesSeparees(CHANTIERS[1])).toEqual([]);
+        expect(store.chantiersRegles().map((c) => c.code)).toEqual(['C168']);
 
-        store.toutesLesEquipes(CHANTIERS[0], true);
-        expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs', 'Opérateurs']);
+        store.toutTraiter(CHANTIERS[0], 'separee');
+        expect(store.equipesSeparees(CHANTIERS[0])).toEqual(['Chauffeurs', 'Opérateurs']);
 
-        store.toutesLesEquipes(CHANTIERS[0], false);
-        expect(store.equipesChoisies('C168')).toEqual([]);
-        expect(store.estDetaille('C168')).toBe(false);
+        store.toutTraiter(CHANTIERS[0], 'liste');
+        expect(store.equipesSeparees(CHANTIERS[0])).toEqual([]);
     });
 
-    it("ne déplie pas un chantier qui n'a aucune équipe", () => {
-        store.suivant();
-        const sansEquipe = { ...CHANTIERS[1], code: 'C999', equipes: [] };
+    describe('étape équipes : un chantier par écran', () => {
+        function ouvrirEquipes(): void {
+            store.suivant(); // période -> format
+            store.suivant(); // format -> marchés
+            store.suivant(); // marchés -> équipes
+        }
 
-        store.basculerOuverture(sansEquipe);
+        it('avance et recule chantier par chantier avant de quitter l’étape', () => {
+            ouvrirEquipes();
+            expect(store.etape()).toBe('equipes');
+            expect(store.chantierCourant()?.code).toBe('C168');
+            expect(store.chantiersRestants()).toBe(1);
 
-        expect(store.estOuvert('C999')).toBe(false);
+            store.suivant();
+            expect(store.etape()).toBe('equipes');
+            expect(store.chantierCourant()?.code).toBe('C196');
+            expect(store.chantiersRestants()).toBe(0);
+
+            store.precedent();
+            expect(store.chantierCourant()?.code).toBe('C168');
+            expect(store.sens()).toBe('arriere');
+
+            store.precedent();
+            expect(store.etape()).toBe('chantier');
+        });
+
+        it('« Passer les autres chantiers » quitte l’étape en laissant les suivants en simple liste', () => {
+            ouvrirEquipes();
+            store.choisirTraitement('C168', 'Chauffeurs', 'separee');
+
+            store.passerChantiersRestants();
+
+            expect(store.etape()).toBe('materiel');
+            expect(store.equipesSeparees(CHANTIERS[1])).toEqual([]);
+        });
+
+        it('revenir depuis l’étape suivante retrouve le dernier chantier ; le récapitulatif rouvre le chantier voulu', () => {
+            ouvrirEquipes();
+            store.suivant();
+            store.suivant();
+            expect(store.etape()).toBe('recap');
+
+            store.precedent();
+            expect(store.chantierCourant()?.code).toBe('C196');
+
+            store.etape.set('recap');
+            store.allerAuChantier('C168');
+            expect(store.etape()).toBe('equipes');
+            expect(store.chantierCourant()?.code).toBe('C168');
+        });
+
+        it('refuse de quitter un chantier où une seule équipe est réunie, même par le raccourci', () => {
+            ouvrirEquipes();
+            store.choisirTraitement('C168', 'Chauffeurs', 'reunie');
+
+            store.suivant();
+            expect(store.chantierCourant()?.code).toBe('C168');
+            expect(store.erreur()).toContain('au moins deux');
+
+            store.passerChantiersRestants();
+            expect(store.etape()).toBe('equipes');
+
+            store.choisirTraitement('C168', 'Opérateurs', 'reunie');
+            expect(store.erreur()).toBeNull();
+            store.suivant();
+            expect(store.chantierCourant()?.code).toBe('C196');
+        });
     });
 
-    it("n'envoie aucun détail quand aucune équipe n'est cochée", () => {
+    it("n'envoie aucun détail quand aucune équipe ne quitte la liste", () => {
         store.suivant();
-        store.basculerOuverture(CHANTIERS[0]);
 
         store.etape.set('recap');
         store.suivant();
 
-        expect(vi.mocked(service.telechargerRapportPdf).mock.lastCall![0].equipesParChantier).toBeNull();
+        const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
+        expect(requete.equipesParChantier).toBeNull();
+        expect(requete.regroupementsEquipesParChantier).toBeNull();
         expect(store.etapes()).not.toContain('materiel');
     });
 
-    it("n'ajoute l'étape matériel que si C168 est détaillé avec l'équipe qui porte un tableau", () => {
+    it("n'ajoute l'étape matériel que si l'équipe qui porte un tableau a sa section à part", () => {
         store.suivant();
         expect(store.etapes()).not.toContain('materiel');
 
-        store.basculerEquipe('C196', 'Chauffeurs'); // C196 : pas de tableau matériel
+        store.choisirTraitement('C196', 'Chauffeurs', 'separee'); // C196 : pas de tableau matériel
         expect(store.etapes()).not.toContain('materiel');
 
-        store.basculerOuverture(CHANTIERS[0]);
-        expect(store.etapes()).not.toContain('materiel'); // chantier ouvert, aucune équipe cochée
-
-        store.basculerEquipe('C168', 'Chauffeurs');
-        store.basculerEquipe('C168', 'Opérateurs');
+        store.toutTraiter(CHANTIERS[0], 'separee');
         expect(store.etapes()).toEqual(['periode', 'format', 'chantier', 'equipes', 'materiel', 'recap']);
 
-        store.basculerEquipe('C168', 'Chauffeurs');
-        store.basculerEquipe('C168', 'Opérateurs');
+        store.toutTraiter(CHANTIERS[0], 'liste');
         expect(store.etapes()).not.toContain('materiel');
     });
 
     it("n'envoie que les nombres saisis des tableaux imprimés, et un zéro compte comme une saisie", () => {
         store.suivant();
-        store.basculerEquipe('C168', 'Chauffeurs'); // seul CAMION est imprimé : OP n'est pas choisie
+        store.choisirTraitement('C168', 'Chauffeurs', 'separee'); // seul CAMION est imprimé : OP reste dans la liste
         store.saisirNombre('CAMION CITERNE', '4');
         store.saisirNombre('PICK UP', '0');
         store.saisirNombre('BULL', '9');
@@ -208,7 +261,7 @@ describe('PaieExportWizardComponent', () => {
 
     it('laisse la colonne vide quand le tableau est marqué « vide »', () => {
         store.suivant();
-        store.basculerEquipe('C168', 'Chauffeurs');
+        store.choisirTraitement('C168', 'Chauffeurs', 'separee');
         store.saisirNombre('CAMION CITERNE', '4');
         store.basculerVide(TABLEAUX[0]);
 
@@ -231,7 +284,7 @@ describe('PaieExportWizardComponent', () => {
     it("construit la requête Excel avec le mode personnalisé et les équipes retirées de la feuille du chantier", () => {
         store.suivant();
         store.choisirFormat('EXCEL');
-        store.toutesLesEquipes(CHANTIERS[0], true);
+        store.toutTraiter(CHANTIERS[0], 'separee');
         store.basculerRetrait('C168', 'Opérateurs');
 
         store.etape.set('recap');
@@ -289,7 +342,7 @@ describe('PaieExportWizardComponent', () => {
 
     it('ne conserve pas les nombres matériels saisis pour le prochain export', () => {
         store.suivant();
-        store.basculerEquipe('C168', 'Chauffeurs');
+        store.choisirTraitement('C168', 'Chauffeurs', 'separee');
         store.saisirNombre('CAMION CITERNE', '7');
         store.etape.set('recap');
         store.suivant();
@@ -304,43 +357,54 @@ describe('PaieExportWizardComponent', () => {
             store.suivant();
         }
 
-        it('une seule réunion s’applique à tous les chantiers qui comptent au moins deux de ces équipes', () => {
+        it('la réunion ne vaut que pour le chantier où elle est choisie', () => {
             store.suivant();
-            store.basculerRegroupement('Chauffeurs');
-            store.basculerRegroupement('Opérateurs');
+            store.toutTraiter(CHANTIERS[0], 'reunie');
 
-            expect(store.chantiersReunis().map((c) => c.code)).toEqual(['C168']);
-            expect(store.texteRegroupement()).toBe('Chauffeurs + Opérateurs : une section commune dans 1 chantier');
+            expect(store.equipesReunies(CHANTIERS[0])).toEqual(['Chauffeurs', 'Opérateurs']);
+            expect(store.equipesReunies(CHANTIERS[1])).toEqual([]);
+            expect(store.texteEquipes(CHANTIERS[0])).toBe('Réunies : Chauffeurs + Opérateurs');
 
             lancer();
 
-            expect(vi.mocked(service.telechargerRapportPdf).mock.lastCall![0].regroupementsEquipesParChantier).toEqual({
-                C168: [['Chauffeurs', 'Opérateurs']]
-            });
+            const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
+            expect(requete.regroupementsEquipesParChantier).toEqual({ C168: [['Chauffeurs', 'Opérateurs']] });
+            expect(requete.equipesParChantier).toBeNull();
         });
 
-        it('ne demande rien pour un chantier qui ne compte qu’une des équipes, ni sans réunion', () => {
+        it('un même chantier mêle une équipe séparée et des équipes réunies ; le reste va dans la liste', () => {
+            const quatre = { ...CHANTIERS[0], equipes: [
+                ...CHANTIERS[0].equipes,
+                { id: 3, code: 'LABO', libelle: 'Labo', effectif: 5, masse: 1, stc: 0, stcMontant: 0 },
+                { id: 4, code: 'MEC', libelle: 'Mécaniciens', effectif: 9, masse: 1, stc: 0, stcMontant: 0 }
+            ] };
+            service.listerChantiersDeLaPeriode.mockReturnValue(of([quatre, CHANTIERS[1]]));
+            store.ouvrir();
             store.suivant();
+            store.choisirTraitement('C168', 'Chauffeurs', 'reunie');
+            store.choisirTraitement('C168', 'Opérateurs', 'reunie');
+            store.choisirTraitement('C168', 'Labo', 'separee');
+
+            expect(store.texteEquipes(quatre)).toBe('Réunies : Chauffeurs + Opérateurs · Séparée : Labo · 1 dans la liste');
+            expect(store.apercu(quatre)).toEqual([
+                { titre: 'Section Chauffeurs + Opérateurs', effectif: 143 },
+                { titre: 'Section Labo', effectif: 5 },
+                { titre: 'Liste des autres employés, sans colonne Équipe', effectif: 165 }
+            ]);
+
             lancer();
-            expect(vi.mocked(service.telechargerRapportPdf).mock.lastCall![0].regroupementsEquipesParChantier).toBeNull();
 
-            store.nouvelExport();
-            store.suivant();
-            store.basculerRegroupement('Chauffeurs');
-            store.basculerRegroupement('Labo');
-
-            expect(store.chantiersReunis()).toEqual([]);
-            expect(store.texteRegroupement()).toContain('aucun chantier');
+            const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
+            expect(requete.equipesParChantier).toEqual({ C168: ['Labo'] });
+            expect(requete.regroupementsEquipesParChantier).toEqual({ C168: [['Chauffeurs', 'Opérateurs']] });
         });
 
         it('les équipes réunies n’ont plus de section ni de tableau matériel propres', () => {
             store.suivant();
-            store.basculerEquipe('C168', 'Chauffeurs');
-            store.basculerEquipe('C168', 'Opérateurs');
+            store.toutTraiter(CHANTIERS[0], 'separee');
             expect(store.etapes()).toContain('materiel');
 
-            store.basculerRegroupement('Chauffeurs');
-            store.basculerRegroupement('Opérateurs');
+            store.toutTraiter(CHANTIERS[0], 'reunie');
 
             expect(store.etapes()).not.toContain('materiel');
             lancer();
@@ -349,27 +413,17 @@ describe('PaieExportWizardComponent', () => {
             expect(requete.regroupementsEquipesParChantier).toEqual({ C168: [['Chauffeurs', 'Opérateurs']] });
         });
 
-        it('l’ordre de sélection donne l’ordre du titre, et « Effacer » annule la réunion', () => {
-            store.suivant();
-            store.basculerRegroupement('Opérateurs');
-            store.basculerRegroupement('Chauffeurs');
-            expect(store.equipesReuniesDe(CHANTIERS[0])).toEqual(['Opérateurs', 'Chauffeurs']);
-
-            store.effacerRegroupement();
-
-            expect(store.regroupement()).toEqual([]);
-        });
-
         it('n’existe pas en Excel et change de mois sans réunion', () => {
             store.suivant();
-            store.basculerRegroupement('Chauffeurs');
-            store.basculerRegroupement('Opérateurs');
+            store.toutTraiter(CHANTIERS[0], 'reunie');
             store.choisirFormat('EXCEL');
-            expect(store.chantiersReunis()).toEqual([]);
+            expect(store.equipesReunies(CHANTIERS[0])).toEqual([]);
+            expect(store.traitement('C168', 'Chauffeurs')).toBe('liste');
 
             store.choisirFormat('PDF');
+            expect(store.equipesReunies(CHANTIERS[0])).toEqual(['Chauffeurs', 'Opérateurs']);
             store.choisirPeriode('2026-08');
-            expect(store.regroupement()).toEqual([]);
+            expect(store.traitements()).toEqual({});
         });
     });
 
@@ -412,14 +466,15 @@ describe('PaieExportWizardComponent', () => {
 
         it('limite les équipes et le matériel aux marchés sélectionnés sans effacer les autres choix', () => {
             store.suivant();
-            store.basculerEquipe('C168', 'Chauffeurs');
-            store.basculerEquipe('C196', 'Chauffeurs');
+            store.choisirTraitement('C168', 'Chauffeurs', 'separee');
+            store.choisirTraitement('C196', 'Chauffeurs', 'separee');
             expect(store.etapes()).toContain('materiel');
 
             store.choisirMarches(['C196']);
 
-            expect(store.equipesChoisies('C168')).toEqual(['Chauffeurs']);
-            expect(store.equipesChoisies('C196')).toEqual(['Chauffeurs']);
+            expect(store.equipesSeparees(CHANTIERS[0])).toEqual(['Chauffeurs']);
+            expect(store.equipesSeparees(CHANTIERS[1])).toEqual(['Chauffeurs']);
+            expect(store.chantiersAvecEquipes().map((c) => c.code)).toEqual(['C196']);
             expect(store.etapes()).not.toContain('materiel');
         });
 

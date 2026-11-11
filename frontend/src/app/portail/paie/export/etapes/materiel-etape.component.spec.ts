@@ -9,7 +9,7 @@ describe('PaieExportEtapeMaterielComponent', () => {
     return monterEtape(PaieExportEtapeMaterielComponent, (store) => {
       store.chantiers.set(CHANTIERS);
       store.tableauxMateriel.set(TABLEAUX);
-      store.basculerEquipe('C168', 'Chauffeurs');
+      store.choisirTraitement('C168', 'Chauffeurs', 'separee');
     });
   }
 

@@ -4,15 +4,30 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription } from 'rxjs';
 
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
-import { PaieChantierPeriode, PaieExportRequest, PaieMaterielTableau, PaieMaterielValeur, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
+import { PaieChantierPeriode, PaieEquipePeriode, PaieExportRequest, PaieMaterielTableau, PaieMaterielValeur, PaiePeriodeResume, PaieRapportPdfRequest } from '../models/paie.model';
 import { formaterMontant, libellePeriode } from '../paie-format';
 import { PaieService } from '../services/paie.service';
 
 export type Format = 'PDF' | 'EXCEL';
 export type EtapeId = 'periode' | 'format' | 'chantier' | 'equipes' | 'materiel' | 'recap';
 export type Etat = 'saisie' | 'generation' | 'termine';
+/** Présentation d'une équipe dans son chantier : dans la liste du chantier, section (ou feuille) à part, ou réunie à d'autres (PDF). */
+export type Traitement = 'liste' | 'separee' | 'reunie';
 type Chargement = 'periodes' | 'chantiers' | 'materiel';
 type EtatLigneMateriel = 'conserve' | 'modifie' | 'nouveau';
+
+const OPTIONS_TRAITEMENT: Record<Format, { valeur: Traitement; libelle: string }[]> = {
+  PDF: [
+    { valeur: 'liste', libelle: 'Dans la liste' },
+    { valeur: 'separee', libelle: 'Séparée' },
+    { valeur: 'reunie', libelle: 'Réunie' }
+  ],
+  EXCEL: [
+    { valeur: 'liste', libelle: 'Feuille du chantier' },
+    { valeur: 'separee', libelle: 'Feuille à part' }
+  ]
+};
+const REUNION_INCOMPLETE = 'Une seule équipe est réunie dans ce chantier : choisissez-en au moins deux, ou remettez-la dans la liste.';
 
 const LIBELLES_ETAPES: Record<EtapeId, string> = {
   periode: 'Mois',
@@ -26,7 +41,7 @@ const SOUS_TITRES: Record<EtapeId, string> = {
   periode: 'Choisissez le mois à exporter',
   format: 'Choisissez le format du fichier',
   chantier: 'Choisissez un ou plusieurs marchés',
-  equipes: 'Étape facultative',
+  equipes: 'Facultatif : la présentation des équipes, chantier par chantier',
   materiel: 'Nombre de camions et d\'engins du chantier',
   recap: 'Dernière vérification'
 };
@@ -35,7 +50,7 @@ export const NOMBRE_MAX_MATERIEL = 999;
 /**
  * État et logique de l'assistant d'export de la paie (voir `PaieExportWizardComponent`) : fourni par l'assistant, injecté
  * par lui et par chacune de ses étapes — aucune étape n'a d'état propre au-delà de son affichage. Mois, format, chantier
- * (PDF), équipes à détailler, parc matériel, génération du fichier.
+ * (PDF), présentation des équipes chantier par chantier, parc matériel, génération du fichier.
  */
 @Injectable()
 export class PaieExportStore {
@@ -65,21 +80,17 @@ export class PaieExportStore {
 
   readonly chantiers = signal<PaieChantierPeriode[]>([]);
   readonly chantiersEnCours = signal(false);
-  readonly recherche = signal('');
-  /** Rapport PDF limité à un chantier : code du chantier choisi, ou `null` pour tous les chantiers. Sans effet en Excel. */
   /** Codes des marchés retenus pour le PDF ; liste vide = tous les marchés. */
   readonly marchesChoisis = signal<string[]>([]);
   readonly rechercheChantier = signal('');
   /** Retire le chapitre « Vue d'ensemble » du PDF (voir `PaieReportPdfRequestDto.sansVueEnsemble`). */
   readonly sansVueEnsemble = signal(false);
-  /** Chantiers dont la liste d'équipes est dépliée (simple état d'affichage). */
-  readonly ouverts = signal<string[]>([]);
-  /** Chantier -> libellés des équipes à détailler (liste vide ou absente : aucune équipe détaillée). */
-  readonly detail = signal<Record<string, string[]>>({});
+  /** Chantier -> libellé d'équipe -> présentation choisie ; une équipe absente reste dans la liste du chantier. */
+  readonly traitements = signal<Record<string, Record<string, Traitement>>>({});
   /** Chantier -> libellés des équipes retirées de la feuille du chantier (Excel uniquement). */
   readonly retirees = signal<Record<string, string[]>>({});
-  /** Libellés des équipes réunies en une seule section dans CHAQUE chantier qui les compte (PDF uniquement). */
-  readonly regroupement = signal<string[]>([]);
+  /** Rang, dans `chantiersAvecEquipes`, du chantier affiché par l'étape équipes. */
+  readonly positionChantier = signal(0);
 
   readonly tableauxMateriel = signal<PaieMaterielTableau[]>([]);
   /** Libellé de la ligne -> nombre saisi, ou `null` (champ vide tant que l'utilisateur ne saisit rien). */
@@ -94,33 +105,14 @@ export class PaieExportStore {
   readonly disponibles = computed(() => this.periodes().map((p) => p.periode));
   readonly dernierEnregistre = signal<{ blob: Blob; nom: string } | null>(null);
 
-  /** Tableaux matériel qui seront réellement imprimés : leur chantier est détaillé avec l'équipe qui les porte. */
+  /** Tableaux matériel qui seront réellement imprimés : l'équipe qui les porte a sa section à part dans un chantier du rapport. */
   readonly tableauxConcernes = computed(() =>
     this.tableauxMateriel().filter((t) => this.chantiersPourEquipes().some((c) => c.code === t.chantierCode)
-      && this.detail()[t.chantierCode]?.includes(
-        this.chantiers().find((c) => c.code === t.chantierCode)?.equipes.find((e) => e.code === t.equipeCode)?.libelle ?? ''
-      )
-      && !this.equipeReunie(
-        t.chantierCode,
-        this.chantiers().find((c) => c.code === t.chantierCode)?.equipes.find((e) => e.code === t.equipeCode)?.libelle ?? ''
-      ))
+      && this.traitement(t.chantierCode, this.libelleEquipe(t.chantierCode, t.equipeCode)) === 'separee')
   );
 
-  /** Équipes que l'on peut réunir : celles des chantiers proposés, sans doublon, avec le nombre de chantiers qui les comptent. */
-  readonly equipesReunissables = computed(() => {
-    const comptes = new Map<string, number>();
-    for (const chantier of this.chantiersPourEquipes()) {
-      for (const equipe of chantier.equipes) {
-        comptes.set(equipe.libelle, (comptes.get(equipe.libelle) ?? 0) + 1);
-      }
-    }
-    return [...comptes].map(([libelle, chantiers]) => ({ libelle, chantiers })).sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
-  });
-
-  /** Chantiers où la réunion s'applique vraiment : ceux qui comptent au moins deux des équipes choisies. */
-  readonly chantiersReunis = computed(() =>
-    this.chantiersPourEquipes().filter((c) => this.equipesReuniesDe(c).length >= 2)
-  );
+  /** Présentations proposées pour une équipe : la réunion n'existe que dans le rapport PDF. */
+  readonly optionsTraitement = computed(() => OPTIONS_TRAITEMENT[this.format()]);
 
   /** Les marchés choisis ne restreignent que le rapport PDF, pas l'export Excel. */
   readonly marchesEffectifs = computed(() => (this.format() === 'PDF' ? this.marchesChoisis() : []));
@@ -130,6 +122,19 @@ export class PaieExportStore {
     const codes = this.marchesEffectifs();
     return codes.length > 0 ? this.chantiers().filter((c) => codes.includes(c.code)) : this.chantiers();
   });
+
+  /** Les chantiers que l'étape équipes parcourt, un écran chacun : ceux qui comptent au moins une équipe. */
+  readonly chantiersAvecEquipes = computed(() => this.chantiersPourEquipes().filter((c) => c.equipes.length > 0));
+  readonly chantierCourant = computed<PaieChantierPeriode | null>(() => {
+    const chantiers = this.chantiersAvecEquipes();
+    return chantiers[Math.min(this.positionChantier(), chantiers.length - 1)] ?? null;
+  });
+  /** Chantiers encore à voir après celui affiché. */
+  readonly chantiersRestants = computed(() => Math.max(0, this.chantiersAvecEquipes().length - 1 - this.positionChantier()));
+  /** Chantiers dont au moins une équipe quitte la liste du chantier. */
+  readonly chantiersRegles = computed(() =>
+    this.chantiersAvecEquipes().filter((c) => c.equipes.some((e) => this.traitement(c.code, e.libelle) !== 'liste'))
+  );
 
   /** Les chantiers proposés, filtrés par la recherche de l'étape chantier. */
   readonly chantiersProposes = computed(() => {
@@ -151,13 +156,6 @@ export class PaieExportStore {
   });
   readonly indexEtape = computed(() => this.etapes().indexOf(this.etape()));
 
-  readonly chantiersFiltres = computed(() => {
-    const terme = this.recherche().trim().toLowerCase();
-    return this.chantiersPourEquipes().filter(
-      (c) => !terme || c.code.toLowerCase().includes(terme) || (c.libelle ?? '').toLowerCase().includes(terme)
-    );
-  });
-
   readonly nomFichier = computed(() => {
     const periode = this.periode() ?? '';
     return this.format() === 'PDF' ? `Paie_Rapport_BI_${periode}.pdf` : `Paie_Export_${periode}.xlsx`;
@@ -177,10 +175,9 @@ export class PaieExportStore {
     this.chantiers.set([]);
     this.marchesChoisis.set([]);
     this.sansVueEnsemble.set(false);
-    this.ouverts.set([]);
-    this.detail.set({});
+    this.traitements.set({});
     this.retirees.set({});
-    this.regroupement.set([]);
+    this.positionChantier.set(0);
   }
 
   choisirFormat(format: Format): void {
@@ -246,11 +243,29 @@ export class PaieExportStore {
       this.generer();
       return;
     }
+    if (courante === 'equipes') {
+      if (this.reunionIncomplete(this.chantierCourant())) {
+        this.erreur.set(REUNION_INCOMPLETE);
+        return;
+      }
+      if (this.chantiersRestants() > 0) {
+        this.afficherChantier(this.positionChantier() + 1, 'avant');
+        return;
+      }
+      if (this.retenirSurReunionIncomplete()) {
+        return;
+      }
+    }
     this.aller(this.etapes()[this.indexEtape() + 1], 'avant');
   }
 
   precedent(): void {
-    if (this.etat() === 'saisie' && this.indexEtape() > 0) {
+    if (this.etat() !== 'saisie') {
+      return;
+    }
+    if (this.etape() === 'equipes' && this.positionChantier() > 0) {
+      this.afficherChantier(this.positionChantier() - 1, 'arriere');
+    } else if (this.indexEtape() > 0) {
       this.aller(this.etapes()[this.indexEtape() - 1], 'arriere');
     }
   }
@@ -258,64 +273,110 @@ export class PaieExportStore {
   allerA(id: EtapeId): void {
     if (this.etat() === 'saisie' && this.etapes().indexOf(id) < this.indexEtape()) {
       this.aller(id, 'arriere');
+      this.positionChantier.set(0);
     }
   }
 
+  /** Arrivée sur l'étape équipes : par l'avant on commence au premier chantier, par le retour on retrouve le dernier. */
   private aller(id: EtapeId, sens: 'avant' | 'arriere'): void {
     this.erreur.set(null);
     this.sens.set(sens);
     this.etape.set(id);
+    if (id === 'equipes') {
+      this.positionChantier.set(sens === 'avant' ? 0 : Math.max(0, this.chantiersAvecEquipes().length - 1));
+    }
   }
 
-  // ---- Étape équipes ----
+  // ---- Étape équipes : un chantier par écran ----
 
-  rechercher(valeur: string): void {
-    this.recherche.set(valeur);
+  private afficherChantier(position: number, sens: 'avant' | 'arriere'): void {
+    this.erreur.set(null);
+    this.sens.set(sens);
+    this.positionChantier.set(position);
   }
 
-  /** Un chantier est « détaillé » dès qu'au moins une de ses équipes est cochée. */
-  estDetaille(code: string): boolean {
-    return this.equipesChoisies(code).length > 0;
+  /** Depuis le récapitulatif : rouvre l'étape équipes sur ce chantier. */
+  allerAuChantier(code: string): void {
+    const position = this.chantiersAvecEquipes().findIndex((c) => c.code === code);
+    if (this.etat() === 'saisie' && position >= 0) {
+      this.aller('equipes', 'arriere');
+      this.positionChantier.set(position);
+    }
   }
 
-  estOuvert(code: string): boolean {
-    return this.ouverts().includes(code);
-  }
-
-  /** Déplie ou replie la liste des équipes d'un chantier. Tous les chantiers figurent de toute façon dans l'export :
-   * ouvrir un chantier ne sert qu'à en choisir les équipes. Un chantier sans équipe ne se déplie pas. */
-  basculerOuverture(chantier: PaieChantierPeriode): void {
-    if (chantier.equipes.length === 0) {
+  /** Laisse les chantiers suivants tels quels (par défaut, une simple liste) et passe à l'étape d'après. */
+  passerChantiersRestants(): void {
+    if (this.etape() !== 'equipes' || this.etat() !== 'saisie' || this.chargementBloquant()) {
       return;
     }
-    this.ouverts.set(
-      this.estOuvert(chantier.code) ? this.ouverts().filter((c) => c !== chantier.code) : [...this.ouverts(), chantier.code]
-    );
+    if (this.reunionIncomplete(this.chantierCourant())) {
+      this.erreur.set(REUNION_INCOMPLETE);
+      return;
+    }
+    if (!this.retenirSurReunionIncomplete()) {
+      this.aller(this.etapes()[this.indexEtape() + 1], 'avant');
+    }
   }
 
-  equipesChoisies(code: string): string[] {
-    return this.detail()[code] ?? [];
+  /** Une réunion compte au moins deux équipes : le serveur refuse un groupe d'une seule. */
+  private reunionIncomplete(chantier: PaieChantierPeriode | null): boolean {
+    return chantier !== null && this.equipesReunies(chantier).length === 1;
+  }
+
+  /** Avant de quitter l'étape : ramène sur le premier chantier dont la réunion est incomplète, s'il y en a un. */
+  private retenirSurReunionIncomplete(): boolean {
+    const position = this.chantiersAvecEquipes().findIndex((c) => this.reunionIncomplete(c));
+    if (position < 0) {
+      return false;
+    }
+    this.afficherChantier(position, 'arriere');
+    this.erreur.set(REUNION_INCOMPLETE);
+    return true;
+  }
+
+  /** Présentation d'une équipe dans son chantier. En Excel la réunion n'existe pas : l'équipe reste dans la feuille du chantier. */
+  traitement(code: string, equipe: string): Traitement {
+    const choisi = this.traitements()[code]?.[equipe] ?? 'liste';
+    return choisi === 'reunie' && this.format() !== 'PDF' ? 'liste' : choisi;
+  }
+
+  choisirTraitement(code: string, equipe: string, traitement: Traitement): void {
+    this.erreur.set(null);
+    this.traitements.set({ ...this.traitements(), [code]: { ...this.traitements()[code], [equipe]: traitement } });
+    if (traitement !== 'separee') {
+      this.retirees.set({ ...this.retirees(), [code]: (this.retirees()[code] ?? []).filter((e) => e !== equipe) });
+    }
+  }
+
+  /** Raccourci : la même présentation pour toutes les équipes du chantier. */
+  toutTraiter(chantier: PaieChantierPeriode, traitement: Traitement): void {
+    this.erreur.set(null);
+    this.traitements.set({
+      ...this.traitements(),
+      [chantier.code]: Object.fromEntries(chantier.equipes.map((e) => [e.libelle, traitement]))
+    });
+    if (traitement !== 'separee') {
+      this.retirees.set({ ...this.retirees(), [chantier.code]: [] });
+    }
+  }
+
+  private equipesTraitees(chantier: PaieChantierPeriode, traitement: Traitement): PaieEquipePeriode[] {
+    return chantier.equipes.filter((e) => this.traitement(chantier.code, e.libelle) === traitement);
+  }
+
+  /** Libellés des équipes qui ont leur section (PDF) ou leur feuille (Excel) à part, dans l'ordre du chantier. */
+  equipesSeparees(chantier: PaieChantierPeriode): string[] {
+    return this.equipesTraitees(chantier, 'separee').map((e) => e.libelle);
+  }
+
+  /** Libellés des équipes réunies en une section commune (PDF), dans l'ordre du chantier : c'est l'ordre du titre. */
+  equipesReunies(chantier: PaieChantierPeriode): string[] {
+    return this.equipesTraitees(chantier, 'reunie').map((e) => e.libelle);
   }
 
   libelleEquipe(chantierCode: string, equipeCode: string): string {
     return this.chantiers().find((chantier) => chantier.code === chantierCode)?.equipes
       .find((equipe) => equipe.code === equipeCode)?.libelle ?? equipeCode;
-  }
-
-  basculerEquipe(code: string, equipe: string): void {
-    const choisies = this.equipesChoisies(code);
-    const suivantes = choisies.includes(equipe) ? choisies.filter((e) => e !== equipe) : [...choisies, equipe];
-    this.detail.set({ ...this.detail(), [code]: suivantes });
-    if (!suivantes.includes(equipe)) {
-      this.retirerDeLaListeRetiree(code, equipe);
-    }
-  }
-
-  toutesLesEquipes(chantier: PaieChantierPeriode, toutes: boolean): void {
-    this.detail.set({ ...this.detail(), [chantier.code]: toutes ? chantier.equipes.map((e) => e.libelle) : [] });
-    if (!toutes) {
-      this.retirees.set({ ...this.retirees(), [chantier.code]: [] });
-    }
   }
 
   estRetiree(code: string, equipe: string): boolean {
@@ -328,57 +389,43 @@ export class PaieExportStore {
     this.retirees.set({ ...this.retirees(), [code]: suivantes });
   }
 
-  private retirerDeLaListeRetiree(code: string, equipe: string): void {
-    this.retirees.set({ ...this.retirees(), [code]: (this.retirees()[code] ?? []).filter((e) => e !== equipe) });
-  }
-
-  // ---- Réunion d'équipes (PDF) ----
-
-  /** Coche ou décoche une équipe à réunir ; l'ordre de sélection donne l'ordre du titre (« Opérateurs + Chauffeurs »). */
-  basculerRegroupement(libelle: string): void {
-    const choisies = this.regroupement();
-    this.regroupement.set(choisies.includes(libelle) ? choisies.filter((e) => e !== libelle) : [...choisies, libelle]);
-  }
-
-  effacerRegroupement(): void {
-    this.regroupement.set([]);
-  }
-
-  /** Les équipes à réunir que ce chantier compte réellement, dans l'ordre choisi. */
-  equipesReuniesDe(chantier: PaieChantierPeriode): string[] {
-    if (this.format() !== 'PDF') {
-      return [];
+  /** Ce que le fichier contiendra pour ce chantier, dans l'ordre d'impression : sections du PDF ou feuilles de l'Excel. */
+  apercu(chantier: PaieChantierPeriode): { titre: string; effectif: number }[] {
+    const effectif = (equipes: PaieEquipePeriode[]) => equipes.reduce((somme, e) => somme + e.effectif, 0);
+    const separees = this.equipesTraitees(chantier, 'separee');
+    if (this.format() === 'EXCEL') {
+      const retirees = separees.filter((e) => this.estRetiree(chantier.code, e.libelle));
+      return [
+        { titre: `Feuille du chantier ${chantier.code}`, effectif: chantier.effectif - effectif(retirees) },
+        ...separees.map((e) => ({ titre: `Feuille de l'équipe ${e.libelle}`, effectif: e.effectif }))
+      ];
     }
-    const presentes = new Set(chantier.equipes.map((e) => e.libelle));
-    return this.regroupement().filter((libelle) => presentes.has(libelle));
-  }
-
-  /** Vrai si l'équipe est absorbée dans la section réunie de ce chantier (donc sans tableau ni section propre). */
-  equipeReunie(chantierCode: string, libelle: string): boolean {
-    const chantier = this.chantiers().find((c) => c.code === chantierCode);
-    return chantier !== undefined && this.equipesReuniesDe(chantier).length >= 2 && this.regroupement().includes(libelle);
-  }
-
-  texteRegroupement(): string {
-    const choisies = this.regroupement();
-    if (choisies.length === 0) {
-      return 'Aucune, chaque équipe garde sa section';
+    const reunies = this.equipesTraitees(chantier, 'reunie');
+    if (separees.length === 0 && reunies.length < 2) {
+      return [{ titre: 'Liste de tout le chantier, avec la colonne Équipe', effectif: chantier.effectif }];
     }
-    const titre = choisies.join(' + ');
-    const n = this.chantiersReunis().length;
-    return n === 0
-      ? `${titre} : aucun chantier ne compte au moins deux de ces équipes`
-      : `${titre} : une section commune dans ${n} chantier${n > 1 ? 's' : ''}`;
+    const groupe = reunies.length >= 2 ? reunies : [];
+    const reste = chantier.effectif - effectif(separees) - effectif(groupe);
+    return [
+      ...(groupe.length > 0 ? [{ titre: `Section ${groupe.map((e) => e.libelle).join(' + ')}`, effectif: effectif(groupe) }] : []),
+      ...separees.map((e) => ({ titre: `Section ${e.libelle}`, effectif: e.effectif })),
+      ...(reste > 0 ? [{ titre: 'Liste des autres employés, sans colonne Équipe', effectif: reste }] : [])
+    ];
   }
 
-  texteDetail(): string {
-    const parties = this.chantiersPourEquipes()
-      .filter((c) => this.equipesChoisies(c.code).length > 0)
-      .map((c) => {
-        const n = this.equipesChoisies(c.code).length;
-        return `${c.code} (${n} équipe${n > 1 ? 's' : ''})`;
-      });
-    return parties.length > 0 ? parties.join(', ') : 'Aucun, une section par chantier';
+  /** Résumé d'un chantier réglé, pour le récapitulatif. */
+  texteEquipes(chantier: PaieChantierPeriode): string {
+    const separees = this.equipesSeparees(chantier);
+    const reunies = this.equipesReunies(chantier);
+    const enListe = chantier.equipes.length - separees.length - reunies.length;
+    const excel = this.format() === 'EXCEL';
+    const retirees = separees.filter((e) => this.estRetiree(chantier.code, e)).length;
+    return [
+      reunies.length > 0 ? `Réunies : ${reunies.join(' + ')}` : '',
+      separees.length > 0 ? `${excel ? 'Feuille à part' : (separees.length > 1 ? 'Séparées' : 'Séparée')} : ${separees.join(', ')}` : '',
+      retirees > 0 ? `${retirees} retirée${retirees > 1 ? 's' : ''} de la feuille du chantier` : '',
+      enListe > 0 ? `${enListe} ${excel ? 'dans la feuille du chantier' : 'dans la liste'}` : ''
+    ].filter((partie) => partie !== '').join(' · ');
   }
 
   // ---- Étape matériel ----
@@ -536,18 +583,23 @@ export class PaieExportStore {
   }
 
   private construireEquipesParChantier(): Record<string, string[]> {
-    const codes = this.format() === 'PDF' ? new Set(this.chantiersPourEquipes().map((c) => c.code)) : null;
     return Object.fromEntries(
-      Object.entries(this.detail())
-        .map(([code, equipes]) => [code, equipes.filter((e) => !this.equipeReunie(code, e))] as const)
-        .filter(([code, equipes]) => equipes.length > 0 && (codes === null || codes.has(code)))
+      this.chantiersAvecEquipes()
+        .map((c) => [c.code, this.equipesSeparees(c)] as const)
+        .filter(([, equipes]) => equipes.length > 0)
     );
   }
 
-  /** Une même réunion pour tous les chantiers : chacun reçoit les seules équipes choisies qu'il compte (au moins deux). */
+  /** Chaque chantier envoie sa propre réunion : une section commune pour ses équipes réunies (au moins deux). */
   private construireRegroupements(): Record<string, string[][]> | null {
-    const reunions = Object.fromEntries(this.chantiersReunis().map((c) => [c.code, [this.equipesReuniesDe(c)]]));
-    return this.format() === 'PDF' && Object.keys(reunions).length > 0 ? reunions : null;
+    const reunions: Record<string, string[][]> = {};
+    for (const chantier of this.chantiersAvecEquipes()) {
+      const reunies = this.equipesReunies(chantier);
+      if (reunies.length >= 2) {
+        reunions[chantier.code] = [reunies];
+      }
+    }
+    return Object.keys(reunions).length > 0 ? reunions : null;
   }
 
   /** Lignes à envoyer : celles des tableaux imprimés dont la colonne n'est pas laissée vide et dont le nombre est renseigné. */
@@ -638,14 +690,12 @@ export class PaieExportStore {
     this.periode.set(null);
     this.format.set('PDF');
     this.chantiers.set([]);
-    this.recherche.set('');
     this.rechercheChantier.set('');
     this.marchesChoisis.set([]);
     this.sansVueEnsemble.set(false);
-    this.ouverts.set([]);
-    this.detail.set({});
+    this.traitements.set({});
     this.retirees.set({});
-    this.regroupement.set([]);
+    this.positionChantier.set(0);
     this.laisseVide.set({});
     this.nombres.set({});
     this.memoire.set({});
