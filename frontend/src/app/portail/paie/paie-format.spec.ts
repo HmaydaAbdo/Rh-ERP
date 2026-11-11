@@ -36,24 +36,24 @@ describe('paie-format', () => {
   });
 
   describe('formaterVariation', () => {
-    it('signe une hausse et arrondit à une décimale', () => {
-      expect(formaterVariation(3.14)).toBe('+3,1 %');
+    it('signe une hausse et arrondit à l’entier HALF_DOWN', () => {
+      expect(formaterVariation(3.14)).toBe('+3 %');
     });
 
     it('garde le signe moins d’une baisse', () => {
-      expect(formaterVariation(-0.84)).toBe('-0,8 %');
+      expect(formaterVariation(-0.84)).toBe('-1 %');
     });
 
     it('n’ajoute pas de signe à une variation nulle', () => {
-      expect(formaterVariation(0)).toBe('0,0 %');
-      expect(formaterVariation(0.04)).toBe('0,0 %');
+      expect(formaterVariation(0)).toBe('0 %');
+      expect(formaterVariation(0.04)).toBe('0 %');
     });
   });
 
   describe('formaterPart', () => {
-    it('donne un pourcentage à une décimale', () => {
-      expect(formaterPart(34.78)).toBe('34,8 %');
-      expect(formaterPart(100)).toBe('100,0 %');
+    it('donne un pourcentage entier', () => {
+      expect(formaterPart(34.78)).toBe('35 %');
+      expect(formaterPart(100)).toBe('100 %');
     });
   });
 });

@@ -11,6 +11,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 from staport.domains.common.fichier import texte_cellule
+from staport.domains.common.montant import arrondir_montant
 
 from .exceptions import HeuresSuppInvalide
 
@@ -79,7 +80,7 @@ def _nombre(valeur: object, adresse: str) -> Decimal | None:
             raise ValueError
     except (ValueError, InvalidOperation) as erreur:
         raise HeuresSuppInvalide(f"valeur P/H invalide en {adresse}.") from erreur
-    return nombre.normalize() if nombre != 0 else Decimal(0)
+    return arrondir_montant(nombre)
 
 
 def lire(nom: str | None, contenu: bytes) -> Fichier:
@@ -155,9 +156,9 @@ def _lire_feuille(feuille: Worksheet) -> Fichier:
             )
         cins.add(cin.upper())
         exposant = cast(int, heures.as_tuple().exponent)
-        chiffres = len(heures.as_tuple().digits)
-        if heures < 0 or -exposant > 1 or chiffres + exposant > 7:
-            raise HeuresSuppInvalide(f"Ligne {numero} : HS doit être positif ou nul et comporter au plus une décimale.")
+        chiffres = len(heures.as_tuple().digits) + max(exposant, 0)
+        if heures < 0 or chiffres > 8:
+            raise HeuresSuppInvalide(f"Ligne {numero} : HS doit être positif ou nul et ne pas dépasser 99 999 999.")
         lignes.append(LigneFichier(numero, nom_prenom, cin, heures))
     if not lignes:
         raise HeuresSuppInvalide("Le fichier ne contient aucune ligne d'heures supplémentaires.")

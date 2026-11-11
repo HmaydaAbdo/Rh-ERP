@@ -310,8 +310,7 @@ def test_le_comptage_donne_les_chiffres_de_l_analytique(
     assert [(t["min"], t["max"]) for t in resultat["parAge"]] == [(0, 25), (25, 35), (35, 45), (45, 55), (55, None)]
     assert [(t["min"], t["max"]) for t in resultat["parAnciennete"]] == [(0, 1), (1, 3), (3, 5), (5, 10), (10, None)]
     assert sum(t["effectif"] for t in resultat["parAnciennete"]) == 4
-    attendu = (date.today() - date(1990, 1, 1)).days / 365.2425
-    assert abs(resultat["ageMoyen"] - attendu) < 0.11
+    assert resultat["ageMoyen"] == 37
     assert (
         resultat["vue"]
         == {
@@ -529,12 +528,12 @@ def test_la_comparaison_rend_variations_statuts_et_extremes(
         6000.0,
         -2700.0,
     )
-    assert f1["variationPourcentage"] == -45.0 and f1["fonctionPrincipale"] is None
+    assert f1["variationPourcentage"] == -45 and f1["fonctionPrincipale"] is None
     assert par_fonction["total"] == {
         "masse": 3300.0,
         "masseReference": 6000.0,
         "variationMasse": -2700.0,
-        "variationPourcentage": -45.0,
+        "variationPourcentage": -45,
         "effectif": 2,
         "effectifReference": 3,
         "variationEffectif": -1,
@@ -559,8 +558,8 @@ def test_la_comparaison_rend_variations_statuts_et_extremes(
     )
     assert [g["code"] for g in chantiers["groupes"]] == [donnees.codes[0], donnees.codes[1]]
     c1, c2 = chantiers["groupes"]
-    assert (c1["variationMasse"], c1["variationPourcentage"], c1["variationEffectif"]) == (-1900.0, -63.3, -1)
-    assert (c2["variationMasse"], c2["variationPourcentage"]) == (-800.0, -26.7)
+    assert (c1["variationMasse"], c1["variationPourcentage"], c1["variationEffectif"]) == (-1900, -63, -1)
+    assert (c2["variationMasse"], c2["variationPourcentage"]) == (-800, -27)
     assert c2["fonctionPrincipale"] == {"libelle": donnees.libelles[0], "effectif": 1}
     assert c1["coutMoyen"] == 1100.0 and c1["coutMoyenReference"] == 1500.0
 
@@ -583,7 +582,7 @@ def test_un_groupe_absent_d_un_mois_est_nouveau_ou_disparu_et_classe_en_dernier(
     statuts = {g["code"]: g["statut"] for g in resultat["groupes"]}
     assert statuts == {donnees.codes[2]: "COMPARABLE", donnees.codes[0]: "DISPARU", donnees.codes[1]: "DISPARU"}
     assert resultat["groupes"][0]["code"] == donnees.codes[2] and resultat["groupes"][0]["variationMasse"] == 100.0
-    assert resultat["groupes"][0]["variationPourcentage"] == 6.7
+    assert resultat["groupes"][0]["variationPourcentage"] == 7
     assert all(g["masse"] is None and g["variationMasse"] is None for g in resultat["groupes"][1:])
     assert resultat["plusForteHausse"]["code"] == donnees.codes[2]
     assert resultat["plusForteBaisse"] is None

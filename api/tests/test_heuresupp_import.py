@@ -118,7 +118,7 @@ def test_l_analyse_calcule_sans_ecrire(plateforme: Plateforme, entetes: dict[str
     lignes = corps["lignes"]
     assert [(ligne["numeroLigne"], ligne["salaireHoraireDh"], ligne["montantDh"]) for ligne in lignes] == [
         (2, 10.0, 20.0),
-        (3, 10.0, 15.0),
+        (3, 10.0, 10.0),
         (4, 38.0, 114.0),
     ]
     assert (lignes[2]["stcOuSortie"], lignes[2]["stcDh"], lignes[2]["netAPayerDh"]) == (True, 114.0, 0.0)
@@ -171,11 +171,11 @@ def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
         "lignesZero": 0,
         "forfaitsSeuls": 0,
         "remplacements": 0,
-        "heuresTotales": 6.5,
-        "montantTotalDh": 149.0,
+        "heuresTotales": 6.0,
+        "montantTotalDh": 144.0,
         "stcTotalDh": 114.0,
         "forfaitTotalDh": 30.0,
-        "netTotalDh": 65.0,
+        "netTotalDh": 60.0,
     }
     assert _lignes_en_base(plateforme, jeu) == 3
     journal = _journal(plateforme, "HEURES_SUP_IMPORT")
@@ -281,12 +281,7 @@ def test_les_fichiers_invalides_sont_refuses_avec_les_messages_de_spring(
         (
             _classeur([["A", cin, -1]]),
             "heures.xlsx",
-            "Ligne 2 : HS doit être positif ou nul et comporter au plus une décimale.",
-        ),
-        (
-            _classeur([["A", cin, 1.25]]),
-            "heures.xlsx",
-            "Ligne 2 : HS doit être positif ou nul et comporter au plus une décimale.",
+            "Ligne 2 : HS doit être positif ou nul et ne pas dépasser 99 999 999.",
         ),
     ]
     for contenu, nom, message in cas:
@@ -295,7 +290,7 @@ def test_les_fichiers_invalides_sont_refuses_avec_les_messages_de_spring(
         assert reponse.json()["message"] == message
     inconnu_en_texte = _appel(plateforme, entetes, "/analyse", _classeur([["Heures 0", cin, "1,5 "]]), jeu)
     assert inconnu_en_texte.status_code == 200, inconnu_en_texte.text
-    assert inconnu_en_texte.json()["lignes"][0]["heuresSupplementaires"] == 1.5
+    assert inconnu_en_texte.json()["lignes"][0]["heuresSupplementaires"] == 1.0
 
 
 def test_une_entete_variante_et_des_lignes_vides_sont_acceptees(

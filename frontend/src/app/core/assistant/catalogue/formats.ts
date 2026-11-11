@@ -1,6 +1,6 @@
 export type FormatColonne = 'texte' | 'nombre' | 'montant' | 'periode';
 
-const NOMBRE = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+const NOMBRE = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const MONTANT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 
 /** Une valeur de cellule telle qu'on la lit à l'écran : nombres à la française, montants en MAD, vide en tiret. */

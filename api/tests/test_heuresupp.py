@@ -152,13 +152,13 @@ def test_creation_calcule_le_taux_le_montant_et_l_audit(
         10.0,
     )
     assert (corps["heuresSupplementaires"], corps["montantDh"], corps["stcDh"], corps["forfaitDh"]) == (
-        7.5,
-        75.0,
+        7.0,
+        70.0,
         0.0,
         20.0,
     )
     assert (corps["netAPayerDh"], corps["stcOuSortie"], corps["nomPrenom"], corps["codeChantier"]) == (
-        95.0,
+        90.0,
         False,
         "Heures 0",
         corps["codeChantier"],
@@ -179,7 +179,11 @@ def test_un_taux_exactement_a_la_moitie_descend_et_un_forfait_seul_n_a_pas_de_ta
     journalier = _creer(plateforme, entetes, jeu, 1, heuresSupplementaires="1.5").json()
     forfait = _creer(plateforme, entetes, jeu, 0, forfaitDh="500").json()
 
-    assert (journalier["salaireHoraireDh"], journalier["montantDh"]) == (10.0, 15.0)
+    assert (journalier["heuresSupplementaires"], journalier["salaireHoraireDh"], journalier["montantDh"]) == (
+        1.0,
+        10.0,
+        10.0,
+    )
     assert forfait["heuresSupplementaires"] is None
     assert (forfait["salaireHoraireDh"], forfait["salaireReferenceDh"], forfait["typeSalaireReference"]) == (
         None,
@@ -232,8 +236,9 @@ def test_creation_refuse_les_saisies_incoherentes_avec_les_messages_de_spring(
     inconnu = _creer(plateforme, entetes, jeu, 0, heuresSupplementaires="1", employeeId=999999999)
     assert inconnu.status_code == 404
     invalide = _creer(plateforme, entetes, jeu, 0, heuresSupplementaires="-1")
-    decimale = _creer(plateforme, entetes, jeu, 0, forfaitDh="1.5")
-    assert (invalide.status_code, decimale.status_code) == (400, 400)
+    decimale = _creer(plateforme, entetes, jeu, 1, forfaitDh="1.5")
+    assert invalide.status_code == 400
+    assert (decimale.status_code, decimale.json()["forfaitDh"]) == (200, 1.0)
 
 
 def test_un_bulletin_stc_donne_un_montant_porte_en_stc_sans_forfait(

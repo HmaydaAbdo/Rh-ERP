@@ -1,5 +1,6 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, effect, ElementRef, input, model, output, untracked, viewChild } from '@angular/core';
 import { FormValueControl } from '@angular/forms/signals';
+import { arrondirDemiBas } from '../../utils/arrondi-nombre';
 
 /** Espaces (normaux, insécables, fines insécables) qu'un format français place entre les milliers. */
 const SPACES = /[\s  ]/g;
@@ -7,7 +8,7 @@ const SPACES = /[\s  ]/g;
 /**
  * Saisie d'un nombre au format français (`1 234,50`) : `inputmode="decimal"` (clavier numérique sur mobile), le nombre est
  * mis en forme au départ du champ et repasse en saisie brute à l'arrivée. Valeur exposée : `number | null`, bornée par
- * `min` / `max`. Pour un montant, `minFractionDigits="2"`.
+ * `min` / `max` et arrondie en entier métier selon HALF_DOWN par défaut.
  */
 @Component({
   selector: 'stp-number-input',
@@ -46,7 +47,7 @@ export class NumberInputComponent implements FormValueControl<number | null> {
   readonly min = input<number | undefined>(undefined);
   readonly max = input<number | undefined>(undefined);
   readonly minFractionDigits = input(0);
-  readonly maxFractionDigits = input<number | null>(null);
+  readonly maxFractionDigits = input<number | null>(0);
 
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   /** Pendant la saisie, le texte du champ est celui de l'utilisateur : une valeur qu'il vient lui-même de produire ne le réécrit pas. */
@@ -105,17 +106,9 @@ export class NumberInputComponent implements FormValueControl<number | null> {
     const max = this.max();
     // En quittant le champ, une valeur est arrondie à sa précision d'affichage (0,5 inclus on descend, au-delà on monte) : les montants sont des entiers.
     const decimales = this.maxFractionDigits();
-    const arrondi = decimales === null ? value : this.arrondirDemiBas(value, decimales);
+    const arrondi = decimales === null ? value : arrondirDemiBas(value, decimales);
     const auMoins = min === undefined ? arrondi : Math.max(min, arrondi);
     return max === undefined ? auMoins : Math.min(max, auMoins);
-  }
-
-  /** 0,5 inclus on descend, au-delà on monte (même règle que le serveur, `arrondir_montant`). */
-  private arrondirDemiBas(value: number, decimales: number): number {
-    const echelle = 10 ** decimales;
-    const brut = value * echelle;
-    const plancher = Math.floor(brut);
-    return (brut - plancher > 0.5 + 1e-9 ? plancher + 1 : plancher) / echelle;
   }
 
   private render(): void {

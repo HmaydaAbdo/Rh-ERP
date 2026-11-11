@@ -11,7 +11,7 @@ from staport.domains.common.schemas import ModeleApi, Nombre, NonVide
 from staport.domains.employee.models import TypeSalaire
 from staport.domains.paie.periode import PeriodePaie
 
-Heures = Annotated[Decimal, Field(ge=0, max_digits=8, decimal_places=1)]
+Heures = Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=8, decimal_places=0)]
 Forfait = Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=14, decimal_places=0)]
 
 

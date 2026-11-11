@@ -18,7 +18,7 @@ def test_reponse_bulletin_respecte_le_contrat_de_la_page_paie() -> None:
             id=41,
             version=2,
             periode=202611,
-            nombre_jours_travailles=Decimal("25.50"),
+            nombre_jours_travailles=Decimal("26"),
             jours_recuperation_ouvrable=None,
             jours_recuperation_dimanche=None,
             salaire_mensuel=Decimal("4500.00"),
@@ -56,6 +56,7 @@ def test_modification_accepte_le_corps_envoye_par_l_interface_sans_employe_ni_pe
         }
     )
     assert corps.version == 2
+    assert corps.nombre_jours_travailles == 25
     assert corps.salaire_mensuel == 0
     assert "employee_id" not in corps.model_fields_set
     assert "periode" not in corps.model_fields_set

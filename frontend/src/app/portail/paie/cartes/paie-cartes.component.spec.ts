@@ -95,7 +95,7 @@ describe('PaieCartesComponent', () => {
     const [septembre, aout, juin] = Array.from(page.querySelectorAll('.app-entity')).map((c) => c.textContent ?? '');
 
     // Septembre se compare à août, le mois contigu.
-    expect(septembre).toContain('+12,5 %');
+    expect(septembre).toContain('+12 %');
     expect(septembre).toContain('+31');
     // Juillet n'a pas de paie : août et juin ne sont comparés à rien, jamais à un mois plus ancien.
     expect(aout).not.toContain('%');

@@ -9,7 +9,7 @@ from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Pla
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
-from .montant import arrondir_si_nombre
+from .montant import arrondir_si_nombre, serialiser_entier
 
 _COURRIEL = re.compile(r"^[^@\s]+@[^@\s]+$")
 
@@ -38,10 +38,15 @@ Courriel = Annotated[str, AfterValidator(_non_vide), AfterValidator(_courriel)]
 """Équivalent de `@NotBlank @Email` (syntaxe tolérante comme Hibernate Validator : `local@domaine`)."""
 
 
-Nombre = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
-"""Décimal exact en Python, nombre JSON sur HTTP comme Jackson (Pydantic sérialise `Decimal` en chaîne par défaut)."""
+Nombre = Annotated[
+    Decimal, BeforeValidator(arrondir_si_nombre), PlainSerializer(serialiser_entier, return_type=int, when_used="json")
+]
+"""Valeur numérique métier arrondie à l'entier (HALF_DOWN) à l'entrée et à la sortie."""
 
-Montant = Annotated[Nombre, BeforeValidator(arrondir_si_nombre)]
+Coordonnee = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
+"""Décimal géographique exact : latitude et longitude ne suivent pas la règle des entiers métier."""
+
+Montant = Nombre
 """Montant d'argent : arrondi automatiquement à l'entier de dirham (`common/montant.py`) avant les contraintes."""
 
 

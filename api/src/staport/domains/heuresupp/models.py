@@ -27,7 +27,7 @@ class HeureSupp(Base):
     salaire_reference: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
     type_salaire_reference: Mapped[str | None] = mapped_column(String(20))
     salaire_horaire: Mapped[Decimal | None] = mapped_column("s_h", Numeric(10, 0))
-    heures: Mapped[Decimal | None] = mapped_column("p_h", Numeric(8, 1))
+    heures: Mapped[Decimal | None] = mapped_column("p_h", Numeric(8, 0))
     montant: Mapped[Decimal] = mapped_column(Numeric(16, 0), nullable=False)
     est_stc_ou_sortie: Mapped[bool] = mapped_column(Boolean, nullable=False)
     stc_dh: Mapped[Decimal] = mapped_column(Numeric(16, 0), nullable=False)

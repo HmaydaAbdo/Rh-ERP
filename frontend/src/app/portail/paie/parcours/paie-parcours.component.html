@@ -22,8 +22,8 @@
         </div>
         <div class="app-kpi">
           <span>Jours travaillés</span>
-          <strong>{{ p.indicateurs.joursTravailles | number: '1.0-2' }}</strong>
-          <small>soit {{ p.indicateurs.joursTravailles / p.indicateurs.moisPayes | number: '1.0-1' }} par mois</small>
+          <strong>{{ p.indicateurs.joursTravailles | number: '1.0-0' }}</strong>
+          <small>soit {{ arrondirJoursMoyens(p.indicateurs.joursTravailles / p.indicateurs.moisPayes) | number: '1.0-0' }} par mois</small>
         </div>
         <div class="app-kpi">
           <span>Dernière paie</span>
@@ -72,7 +72,7 @@
             @switch (col.field) {
               @case ('periode') { <a class="app-link" [routerLink]="['/paie', mois.bulletinId]">{{ libellePeriode(mois.periode) }}</a> }
               @case ('equipe') { {{ mois.equipe ?? '—' }} }
-              @case ('nombreJoursTravailles') { {{ mois.nombreJoursTravailles | number: '1.0-2' }} }
+              @case ('nombreJoursTravailles') { {{ mois.nombreJoursTravailles | number: '1.0-0' }} }
               @case ('salaireMensuel') { {{ mois.salaireMensuel | number: '1.0-0' }} }
               @case ('salaireTotal') { <strong>{{ mois.salaireTotal | number: '1.0-0' }}</strong> }
               @default { {{ mois[col.field] ?? '' }} }
