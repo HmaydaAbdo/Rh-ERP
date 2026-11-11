@@ -252,7 +252,9 @@ class ServiceRapportPaie:
                 niveau_section = (
                     f"CHANTIER : {identifiant} · ÉQUIPE : {libelle}" if libelle else f"CHANTIER : {identifiant}"
                 )
-                avec_equipe = libelle is None or est_regroupe
+                # La colonne « Équipe » distingue les équipes d'une section réunie et celles d'un chantier laissé
+                # entier ; la liste du reste (chantier dont des équipes sont séparées ou réunies) ne l'affiche pas.
+                avec_equipe = est_regroupe or (libelle is None and not choix and not regroupements)
                 equipe_choisie = libelle is not None and not est_regroupe and libelle in choix
                 hauteur_derniere_analyse: float | None = None
                 materiel: tuple[str, float] | None = None

@@ -65,11 +65,21 @@ décroissant, avec les colonnes Montant de la paie (DH), Bulletins, Sortants (pe
 Total en bas de la dernière page. Les chapitres de chantier se suivent par code croissant, dans l'ordre naturel des nombres (C57, puis C108, puis C205), et non par montant de la paie. Chaque chantier possède ensuite son chapitre : indicateurs,
 évolutions, répartition et liste complète des employés.
 
-- Sans équipe détaillée : une section contient tous les employés du chantier; la répartition est présentée par fonction.
-- Avec équipes réunies (assistant d'export, une seule réunion pour tous les chantiers) : les équipes cochées forment une seule section « A + B » dans chaque chantier qui en compte au moins deux, sans tableau matériel propre.
-- Avec équipes détaillées : chaque équipe choisie a sa section; les autres employés sont regroupés dans le reste du chantier. La répartition du chantier conserve toutes ses équipes, même non détaillées.
+La présentation des équipes se règle **chantier par chantier** dans l'assistant d'export : l'étape « Équipes » affiche un
+chantier par écran (ceux qui comptent au moins une équipe) et chaque équipe y reçoit l'une de trois présentations. Un
+réglage ne vaut que pour son chantier : la même équipe peut être réunie dans un chantier et rester dans la liste d'un autre.
+
+| Présentation | Effet dans le chapitre du chantier |
+|---|---|
+| Dans la liste (par défaut) | Ses employés restent dans la liste du chantier. |
+| Séparée | L'équipe a sa propre section, avec son tableau matériel s'il existe. |
+| Réunie | Les équipes réunies du chantier (au moins deux) forment une seule section « A + B », sans tableau matériel propre. |
+
+- Chantier sans réglage : une section contient tous les employés du chantier, avec la colonne Équipe ; la répartition est présentée par fonction.
+- Chantier réglé : section réunie d'abord, puis une section par équipe séparée, puis la liste des autres employés. La répartition du chantier conserve toutes ses équipes.
 - Un employé apparaît exactement une fois dans le détail PDF, y compris s'il n'a pas d'équipe.
-- Le détail est trié par fonction puis nom. Il conserve nom, fonction, CIN, jours, récupérations, salaire, primes, total et observation. Le reste du chantier indique aussi l'équipe réelle.
+- Le détail est trié par fonction puis nom. Il conserve nom, fonction, CIN, jours, récupérations, salaire, primes, total et observation. La colonne Équipe n'apparaît que dans une section réunie et dans la liste d'un chantier sans réglage ; la liste des autres employés d'un chantier réglé ne l'affiche pas.
+- L'assistant refuse de quitter un chantier où une seule équipe est réunie. « Passer les autres chantiers » laisse les chantiers suivants sans réglage. Le récapitulatif résume chaque chantier réglé et le rouvre directement.
 - Chaque section conserve son récapitulatif par fonction. Le parc matériel est un tableau Matériel / Nombre, présent seulement pour une équipe dont le tableau concerné comporte une quantité positive ; les lignes sans quantité sont omises. Le rapport ne contient plus aucun graphique.
 
 Les équipes sont nommées par leur libellé. Les titres chantier présentent le nom suivi du code si le

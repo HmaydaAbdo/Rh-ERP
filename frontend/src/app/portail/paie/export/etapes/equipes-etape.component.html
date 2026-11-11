@@ -1,119 +1,91 @@
 <section class="app-wizard__panneau" [class.app-wizard__panneau--arriere]="store.sens() === 'arriere'">
-  <p class="app-wizard__consigne">
-    @if (store.format() === 'PDF') {
-      Un chantier détaillé reçoit un graphique par équipe et une section par équipe choisie.
-    } @else {
-      Chaque équipe choisie reçoit sa propre feuille, en plus de la feuille du chantier.
-    }
-  </p>
-  @if (store.format() === 'PDF' && store.equipesReunissables().length > 1) {
-    <div class="app-wizard__regroupement">
-      <div class="app-wizard__equipes-tete">
-        <span><strong>Réunir des équipes</strong> · s'applique à tous les chantiers</span>
-        @if (store.regroupement().length > 0) {
-          <button type="button" (click)="store.effacerRegroupement()">Effacer</button>
-        }
-      </div>
-      <p class="app-wizard__legende">
-        Cochez les équipes à présenter ensemble, par exemple Chauffeurs et Opérateurs : chaque chantier qui compte au moins deux
-        d'entre elles reçoit une seule section « équipe A + équipe B ». Aucun réglage chantier par chantier.
-      </p>
-      <div class="app-wizard__regroupement-choix">
-        @for (e of store.equipesReunissables(); track e.libelle) {
-          <span class="app-wizard__equipe" [class.app-wizard__equipe--choisie]="store.regroupement().includes(e.libelle)">
-            <button type="button" (click)="store.basculerRegroupement(e.libelle)" [attr.aria-pressed]="store.regroupement().includes(e.libelle)">
-              {{ e.libelle }}<small>{{ e.chantiers }} chantier{{ e.chantiers > 1 ? 's' : '' }}</small>
-            </button>
-          </span>
-        }
-      </div>
-      @if (store.regroupement().length > 0) {
-        <p class="app-wizard__legende app-wizard__regroupement-resume" role="status">{{ store.texteRegroupement() }}</p>
-      }
-    </div>
-  }
-  <input
-    type="search"
-    class="stp-input mb-2"
-    placeholder="Rechercher un chantier"
-    aria-label="Rechercher un chantier"
-    [value]="store.recherche()"
-    (input)="store.rechercher($any($event.target).value)"
-  />
   @if (store.chantiersEnCours()) {
-    <p class="app-wizard__legende">Chargement des chantiers…</p>
-  }
-  <div class="app-wizard__chantiers">
-    @for (c of store.chantiersFiltres(); track c.code) {
-      <div class="app-wizard__chantier" [class.app-wizard__chantier--actif]="store.estDetaille(c.code)">
-        <button
-          type="button"
-          class="app-wizard__chantier-tete"
-          [attr.aria-expanded]="store.estOuvert(c.code)"
-          [disabled]="c.equipes.length === 0"
-          (click)="store.basculerOuverture(c)"
-        >
+    <p class="app-wizard__legende" role="status">Chargement des chantiers…</p>
+  } @else if (store.chantierCourant(); as courant) {
+    <!-- Une seule entrée, suivie par son code : changer de chantier recrée l'écran et rejoue son entrée. -->
+    @for (c of [courant]; track c.code) {
+      <div class="app-cas">
+        <header class="app-cas__entete">
+          <div class="app-presentation__chantier">
+            <h3>{{ c.code }} {{ c.libelle }}</h3>
+            <p>{{ c.effectif }} employés · {{ c.equipes.length }} équipe{{ c.equipes.length > 1 ? 's' : '' }}</p>
+          </div>
+          <span class="app-cas__position">Chantier {{ store.positionChantier() + 1 }} sur {{ store.chantiersAvecEquipes().length }}</span>
+        </header>
+        <progress
+          class="app-cas__progres"
+          [max]="store.chantiersAvecEquipes().length"
+          [value]="store.positionChantier() + 1"
+          aria-label="Avancement dans les chantiers"
+        ></progress>
+
+        <p class="app-wizard__consigne app-presentation__consigne">
+          @if (store.format() === 'PDF') {
+            Une équipe séparée a sa propre section. Les équipes réunies partagent une section. Les autres restent dans la liste du
+            chantier, sans colonne Équipe.
+          } @else {
+            Une équipe en feuille à part reçoit sa propre feuille, en plus de la feuille du chantier.
+          }
+        </p>
+
+        <div class="app-wizard__equipes-tete">
+          <span>Équipes de ce chantier</span>
           <span>
-            <span class="app-wizard__code">{{ c.code }}</span>
-            <span class="app-wizard__meta">
-              {{ c.libelle ? c.libelle + ' · ' : '' }}{{ c.effectif }} employés ·
-              {{ c.equipes.length > 0 ? c.equipes.length + ' équipes' : 'aucune équipe' }}
-            </span>
-          </span>
-          <span class="app-wizard__chantier-etat">
-            @if (store.estDetaille(c.code)) {
-              <span class="app-wizard__badge">{{ store.equipesChoisies(c.code).length }} / {{ c.equipes.length }} équipes</span>
-            }
-            @if (c.equipes.length > 0) {
-              <stp-icon name="chevron-down" [class.app-wizard__chevron--ouvert]="store.estOuvert(c.code)" />
+            Appliquer à toutes :
+            @for (o of store.optionsTraitement(); track o.valeur) {
+              <button type="button" (click)="store.toutTraiter(c, o.valeur)">{{ o.libelle }}</button>
             }
           </span>
-        </button>
-        <div class="app-wizard__deplie" [class.app-wizard__deplie--ouvert]="store.estOuvert(c.code)">
-          <div>
-            <div class="app-wizard__equipes">
-              <div class="app-wizard__equipes-tete">
-                <span>Équipes à détailler</span>
-                <span>
-                  <button type="button" (click)="store.toutesLesEquipes(c, true)">Toutes</button>
-                  <button type="button" (click)="store.toutesLesEquipes(c, false)">Aucune</button>
-                </span>
-              </div>
-              <div class="app-wizard__pastilles">
-                @for (e of c.equipes; track e.id) {
-                  <span class="app-wizard__equipe" [class.app-wizard__equipe--choisie]="store.equipesChoisies(c.code).includes(e.libelle)">
-                    <button type="button" (click)="store.basculerEquipe(c.code, e.libelle)" [attr.aria-pressed]="store.equipesChoisies(c.code).includes(e.libelle)">
-                      {{ e.libelle }}<small>{{ e.effectif }}</small>
-                    </button>
-                    @if (store.format() === 'EXCEL' && store.equipesChoisies(c.code).includes(e.libelle)) {
-                      <button
-                        type="button"
-                        class="app-wizard__retrait"
-                        [class.app-wizard__retrait--actif]="store.estRetiree(c.code, e.libelle)"
-                        [attr.aria-pressed]="store.estRetiree(c.code, e.libelle)"
-                        [attr.aria-label]="'Retirer ' + e.libelle + ' de la feuille du chantier'"
-                        title="Retirer cette équipe de la feuille du chantier"
-                        (click)="store.basculerRetrait(c.code, e.libelle)"
-                      >
-                        <stp-icon name="eye-off" />
-                      </button>
+        </div>
+
+        <ul class="app-presentation__equipes">
+          @for (e of c.equipes; track e.id) {
+            <li class="app-presentation__equipe">
+              <span class="app-presentation__nom" [id]="'equipe-' + c.id + '-' + e.id">
+                {{ e.libelle }}
+                <small>{{ e.effectif }} employé{{ e.effectif > 1 ? 's' : '' }}</small>
+              </span>
+              <div class="app-segments" role="radiogroup" [attr.aria-labelledby]="'equipe-' + c.id + '-' + e.id">
+                @for (o of store.optionsTraitement(); track o.valeur) {
+                  <label class="app-segments__option" [class.app-segments__option--choisie]="store.traitement(c.code, e.libelle) === o.valeur">
+                    <input
+                      type="radio"
+                      [name]="'presentation-' + c.id + '-' + e.id"
+                      [checked]="store.traitement(c.code, e.libelle) === o.valeur"
+                      (change)="store.choisirTraitement(c.code, e.libelle, o.valeur)"
+                    />
+                    @if (store.traitement(c.code, e.libelle) === o.valeur) {
+                      <stp-icon name="check" />
                     }
-                  </span>
+                    <span>{{ o.libelle }}</span>
+                  </label>
                 }
               </div>
-              @if (store.format() === 'EXCEL') {
-                <p class="app-wizard__legende">
-                  L'icône œil barré retire l'équipe de la feuille du chantier : elle garde sa propre feuille.
-                </p>
+              @if (store.format() === 'EXCEL' && store.traitement(c.code, e.libelle) === 'separee') {
+                <label class="app-wizard__case app-presentation__retrait">
+                  <input type="checkbox" [checked]="store.estRetiree(c.code, e.libelle)" (change)="store.basculerRetrait(c.code, e.libelle)" />
+                  <span>Retirer ses employés de la feuille du chantier</span>
+                </label>
               }
-            </div>
-          </div>
+            </li>
+          }
+        </ul>
+
+        <p class="app-wizard__erreur" role="alert">{{ store.erreur() }}</p>
+
+        <div class="app-presentation__apercu" role="status">
+          <strong>{{ store.format() === 'PDF' ? 'Dans le rapport, pour ce chantier' : 'Dans le classeur, pour ce chantier' }}</strong>
+          <ol>
+            @for (s of store.apercu(c); track s.titre) {
+              <li>{{ s.titre }} <small>{{ s.effectif }} employé{{ s.effectif > 1 ? 's' : '' }}</small></li>
+            }
+          </ol>
         </div>
       </div>
-    } @empty {
-      @if (!store.chantiersEnCours()) {
-        <p class="app-wizard__legende">Aucun chantier ne correspond à cette recherche.</p>
-      }
     }
-  </div>
+  } @else {
+    <p class="app-wizard__vide">
+      Aucun chantier de ce mois n'a d'équipe : chaque chantier garde une seule liste d'employés. Vous pouvez continuer.
+    </p>
+  }
 </section>

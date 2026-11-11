@@ -170,7 +170,7 @@ test.describe('Paie', () => {
     await dialogue.getByRole('checkbox', { name: /C168/ }).check();
     await expect(dialogue.getByRole('checkbox', { name: /Sans vue d.ensemble/ })).toBeChecked();
     await dialogue.getByRole('button', { name: 'Continuer' }).click(); // équipes : le chantier seul
-    await expect(dialogue.getByText('C168', { exact: true })).toBeVisible();
+    await expect(dialogue.getByRole('heading', { name: 'C168 Nador' })).toBeVisible();
     await dialogue.getByRole('button', { name: 'Continuer' }).click(); // récapitulatif
 
     await expect(dialogue.getByText('C168 — Nador')).toBeVisible();
@@ -179,6 +179,56 @@ test.describe('Paie', () => {
 
     await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({ periode: '2026-08', chantierIds: [3], sansVueEnsemble: true });
   });
+
+  test('règle la présentation des équipes chantier par chantier : séparée, réunie ou dans la liste', async ({ page }) => {
+    const equipe = (id: number, code: string, libelle: string, effectif: number) => ({ id, code, libelle, effectif, masse: effectif * 4000 });
+    const chantiers = [
+      { id: 3, code: 'C168', libelle: 'Nador', effectif: 40, masse: 160000, equipes: [equipe(5, 'CH', 'Chauffeurs', 14), equipe(6, 'OP', 'Opérateurs', 11), equipe(7, 'LABO', 'Laboratoire', 6)] },
+      { id: 4, code: 'C196', libelle: 'Marrakech', effectif: 22, masse: 88000, equipes: [equipe(5, 'CH', 'Chauffeurs', 9), equipe(6, 'OP', 'Opérateurs', 8)] }
+    ];
+    const mock = await mockApi(page, { username: 'paie', permissions: DROITS }, {
+      ...routes(), 'POST /paie/chantiers/search': () => chantiers, 'GET /paie/chantiers': () => chantiers, 'POST /paie/report/pdf': () => ({})
+    });
+    await page.goto('/paie');
+
+    await page.getByRole('button', { name: 'Exporter' }).click();
+    const dialogue = page.getByRole('dialog', { name: 'Exporter la paie' });
+    const continuer = dialogue.getByRole('button', { name: 'Continuer' });
+    await continuer.click(); // mois
+    await continuer.click(); // format PDF
+    await continuer.click(); // marchés : tous
+
+    await expect(dialogue.getByRole('heading', { name: 'C168 Nador' })).toBeVisible();
+    await expect(dialogue.getByText('Chantier 1 sur 2')).toBeVisible();
+    await dialogue.getByRole('radiogroup', { name: /Chauffeurs/ }).getByRole('radio', { name: 'Réunie' }).check();
+    await continuer.click();
+    await expect(dialogue.getByRole('alert').filter({ hasText: 'au moins deux' })).toBeVisible();
+
+    await dialogue.getByRole('radiogroup', { name: /Opérateurs/ }).getByRole('radio', { name: 'Réunie' }).check();
+    await dialogue.getByRole('radiogroup', { name: /Laboratoire/ }).getByRole('radio', { name: 'Séparée' }).check();
+    await expect(dialogue.getByText('Section Chauffeurs + Opérateurs')).toBeVisible();
+    await expect(dialogue.getByText('Liste des autres employés, sans colonne Équipe')).toBeVisible();
+    for (const theme of ['light', 'dark'] as const) {
+      await page.evaluate((valeur) => document.documentElement.setAttribute('data-theme', valeur), theme);
+      const accessibilite = await new AxeBuilder({ page }).include('[role=dialog]').analyze();
+      expect(accessibilite.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+    }
+
+    await continuer.click();
+    await expect(dialogue.getByRole('heading', { name: 'C196 Marrakech' })).toBeVisible();
+    await dialogue.getByRole('radiogroup', { name: /Chauffeurs/ }).getByRole('radio', { name: 'Séparée' }).check();
+    await continuer.click(); // récapitulatif : aucun tableau matériel
+
+    await expect(dialogue.getByText('Réunies : Chauffeurs + Opérateurs · Séparée : Laboratoire')).toBeVisible();
+    await expect(dialogue.getByText('Séparée : Chauffeurs · 1 dans la liste')).toBeVisible();
+    await dialogue.getByRole('button', { name: 'Générer le PDF' }).click();
+
+    await expect.poll(() => mock.bodies['POST /paie/report/pdf']?.[0]).toMatchObject({
+      equipesParChantier: { C168: ['Laboratoire'], C196: ['Chauffeurs'] },
+      regroupementsEquipesParChantier: { C168: [['Chauffeurs', 'Opérateurs']] }
+    });
+  });
+
   test('importe la paie du mois écoulé : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-08T09:00:00')); // le mois proposé est le mois civil précédent : septembre
     const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim', typeSalaire: 'MENSUEL',

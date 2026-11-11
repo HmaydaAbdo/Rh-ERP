@@ -378,7 +378,7 @@ renvoie `value` et `totalRecords`) ou mode mémoire (tri et pagination faits par
 `portail/paie/export/` : dialogue en étapes guidées (mois, format, chantier en PDF, équipes, matériel conditionnel, génération). La coque
 (`paie-export-wizard.component.*`) porte la fenêtre, le bandeau et le pied ; `paie-export.store.ts` porte l'état (signaux) et la logique ;
 chaque étape est un composant de `etapes/`. Les étapes sont une liste calculée (chantier seulement en PDF, matériel seulement si un tableau
-sera imprimé). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
+sera imprimé). L'étape équipes affiche un chantier par écran ; chaque équipe se règle par un choix exclusif en segments (classe partagée `app-segments`, boutons radio natifs) : dans la liste, séparée ou réunie (PDF), feuille du chantier ou feuille à part (Excel). Détail fonctionnel : `docs/report/README.md`, « Assistant d'export ».
 
 **Budget de style** : `angular.json` plafonne le SCSS d'un composant à 8 ko (avertissement) et 16 ko (erreur) — relevé
 des 2/4 ko par défaut le 2026-10-03 pour cet assistant (~15,7 ko avant le 2026-10-10). **Résolu** : l'assistant est découpé en une coque, un store (`paie-export.store.ts`, fourni par la coque) et

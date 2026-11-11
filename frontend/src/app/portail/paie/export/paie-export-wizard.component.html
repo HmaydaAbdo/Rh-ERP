@@ -57,7 +57,11 @@
         <button stp-button variant="text" icon="arrow-left" type="button" (click)="store.precedent()" [style.visibility]="store.indexEtape() > 0 && store.etat() === 'saisie' ? 'visible' : 'hidden'">Retour</button>
         <span class="app-wizard__indice">
           @if (store.etape() === 'equipes' && store.etat() === 'saisie') {
-            Vous pouvez continuer sans rien choisir
+            @if (store.chantiersRestants() > 0) {
+              <button type="button" class="app-wizard__lien" (click)="store.passerChantiersRestants()">Passer les autres chantiers</button>
+            } @else {
+              Vous pouvez continuer sans rien choisir
+            }
           }
         </span>
         <button stp-button type="button" [icon]="store.etape() === 'recap' ? 'download' : 'arrow-right'" [loading]="store.etat() === 'generation'" [disabled]="store.chargementBloquant()" (click)="store.suivant()">{{ store.etape() === 'recap' ? (store.format() === 'PDF' ? 'Générer le PDF' : 'Générer l\'Excel') : 'Continuer' }}</button>

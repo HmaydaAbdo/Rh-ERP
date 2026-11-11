@@ -92,6 +92,10 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert html.count('<td class="nom-prenom">') == 3
     assert '<td class="equipe">CH</td>' in html
     assert '<td class="equipe">OP</td>' in html
+    # La liste du reste (ici l'équipe « Autre ») ne porte pas de colonne Équipe : seule la section réunie la garde.
+    assert '<td class="equipe">Autre</td>' not in html
+    html_entier = rendre(PaieRapportRequete(periode="2026-10"), lignes, [])
+    assert '<td class="equipe">Autre</td>' in html_entier
     assert "Page 1 / 8" in html and "Page 8 / 8" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "SORTANTS" in html
@@ -104,6 +108,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
         {(1, 1): [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
     )
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
+    assert '<td class="equipe">' not in html_equipe
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "<th>FONCTION</th>" in html_equipe and "<svg" not in html_equipe
     assert "SORTANTS" in html_equipe

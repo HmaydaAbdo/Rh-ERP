@@ -21,7 +21,7 @@ describe('PaieExportEtapeRecapComponent', () => {
       ['Format', 'Rapport PDF de synthèse'],
       ['Marchés', 'Tous les marchés'],
       ['Vue d\'ensemble', 'Incluse'],
-      ['Détail par équipe', 'Aucun, une section par chantier']
+      ['Équipes', 'Aucun réglage : une liste par chantier']
     ]);
     expect(racine.querySelector('.app-wizard__fichier code')?.textContent).toBe('Paie_Rapport_BI_2026-08.pdf');
   });
@@ -32,8 +32,9 @@ describe('PaieExportEtapeRecapComponent', () => {
     store.choisirFormat('EXCEL');
     await stabiliser(fixture);
 
-    expect(lignes(racine).map((l) => l[0])).toEqual(['Période', 'Format', 'Détail par équipe']);
+    expect(lignes(racine).map((l) => l[0])).toEqual(['Période', 'Format', 'Équipes']);
     expect(lignes(racine)[1][1]).toBe('Classeur Excel détaillé');
+    expect(lignes(racine)[2][1]).toBe('Aucun réglage : une feuille par chantier');
     expect(racine.querySelector('.app-wizard__fichier code')?.textContent).toBe('Paie_Export_2026-08.xlsx');
   });
 
@@ -47,16 +48,27 @@ describe('PaieExportEtapeRecapComponent', () => {
     expect(lignes(racine)[3]).toEqual(['Vue d\'ensemble', 'Retirée : le rapport commence par le premier chantier']);
   });
 
-  it('liste les équipes détaillées et les tableaux de matériel imprimés', async () => {
+  it('résume chaque chantier réglé sur sa ligne, puis les tableaux de matériel imprimés', async () => {
     const { fixture, store, racine } = await monter();
     store.tableauxMateriel.set(TABLEAUX);
-    store.basculerEquipe('C168', 'Chauffeurs');
+    store.choisirTraitement('C168', 'Chauffeurs', 'separee');
     store.saisirNombre('Camion benne', '4');
     await stabiliser(fixture);
 
-    const detail = lignes(racine).find((l) => l[0] === 'Détail par équipe');
-    expect(detail?.[1]).toBe('C168 (1 équipe)');
+    expect(lignes(racine).filter((l) => l[0]?.startsWith('Équipes'))).toEqual([['Équipes C168', 'Séparée : Chauffeurs · 1 dans la liste']]);
     expect(lignes(racine).at(-1)).toEqual(['Camions C168 (C168)', '1 ligne renseignée sur 2 (1 nouvelle) · total 4']);
+  });
+
+  it('« Modifier » d’un chantier rouvre l’étape équipes sur ce chantier', async () => {
+    const { fixture, store, racine } = await monter();
+    store.choisirTraitement('C196', 'Labo', 'separee');
+    store.etape.set('recap');
+    await stabiliser(fixture);
+
+    (racine.querySelector('button[aria-label="Modifier les équipes de C196"]') as HTMLButtonElement).click();
+
+    expect(store.etape()).toBe('equipes');
+    expect(store.chantierCourant()?.code).toBe('C196');
   });
 
   it('chaque ligne offre « Modifier » qui revient à l’étape correspondante', async () => {
