@@ -157,9 +157,10 @@ def enregistrer(
         title="Indicateurs de paie d'un mois",
         annotations=LECTURE_SEULE,
         description=(
-            "Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : masse salariale "
-            "en dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, soldes de "
-            "tout compte (STC, départs payés) et leur montant. Rend aussi les mêmes chiffres pour le mois précédent "
+            "Chiffres clés de la paie d'un mois sur un périmètre (chantiers, équipes, fonctions) : montant de la "
+            "paie en dirhams, effectif payé (nombre de bulletins), coût moyen par employé, nombre de chantiers, "
+            "sortants (STC, départs payés, en nombre de personnes) et leur montant « STC (DH) ». Rend aussi les "
+            "mêmes chiffres pour le mois précédent "
             "et tous les chantiers du périmètre, classés par masse. C'est l'outil par défaut pour « combien coûte / "
             "combien d'employés payés ». Pour l'évolution sur plusieurs mois utiliser `paie_evolution` ; pour les "
             "arrivées et départs, `paie_mouvements` ; pour détailler par chantier, équipe ou fonction, "
@@ -197,7 +198,8 @@ def enregistrer(
         annotations=LECTURE_SEULE,
         description=(
             "Liste les mois de paie importés, du plus récent au plus ancien, avec pour chacun le nombre de "
-            "bulletins, le nombre de chantiers, la masse salariale en dirhams et les soldes de tout compte (STC), "
+            "bulletins, le nombre de chantiers, le montant de la paie en dirhams, les sortants et leur montant « "
+            "STC (DH) », "
             "sur un périmètre. À utiliser pour savoir quels mois existent ou quel est le dernier mois de paie ; tous "
             "les mois importés sont rendus. Pour les chiffres d'un mois, utiliser `paie_indicateurs`."
         ),
@@ -232,11 +234,12 @@ def enregistrer(
         title="Paie par chantier, équipe ou fonction",
         annotations=LECTURE_SEULE,
         description=(
-            "Répartit la paie d'un mois par chantier, par équipe ou par fonction : masse salariale en dirhams, "
-            "effectif payé et soldes de tout compte (STC) de chaque groupe. Tous les groupes sont rendus. De la plus "
+            "Répartit la paie d'un mois par chantier, par équipe ou par fonction : montant de la paie en dirhams, "
+            "effectif payé, sortants et « STC (DH) » de chaque groupe. Tous les groupes sont rendus. De la plus "
             "grosse masse à la plus petite par défaut ; `tri` (MASSE, EFFECTIF, STC, STC_MONTANT, LIBELLE, CODE) et "
-            "`sens` (ASC ou DESC) donnent « le chantier le moins cher », « les équipes avec le plus de STC ». À "
-            "utiliser pour « quel chantier coûte le plus », « masse par équipe ». Pour les effectifs sans montants, "
+            "`sens` (ASC ou DESC) donnent « le chantier le moins cher », « les équipes avec le plus de sortants ». À "
+            "utiliser pour « quel chantier coûte le plus », « montant de la paie par équipe ». Pour les "
+            "effectifs sans montants, "
             "`employes_regrouper` ; pour un seul chiffre global, `paie_indicateurs`."
         ),
     )
@@ -291,8 +294,9 @@ def enregistrer(
         annotations=LECTURE_SEULE,
         description=(
             "Série mensuelle de la paie d'un périmètre, du mois le plus ancien au plus récent, jusqu'au mois donné : "
-            "masse salariale en dirhams, effectif payé, soldes de tout compte (STC) et leur montant. À utiliser pour "
-            "les tendances (« la masse augmente-t-elle ? »). Pour comparer seulement deux mois, `paie_indicateurs` "
+            "montant de la paie en dirhams, effectif payé, sortants et leur montant « STC (DH) ». À utiliser pour "
+            "les tendances (« le montant de la paie augmente-t-il ? »). Pour comparer seulement deux mois, "
+            "`paie_indicateurs` "
             "rend déjà le mois précédent ; toute la série historique est rendue."
         ),
     )
@@ -334,8 +338,9 @@ def enregistrer(
         title="Comparer la paie de deux mois",
         annotations=LECTURE_SEULE,
         description=(
-            "Compare la paie de deux mois, groupe par groupe (par chantier, équipe ou fonction) : masse salariale, "
-            "effectif et coût moyen de chaque mois, variation de la masse en dirhams et en pourcentage, variation de "
+            "Compare la paie de deux mois, groupe par groupe (par chantier, équipe ou fonction) : montant de la paie, "
+            "effectif et coût moyen de chaque mois, variation du montant de la paie en dirhams et en "
+            "pourcentage, variation de "
             "l'effectif, et la fonction la plus représentée de chaque chantier ou équipe. Tous les calculs sont faits "
             "ici : ne calcule jamais toi-même un écart, un pourcentage ou une moyenne, cite les valeurs rendues. "
             "`periode` est le mois récent (absent = dernier mois de paie) et `periodeReference` le mois de "

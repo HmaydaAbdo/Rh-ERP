@@ -230,7 +230,7 @@ describe('PaieFormComponent', () => {
       expect(service.create).toHaveBeenCalledWith(
         expect.objectContaining({ equipeId: 3, joursRecuperationOuvrable: 1, primeRoulageDimanche: 80, observation: 'Heures de nuit' })
       );
-      expect(racine().textContent).toContain("met aussi à jour l'équipe sur la fiche de l'employé");
+      expect(racine().textContent).toContain("reprend l'équipe, le chantier et la fonction du dernier bulletin");
     });
 
     it('enregistre le choix Orphelins sans équipe et n’envoie pas son identifiant synthétique', async () => {

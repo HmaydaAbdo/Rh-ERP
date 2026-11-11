@@ -112,9 +112,12 @@ async def _verifier_referentiels(url: str) -> None:
             assert corrigee.pret
             assert (await service.importer(session, valide, 202611, False, PaieImportDeparts())).crees == 1
             with pytest.raises(
-                ErreurImportPaie, match="Le mois ne peut pas être importé : La paie de 2026-11 existe déjà"
+                ErreurImportPaie, match="La période demande confirmation : La paie de 2026-11 existe déjà"
             ):
                 await service.importer(session, valide, 202611, False, PaieImportDeparts())
+            # confirmé, le même fichier met à jour le bulletin existant au lieu d'en créer un second
+            rejeu = await service.importer(session, valide, 202611, False, PaieImportDeparts(), periode_confirmee=True)
+            assert (rejeu.crees, rejeu.mis_a_jour) == (0, 1)
 
         async with sessions() as session:
             etat = (

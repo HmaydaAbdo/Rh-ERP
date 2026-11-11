@@ -9,7 +9,7 @@ export type MesureGraphique = 'masse' | 'effectif';
 /** Mesures disponibles dans l'évolution : les montants et les effectifs restent sur un seul axe à la fois. */
 export type MesureEvolution = MesureGraphique | 'stc' | 'stcMontant';
 
-/** Couleur d'une mesure : la masse salariale est toujours bleue, les bulletins toujours orange (jetons `--chart-1` et `--chart-2`). */
+/** Couleur d'une mesure : le montant de la paie est toujours bleue, les bulletins toujours orange (jetons `--chart-1` et `--chart-2`). */
 export function couleurMesure(mesure: MesureGraphique): string {
   return jeton(mesure === 'masse' ? '--chart-1' : '--chart-2');
 }
@@ -34,7 +34,7 @@ export function libelleEvolutionMesure(mesure: MesureEvolution): string {
   switch (mesure) {
     case 'masse': return 'Masse (DH)';
     case 'effectif': return 'Bulletins de paie';
-    case 'stc': return 'STC (bulletins)';
+    case 'stc': return 'Sortants';
     case 'stcMontant': return 'STC (DH)';
   }
 }

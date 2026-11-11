@@ -16,7 +16,7 @@ export function moduleFunction(functionService: FunctionService): ModulePerimetr
     ordreAnalytique: ['PAIE'],
     sourcesAnalytique: ['PAIE'],
     vueEffectifParDimension: true,
-    introAnalytique: 'Répartition de la masse salariale et de l’effectif payé par fonction, puis évolution mensuelle.',
+    introAnalytique: 'Répartition du montant de la paie et de l’effectif payé par fonction, puis évolution mensuelle.',
     periodePaieRecenteFixe: true,
     sansRaccourciCartes: true,
     sansLienEmployes: true,

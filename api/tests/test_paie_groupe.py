@@ -58,6 +58,7 @@ def jeu(plateforme: Plateforme) -> Iterator[Jeu]:
     with plateforme.moteur.begin() as c:
         c.execute(text("DELETE FROM paie WHERE chantier_id = :c"), {"c": chantier})
         c.execute(text("DELETE FROM paie WHERE employee_id = ANY(:e)"), {"e": employes})
+        c.execute(text("DELETE FROM employe_sortie WHERE employee_id = ANY(:e)"), {"e": employes})
         c.execute(text("DELETE FROM employe WHERE id = ANY(:e)"), {"e": employes})
         c.execute(text("DELETE FROM chantier WHERE id = :c"), {"c": chantier})
         c.execute(text("DELETE FROM fonction WHERE id = :f"), {"f": fonction})
@@ -327,26 +328,39 @@ def test_creation_rejette_les_references_inexistantes_avec_les_messages_de_sprin
         assert reponse.json()["message"] == message
 
 
-def test_le_bulletin_cree_l_equipe_de_l_employe_actif_et_epargne_l_inactif(
+def test_le_bulletin_cree_l_equipe_de_l_actif_fait_revenir_l_inactif_sans_depart_posterieur(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe: int
 ) -> None:
+    """La fiche reprend l'état du dernier bulletin : l'inactif revient, sauf si un départ est postérieur au bulletin."""
     entetes = _entetes(connecter)
     with plateforme.moteur.begin() as c:
         c.execute(
-            text("UPDATE employe SET statut = 'INACTIF', chantier_id = NULL WHERE id = :e"), {"e": jeu.employes[1]}
+            text(
+                "UPDATE employe SET statut = 'INACTIF', chantier_id = NULL, type_salaire = 'MENSUEL' WHERE id = ANY(:e)"
+            ),
+            {"e": [jeu.employes[1], jeu.employes[2]]},
+        )
+        c.execute(
+            text("INSERT INTO employe_sortie (employee_id, periode, motif) VALUES (:e, 209807, 'Sortie')"),
+            {"e": jeu.employes[2]},
         )
 
     actif = plateforme.client.post(
         "/paie", headers=entetes, json=_corps_bulletin(jeu, jeu.employes[0], "2098-06", equipeId=equipe)
     )
-    inactif = plateforme.client.post(
+    revenu = plateforme.client.post(
         "/paie", headers=entetes, json=_corps_bulletin(jeu, jeu.employes[1], "2098-06", equipeId=equipe)
+    )
+    reste_sorti = plateforme.client.post(
+        "/paie", headers=entetes, json=_corps_bulletin(jeu, jeu.employes[2], "2098-06", equipeId=equipe)
     )
 
     assert actif.status_code == 201, actif.text
-    assert inactif.status_code == 201, inactif.text
+    assert revenu.status_code == 201, revenu.text
+    assert reste_sorti.status_code == 201, reste_sorti.text
     assert _equipe_employe(plateforme, jeu.employes[0]) == equipe
-    assert _equipe_employe(plateforme, jeu.employes[1]) is None
+    assert _equipe_employe(plateforme, jeu.employes[1]) == equipe
+    assert _equipe_employe(plateforme, jeu.employes[2]) is None
 
 
 def test_la_modification_met_a_jour_l_equipe_de_l_employe(

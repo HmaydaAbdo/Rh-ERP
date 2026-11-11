@@ -302,7 +302,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const tuiles = Array.from(page.querySelectorAll('.app-kpi')).map((t) => t.textContent ?? '');
 
     expect(page.textContent).toContain('Paie · août 2026');
-    expect(tuiles[0]).toMatch(/Masse salariale\s*4\s500\sDH\s*\+12 % sur le mois précédent/);
+    expect(tuiles[0]).toMatch(/Montant de la paie\s*4\s500\sDH\s*\+12 % sur le mois précédent/);
     expect(tuiles.some((t) => t.includes('Chantiers concernés'))).toBe(true);
     expect(page.querySelectorAll('stp-chart').length).toBeGreaterThanOrEqual(5);
     expect(page.querySelectorAll('details').length).toBeGreaterThanOrEqual(5);
@@ -447,7 +447,7 @@ describe('AnalytiquePerimetreComponent', () => {
     expect(evolution.querySelectorAll('.app-chart-indicator')).toHaveLength(1);
     const graphiques = harness.fixture.debugElement.queryAll(By.directive(ChartComponent)).map((debug) => debug.componentInstance as ChartComponent<'bar' | 'line'>);
     const groupes = graphiques.filter((graphique) => graphique.data().datasets.length === 2);
-    expect(groupes.map((graphique) => graphique.data().datasets.map((jeu) => jeu.label))).toEqual([['Bulletins de paie', 'Masse salariale (DH)'], ['Bulletins de paie', 'STC (bulletins)']]);
+    expect(groupes.map((graphique) => graphique.data().datasets.map((jeu) => jeu.label))).toEqual([['Bulletins de paie', 'Montant de la paie (DH)'], ['Bulletins de paie', 'Sortants']]);
     expect(Object.keys(groupes[0].options()!.scales!)).toEqual(expect.arrayContaining(['x', 'x1']));
     expect(Object.keys(groupes[1].options()!.scales!)).not.toContain('y1');
   });
@@ -457,9 +457,9 @@ describe('AnalytiquePerimetreComponent', () => {
     const bouton = (nom: string) => Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.trim() === nom) as HTMLButtonElement;
 
     expect(bouton('Masse (DH)').getAttribute('aria-pressed')).toBe('true');
-    bouton('STC (bulletins)').click();
+    bouton('Sortants').click();
     harness.fixture.detectChanges();
-    expect(bouton('STC (bulletins)').getAttribute('aria-pressed')).toBe('true');
+    expect(bouton('Sortants').getAttribute('aria-pressed')).toBe('true');
     bouton('Bulletins de paie').click();
     harness.fixture.detectChanges();
     expect(bouton('Bulletins de paie').getAttribute('aria-pressed')).toBe('true');
@@ -543,7 +543,7 @@ describe('AnalytiquePerimetreComponent', () => {
 
     expect(page.textContent).toContain('Les indicateurs de paie ne sont pas disponibles pour votre compte.');
     expect(page.textContent).toContain('Situation des fiches Employé');
-    expect(page.textContent).not.toContain('Masse salariale');
+    expect(page.textContent).not.toContain('Montant de la paie');
     expect(paie.listerPeriodes).not.toHaveBeenCalled();
     expect(paie.analyser).not.toHaveBeenCalled();
     expect(paie.effectifs).not.toHaveBeenCalled();
@@ -554,7 +554,7 @@ describe('AnalytiquePerimetreComponent', () => {
     const page = await ouvrir();
 
     expect(page.textContent).toContain('Les effectifs des fiches Employé ne sont pas disponibles pour votre compte.');
-    expect(page.textContent).toContain('Masse salariale');
+    expect(page.textContent).toContain('Montant de la paie');
     expect(employes.analyser).not.toHaveBeenCalled();
     expect(employes.regrouper).not.toHaveBeenCalled();
   });

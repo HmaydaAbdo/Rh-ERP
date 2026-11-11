@@ -344,7 +344,7 @@ def enregistrer(
         title="Départs d'un mois",
         annotations=LECTURE_SEULE,
         description=(
-            "Liste les départs de l'entreprise constatés par la paie d'un mois (soldes de tout compte et absences "
+            "Liste les départs de l'entreprise constatés par la paie d'un mois (sortants : STC et absences "
             "confirmées) : nombre total, nombre par motif et la liste complète des employés concernés. Un départ "
             "ancien sans motif est compté « NON_PRECISE ». À ne pas confondre avec les « plus payés » de "
             "`paie_mouvements`, qui comptent aussi les absences non confirmées. "

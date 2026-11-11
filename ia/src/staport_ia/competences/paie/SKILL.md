@@ -1,6 +1,6 @@
 ---
 name: paie
-description: "Paie : masse salariale, indicateurs, évolution, comparaison de mois, répartition par chantier ou fonction, mouvements d'effectif, qualité des données de paie."
+description: "Paie : montant de la paie, sortants et STC, indicateurs, évolution, comparaison de mois, répartition par chantier ou fonction, mouvements d'effectif, qualité des données de paie."
 metadata:
   include_tools: paie_indicateurs paie_periodes paie_repartition paie_evolution paie_comparer paie_mouvements paie_qualite
 ---
