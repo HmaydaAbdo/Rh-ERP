@@ -42,8 +42,9 @@ aligné sur les colonnes PostgreSQL `DATE` après découverte d'un échec transa
 Règle métier validée pour l'import : la création d'un bulletin est distincte de la mise à jour de la
 fiche Employé. Un salaire identique à celui de la fiche (dernier salaire connu) passe automatiquement;
 un salaire différent passe par le wizard, avec type proposé (`≤ 500` journalier, `> 500` mensuel).
-Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
-d'affectation ne sont pas déduits automatiquement.
+Réimporter un mois existant met à jour ses bulletins sur place, après confirmation auditée (les heures
+supplémentaires liées sont recalculées, les bulletins absents du fichier ne sont pas touchés) ; sur un mois nouveau,
+les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement.
 L'option « Ignorer et conserver 0 » ne confirme que l'avertissement de salaire nul ; un salaire
 différent de la fiche employé reste à traiter dans le wizard avant la création des bulletins.
 Si le fichier porte `0` et que la fiche porte un autre salaire, seul `SALAIRE_DIFFERENT` est rendu

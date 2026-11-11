@@ -102,8 +102,8 @@
 
       @if (store.etat() === 'termine') {
         @if (store.bilan(); as bilan) {
-          <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Paie de ' + store.libellePeriode(bilan.periode) + ' importée'">
-            <p class="m-0">{{ bilan.crees }} bulletin(s) · {{ bilan.departs }} départ(s) · {{ bilan.retours }} retour(s)</p>
+          <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Paie de ' + store.libellePeriode(bilan.periode) + ((bilan.misAJour ?? 0) > 0 ? ' mise à jour' : ' importée')">
+            <p class="m-0">{{ bilan.crees }} bulletin(s) créé(s) · {{ bilan.misAJour ?? 0 }} mis à jour · {{ bilan.departs }} départ(s) · {{ bilan.retours }} retour(s)</p>
             @if ((bilan.fonctionsCreees ?? 0) > 0 || (bilan.chantiersRouverts ?? 0) > 0) {
               <p class="m-0">{{ bilan.fonctionsCreees ?? 0 }} fonction(s) créée(s) · {{ bilan.chantiersRouverts ?? 0 }} chantier(s) rouvert(s)</p>
             }
