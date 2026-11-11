@@ -93,12 +93,12 @@ règles détaillées suivent dans les sections suivantes.
   `periode_confirmee` à l'import, vérifié aussi par le serveur). Un mois qui a déjà des bulletins, ou plus ancien que la dernière
   paie importée, est **bloqué** par un seul message (`blocagesPeriode`).
   Le contrôle est un **parcours d'étapes dynamiques**, une par type de problème réellement trouvé, dans l'ordre des dépendances :
-  À savoir (ce que l'import fera seul : fonctions créées, chantiers rouverts), Mois impossible, Mois à confirmer, Erreurs du
+  À savoir (ce que l'import fera seul : fonctions créées, chantiers rouverts, nom, fonction, chantier et équipe de la fiche alignés sur le fichier), Mois impossible, Mois à confirmer, Erreurs du
   fichier, Chantiers clôturés, Nouvelles embauches (CIN sans fiche), Mises à jour de fiches, Points à confirmer. La suivante s'ouvre
   quand la précédente est réglée. Les embauches et les mises à jour de fiches se règlent **un cas à la fois** : une fois le cas réglé,
   l'écran passe au suivant (« Passer » et « Précédent » pour garder un cas pour plus tard, liste complète à la demande, barre de
-  progression). Les mises à jour sont nommées selon ce qui change : Mutations de chantier, Changements d'équipe, Changements de
-  fonction, Révisions de salaire, Noms écrits autrement ; chacune a son action « mettre à jour les N fiches ». Pour les embauches, la
+  progression). Seules les révisions de salaire demandent un choix (mensuel ou journalier) ; le nom, la fonction, le chantier et l'équipe
+  du fichier s'appliquent sans confirmation. Pour les embauches, la
   date d'embauche et le type de salaire se recopient sur les autres cas, puis les fiches complètes se créent d'un seul envoi. Les
   erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).
@@ -185,9 +185,9 @@ Table `paie` :
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | **Snapshot** — chantier d'affectation ce mois-là |
 | `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | **Snapshot** — équipe ce mois-là (voir `docs/equipe/README.md`) ; `NULL` = employé sans équipe |
-| `nombre_jours_travailles` | `NUMERIC(5,2)` | `NOT NULL` | Jours travaillés, jusqu'à deux décimales |
-| `jours_recuperation_ouvrable` | `DECIMAL(5,2)` | nullable | Jours de récupération (jour ouvrable) |
-| `jours_recuperation_dimanche` | `DECIMAL(5,2)` | nullable | Jours de récupération (dimanche) |
+| `nombre_jours_travailles` | `NUMERIC(5,0)` | `NOT NULL` | Jours travaillés entiers après arrondi `HALF_DOWN` |
+| `jours_recuperation_ouvrable` | `NUMERIC(5,0)` | nullable | Jours de récupération ouvrables entiers |
+| `jours_recuperation_dimanche` | `NUMERIC(5,0)` | nullable | Jours de récupération du dimanche entiers |
 | `salaire_mensuel` | `DECIMAL(10,0)` | `NOT NULL` | Salaire de base |
 | `prime_roulage_ordinaire` | `DECIMAL(10,0)` | nullable | Prime de roulage (ordinaire) |
 | `prime_roulage_dimanche` | `DECIMAL(10,0)` | nullable | Prime de roulage (dimanche) |
@@ -237,11 +237,11 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
   porte le tarif journalier et le total vaut tarif × jours (ex. 120 × 31 = 3 720), ce qu'une somme
   `salaireMensuel + primes` fausserait. Le formulaire propose un aperçu de saisie, mais le champ
   reste modifiable. La paie est prise telle que saisie (formulaire) ou importée (Excel).
-- Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours) ;
-  les jours travaillés et de récupération acceptent de 0 à 999,99; les salaires et primes de 0 à
-  9 999 999 999. **Les montants sont arrondis automatiquement à l'entier de dirham** (0,5 inclus on descend, au-delà on monte : 769,5 → 769, 769,51 → 770), à la
-  saisie comme à l'import, puis contrôlés ; une valeur négative ou dépassant la borne reste refusée. Les jours, eux, n'ont
-  jamais plus de deux décimales (jamais arrondis). `observation` fait 255 caractères au plus.
+- Les champs numériques ne peuvent pas être négatifs (`salaireMensuel`, `salaireTotal`, primes, jours). Les valeurs
+  métier sont arrondies automatiquement à l'entier selon `HALF_DOWN` (0,5 inclus vers zéro ; au-delà vers l'entier
+  supérieur pour les valeurs positives), à la saisie, à l'import et dans les calculs, puis contrôlées. Les jours
+  travaillés et de récupération sont stockés en `NUMERIC(5,0)` (de 0 à 1 000) ; les montants en dirhams sont des entiers. `observation`
+  fait 255 caractères au plus.
 - La suppression (`DELETE /paie/{id}`) n'a pas de contrainte de blocage : aucune autre entité ne référence un
   bulletin. Supprimer un bulletin permet de le **réimporter** (voir « Import Excel »). La suppression **en groupe**
   (`POST /paie/suppression`) suit la même règle, avec les garde-fous décrits dans « Suppression en groupe ».
@@ -327,7 +327,7 @@ les autres bulletins.
 
 | Sorte | Exemples | Se règle |
 |---|---|---|
-| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours hors 0–999,99 ou plus de deux décimales ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier introuvable ; équipe introuvable ; fonction introuvable pour qui n'a pas `FUNCTION_WRITE` | Dans le fichier, puis réimport. Les groupes d'erreurs disent le problème exact (« Chantier introuvable », « Chantier clôturé », « Fonction introuvable ») |
+| **Erreur du fichier** | Champ obligatoire manquant ; valeur négative ; **salaire à 0** (une ligne porte toujours le salaire de l'employé ; un employé sans paie ce mois-ci n'est pas dans le fichier) ; jours dépassant la capacité entière après arrondi ; observation de plus de 255 caractères ; nom de plus de 150 ; CIN en double ; chantier introuvable ; équipe introuvable ; fonction introuvable pour qui n'a pas `FUNCTION_WRITE` | Dans le fichier, puis réimport. Les groupes d'erreurs disent le problème exact (« Chantier introuvable », « Chantier clôturé », « Fonction introuvable ») |
 | **Chantier clôturé** | Une ou plusieurs lignes citent un chantier clôturé (le message liste les lignes). **Avec `CHANTIER_WRITE`, ce n'est plus un problème** : l'analyse l'annonce (`chantiersARouvrir`) et l'import le rouvre dans sa transaction | Sans `CHANTIER_WRITE` : « Rouvrir le chantier » ici (droits `CHANTIER_READ` et `CHANTIER_WRITE`), le fichier est réanalysé tel quel — ou corriger le chantier dans le fichier |
 | **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
@@ -671,7 +671,7 @@ les résultats des filtres courants. Les quantités et montants sont affichés a
 |---|---|
 | Unicité, références, conservation du total et synchronisation de l'équipe | `PaieServiceTest` |
 | Version attendue et conflit de modification | `VersionOptimisteTest` |
-| Bornes de jours et montants, décimales | `PaieRequestValidationTest`, `PaieImportServiceTest`, specs du formulaire |
+| Bornes et arrondi entier des valeurs métier | `PaieRequestValidationTest`, `PaieImportServiceTest`, specs du formulaire |
 | Trois lignes d'en-tête, trous de lignes, cellules invalides | `LecteurFichierPaieTest` |
 | Mois autorisé, corrections, départs, retours et import atomique | `PaieImportServiceTest`, `AuditImportTest`, specs de l'assistant d'import |
 | Filtres cohérents, jokers littéraux, options paginées | `PaieRechercheJokersTest`, `FiltresPaieTest`, specs de filtre et service |
@@ -719,8 +719,8 @@ repérer la couche touchée et vérifier ses points de contrôle.
   permissions de lecture indiquées dans le RBAC.
 - Tout export ou suppression respecte l'audit ; ne pas inclure de données personnelles réelles dans
   les tests ou prompts IA.
-- Garder la parité API/formulaire/import : jours sur 5 chiffres dont 2 décimales, montants sur 10
-  chiffres entiers. Refuser une cellule numérique invalide plutôt que la remplacer par une
+- Garder la parité API/formulaire/import : tous les nombres métier sont arrondis en entier avec `HALF_DOWN`.
+  Refuser une cellule numérique invalide plutôt que la remplacer par une
   absence; les numéros de ligne d'erreur sont ceux d'Excel.
 - Les mouvements et les agrégats utilisent les mêmes filtres de nom, CIN et rattachements. Ne pas
   mélanger l'affectation historique du bulletin et l'état courant de la fiche.

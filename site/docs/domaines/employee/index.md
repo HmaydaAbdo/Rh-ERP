@@ -59,7 +59,7 @@ Employé a **deux** sources de chiffres, à ne pas confondre :
   indicateurs de paie sont identifiés par leur période.
 - **Analytique** : chiffres et tranches Employé d'abord, puis données de paie autorisées ; les graphiques limitent les
   groupes aux douze plus grands, le tableau de données les garde tous.
-- **Définitions.** Âge et ancienneté moyens : moyenne des durées en jours ÷ 365,2425, arrondie à une décimale (jamais
+- **Définitions.** Âge et ancienneté moyens : moyenne des durées en jours ÷ 365,2425, arrondie à l'entier `HALF_DOWN` (jamais
   négative). Embauches des douze mois : \`aujourd'hui − 1 an < embauche ≤ aujourd'hui\` ; les dates futures sont exclues.
   Tranches d'âge \`<25\`, \`25–34\`, \`35–44\`, \`45–54\`, \`55+\` ; d'ancienneté \`<1\`, \`[1,3[\`, \`[3,5[\`, \`[5,10[\`, \`10+\` ans.
 - **Attention.** L'effectif des fiches est l'état **courant** (issu du dernier mois de paie importé), pas un historique :
@@ -212,8 +212,8 @@ La recherche renvoie une page (`content`, `page.number`, `page.size`, `page.tota
 | `LigneIgnoreeDto` | `numeroLigne` (`int`, numéro réel Excel à partir de 1), `cin`, `nomPrenom` (`String` ou `null`), `raison` (`String`) |
 | `EmployeeSortieDto` | Contrat de façade : `employeId` (`long`), `periode` (`YearMonth`, `aaaa-MM`), `motif` (`String`); consommé par le parcours Paie |
 
-Âge et ancienneté moyens sont la moyenne des durées en jours divisée par 365,2425, arrondie à une
-décimale. L’ancienneté ne devient jamais négative. Les embauches des douze derniers mois satisfont
+Âge et ancienneté moyens sont la moyenne des durées en jours divisée par 365,2425, arrondie à l'entier avec `HALF_DOWN`.
+L’ancienneté ne devient jamais négative. Les embauches des douze derniers mois satisfont
 `aujourd’hui - 1 an < dateEmbauche <= aujourd’hui`; les dates futures sont exclues.
 Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienneté `<1`, `[1,3[`, `[3,5[`,
 `[5,10[`, `10+` ans.

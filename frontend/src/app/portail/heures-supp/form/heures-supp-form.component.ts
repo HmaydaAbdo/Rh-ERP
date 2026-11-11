@@ -11,6 +11,7 @@ import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { FieldErrorComponent } from '../../../shared/ui/field-error/field-error.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
+import { arrondirDemiBas } from '../../../shared/utils/arrondi-nombre';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { HeuresSupp } from '../models/heures-supp.model';
@@ -102,9 +103,11 @@ export class HeuresSuppFormComponent {
     const periode = periodeTexte(saisie.periode);
     if (!periode || saisie.employeeId === null || saisie.chantierId === null) return;
     this.saving.set(true);
+    const heuresSupplementaires = saisie.heuresSupplementaires === null ? null : arrondirDemiBas(saisie.heuresSupplementaires);
+    const forfaitDh = saisie.forfaitDh === null ? null : arrondirDemiBas(saisie.forfaitDh);
     const requete = this.ligne()
-      ? this.service.modifier(this.ligne()!.id, { version: this.ligne()!.version, heuresSupplementaires: saisie.heuresSupplementaires, forfaitDh: saisie.forfaitDh })
-      : this.service.creer({ employeeId: saisie.employeeId, periode, chantierId: saisie.chantierId, heuresSupplementaires: saisie.heuresSupplementaires, forfaitDh: saisie.forfaitDh });
+      ? this.service.modifier(this.ligne()!.id, { version: this.ligne()!.version, heuresSupplementaires, forfaitDh })
+      : this.service.creer({ employeeId: saisie.employeeId, periode, chantierId: saisie.chantierId, heuresSupplementaires, forfaitDh });
     requete.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         this.form().reset();

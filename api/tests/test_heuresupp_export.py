@@ -54,10 +54,11 @@ def test_le_tri_accepte_seulement_les_colonnes_de_la_vue_tabulaire() -> None:
 
 
 def test_formats_francais_et_mois_en_toutes_lettres() -> None:
-    assert export_pdf.nombre(Decimal("1234567.5"), 1) == "1 234 567,5"
-    assert export_pdf.nombre(Decimal("2600"), 2) == "2 600,00"
-    assert export_pdf.nombre(Decimal(0), 0) == "0"
-    assert export_pdf.nombre(None, 0) == "—"
+    assert export_pdf.nombre(Decimal("1234567.5")) == "1 234 567"
+    assert export_pdf.nombre_heures(Decimal("7.5")) == "7"
+    assert export_pdf.nombre(Decimal("2600")) == "2 600"
+    assert export_pdf.nombre(Decimal(0)) == "0"
+    assert export_pdf.nombre(None) == "—"
     assert export_pdf.mois_en_toutes_lettres(202602) == "février 2026"
 
 
@@ -89,6 +90,9 @@ def test_le_gabarit_echappe_les_donnees_et_totalise_le_perimetre() -> None:
     assert "<th>Chantier</th>" not in html
     assert "Édité le 05/11/2026 à 14:07" in html
     assert "Total · 2 lignes" in html
+    assert '<th class="num">Nombre d&#x27;heures</th><th class="num">S/H</th>' in html
+    assert '<td class="num">7</td><td class="num">10</td>' in html
+    assert '<td class="num">7</td><td class="num"></td>' in html  # total des valeurs P/H affichées
     assert "<td>—</td>" not in html  # les cellules vides portent la classe « num »
     assert '<td class="num">—</td>' in html
     assert '<td class="num">150</td>' in html  # montant total

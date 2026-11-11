@@ -13,6 +13,7 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.common.montant import arrondir_montant
 from staport.domains.common.pdf import rendre_pdf
 from staport.domains.paie import report as _rapport_paie
 from staport.domains.paie.periode import afficher_periode
@@ -47,7 +48,7 @@ LIBELLES_TRI = {
     "fonction.libelle": "Fonction",
     "salaireReference": "Salaire référence",
     "salaireHoraire": "S/H",
-    "heures": "P/H",
+    "heures": "Nombre d'heures",
     "montant": "Montant",
     "stcDh": "STC",
     "forfait": "Forfait",
@@ -57,8 +58,8 @@ COLONNES = (
     ("Employé", ""),
     ("CIN", ""),
     ("Fonction", ""),
+    ("Nombre d'heures", "num"),
     ("S/H", "num"),
-    ("P/H", "num"),
     ("Montant", "num"),
     ("STC", "num"),
     ("Forfait", "num"),
@@ -90,11 +91,18 @@ def mois_en_toutes_lettres(periode: int) -> str:
     return f"{MOIS[mois - 1]} {annee}"
 
 
-def nombre(valeur: Decimal | None, decimales: int) -> str:
-    """Format français : espace pour les milliers, virgule décimale ; « — » sans valeur."""
+def nombre(valeur: Decimal | None) -> str:
+    """Format français d'une valeur métier entière ; « — » sans valeur."""
     if valeur is None:
         return "—"
-    return f"{valeur:,.{decimales}f}".replace(",", " ").replace(".", ",")
+    return f"{arrondir_montant(valeur):,.0f}".replace(",", " ")
+
+
+def nombre_heures(valeur: Decimal | None) -> str:
+    """Affiche les heures à l'entier selon la règle commune HALF_DOWN."""
+    if valeur is None:
+        return nombre(None)
+    return nombre(arrondir_montant(valeur))
 
 
 def _td(texte: str, classe: str = "") -> str:
@@ -176,26 +184,29 @@ def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSupp
             + _td(ligne.nom_prenom)
             + _td(ligne.cin)
             + _td(ligne.fonction)
-            + _td(nombre(ligne.salaire_horaire_dh, 0), "num")
-            + _td(nombre(ligne.heures_supplementaires, 1), "num")
-            + _td(nombre(ligne.montant_dh, 0), "num")
-            + _td(nombre(ligne.stc_dh, 0), "num")
-            + _td(nombre(ligne.forfait_dh, 0), "num")
-            + _td(nombre(ligne.net_a_payer_dh, 0), "num")
+            + _td(nombre_heures(ligne.heures_supplementaires), "num")
+            + _td(nombre(ligne.salaire_horaire_dh), "num")
+            + _td(nombre(ligne.montant_dh), "num")
+            + _td(nombre(ligne.stc_dh), "num")
+            + _td(nombre(ligne.forfait_dh), "num")
+            + _td(nombre(ligne.net_a_payer_dh), "num")
             + _cellule_emargement(requete.mode)
             + "</tr>"
         )
     zero = Decimal(0)
-    heures = sum((ligne.heures_supplementaires or zero for ligne in lignes), zero)
+    heures = sum(
+        (arrondir_montant(valeur) for ligne in lignes if (valeur := ligne.heures_supplementaires) is not None),
+        zero,
+    )
     corps.append(
         '<tr class="total">'
         + f'<td colspan="3">{escape("Total · " + _pluriel(len(lignes), "ligne", "lignes"))}</td>'
+        + _td(nombre(heures), "num")
         + '<td class="num"></td>'
-        + _td(nombre(heures, 1), "num")
-        + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.forfait_dh or zero for ligne in lignes), zero), 0), "num")
-        + _td(nombre(sum((ligne.net_a_payer_dh for ligne in lignes), zero), 0), "num")
+        + _td(nombre(sum((ligne.montant_dh for ligne in lignes), zero)), "num")
+        + _td(nombre(sum((ligne.stc_dh for ligne in lignes), zero)), "num")
+        + _td(nombre(sum((ligne.forfait_dh or zero for ligne in lignes), zero)), "num")
+        + _td(nombre(sum((ligne.net_a_payer_dh for ligne in lignes), zero)), "num")
         + "<td></td></tr></tbody></table>"
     )
     return (

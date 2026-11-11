@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { disabled, form, FormField, FormRoot, max, maxLength, min, required, validate } from '@angular/forms/signals';
+import { disabled, form, FormField, FormRoot, max, maxLength, min, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -8,6 +8,7 @@ import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { focaliserPremiereErreur } from '../../../shared/forms/focus-first-error';
 import { attendreEnregistrement } from '../../../shared/forms/soumission';
+import { arrondirDemiBas } from '../../../shared/utils/arrondi-nombre';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
@@ -109,7 +110,7 @@ export class PaieFormComponent {
       required(chemin.chantierId, { message: 'Le chantier est obligatoire.' });
       required(chemin.nombreJoursTravailles, { message: 'Le nombre de jours travaillés est obligatoire.' });
       for (const jours of [chemin.nombreJoursTravailles, chemin.joursRecuperationOuvrable, chemin.joursRecuperationDimanche]) {
-        max(jours, 999.99, { message: 'Le maximum est de 999,99 jours.' });
+        max(jours, 1000, { message: 'Le maximum est de 1 000 jours.' });
       }
       required(chemin.salaireMensuel, { message: 'Le salaire mensuel est obligatoire.' });
       required(chemin.salaireTotal, { message: 'Le salaire total est obligatoire.' });
@@ -123,15 +124,6 @@ export class PaieFormComponent {
         chemin.salaireTotal
       ]) {
         min(montant, 0, { message: 'La valeur ne peut pas être négative.' });
-      }
-      // Les jours gardent deux décimales ; les montants sont des entiers de dirham (règle commune des montants).
-      for (const [champ, decimales] of [[chemin.nombreJoursTravailles, 2], [chemin.joursRecuperationOuvrable, 2], [chemin.joursRecuperationDimanche, 2], [chemin.salaireMensuel, 0], [chemin.primeRoulageOrdinaire, 0], [chemin.primeRoulageDimanche, 0], [chemin.salaireTotal, 0]] as const) {
-        validate(champ, ({ value }) => {
-          const nombre = value();
-          return nombre !== null && Number(nombre.toFixed(decimales)) !== nombre
-            ? { kind: 'precision', message: decimales === 0 ? 'Saisissez un montant entier en dirhams.' : 'Saisissez au maximum deux décimales.' }
-            : undefined;
-        });
       }
       for (const montant of [chemin.salaireMensuel, chemin.primeRoulageOrdinaire, chemin.primeRoulageDimanche, chemin.salaireTotal]) {
         max(montant, 9999999999, { message: 'Le maximum est de 9 999 999 999.' });
@@ -189,13 +181,13 @@ export class PaieFormComponent {
       fonctionId: saisie.fonctionId!,
       chantierId: saisie.chantierId!,
       equipeId: saisie.equipeId === 0 ? null : saisie.equipeId,
-      nombreJoursTravailles: saisie.nombreJoursTravailles!,
-      joursRecuperationOuvrable: saisie.joursRecuperationOuvrable,
-      joursRecuperationDimanche: saisie.joursRecuperationDimanche,
-      salaireMensuel: saisie.salaireMensuel!,
-      primeRoulageOrdinaire: saisie.primeRoulageOrdinaire,
-      primeRoulageDimanche: saisie.primeRoulageDimanche,
-      salaireTotal: saisie.salaireTotal!,
+      nombreJoursTravailles: arrondirDemiBas(saisie.nombreJoursTravailles!),
+      joursRecuperationOuvrable: saisie.joursRecuperationOuvrable === null ? null : arrondirDemiBas(saisie.joursRecuperationOuvrable),
+      joursRecuperationDimanche: saisie.joursRecuperationDimanche === null ? null : arrondirDemiBas(saisie.joursRecuperationDimanche),
+      salaireMensuel: arrondirDemiBas(saisie.salaireMensuel!),
+      primeRoulageOrdinaire: saisie.primeRoulageOrdinaire === null ? null : arrondirDemiBas(saisie.primeRoulageOrdinaire),
+      primeRoulageDimanche: saisie.primeRoulageDimanche === null ? null : arrondirDemiBas(saisie.primeRoulageDimanche),
+      salaireTotal: arrondirDemiBas(saisie.salaireTotal!),
       observation: saisie.observation || null
     };
     const id = this.paieId();

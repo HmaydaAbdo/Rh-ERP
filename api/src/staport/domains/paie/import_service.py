@@ -87,7 +87,7 @@ def _nombre_ligne(ligne: list[Any], index: int) -> Decimal | None:
         nombre = Decimal(str(valeur).strip())
     except InvalidOperation, ValueError:
         return None
-    return nombre.normalize() if nombre.is_finite() else None
+    return arrondir_montant(nombre) if nombre.is_finite() else None
 
 
 def signature_ligne(ligne: list[Any]) -> tuple[Any, ...]:
@@ -358,8 +358,6 @@ class ServiceImportPaie:
                     )
                 ).all():
                     bulletins_voisins.setdefault(b[0], {})[b[1]] = signature_ligne([None, None, None, *b[2:]])
-            fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
-            chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
         # Un mois déjà importé se met à jour. La fiche Employé suit le dernier mois : ses écarts avec le fichier ne se
         # comparent que si ce mois est le dernier (ou un mois nouveau), jamais pour un ancien mois.
@@ -492,57 +490,9 @@ class ServiceImportPaie:
             if cin and cin.upper() in employees and fiche_a_comparer:
                 employe = employees[cin.upper()]
                 champs: list[PaieImportChamp] = []
-                if nom and employe.nom_prenom != nom:
-                    champs.append(PaieImportChamp(champ="nomPrenom", base=employe.nom_prenom, fichier=nom))
-                fonction_id = next(
-                    (
-                        ident
-                        for ident, libelle in fonctions_par_id.items()
-                        if libelle.strip().upper() == (fonction or "").upper()
-                    ),
-                    None,
-                )
-                if fonction_id is not None and fonction_id != employe.fonction_id:
-                    champs.append(
-                        PaieImportChamp(
-                            champ="fonction", base=fonctions_par_id.get(employe.fonction_id), fichier=fonction
-                        )
-                    )
-                chantier_id = next(
-                    (
-                        ident
-                        for ident, entite in chantiers_par_id.items()
-                        if entite.code.strip().upper() == (chantier or "").upper()
-                    ),
-                    None,
-                )
+                # Nom, fonction, chantier et équipe du fichier s'appliquent seuls à l'import (la fiche suit le dernier
+                # bulletin) : aucune confirmation. Seule une révision de salaire demande un choix.
                 actif = employe.statut != EmployeeStatut.INACTIF  # un retour est réactivé par l'import
-                if actif and chantier_id is not None and chantier_id != employe.chantier_id:
-                    chantier_actuel = (
-                        chantiers_par_id.get(employe.chantier_id) if employe.chantier_id is not None else None
-                    )
-                    champs.append(
-                        PaieImportChamp(
-                            champ="chantier",
-                            base=chantier_actuel.code if chantier_actuel else None,
-                            fichier=chantier,
-                        )
-                    )
-                equipe_id = (
-                    next(
-                        (
-                            ident
-                            for ident, code in equipes_par_id.items()
-                            if code.strip().upper() == (equipe or "").upper()
-                        ),
-                        None,
-                    )
-                    if equipe
-                    else None
-                )
-                if actif and equipe_id is not None and equipe_id != employe.equipe_id:
-                    equipe_actuelle = equipes_par_id.get(employe.equipe_id) if employe.equipe_id is not None else None
-                    champs.append(PaieImportChamp(champ="equipe", base=equipe_actuelle, fichier=equipe))
                 if actif and not equipe and employe.equipe_id is not None:
                     avertissements.append(
                         PaieImportErreur(
@@ -609,14 +559,7 @@ class ServiceImportPaie:
                     nombre = Decimal(str(valeur).strip())
                 except InvalidOperation, ValueError:
                     nombre = None
-                exposant = nombre.as_tuple().exponent if nombre is not None else None
-                if (
-                    nombre is None
-                    or not nombre.is_finite()
-                    or nombre < 0
-                    or nombre > Decimal("999.99")
-                    or (isinstance(exposant, int) and exposant < -2)
-                ):
+                if nombre is None or not nombre.is_finite() or nombre < 0 or arrondir_montant(nombre) > Decimal("1000"):
                     erreurs.append(
                         PaieImportErreur(
                             numero_ligne=numero,
@@ -624,7 +567,7 @@ class ServiceImportPaie:
                             nom_prenom=nom,
                             champ=champ,
                             valeur=str(valeur),
-                            raison="jours attendus entre 0 et 999,99 avec deux décimales au plus",
+                            raison="jours attendus entre 0 et 1 000, arrondis à l'entier",
                         )
                     )
             for index, champ in (
@@ -857,11 +800,11 @@ class ServiceImportPaie:
                     "fonction_id": fonction_id,
                     "chantier_id": chantier_id,
                     "equipe_id": equipe,
-                    "nombre_jours_travailles": Decimal(str(ligne[3] or 0)),
-                    "jours_recuperation_ouvrable": Decimal(str(ligne[4]))
+                    "nombre_jours_travailles": arrondir_montant(Decimal(str(ligne[3] or 0))),
+                    "jours_recuperation_ouvrable": arrondir_montant(Decimal(str(ligne[4])))
                     if len(ligne) > 4 and ligne[4] is not None
                     else None,
-                    "jours_recuperation_dimanche": Decimal(str(ligne[5]))
+                    "jours_recuperation_dimanche": arrondir_montant(Decimal(str(ligne[5])))
                     if len(ligne) > 5 and ligne[5] is not None
                     else None,
                     "salaire_mensuel": montant_ligne(ligne, 6) or Decimal(0),

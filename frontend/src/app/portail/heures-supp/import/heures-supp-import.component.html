@@ -12,7 +12,7 @@
       @if (resultat(); as bilan) {
         <stp-wizard-state etat="termine" class="app-wizard__panneau" [titre]="'Heures supplémentaires de ' + moisLibelle() + ' importées'">
           <p class="m-0">{{ bilan.lignesHeures }} ligne(s) · {{ bilan.lignesZero }} à 0 · {{ bilan.forfaitsSeuls }} forfait(s) seul(s)</p>
-          <p class="m-0">{{ bilan.heuresTotales | number:'1.0-1' }} h · Net à payer {{ bilan.netTotalDh | number:'1.0-0' }} DH</p>
+          <p class="m-0">{{ bilan.heuresTotales | number:'1.0-0' }} h · Net à payer {{ bilan.netTotalDh | number:'1.0-0' }} DH</p>
           <div class="app-wizard__boutons-fin">
             <a stp-button routerLink="/heures-supp">Voir les heures supplémentaires</a>
           </div>
@@ -90,7 +90,7 @@
                         <label class="field" for="hs-naissance-{{ ligne.numeroLigne }}">Date de naissance <stp-date-input inputId="hs-naissance-{{ ligne.numeroLigne }}" [ariaLabel]="'Date de naissance de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateNaissance')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateNaissance', $event)" /></label>
                         <label class="field" for="hs-embauche-{{ ligne.numeroLigne }}">Date d’embauche <stp-date-input inputId="hs-embauche-{{ ligne.numeroLigne }}" [ariaLabel]="'Date d’embauche de ' + ligne.cin" [value]="dateCreation(ligne.numeroLigne, 'dateEmbauche')" (valueChange)="saisirDate(ligne.numeroLigne, 'dateEmbauche', $event)" /></label>
                         <label class="field" for="hs-fonction-{{ ligne.numeroLigne }}">Fonction <app-lazy-select inputId="hs-fonction-{{ ligne.numeroLigne }}" ariaLabel="Fonction du nouvel employé" placeholder="Rechercher une fonction" optionLabel="libelle" dataKey="id" [source]="fonctions" [value]="creation(ligne.numeroLigne).fonctionId || null" (valueChange)="choisirFonction(ligne.numeroLigne, $event)" /></label>
-                        <label class="field" for="hs-salaire-{{ ligne.numeroLigne }}">Salaire de référence (DH) <stp-number-input inputId="hs-salaire-{{ ligne.numeroLigne }}" ariaLabel="Salaire de référence en DH" [value]="valeurSalaire(ligne.numeroLigne)" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" (valueChange)="saisirSalaire(ligne.numeroLigne, $event)" /></label>
+                        <label class="field" for="hs-salaire-{{ ligne.numeroLigne }}">Salaire de référence (DH) <stp-number-input inputId="hs-salaire-{{ ligne.numeroLigne }}" ariaLabel="Salaire de référence en DH" [value]="valeurSalaire(ligne.numeroLigne)" [min]="0" (valueChange)="saisirSalaire(ligne.numeroLigne, $event)" /></label>
                         <label class="field" for="hs-type-salaire-{{ ligne.numeroLigne }}">Type de salaire <stp-select inputId="hs-type-salaire-{{ ligne.numeroLigne }}" ariaLabel="Type de salaire" [options]="typesSalaire" placeholder="Choisir un type" [value]="creation(ligne.numeroLigne).typeSalaire || null" (valueChange)="choisirTypeSalaire(ligne.numeroLigne, $event)" /></label>
                       </div>
                     </article>
@@ -106,7 +106,7 @@
                     <ng-template stpCell let-ligne let-col="col">
                       @switch (col.field) {
                         @case ('nomPrenom') { {{ ligne.nomPrenom || ligne.nomFichier }}<small class="block text-muted">{{ ligne.fonction || ligne.fonctionFichier }}</small> }
-                        @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-1') + ' h' }} }
+                        @case ('heuresSupplementaires') { {{ ligne.heuresSupplementaires === null ? 'Forfait seul' : (ligne.heuresSupplementaires | number:'1.0-0') + ' h' }} }
                         @case ('salaireHoraireDh') { {{ ligne.salaireHoraireDh === null ? '—' : (ligne.salaireHoraireDh | number:'1.0-0') }} }
                         @case ('forfaitDh') { {{ ligne.forfaitDh === null ? '—' : (ligne.forfaitDh | number:'1.0-0') }} }
                         @case ('netAPayerDh') { <strong>{{ ligne.netAPayerDh | number:'1.0-0' }}</strong> }

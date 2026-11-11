@@ -15,7 +15,7 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
         feuille.append([])
     feuille.append(["Amal", None, "AB123", 26, 0, 0, 123.456, 0, 0, 123.456, None, None, None])
     feuille.append(["Omar", None, "AB124", 26, 0, 0, 0, 0, 0, 0, None, None, None])
-    feuille.append(["Nadia", "Fonction absente", "AB125", 1000, 0, 0, 4500, 0, 0, 4500, None, "X404", "E404"])
+    feuille.append(["Nadia", "Fonction absente", "AB125", 1001, 0, 0, 4500, 0, 0, 4500, None, "X404", "E404"])
     contenu = BytesIO()
     classeur.save(contenu)
     jeton = connecter(*ADMIN)["accessToken"]
@@ -39,7 +39,7 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
     assert not any(
         erreur["numeroLigne"] == 4 and erreur["champ"] in ("salaireMensuel", "salaireTotal")
         for erreur in analyse["erreurs"]
-    ), "123,456 est arrondi automatiquement à 123,46 : plus d'erreur de précision"
+    ), "123,456 est arrondi automatiquement à 123 : plus d'erreur de précision"
     assert any(
         avertissement["numeroLigne"] == 5
         and avertissement["champ"] == "salaireMensuel"
@@ -48,7 +48,7 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
         for avertissement in analyse["avertissements"]
     )
     assert any(
-        erreur["numeroLigne"] == 6 and erreur["champ"] == "nombreJoursTravailles" and erreur["valeur"] == "1000"
+        erreur["numeroLigne"] == 6 and erreur["champ"] == "nombreJoursTravailles" and erreur["valeur"] == "1001"
         for erreur in analyse["erreurs"]
     )
     assert {

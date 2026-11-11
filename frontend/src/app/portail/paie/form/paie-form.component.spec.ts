@@ -150,9 +150,9 @@ describe('PaieFormComponent', () => {
     });
 
     it.each([
-      ['joursRecuperationOuvrable', 1000], ['joursRecuperationDimanche', 1.001],
-      ['primeRoulageOrdinaire', 10000000000], ['primeRoulageDimanche', 1.5], ['salaireTotal', 10000000000]
-    ] as const)('refuse %s hors des bornes et de la précision du contrat', async (champ, valeur) => {
+      ['joursRecuperationOuvrable', 100000], ['joursRecuperationDimanche', 100000],
+      ['primeRoulageOrdinaire', 10000000000], ['primeRoulageDimanche', 10000000000], ['salaireTotal', 10000000000]
+    ] as const)('refuse %s au-delà de la capacité du contrat', async (champ, valeur) => {
       await afficher();
       await remplirObligatoires();
       formulaire()[champ]().value.set(valeur);
@@ -203,7 +203,7 @@ describe('PaieFormComponent', () => {
         fonctionId: 1,
         chantierId: 2,
         equipeId: null,
-        nombreJoursTravailles: 26.5,
+        nombreJoursTravailles: 26,
         joursRecuperationOuvrable: null,
         joursRecuperationDimanche: null,
         salaireMensuel: 4000,
@@ -228,7 +228,7 @@ describe('PaieFormComponent', () => {
       await envoyer();
 
       expect(service.create).toHaveBeenCalledWith(
-        expect.objectContaining({ equipeId: 3, joursRecuperationOuvrable: 1.5, primeRoulageDimanche: 80, observation: 'Heures de nuit' })
+        expect.objectContaining({ equipeId: 3, joursRecuperationOuvrable: 1, primeRoulageDimanche: 80, observation: 'Heures de nuit' })
       );
       expect(racine().textContent).toContain("reprend l'équipe, le chantier et la fonction du dernier bulletin");
     });
@@ -319,7 +319,7 @@ describe('PaieFormComponent', () => {
         chantierId: 2,
         equipeId: 3,
         nombreJoursTravailles: 26,
-        joursRecuperationOuvrable: 1.5,
+        joursRecuperationOuvrable: 1,
         joursRecuperationDimanche: null,
         salaireMensuel: 4000,
         primeRoulageOrdinaire: 120,

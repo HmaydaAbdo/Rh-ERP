@@ -99,10 +99,10 @@ test.describe('Équipes', () => {
     await expect(indicateurs).toHaveCount(4);
     await expect(indicateurs.nth(0).locator('dt')).toHaveText('Bulletins de paie');
     await expect(indicateurs.nth(0).locator('strong')).toHaveText('1');
-    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 bulletin (−50,0 %) · vs juillet 2026');
+    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 bulletin (−50 %) · vs juillet 2026');
     await expect(indicateurs.nth(1).locator('dt')).toHaveText('Montant de la paie (DH)');
     await expect(indicateurs.nth(1).locator('strong')).toContainText('4');
-    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7,1 %\) · vs juillet 2026$/);
+    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7 %\) · vs juillet 2026$/);
     await expect(indicateurs.nth(2).locator('dt')).toHaveText('Sortants');
     await expect(indicateurs.nth(2).locator('strong')).toHaveText('1');
     await expect(indicateurs.nth(2).locator('.app-entity__variation')).toHaveText('+1 bulletin · vs juillet 2026');
