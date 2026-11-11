@@ -35,7 +35,7 @@
             @if (store.analyse(); as analyse) {
               <section class="app-wizard__panneau">
                 @if (analyse.departs.length === 0) {
-                  <p class="app-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans STC.</p>
+                  <p class="app-wizard__consigne">Aucun départ ce mois-ci : tous les employés en poste sont dans le fichier, sans sortant.</p>
                 } @else {
                   <p class="app-wizard__consigne">Ces employés quittent Staport. Décochez ceux qui restent ; un motif est demandé pour chaque départ confirmé, sauf pour un salarié absent du fichier, dont le départ peut être confirmé sans motif.</p>
                   <ul class="app-wizard__departs">
