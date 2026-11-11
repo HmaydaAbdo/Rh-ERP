@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from html import escape
@@ -41,6 +41,10 @@ class PointEvolution:
     effectif: int
     stc: int
     montant_stc: Decimal
+    # Salariés payés ce mois-là dans le périmètre : sert à compter les entrants
+    # (payés ce mois-ci mais pas le mois civil d'avant).
+    membres: frozenset[int] = frozenset()
+    entrees: int | None = None
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ class ServiceRapportPaie:
             .where(*conditions)
             .order_by(Fonction.libelle, Employee.nom_prenom)
         )
-        conditions_evolution = _conditions(_periodes_recentes(requete.periode, 12), requete)
+        conditions_evolution = _conditions(_periodes_recentes(requete.periode, 13), requete)
         est_stc = func.lower(func.btrim(Paie.observation, " \t\n\r\f\v")).in_(["stc", "sortie"])
         q_evolution_chantier = (
             select(
@@ -84,6 +88,7 @@ class ServiceRapportPaie:
                 func.count(Paie.id),
                 func.coalesce(func.sum(case((est_stc, 1), else_=0)), 0),
                 func.coalesce(func.sum(case((est_stc, Paie.salaire_total), else_=Decimal(0))), Decimal(0)),
+                func.array_agg(Paie.employee_id),
             )
             .join(Employee, Employee.id == Paie.employee_id)
             .where(*conditions_evolution)
@@ -96,7 +101,7 @@ class ServiceRapportPaie:
                 [tuple(row) for row in (await session.execute(q)).all()],
             )
             evolution_chantiers_brute = cast(
-                list[tuple[int, int | None, int, Decimal, int, int, Decimal]],
+                list[tuple[int, int | None, int, Decimal, int, int, Decimal, list[int]]],
                 [tuple(row) for row in (await session.execute(q_evolution_chantier)).all()],
             )
         lignes_courantes = [ligne for ligne in lignes if ligne[0].periode == int(requete.periode.replace("-", ""))]
@@ -107,8 +112,8 @@ class ServiceRapportPaie:
         cumul_chantiers: dict[tuple[int, int], PointEvolution] = {}
         evolution_chantiers: dict[int, list[PointEvolution]] = {}
         evolution_equipes: dict[tuple[int, int], list[PointEvolution]] = {}
-        for chantier_id, equipe_id, periode, masse, effectif, stc, montant_stc in evolution_chantiers_brute:
-            point = PointEvolution(periode, masse, effectif, stc, montant_stc)
+        for chantier_id, equipe_id, periode, masse, effectif, stc, montant_stc, employes in evolution_chantiers_brute:
+            point = PointEvolution(periode, masse, effectif, stc, montant_stc, frozenset(employes))
             if equipe_id is not None:
                 evolution_equipes.setdefault((chantier_id, equipe_id), []).append(point)
             cle_chantier = chantier_id, periode
@@ -118,7 +123,13 @@ class ServiceRapportPaie:
             evolution_chantiers.setdefault(chantier_id, []).append(point)
         evolution = [cumul_global[periode] for periode in sorted(cumul_global)]
         html = self._html(
-            requete, lignes_courantes, lignes_precedentes, evolution, evolution_chantiers, evolution_equipes
+            requete,
+            lignes_courantes,
+            lignes_precedentes,
+            evolution,
+            evolution_chantiers,
+            evolution_equipes,
+            _FenetreEvolution(set(cumul_global), set(_periodes_recentes(requete.periode, 12))),
         )
         return BytesIO(await rendre_pdf(html, self._ressources))
 
@@ -130,6 +141,7 @@ class ServiceRapportPaie:
         evolution: list[PointEvolution] | None = None,
         evolution_chantiers: dict[int, list[PointEvolution]] | None = None,
         evolution_equipes: dict[tuple[int, int], list[PointEvolution]] | None = None,
+        fenetre: _FenetreEvolution | None = None,
     ) -> str:
         css = (self._ressources / "rapport.css").read_text(encoding="utf-8")
         par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
@@ -183,7 +195,7 @@ class ServiceRapportPaie:
                     "GLOBAL",
                     f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}'
                     + _rubrique(1, TITRE_EVOLUTION)
-                    + _tableau_evolution(evolution or []),
+                    + _tableau_evolution(_avec_entrees(evolution or [], fenetre)),
                 )
             )
             tableaux_globaux = _tableaux_repartition_chantiers(par_chantier)
@@ -212,7 +224,7 @@ class ServiceRapportPaie:
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + _rubrique(1, TITRE_EVOLUTION)
-                + _tableau_evolution((evolution_chantiers or {}).get(chantier.id, []))
+                + _tableau_evolution(_avec_entrees((evolution_chantiers or {}).get(chantier.id, []), fenetre))
             )
             if choix or regroupements:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
@@ -258,7 +270,7 @@ class ServiceRapportPaie:
                                 points_section[point.periode] = _additionner_points(
                                     points_section.get(point.periode), point
                                 )
-                    evolutions_section = [points_section[p] for p in sorted(points_section)]
+                    evolutions_section = _avec_entrees([points_section[p] for p in sorted(points_section)], fenetre)
                     pages.append(
                         (
                             niveau_section,
@@ -719,6 +731,7 @@ def _tableau_evolution(points: list[PointEvolution]) -> str:
         ("Sortants (DH)", [_masse(point.montant_stc) for point in points]),
         ("Bulletins de paie", [_entier(point.effectif) for point in points]),
         ("Sortants (bulletins)", [_entier(point.stc) for point in points]),
+        ("Entrants (bulletins)", ["—" if point.entrees is None else _entier(point.entrees) for point in points]),
     )
     colonnes = '<col class="libelle">' + '<col class="mois">' * len(points)
     entete = "<th>MOIS</th>" + "".join(f"<th>{point.periode % 100}/{point.periode // 100}</th>" for point in points)
@@ -740,7 +753,44 @@ def _additionner_points(precedent: PointEvolution | None, point: PointEvolution)
         precedent.effectif + point.effectif,
         precedent.stc + point.stc,
         precedent.montant_stc + point.montant_stc,
+        precedent.membres | point.membres,
     )
+
+
+@dataclass(frozen=True)
+class _FenetreEvolution:
+    """Mois avec de la paie (tous périmètres) et les 12 mois affichés ; le 13e ne sert qu'à compter les entrants."""
+
+    mois_avec_paie: set[int]
+    affiches: set[int]
+
+
+def _mois_civil_precedent(periode: int) -> int:
+    annee, mois = divmod(periode, 100)
+    return (annee - 1) * 100 + 12 if mois == 1 else periode - 1
+
+
+def _avec_entrees(points: list[PointEvolution], fenetre: _FenetreEvolution | None) -> list[PointEvolution]:
+    """Ajoute les entrants de chaque mois : salariés du périmètre payés ce mois-ci mais pas le mois civil d'avant.
+
+    Inconnu (`None`, affiché « — ») quand le mois civil d'avant n'a aucune paie : on ne peut pas dire qui entre.
+    Le même calcul vaut pour le global, un chantier ou une section d'équipes réunies : il part des salariés.
+    """
+    if fenetre is None:
+        return points
+    par_periode = {point.periode: point for point in points}
+    resultat: list[PointEvolution] = []
+    for point in sorted(points, key=lambda p: p.periode):
+        if point.periode not in fenetre.affiches:
+            continue
+        avant = _mois_civil_precedent(point.periode)
+        if avant not in fenetre.mois_avec_paie:
+            entrees = None
+        else:
+            precedent = par_periode.get(avant)
+            entrees = len(point.membres - (precedent.membres if precedent else frozenset()))
+        resultat.append(replace(point, entrees=entrees))
+    return resultat
 
 
 def _conditions(periodes: Sequence[str | int], requete: PaieRapportRequete) -> list[ColumnElement[bool]]:

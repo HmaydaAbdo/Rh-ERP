@@ -214,8 +214,31 @@ def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
     assert '<td class="libelle">Sortants (DH)</td><td class="mois">500</td><td class="mois">0</td>' in tableau
     assert '<td class="libelle">Bulletins de paie</td><td class="mois">2</td><td class="mois">3</td>' in tableau
     assert '<td class="libelle">Sortants (bulletins)</td><td class="mois">1</td><td class="mois">0</td>' in tableau
+    assert '<td class="libelle">Entrants (bulletins)</td><td class="mois">—</td><td class="mois">—</td>' in tableau
     indisponible = rapport._tableau_evolution([])
     assert "Aucune donnée historique" in indisponible and "<table" not in indisponible
+
+
+def test_entrants_comptent_les_salaries_absents_le_mois_civil_precedent() -> None:
+    rapport = cast(Any, report)
+    points = [
+        rapport.PointEvolution(202512, Decimal(0), 2, 0, Decimal(0), frozenset({1, 2})),
+        rapport.PointEvolution(202601, Decimal(0), 3, 0, Decimal(0), frozenset({1, 2, 3})),
+        rapport.PointEvolution(202603, Decimal(0), 3, 0, Decimal(0), frozenset({1, 4, 5})),
+    ]
+    fenetre = rapport._FenetreEvolution({202512, 202601, 202602, 202603}, {202601, 202602, 202603})
+
+    avec = rapport._avec_entrees(points, fenetre)
+
+    # 12/2025 est hors fenêtre (simple référence) ; 01/2026 : 3 est nouveau ; 03/2026 : février sans bulletin
+    # du périmètre, mais avec de la paie ailleurs, donc les 3 salariés du périmètre sont tous entrants.
+    assert [(p.periode, p.entrees) for p in avec] == [(202601, 1), (202603, 3)]
+    # sans paie le mois civil d'avant, on ne sait pas : inconnu
+    inconnu = rapport._avec_entrees(points, rapport._FenetreEvolution({202601}, {202601}))
+    assert [p.entrees for p in inconnu] == [None]
+    assert rapport._avec_entrees(points, None) is points
+    tableau = rapport._tableau_evolution(avec)
+    assert '<td class="libelle">Entrants (bulletins)</td><td class="mois">1</td><td class="mois">3</td>' in tableau
 
 
 def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
@@ -441,6 +464,8 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert htmls[0].count("12/2025") == 3
         assert "1/2026" not in htmls[0]
         assert "Sortants (bulletins)" in htmls[0] and "200" in htmls[0]
+        # aucun mois civil précédent avec paie (11/2025 et 1/2026 absents) : entrants inconnus
+        assert htmls[0].count("Entrants (bulletins)") == 3
     finally:
         if ids is not None:
             with plateforme.moteur.begin() as connection:
