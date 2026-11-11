@@ -89,9 +89,9 @@ async def regroupements(
 
 @employees.post("/sorties-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
 async def sorties_mois(
-    corps: EmployeeSortiesRecherche, session: Session, contexte: Contexte
+    corps: EmployeeSortiesRecherche, session: Session, contexte: Contexte, acces: Authentifie
 ) -> EmployeeSortiesMoisReponse:
-    return await contexte.employees.sorties_mois(session, corps.periode)
+    return await contexte.employees.sorties_mois(session, corps.periode, avec_paie=paie(acces))
 
 
 @employees.get("/import/modele", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])

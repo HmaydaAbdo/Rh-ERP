@@ -310,7 +310,18 @@ reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `Lecteu
 | 2. Contrôle | `POST /paie/import/analyse` | Analyse **sans rien enregistrer**. Quatre sortes de problèmes, chacune avec sa solution (ci-dessous). On corrige, on réimporte le fichier corrigé, et on recommence jusqu'à **zéro problème**. |
 | — | `POST /paie/import/corrections` | Depuis le contrôle : met à jour des fiches avec les valeurs du fichier, ou crée les employés des CIN inconnus. Renvoie la nouvelle analyse. (Rouvrir un chantier clôturé passe par `PUT /chantiers/{id}`, puis le fichier est réanalysé.) |
 | 3. Départs | — | Les employés qui quittent Staport, **tous cochés** : ceux marqués STC ou « sortie » dans le fichier (motif « STC » / « Sortie » prérempli) et les actifs **absents** du fichier (motif à saisir). Décoché = l'employé reste en poste. Les employés sortis présents dans le fichier sont annoncés comme **retours** (ils repassent en poste). |
-| 4. Import | `POST /paie/import` | Refait l'analyse : refus (`400`) si le fichier n'est pas prêt ou si un départ envoyé n'a pas été proposé. Sinon, en une transaction : les bulletins, les retours (ACTIF), les départs confirmés (INACTIF + départ du mois dans `employe_sortie`). |
+| 4. Import | `POST /paie/import` | Refait l'analyse : refus (`400`) si le fichier n'est pas prêt ou si un départ envoyé n'a pas été proposé. Sinon, en une transaction : les bulletins, les retours (ACTIF), les départs confirmés (INACTIF + départ du mois dans `employe_sortie`). Si le mois existe déjà, les bulletins du fichier sont **mis à jour sur place** (les autres bulletins du mois ne bougent pas), les heures supplémentaires liées sont recalculées et les fiches suivent leur dernier bulletin ; l'étape « Départs » est alors sans objet. |
+
+### La fiche suit le dernier bulletin
+
+Toute écriture sur un bulletin (création, modification, suppression, suppression ou restauration d'un groupe) réaligne la
+fiche de l'employé sur son **dernier bulletin** (`fiche_employe.aligner_fiche`) : fonction, chantier et équipe sont repris de
+ce bulletin. Une observation « STC » ou « sortie » enregistre le départ du mois (`employe_sortie`, motif « STC » ou
+« Sortie ») ; si ce départ est au dernier mois, la fiche passe à « sortie » (sans chantier ni équipe). Supprimer ou corriger
+le bulletin retire le départ qu'il avait créé (un départ saisi à la main avec un autre motif n'est jamais touché) et
+recalcule la fiche. Un bulletin postérieur à un départ remet l'employé en poste, à condition que son type de salaire soit
+renseigné (sinon `409`) ; le salaire de la fiche est alors repris du bulletin. Le salaire de la fiche n'est pas modifié par
+les autres bulletins.
 
 ### Les problèmes du contrôle
 

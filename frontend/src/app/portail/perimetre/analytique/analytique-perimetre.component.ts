@@ -118,15 +118,15 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly colonnesEquipes = computed<TableColumn[]>(() => [
     { field: 'libelle', header: this.libelleDimensionVueMaj() },
     { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
-    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
-    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
+    { field: 'masse', header: 'Montant de la paie (DH)', align: 'text-end' },
+    { field: 'stc', header: 'Sortants', align: 'text-end' },
     { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
   ]);
   protected readonly colonnesEvolutionEquipe: TableColumn[] = [
     { field: 'periode', header: 'Mois' },
     { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
-    { field: 'masse', header: 'Masse salariale (DH)', align: 'text-end' },
-    { field: 'stc', header: 'STC (bulletins)', align: 'text-end' },
+    { field: 'masse', header: 'Montant de la paie (DH)', align: 'text-end' },
+    { field: 'stc', header: 'Sortants', align: 'text-end' },
     { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
   ];
   protected readonly colonnesQualite: TableColumn[] = [
@@ -146,14 +146,14 @@ export class AnalytiquePerimetreComponent implements OnInit {
     { field: 'periode', header: 'Mois' },
     { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
     { field: 'effectif', header: 'Bulletins de paie', align: 'text-end' },
-    { field: 'stc', header: 'STC', align: 'text-end' },
-    { field: 'stcMontant', header: 'Montant STC (DH)', align: 'text-end' }
+    { field: 'stc', header: 'Sortants', align: 'text-end' },
+    { field: 'stcMontant', header: 'STC (DH)', align: 'text-end' }
   ];
   protected readonly colonnesRepartitionPaie = computed<TableColumn[]>(() => [
     { field: 'libelle', header: this.libelles[this.dimension()] },
     { field: 'effectif', header: 'Payés', align: 'text-end' },
     { field: 'masse', header: 'Masse (DH)', align: 'text-end' },
-    { field: 'stc', header: 'STC' },
+    { field: 'stc', header: 'Sortants' },
     { field: 'approfondir', header: 'Approfondir', sortable: false }
   ]);
   protected readonly colonnesTranches: TableColumn[] = [
@@ -248,10 +248,10 @@ export class AnalytiquePerimetreComponent implements OnInit {
     const absolu = (courant: number, precedent: number | undefined): string | null =>
       moisPrecedent && precedent !== undefined ? `${courant - precedent > 0 ? '+' : ''}${FORMAT_ENTIER.format(courant - precedent)}` : null;
     const tuiles: Tuile[] = [
-      { libelle: 'Masse salariale', valeur: `${formaterMontant(kpis.masse)} DH`, variation: pourcent(kpis.masse, moisPrecedent?.masse) },
+      { libelle: 'Montant de la paie', valeur: `${formaterMontant(kpis.masse)} DH`, variation: pourcent(kpis.masse, moisPrecedent?.masse) },
       { libelle: 'Bulletins de paie', valeur: String(kpis.effectif), variation: absolu(kpis.effectif, moisPrecedent?.effectif) },
       { libelle: 'Coût moyen par personne', valeur: kpis.coutMoyen === null ? '—' : `${formaterMontant(kpis.coutMoyen)} DH`, variation: pourcent(kpis.coutMoyen, moisPrecedent?.coutMoyen) },
-      { libelle: 'Soldes de tout compte', valeur: `${kpis.stc} · ${formaterMontant(kpis.stcMontant)} DH`, variation: absolu(kpis.stc, moisPrecedent?.stc) }
+      { libelle: 'Sortants et STC (DH)', valeur: `${kpis.stc} · ${formaterMontant(kpis.stcMontant)} DH`, variation: absolu(kpis.stc, moisPrecedent?.stc) }
     ];
     if (etapeChoisie(this.perimetre(), 'CHANTIER') === null) {
       tuiles.push({ libelle: 'Chantiers concernés', valeur: String(kpis.nombreChantiers), variation: absolu(kpis.nombreChantiers, moisPrecedent?.nombreChantiers) });
@@ -324,8 +324,8 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly libelleMesureEquipe = (mesure: MesureEvolution): string => {
     switch (mesure) {
       case 'effectif': return 'Bulletins de paie';
-      case 'masse': return 'Masse salariale (DH)';
-      case 'stc': return 'STC (bulletins)';
+      case 'masse': return 'Montant de la paie (DH)';
+      case 'stc': return 'Sortants';
       case 'stcMontant': return 'STC (DH)';
     }
   };

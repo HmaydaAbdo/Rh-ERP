@@ -326,7 +326,7 @@ export interface PaieImportControlePeriode {
     | 'MOIS_HORS_CYCLE'
     | 'MOIS_SAUTE'
     | 'CONTENU_DEJA_IMPORTE'
-    | 'MOIS_DEJA_IMPORTE'
+    | 'MOIS_MIS_A_JOUR'
     | 'MOIS_ANTERIEUR_AU_DERNIER';
   message: string;
   periodeReference: string | null;
@@ -342,6 +342,8 @@ export interface PaieImportCorrections {
 export interface PaieImportResult {
   periode: string;
   crees: number;
+  /** Bulletins d'un mois déjà importé, mis à jour sur place. */
+  misAJour?: number;
   departs: number;
   retours: number;
   fonctionsCreees?: number;
@@ -366,6 +368,8 @@ export interface PaieRapportPdfRequest {
   /** Retire le chapitre « Vue d'ensemble » : le rapport commence par le premier chantier. */
   sansVueEnsemble?: boolean;
   equipesParChantier?: Record<string, string[]> | null;
+  /** Équipes réunies en une seule section, par chantier : `{ C168: [['Chauffeurs', 'Opérateurs']] }`. */
+  regroupementsEquipesParChantier?: Record<string, string[][]> | null;
   /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
   materiel?: Record<string, number> | null;
 }

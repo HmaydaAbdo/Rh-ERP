@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Paie', icon: 'wallet', route: '/paie', permission: 'PAIE_READ' },
   { label: 'Heures sup.', icon: 'clock-3', route: '/heures-supp', permission: 'HEURES_SUP_READ' },
   { label: 'Employés', icon: 'users', route: '/employees', permission: 'EMPLOYEE_READ' },
-  { label: 'Sorties', icon: 'log-out', route: '/sorties', permission: 'EMPLOYEE_READ' },
+  { label: 'STC / Sortie', icon: 'log-out', route: '/sorties', permission: 'EMPLOYEE_READ' },
   { label: 'Chantiers', icon: 'building', route: '/chantiers', permission: 'CHANTIER_READ' },
   { label: 'Carte', icon: 'map-pinned', route: '/carte', permission: 'CARTE_READ' },
   { label: 'Fonctions', icon: 'briefcase', route: '/functions', permission: 'FUNCTION_READ' },

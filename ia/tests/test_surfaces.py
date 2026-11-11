@@ -58,7 +58,7 @@ def test_une_suite_de_mois_donne_une_courbe_dans_l_ordre_du_temps() -> None:
     graphique = composants["graphique"]
     assert composants["root"]["children"] == ["graphique", "tableau"]
     assert graphique["labels"] == ["2026-06", "2026-07", "2026-08", "2026-09"]
-    masse = {"name": "Masse salariale", "values": [50.5, 100.5, 200.5, 300.5], "format": "montant"}
+    masse = {"name": "Montant de la paie", "values": [50.5, 100.5, 200.5, 300.5], "format": "montant"}
     assert graphique["series"][0] == masse
     assert {c["key"]: c["format"] for c in composants["tableau"]["columns"]}["periode"] == "periode"
 
