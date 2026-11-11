@@ -93,12 +93,12 @@ règles détaillées suivent dans les sections suivantes.
   `periode_confirmee` à l'import, vérifié aussi par le serveur). Un mois qui a déjà des bulletins, ou plus ancien que la dernière
   paie importée, est **bloqué** par un seul message (`blocagesPeriode`).
   Le contrôle est un **parcours d'étapes dynamiques**, une par type de problème réellement trouvé, dans l'ordre des dépendances :
-  À savoir (ce que l'import fera seul : fonctions créées, chantiers rouverts), Mois impossible, Mois à confirmer, Erreurs du
+  À savoir (ce que l'import fera seul : fonctions créées, chantiers rouverts, nom, fonction, chantier et équipe de la fiche alignés sur le fichier), Mois impossible, Mois à confirmer, Erreurs du
   fichier, Chantiers clôturés, Nouvelles embauches (CIN sans fiche), Mises à jour de fiches, Points à confirmer. La suivante s'ouvre
   quand la précédente est réglée. Les embauches et les mises à jour de fiches se règlent **un cas à la fois** : une fois le cas réglé,
   l'écran passe au suivant (« Passer » et « Précédent » pour garder un cas pour plus tard, liste complète à la demande, barre de
-  progression). Les mises à jour sont nommées selon ce qui change : Mutations de chantier, Changements d'équipe, Changements de
-  fonction, Révisions de salaire, Noms écrits autrement ; chacune a son action « mettre à jour les N fiches ». Pour les embauches, la
+  progression). Seules les révisions de salaire demandent un choix (mensuel ou journalier) ; le nom, la fonction, le chantier et l'équipe
+  du fichier s'appliquent sans confirmation. Pour les embauches, la
   date d'embauche et le type de salaire se recopient sur les autres cas, puis les fiches complètes se créent d'un seul envoi. Les
   erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).

@@ -16,7 +16,7 @@ from staport.domains.employee import audit as _historique_employee  # noqa: F401
 from staport.domains.paie import audit as _historique_paie  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from staport.domains.paie.exceptions import ErreurImportPaie
 from staport.domains.paie.import_service import ServiceImportPaie
-from staport.domains.paie.schemas import PaieImportAlignement, PaieImportCorrections, PaieImportDeparts
+from staport.domains.paie.schemas import PaieImportDeparts
 
 
 def _fichier(fonction: str, chantier: str, equipe: str) -> bytes:
@@ -102,14 +102,9 @@ async def _verifier_referentiels(url: str) -> None:
 
             valide = _fichier("Nouvelle", "NOUVEAU", "NEW")
             initiale = await service.analyser(session, valide, 202611)
-            assert [ecart.employe_id for ecart in initiale.ecarts] == [employe]
-            corrigee = await service.corriger_et_reanalyser(
-                session,
-                valide,
-                202611,
-                PaieImportCorrections(aligner=[PaieImportAlignement(employe_id=employe)], creer=[]),
-            )
-            assert corrigee.pret
+            # nom, fonction, chantier et équipe du fichier s'appliquent seuls : aucun écart à confirmer
+            assert initiale.ecarts == []
+            assert initiale.pret
             assert (await service.importer(session, valide, 202611, False, PaieImportDeparts())).crees == 1
             with pytest.raises(
                 ErreurImportPaie, match="La période demande confirmation : La paie de 2026-11 existe déjà"
