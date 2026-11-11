@@ -52,11 +52,6 @@ html, body {
     line-height: 14pt;
 }
 
-.graphique svg {
-    width: 100%;
-    height: auto;
-}
-
 /* ================================ PAGE : structure commune ================================ */
 
 .page {
@@ -493,33 +488,24 @@ table.recap.fonction td.effectif,
 table.recap.fonction td.stc-personnes { text-align: center; }
 table.recap.fonction td.stc-montant { text-align: right; }
 
+table.recap.evolution { margin-top: 4pt; }
+table.recap.evolution col.libelle { width: 130pt; }
+table.recap.evolution col.mois { width: 56pt; }
+table.recap.evolution td.libelle { text-align: left; font-weight: bold; }
+table.recap.evolution td.mois { text-align: right; }
+
+table.recap.repartition { width: 802pt; margin-top: 4pt; }
+table.recap.repartition col.libelle { width: 250pt; }
+table.recap.repartition col.nombre { width: 138pt; }
+table.recap.repartition td.libelle { text-align: left; }
+table.recap.repartition td.nombre { text-align: right; }
+table.recap.repartition tr.total td { font-weight: bold; }
+
 table.recap.materiel { width: 250pt; }
 table.recap.materiel col.libelle { width: 180pt; }
 table.recap.materiel col.nbre { width: 70pt; }
 table.recap.materiel td.libelle { text-align: left; }
-
-/* ================================ GRAPHIQUES (SVG, voir RapportChartSvgBuilder) ================================ */
-
-.chart-container {
-    margin-top: 8pt;
-}
-
-.chart-container svg text {
-    font-family: "Liberation Serif", serif;
-}
-
-.evolution-container {
-    margin-top: 4pt;
-    width: 802pt;
-}
-
-.evolution-container svg {
-    display: block;
-}
-
-.evolution-container svg text {
-    font-family: "Liberation Serif", serif;
-}
+table.recap.materiel td.nbre { text-align: right; }
 
 .evolution-indisponible {
     margin: 18pt 0;

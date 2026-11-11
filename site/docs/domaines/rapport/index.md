@@ -4,7 +4,7 @@ sidebar_position: 1
 ---
 
 Le domaine produit des documents à partir des bulletins mensuels, sans les modifier. Le rapport PDF
-réunit les indicateurs, graphiques et données détaillées pour le partage et l'impression. Le classeur
+réunit les indicateurs, tableaux d'analyse et données détaillées pour le partage et l'impression. Le classeur
 Excel permet l'exploitation ligne par ligne. Les règles de saisie et d'import restent dans
 [le dossier Paie](../paie/index.md).
 
@@ -15,13 +15,13 @@ les changements de la fiche Employé ne remplacent pas ces affectations historiq
 
 | Mesure | Définition et unité |
 |---|---|
-| Masse salariale | Somme de `salaireTotal`, en DH; ce total n'est jamais recalculé à partir du salaire de base ou des primes. |
+| Montant de la paie | Somme de `salaireTotal`, en DH; ce total n'est jamais recalculé à partir du salaire de base ou des primes. |
 | Effectif rémunéré | Nombre de bulletins du périmètre et du mois, en personnes. L'unicité employé/mois empêche le double comptage. |
-| STC / sorties | Nombre de bulletins dont l'observation vaut `STC` ou `sortie`, sans tenir compte de la casse et des espaces autour. |
-| Montant des STC | Somme de `salaireTotal` de ces mêmes bulletins, en DH. |
+| Sortants | Nombre de bulletins dont l'observation vaut `STC` ou `sortie`, sans tenir compte de la casse et des espaces autour. |
+| Montant des sortants | Somme de `salaireTotal` de ces mêmes bulletins, en DH. |
 | Chantiers | Nombre de chantiers distincts du périmètre courant. |
 | Comparaison | Même périmètre sur le mois civil immédiatement précédent. Sans bulletin précédent, la comparaison est indisponible; une masse réellement nulle reste une valeur connue. |
-| Évolution | Masse, effectif et STC des mois disponibles dans une fenêtre maximale de douze mois finissant au mois du rapport. Aucun mois manquant n'est inventé. |
+| Évolution | Tableau à une colonne par mois disponible (fenêtre maximale de douze mois finissant au mois du rapport) et quatre lignes : montant de la paie (DH), sortants (DH), bulletins de paie, sortants (bulletins). Aucun mois manquant n'est inventé. |
 
 Les KPI, les comparaisons, le détail et les évolutions PDF appliquent les mêmes filtres de nom, CIN,
 fonction et marchés. Nom et CIN utilisent une recherche « contient » insensible à la casse; `%` et
@@ -33,7 +33,7 @@ L'action **Exporter** du domaine Paie ouvre un assistant commun aux deux formats
 
 | Étape | Fonctionnement |
 |---|---|
-| Mois | Le dernier mois contenant des bulletins est présélectionné. Les mois sans paie sont indisponibles. Le résumé indique bulletins, chantiers, masse et STC. |
+| Mois | Le dernier mois contenant des bulletins est présélectionné. Les mois sans paie sont indisponibles. Le résumé indique bulletins, chantiers, montant de la paie et sortants. |
 | Format | Choix entre rapport PDF et classeur Excel. |
 | Marchés | Étape PDF : tous les marchés ou une sélection multiple, recherchable par code ou libellé. Une sélection coche « Sans vue d'ensemble »; ce choix reste modifiable. |
 | Équipes | Sélection explicite par chantier; aucune équipe n'est cochée d'office. Toutes les équipes ou aucune peuvent être choisies pour un chantier. En PDF, seuls les marchés retenus sont proposés. |
@@ -58,20 +58,22 @@ espaces de signature. Les pages de contenu portent la période, le niveau et la 
 Un rapport filtré contient des pages **Périmètre du rapport** qui détaillent tous les filtres actifs,
 avec continuation si nécessaire. Ces pages restent présentes quand la vue d'ensemble est retirée.
 
-La vue d'ensemble présente les KPI, les deux graphiques d'évolution (montants en DH puis personnes)
-et la répartition par chantier. Chaque chantier possède ensuite son chapitre : indicateurs,
+La vue d'ensemble présente les KPI, le tableau d'évolution sur douze mois
+et la répartition par chantier. Chaque répartition (chantier, équipe, fonction) est un tableau trié par montant de la paie
+décroissant, avec les colonnes Montant de la paie (DH), Bulletins, Sortants (bulletins) et Sortants (DH), et une ligne
+Total en bas de la dernière page. Chaque chantier possède ensuite son chapitre : indicateurs,
 évolutions, répartition et liste complète des employés.
 
 - Sans équipe détaillée : une section contient tous les employés du chantier; la répartition est présentée par fonction.
 - Avec équipes détaillées : chaque équipe choisie a sa section; les autres employés sont regroupés dans le reste du chantier. La répartition du chantier conserve toutes ses équipes, même non détaillées.
 - Un employé apparaît exactement une fois dans le détail PDF, y compris s'il n'a pas d'équipe.
 - Le détail est trié par fonction puis nom. Il conserve nom, fonction, CIN, jours, récupérations, salaire, primes, total et observation. Le reste du chantier indique aussi l'équipe réelle.
-- Chaque section conserve son récapitulatif par fonction. Les graphiques matériel ne sont présents que pour un tableau concerné comportant une quantité positive.
+- Chaque section conserve son récapitulatif par fonction. Le parc matériel est un tableau Matériel / Nombre, présent seulement pour une équipe dont le tableau concerné comporte une quantité positive ; les lignes sans quantité sont omises. Le rapport ne contient plus aucun graphique.
 
 Les équipes sont nommées par leur libellé. Les titres chantier présentent le nom suivi du code si le
-nom existe, sinon le code. Le graphique global utilise le nom seul, avec le code comme repli.
+nom existe, sinon le code. La répartition globale utilise le nom seul, avec le code comme repli.
 Les libellés longs passent à la ligne. Les tableaux et répartitions importants continuent sur autant
-de pages que nécessaire, avec une échelle de graphique cohérente entre les pages.
+de pages que nécessaire (16 chantiers ou 15 fonctions au plus par page).
 
 ### Contrat PDF
 
@@ -147,8 +149,8 @@ La sélection des lignes ne dépend jamais de la pagination de l'écran.
 | Agrégats, comparaison, STC, sections et absence de double détail | `PaieBiReportBuilderTest` |
 | Évolutions et effectifs filtrés comme le détail, caractères `%` et `_` littéraux | `PaieRechercheJokersTest` sur PostgreSQL |
 | Pagination, grands textes, tableaux et pages complètes de périmètre | `RapportPageModelBuilderTest` |
-| PDF valide, texte complet, filtres affichés, graphiques réellement rendus, données échappées | `PaieReportHtmlPdfServiceTest` |
-| Graphiques d'évolution, répartition et matériel | `RapportEvolutionSvgBuilderTest`, `RapportChartSvgBuilderTest` |
+| PDF valide, texte complet, filtres affichés, tableaux réellement rendus, données échappées | `PaieReportHtmlPdfServiceTest` |
+| Tableaux d'évolution, de répartition et de parc matériel | `RapportEvolutionSvgBuilderTest`, `RapportChartSvgBuilderTest` |
 | Feuilles Excel, exclusions, équipes et cellules | `PaieExportServiceTest` |
 | Choix, données chargées, reprise après erreur et réponses obsolètes | Specs `paie-export-wizard` et de ses étapes |
 | Permission par route | `EndpointSecurityTest` |
@@ -192,6 +194,6 @@ services documentés.
 
 Tester les formules contre fixtures synthétiques, périodes et filtres, arrondis, cohérence global →
 local, permissions, absence de double comptage et génération PDF/Excel.
-Pour les PDF, vérifier texte et pixels de graphiques avec `PaieReportHtmlPdfServiceTest`; une
+Pour les PDF, vérifier le texte et la mise en page des tableaux avec `PaieReportHtmlPdfServiceTest`; une
 extraction de texte seule ne prouve pas le rendu. Vérifier les grandes listes de filtres dans
 `RapportPageModelBuilderTest` et le filtrage PostgreSQL avec `PaieRechercheJokersTest`.
