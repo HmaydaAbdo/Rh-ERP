@@ -74,12 +74,13 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
     assert 'table class="recap repartition"' in html and "<svg" not in html
-    for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS (BULLETINS)", "SORTANTS (DH)"):
+    for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"):
         assert f"<th>{entete}</th>" in html
     assert "2. Répartition par équipe" in html and "<th>ÉQUIPE</th>" in html
     assert '<tr class="total"><td class="libelle">Total</td>' in html
     assert "1. Évolution sur 12 mois" in html
-    assert "Masse salariale" not in html and "STC" not in html
+    # « STC » n'existe plus que dans l'intitulé du montant : « STC (DH) » ; le nombre de personnes se dit « Sortants »
+    assert "Masse salariale" not in html and "STC" not in html.replace("STC (DH)", "")
     assert "2. Répartition par chantier" in html
     assert "3. Liste des employés" in html
     assert "Montant mois precedent" in html
@@ -93,7 +94,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">OP</td>' in html
     assert "Page 1 / 8" in html and "Page 8 / 8" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
-    assert "SORTANTS (PERS.)" in html
+    assert "SORTANTS" in html
     html_equipe = rendre(
         PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
         lignes,
@@ -105,7 +106,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "<th>FONCTION</th>" in html_equipe and "<svg" not in html_equipe
-    assert "SORTANTS (PERS.)" in html_equipe
+    assert "SORTANTS" in html_equipe
     assert "2. Répartition par fonction" in html_equipe
     assert "3. Liste des employés" in html_equipe
     assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
@@ -211,10 +212,10 @@ def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
         '<td class="libelle">Montant de la paie (DH)</td>'
         '<td class="mois">1\u00a0000</td><td class="mois">1\u00a0500</td>' in tableau
     )
-    assert '<td class="libelle">Sortants (DH)</td><td class="mois">500</td><td class="mois">0</td>' in tableau
+    assert '<td class="libelle">STC (DH)</td><td class="mois">500</td><td class="mois">0</td>' in tableau
     assert '<td class="libelle">Bulletins de paie</td><td class="mois">2</td><td class="mois">3</td>' in tableau
-    assert '<td class="libelle">Sortants (bulletins)</td><td class="mois">1</td><td class="mois">0</td>' in tableau
-    assert '<td class="libelle">Entrants (bulletins)</td><td class="mois">—</td><td class="mois">—</td>' in tableau
+    assert '<td class="libelle">Sortants</td><td class="mois">1</td><td class="mois">0</td>' in tableau
+    assert '<td class="libelle">Entrants</td><td class="mois">—</td><td class="mois">—</td>' in tableau
     indisponible = rapport._tableau_evolution([])
     assert "Aucune donnée historique" in indisponible and "<table" not in indisponible
 
@@ -238,7 +239,7 @@ def test_entrants_comptent_les_salaries_absents_le_mois_civil_precedent() -> Non
     assert [p.entrees for p in inconnu] == [None]
     assert rapport._avec_entrees(points, None) is points
     tableau = rapport._tableau_evolution(avec)
-    assert '<td class="libelle">Entrants (bulletins)</td><td class="mois">1</td><td class="mois">3</td>' in tableau
+    assert '<td class="libelle">Entrants</td><td class="mois">1</td><td class="mois">3</td>' in tableau
 
 
 def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
@@ -354,10 +355,7 @@ def test_tableau_repartition_presente_les_quatre_mesures() -> None:
         Decimal("300"),
     )
     tableau, _hauteur = rapport._tableaux_repartition([point], "CHANTIER", maximum=16)[0]
-    assert all(
-        entete in tableau
-        for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS (BULLETINS)", "SORTANTS (DH)")
-    )
+    assert all(entete in tableau for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"))
     assert '<td class="libelle">Chantier A</td><td class="nombre">1\u00a0000</td><td class="nombre">2</td>' in tableau
 
 
@@ -463,9 +461,9 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
         assert htmls[0].count("12/2025") == 3
         assert "1/2026" not in htmls[0]
-        assert "Sortants (bulletins)" in htmls[0] and "200" in htmls[0]
+        assert "Sortants" in htmls[0] and "200" in htmls[0]
         # aucun mois civil précédent avec paie (11/2025 et 1/2026 absents) : entrants inconnus
-        assert htmls[0].count("Entrants (bulletins)") == 3
+        assert htmls[0].count("Entrants") == 3
     finally:
         if ids is not None:
             with plateforme.moteur.begin() as connection:

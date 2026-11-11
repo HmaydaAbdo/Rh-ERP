@@ -614,9 +614,7 @@ def _tableaux_repartition(elements: list[PointRepartition], colonne: str, *, max
                 '<table class="recap repartition"><col class="libelle"><col class="nombre"><col class="nombre">'
                 '<col class="nombre"><col class="nombre"><thead><tr>'
                 f"<th>{escape(colonne)}</th><th>MONTANT DE LA PAIE (DH)</th><th>BULLETINS</th>"
-                "<th>SORTANTS (BULLETINS)</th><th>SORTANTS (DH)</th></tr></thead><tbody>"
-                + "".join(lignes_html)
-                + "</tbody></table>",
+                "<th>SORTANTS</th><th>STC (DH)</th></tr></thead><tbody>" + "".join(lignes_html) + "</tbody></table>",
                 hauteur,
             )
         )
@@ -706,7 +704,7 @@ def _recaps_fonctions(
                 '<table class="recap fonction"><col class="libelle"><col class="effectif">'
                 '<col class="stc-personnes"><col class="stc-montant">'
                 "<thead><tr><th>FONCTION</th><th>BULLETINS</th>"
-                "<th>SORTANTS (PERS.)</th><th>SORTANTS (DH)</th></tr></thead><tbody>"
+                "<th>SORTANTS</th><th>STC (DH)</th></tr></thead><tbody>"
                 + "".join(tranche)
                 + "</tbody></table></div></div>",
                 hauteur,
@@ -728,10 +726,10 @@ def _tableau_evolution(points: list[PointEvolution]) -> str:
         )
     lignes: tuple[tuple[str, list[str]], ...] = (
         ("Montant de la paie (DH)", [_masse(point.masse) for point in points]),
-        ("Sortants (DH)", [_masse(point.montant_stc) for point in points]),
+        ("STC (DH)", [_masse(point.montant_stc) for point in points]),
         ("Bulletins de paie", [_entier(point.effectif) for point in points]),
-        ("Sortants (bulletins)", [_entier(point.stc) for point in points]),
-        ("Entrants (bulletins)", ["—" if point.entrees is None else _entier(point.entrees) for point in points]),
+        ("Sortants", [_entier(point.stc) for point in points]),
+        ("Entrants", ["—" if point.entrees is None else _entier(point.entrees) for point in points]),
     )
     colonnes = '<col class="libelle">' + '<col class="mois">' * len(points)
     entete = "<th>MOIS</th>" + "".join(f"<th>{point.periode % 100}/{point.periode // 100}</th>" for point in points)
@@ -866,13 +864,13 @@ def _cartes_kpi(
             "compte",
         ),
         (
-            "Sortants (bulletins)",
+            "Sortants",
             _entier(courant.stc),
             _ecart_compte(courant.stc, precedent.stc if precedent else None, "bulletin", "bulletins"),
             "compte",
         ),
         (
-            "Sortants (DH)",
+            "STC (DH)",
             f"{_montant(courant.montant_stc)} DH",
             _ecart_montant(courant.montant_stc, precedent.montant_stc if precedent else None, decimales=True),
             "montant",

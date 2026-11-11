@@ -59,9 +59,9 @@ Un rapport filtré contient des pages **Périmètre du rapport** qui détaillent
 avec continuation si nécessaire. Ces pages restent présentes quand la vue d'ensemble est retirée.
 
 La vue d'ensemble présente les KPI, le tableau d'évolution sur douze mois
-(Montant de la paie, Sortants en DH, Bulletins de paie, Sortants en bulletins et Entrants : salariés payés ce mois-ci
+(Montant de la paie, STC en DH, Bulletins de paie, Sortants en nombre de personnes et Entrants : salariés payés ce mois-ci
 mais pas le mois civil précédent, « — » quand ce mois précédent n'a aucune paie) et la répartition par chantier. Chaque répartition (chantier, équipe, fonction) est un tableau trié par montant de la paie
-décroissant, avec les colonnes Montant de la paie (DH), Bulletins, Sortants (bulletins) et Sortants (DH), et une ligne
+décroissant, avec les colonnes Montant de la paie (DH), Bulletins, Sortants (personnes) et STC (DH), et une ligne
 Total en bas de la dernière page. Chaque chantier possède ensuite son chapitre : indicateurs,
 évolutions, répartition et liste complète des employés.
 
