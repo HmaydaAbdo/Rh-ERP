@@ -242,6 +242,13 @@ def test_entrants_comptent_les_salaries_absents_le_mois_civil_precedent() -> Non
     assert '<td class="libelle">Entrants</td><td class="mois">1</td><td class="mois">3</td>' in tableau
 
 
+def test_chapitres_de_chantier_suivent_l_ordre_naturel_des_codes() -> None:
+    rapport = cast(Any, report)
+    codes = ["C302", "C57", "C205", "C108", "c1000", "CH01"]
+
+    assert sorted(codes, key=rapport._cle_code) == ["C57", "C108", "C205", "C302", "c1000", "CH01"]
+
+
 def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
     rapport = cast(Any, report)
     assert rapport._tableau_materiel("C168", "CH", {"CAMION CITERNE": 0}) is None

@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date
@@ -209,9 +210,7 @@ class ServiceRapportPaie:
                         _rubrique(2, titre_repartition) + tableau,
                     )
                 )
-        chantiers_ordonnes = sorted(
-            par_chantier.items(), key=lambda item: -sum(ligne[0].salaire_total for ligne in item[1])
-        )
+        chantiers_ordonnes = sorted(par_chantier.items(), key=lambda item: _cle_code(item[0]))
         chapitres_fixes = 0 if requete.sans_vue_ensemble else 1
         for rang_chantier, (code, lignes_chantier) in enumerate(chantiers_ordonnes, start=chapitres_fixes + 1):
             chantier = lignes_chantier[0][2]
@@ -714,6 +713,11 @@ def _recaps_fonctions(
 
 
 TITRE_EVOLUTION = "Évolution sur 12 mois"
+
+
+def _cle_code(code: str) -> list[str | int]:
+    """Tri « naturel » des codes de chantier : C57 avant C108, C108 avant C205 (le nombre compte, pas les lettres)."""
+    return [int(morceau) if morceau.isdigit() else morceau.casefold() for morceau in re.split(r"(\d+)", code)]
 
 
 def _tableau_evolution(points: list[PointEvolution]) -> str:
