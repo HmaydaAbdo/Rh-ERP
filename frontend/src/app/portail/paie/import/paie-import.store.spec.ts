@@ -125,7 +125,7 @@ describe('PaieImportStore', () => {
   it('un mois bloqué empêche tout passage, même confirmé', () => {
     service.analyserImport.mockReturnValue(of({
       ...PRETE,
-      blocagesPeriode: [{ code: 'MOIS_DEJA_IMPORTE' as const, message: 'Déjà importé.', periodeReference: null }],
+      blocagesPeriode: [{ code: 'MOIS_ANTERIEUR_AU_DERNIER' as const, message: 'Plus ancien que la dernière paie.', periodeReference: null }],
       pret: false
     }));
     store.ouvrir();

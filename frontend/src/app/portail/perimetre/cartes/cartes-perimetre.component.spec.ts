@@ -248,7 +248,7 @@ describe('CartesPerimetreComponent', () => {
     expect(cartes[0].textContent).not.toContain('en poste');
     expect(cartes[0].textContent).toContain('Paie · août 2026');
     expect(Array.from(cartes[0].querySelectorAll('.app-entity__indicator dt')).map((dt) => dt.textContent?.trim())).toEqual([
-      'Bulletins de paie', 'Masse salariale (DH)', 'STC (bulletins)', 'STC (DH)'
+      'Bulletins de paie', 'Montant de la paie (DH)', 'Sortants', 'STC (DH)'
     ]);
     expect(cartes[0].querySelectorAll('.app-entity__indicator')).toHaveLength(4);
     expect(cartes[0].textContent).toContain('Stable · vs juillet 2026');
@@ -520,7 +520,7 @@ describe('CartesPerimetreComponent', () => {
     expect(page.querySelector('stp-select')).toBeNull();
     expect(page.textContent).toContain('Paie · août 2026');
     expect(page.querySelector('.app-level__title .app-tag')?.textContent).toContain('Paie · août 2026');
-    expect(page.querySelector('.app-level__summary .app-muted')?.textContent).toContain('Masse salariale');
+    expect(page.querySelector('.app-level__summary .app-muted')?.textContent).toContain('Montant de la paie');
     expect(page.querySelector('.app-results__head')).toBeNull();
     expect(page.querySelector('a[href="/functions"]')).toBeNull();
     expect(page.querySelector('.app-actions-row a[href^="/employees"]')).toBeNull();
@@ -550,7 +550,7 @@ describe('CartesPerimetreComponent', () => {
 
     expect(page.querySelector('.app-muted')?.textContent).toContain('1 équipe');
     expect(page.querySelector('.app-muted')?.textContent).toContain('Effectif : 1 personnes');
-    expect(page.querySelector('.app-muted')?.textContent).toMatch(/Masse salariale : 50 DH/);
+    expect(page.querySelector('.app-muted')?.textContent).toMatch(/Montant de la paie : 50 DH/);
     expect(page.querySelector('.app-muted')?.textContent).not.toMatch(/employé|fiche|payé/i);
     expect(corps(page, 'Orphelins')).toBeNull();
     expect(page.textContent).not.toContain('Orphelins');

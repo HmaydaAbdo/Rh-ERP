@@ -144,11 +144,26 @@ class EmployeeSortiesRecherche(ModeleApi):
 
 
 class EmployeeSortieReponse(ModeleApi):
+    """Un départ du mois, avec l'affectation et le montant du dernier bulletin à ce mois ou avant."""
+
     employe_id: int
     nom_prenom: str
     cin: str
     periode: PeriodePaie
     motif: str
+    date_embauche: date | None = None
+    anciennete_mois: int | None = None
+    statut_actuel: EmployeeStatut | None = None
+    salaire: Nombre | None = None
+    type_salaire: TypeSalaire | None = None
+    fonction: str | None = None
+    chantier: str | None = None
+    chantier_designation: str | None = None
+    equipe: str | None = None
+    derniere_paie: PeriodePaie | None = None
+    jours_travailles: Nombre | None = None
+    montant_dernier_bulletin: Nombre | None = None
+    observation: str | None = None
 
 
 class EmployeeSortiesMoisReponse(ModeleApi):

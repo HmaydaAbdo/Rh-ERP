@@ -239,7 +239,7 @@ def _ecrire(
         else "INTROUVABLE"
     )
     depart_recap = total_ligne + 3
-    for colonne, libelle in enumerate(("FONCTION", "BULLETINS DE PAIE", "STC"), start=1):
+    for colonne, libelle in enumerate(("FONCTION", "BULLETINS DE PAIE", "SORTANTS"), start=1):
         cellule = feuille.cell(depart_recap, colonne, libelle)
         cellule.fill = entete
         cellule.font = _police(bold=True)

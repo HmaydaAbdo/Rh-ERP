@@ -99,11 +99,11 @@ test.describe('Équipes', () => {
     await expect(indicateurs).toHaveCount(4);
     await expect(indicateurs.nth(0).locator('dt')).toHaveText('Bulletins de paie');
     await expect(indicateurs.nth(0).locator('strong')).toHaveText('1');
-    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 bulletin (−50,0 %) · vs juillet 2026');
-    await expect(indicateurs.nth(1).locator('dt')).toHaveText('Masse salariale (DH)');
+    await expect(indicateurs.nth(0).locator('.app-entity__variation')).toHaveText('−1 bulletin (−50 %) · vs juillet 2026');
+    await expect(indicateurs.nth(1).locator('dt')).toHaveText('Montant de la paie (DH)');
     await expect(indicateurs.nth(1).locator('strong')).toContainText('4');
-    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7,1 %\) · vs juillet 2026$/);
-    await expect(indicateurs.nth(2).locator('dt')).toHaveText('STC (bulletins)');
+    await expect(indicateurs.nth(1).locator('.app-entity__variation')).toHaveText(/^\+[\d\s  ,]+ DH \(\+7 %\) · vs juillet 2026$/);
+    await expect(indicateurs.nth(2).locator('dt')).toHaveText('Sortants');
     await expect(indicateurs.nth(2).locator('strong')).toHaveText('1');
     await expect(indicateurs.nth(2).locator('.app-entity__variation')).toHaveText('+1 bulletin · vs juillet 2026');
     await expect(indicateurs.nth(3).locator('dt')).toHaveText('STC (DH)');
@@ -125,9 +125,9 @@ test.describe('Équipes', () => {
     const indicateursEvolution = evolution.getByRole('combobox', { name: 'Indicateurs de l’évolution mensuelle par équipe' });
     await indicateursRepartition.click();
     await expect(page.getByRole('option')).toHaveCount(4);
-    await page.getByRole('option', { name: 'Masse salariale (DH)' }).click();
+    await page.getByRole('option', { name: 'Montant de la paie (DH)' }).click();
     await indicateursEvolution.click();
-    await page.getByRole('option', { name: 'STC (bulletins)' }).click();
+    await page.getByRole('option', { name: 'Sortants' }).click();
     // Les deux indicateurs choisis sont groupés dans un seul graphique par bloc.
     await expect(repartition.locator('.app-chart-indicator')).toHaveCount(1);
     await expect(evolution.locator('.app-chart-indicator')).toHaveCount(1);

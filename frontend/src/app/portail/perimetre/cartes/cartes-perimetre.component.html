@@ -57,7 +57,7 @@
           <p class="app-muted" role="status">
             {{ libelleGroupesResume(groupes() ?? []) }}
             @if (module().sansEffectifFichesDansCartes) {
-              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
+              @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Montant de la paie : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
             } @else {
               @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
               @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.0-0' }} DH }
@@ -98,7 +98,7 @@
               <p class="app-muted" role="status">
                 {{ libelleGroupesResume(liste) }}
                 @if (module().sansEffectifFichesDansCartes) {
-                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Masse salariale : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
+                  @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · Effectif : {{ totaux().payes }} personnes · Montant de la paie : {{ totaux().masse | number: '1.0-0' }} DH · {{ libellePeriode(periode()!) }} }
                 } @else {
                   @if (voitEmployes() && !resultat().erreursSources.includes('FICHES')) { · {{ totaux().fiches }} employé(s) sur les fiches récentes }
                   @if (voitPaie() && periode() && !resultat().erreursSources.includes('PAIE')) { · {{ totaux().payes }} payé(s) en {{ libellePeriode(periode()!) }} · {{ totaux().masse | number: '1.0-0' }} DH }
@@ -152,14 +152,14 @@
                             </dd>
                           </div>
                           <div class="app-entity__indicator">
-                            <dt>Masse salariale (DH)</dt>
+                            <dt>Montant de la paie (DH)</dt>
                             <dd>
                               <strong>{{ (groupe.paie?.masse ?? 0) | number: '1.0-0' }} DH</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'masse', mois) }}</small>
                             </dd>
                           </div>
                           <div class="app-entity__indicator">
-                            <dt>STC (bulletins)</dt>
+                            <dt>Sortants</dt>
                             <dd>
                               <strong>{{ groupe.paie?.stc ?? 0 }}</strong>
                               <small class="app-entity__variation">{{ variationPaie(groupe, 'stc', mois) }}</small>

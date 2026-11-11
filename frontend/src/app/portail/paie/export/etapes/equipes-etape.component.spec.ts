@@ -23,6 +23,26 @@ describe('PaieExportEtapeEquipesComponent', () => {
     expect(metas).toEqual(['Nador · 10 employés · 2 équipes', '5 employés · 1 équipes', 'Dépôt · 2 employés · aucune équipe']);
   });
 
+  it('propose de réunir des équipes pour tous les chantiers, en PDF seulement', async () => {
+    const { fixture, store, racine } = await monter();
+    const choix = () => Array.from(racine.querySelectorAll<HTMLButtonElement>('.app-wizard__regroupement-choix button'));
+
+    expect(racine.querySelector('.app-wizard__regroupement')?.textContent).toContain('tous les chantiers');
+    expect(choix().map((b) => b.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Chauffeurs1 chantier', 'Labo1 chantier', 'Opérateurs1 chantier'
+    ]);
+
+    choix()[0].click();
+    choix()[2].click();
+    await stabiliser(fixture);
+    expect(store.regroupement()).toEqual(['Chauffeurs', 'Opérateurs']);
+    expect(racine.querySelector('.app-wizard__regroupement-resume')?.textContent).toContain('Chauffeurs + Opérateurs');
+
+    store.choisirFormat('EXCEL');
+    await stabiliser(fixture);
+    expect(racine.querySelector('.app-wizard__regroupement')).toBeNull();
+  });
+
   it('adapte la consigne au format : PDF puis Excel', async () => {
     const { fixture, store, racine } = await monter();
     expect(racine.querySelector('.app-wizard__consigne')?.textContent).toContain('graphique par équipe');

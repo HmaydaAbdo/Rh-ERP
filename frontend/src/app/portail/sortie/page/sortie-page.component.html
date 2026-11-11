@@ -1,25 +1,91 @@
 <div class="app-page">
   <div class="app-page__header">
-    <h1>Sorties</h1>
+    <h1>STC / Sortie</h1>
   </div>
 
-  <div class="app-toolbar">
-    <app-month-picker [value]="periode()" (valueChange)="choisir($event)" />
+  <div class="app-toolbar" role="group" aria-label="Mois de sortie">
+    <div class="app-toolbar__period" role="group" aria-label="Mois">
+      <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois précédent" (click)="moisPrecedent()"></button>
+      <button
+        stp-button
+        variant="text"
+        icon="calendar"
+        class="app-toolbar__period-month"
+        type="button"
+        cdkOverlayOrigin
+        #origine="cdkOverlayOrigin"
+        [attr.aria-label]="'Choisir le mois : ' + libelleMois()"
+        aria-haspopup="dialog"
+        [attr.aria-expanded]="panneauMoisOuvert()"
+        (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
+      >
+        <span class="app-capitalize">{{ libelleMois() }}</span>
+      </button>
+      <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois suivant" (click)="moisSuivant()"></button>
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="origine"
+        [cdkConnectedOverlayOpen]="panneauMoisOuvert()"
+        [cdkConnectedOverlayPositions]="positions"
+        (overlayOutsideClick)="panneauMoisOuvert.set(false)"
+        (overlayKeydown)="surToucheMois($event)"
+        (detach)="panneauMoisOuvert.set(false)"
+      >
+        <div class="stp-popover" role="dialog" aria-label="Choisir un mois">
+          <app-month-picker [value]="periode()" (valueChange)="choisir($event)"></app-month-picker>
+        </div>
+      </ng-template>
+    </div>
   </div>
 
-  @if (resultat(); as sorties) {
-    <p class="sortie-resume m-0" aria-live="polite">
-      <strong>{{ sorties.nombre }}</strong>
-      {{ sorties.nombre > 1 ? 'sorties' : 'sortie' }} sur la période {{ sorties.periode }}
-      @for (m of motifs(); track m.motif; let premier = $first) {
-        {{ premier ? ' —' : ',' }} {{ m.motif }} : {{ m.nombre }}
+  @if (chiffres(); as c) {
+    <section class="app-kpis" aria-label="Chiffres du mois">
+      <div class="app-kpi">
+        <span>Départs du mois</span>
+        <strong>{{ c.nombre }}</strong>
+        <small class="app-capitalize">{{ libelleMois() }}</small>
+      </div>
+      <div class="app-kpi">
+        <span>STC</span>
+        <strong>{{ c.stc }}</strong>
+        <small>{{ c.partStc }} % des départs</small>
+      </div>
+      <div class="app-kpi">
+        <span>Autres sorties</span>
+        <strong>{{ c.autres }}</strong>
+        <small>{{ c.detailAutres || 'Aucun autre motif' }}</small>
+      </div>
+      @if (c.montant !== null) {
+        <div class="app-kpi">
+          <span>Montant des derniers bulletins</span>
+          <strong>{{ c.montant | number: '1.0-0' }} DH</strong>
+          <small>somme des départs du mois</small>
+        </div>
       }
-    </p>
+      @if (c.anciennete !== null) {
+        <div class="app-kpi">
+          <span>Ancienneté moyenne</span>
+          <strong>{{ formaterAnciennete(c.anciennete) }}</strong>
+          <small>{{ c.revenus > 0 ? c.revenus + ' revenu(s) en poste depuis' : 'au mois du départ' }}</small>
+        </div>
+      }
+    </section>
   }
 
-  <app-column-chooser [state]="colonnes" />
+  <div class="app-table-bar">
+    <div class="app-table-bar__summary">
+      <p class="app-table-bar__total" role="status" aria-live="polite">
+        @if (!chargement() && resultat(); as sorties) {
+          {{ sorties.nombre }} {{ sorties.nombre > 1 ? 'sorties' : 'sortie' }} sur la période {{ sorties.periode }}
+        }
+      </p>
+    </div>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="colonnes" />
+    </div>
+  </div>
   <stp-table
-    label="Sorties du mois"
+    label="STC et sorties du mois"
     [value]="lignes()"
     [columns]="colonnes.visible"
     [loading]="chargement()"
@@ -32,11 +98,46 @@
         @case ('nomPrenom') {
           <a [routerLink]="['/employees', sortie.employeId]">{{ sortie.nomPrenom }}</a>
         }
+        @case ('periode') {
+          <span class="app-capitalize">{{ libellePeriode(sortie.periode) }}</span>
+        }
         @case ('motif') {
-          {{ libelleMotif(sortie.motif) }}
+          <stp-badge [severity]="severiteMotif(sortie.motif)" [value]="libelleMotif(sortie.motif)" />
+        }
+        @case ('ancienneteMois') {
+          {{ formaterAnciennete(sortie.ancienneteMois) }}
+        }
+        @case ('dernierePaie') {
+          @if (sortie.dernierePaie) {
+            <span class="app-capitalize">{{ libellePeriode(sortie.dernierePaie) }}</span>
+          } @else {
+            —
+          }
+        }
+        @case ('joursTravailles') {
+          {{ sortie.joursTravailles === null || sortie.joursTravailles === undefined ? '—' : (sortie.joursTravailles | number: '1.0-2') }}
+        }
+        @case ('montantDernierBulletin') {
+          {{ sortie.montantDernierBulletin === null || sortie.montantDernierBulletin === undefined ? '—' : (sortie.montantDernierBulletin | number: '1.0-0') }}
+        }
+        @case ('salaire') {
+          @if (sortie.salaire === null || sortie.salaire === undefined) {
+            —
+          } @else {
+            {{ sortie.salaire | number: '1.0-0' }}{{ sortie.typeSalaire === 'JOURNALIER' ? ' / jour' : '' }}
+          }
+        }
+        @case ('statutActuel') {
+          @if (sortie.statutActuel === 'ACTIF') {
+            <stp-badge severity="success" value="Revenu en poste" />
+          } @else if (sortie.statutActuel === 'INACTIF') {
+            <stp-badge severity="neutral" value="Sorti" />
+          } @else {
+            —
+          }
         }
         @default {
-          {{ sortie[col.field] }}
+          {{ sortie[col.field] ?? '—' }}
         }
       }
     </ng-template>

@@ -172,7 +172,8 @@ async def test_analyse_signale_un_bulletin_deja_present_avant_import(
     analyse = await service.analyser(cast(AsyncSession, SessionAnalyse()), sortie.getvalue(), 202610)
     assert analyse.total_lignes == 1
     attendus = [] if chantier_actif else [(4, "chantier")]
-    assert [x.code for x in analyse.blocages_periode] == ["MOIS_DEJA_IMPORTE"], "un seul message pour le mois"
+    assert analyse.blocages_periode == [], "un mois existant se met à jour : il ne bloque plus"
+    assert [x.code for x in analyse.controles_periode] == ["MOIS_MIS_A_JOUR"], "une seule confirmation pour le mois"
     assert [(erreur.numero_ligne, erreur.champ) for erreur in analyse.erreurs] == attendus
     codes = {avertissement.code_avertissement for avertissement in analyse.avertissements}
     assert codes == {"SALAIRE_DIFFERENT"}, "0 sur une fiche à salaire différent : un seul avertissement"
@@ -418,15 +419,15 @@ def test_les_mois_sautes_sont_ceux_entre_la_derniere_paie_et_le_mois_choisi() ->
     [
         (202610, 202609, 0, None),
         (202610, None, 0, None),
-        (202610, 202610, 3, "MOIS_DEJA_IMPORTE"),  # le mois existe déjà, même en partie
+        (202610, 202610, 3, None),  # le mois existe déjà : il se met à jour
         (202609, 202610, 0, "MOIS_ANTERIEUR_AU_DERNIER"),  # plus ancien que la dernière paie importée
-        (202609, 202610, 5, "MOIS_DEJA_IMPORTE"),  # un seul blocage, le plus parlant
+        (202609, 202610, 5, None),  # un ancien mois existant se met à jour aussi
     ],
 )
-def test_un_mois_deja_importe_ou_anterieur_au_dernier_est_bloque_une_seule_fois(
+def test_seul_un_mois_sans_bulletin_anterieur_au_dernier_est_bloque(
     periode: int, derniere: int | None, existants: int, code: str | None
 ) -> None:
-    blocage = ServiceImportPaie._blocage_mois(periode, derniere, existants, min(existants, 2), 10)  # pyright: ignore[reportPrivateUsage]
+    blocage = ServiceImportPaie._blocage_mois(periode, derniere, existants)  # pyright: ignore[reportPrivateUsage]
     assert (blocage.code if blocage else None) == code
 
 
@@ -445,7 +446,7 @@ async def test_importer_refuse_un_mois_bloque_meme_confirme(monkeypatch: pytest.
             ecarts=[],
             departs=[],
             retours=[],
-            blocages_periode=[PaieImportControlePeriode(code="MOIS_DEJA_IMPORTE", message="Déjà là.")],
+            blocages_periode=[PaieImportControlePeriode(code="MOIS_ANTERIEUR_AU_DERNIER", message="Déjà là.")],
             pret=False,
         )
 
