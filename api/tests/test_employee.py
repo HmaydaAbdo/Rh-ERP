@@ -132,6 +132,30 @@ def test_la_reponse_imbrique_fonction_chantier_et_equipe_comme_spring(plateforme
     assert "fonctionId" not in lu and "chantierId" not in lu and "equipeId" not in lu
 
 
+def _sortie_attendue(identifiant: int, nom: str, cin: str, motif: str) -> dict[str, Any]:
+    """Sortie sans bulletin : détails de la fiche seulement (fonction de la fiche, aucune affectation de paie)."""
+    return {
+        "employeId": identifiant,
+        "nomPrenom": nom,
+        "cin": cin,
+        "periode": "2097-03",
+        "motif": motif,
+        "dateEmbauche": "2024-01-02",
+        "ancienneteMois": 878,
+        "statutActuel": "ACTIF",
+        "salaire": None,
+        "typeSalaire": None,
+        "fonction": "Sortie fonction",
+        "chantier": None,
+        "chantierDesignation": None,
+        "equipe": None,
+        "dernierePaie": None,
+        "joursTravailles": None,
+        "montantDernierBulletin": None,
+        "observation": None,
+    }
+
+
 def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Plateforme, connecter: Any) -> None:
     """Source du futur calcul des STC et du suivi des abandons de poste (décision du propriétaire, 2026-11-07)."""
     from sqlalchemy import text
@@ -171,20 +195,8 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         "nombre": 2,
         "parMotif": {"ABANDON": 1, "NON_PRECISE": 1},
         "sorties": [
-            {
-                "employeId": ids[1],
-                "nomPrenom": "Adam Sortie",
-                "cin": "CIN-SOR-2",
-                "periode": "2097-03",
-                "motif": "NON_PRECISE",
-            },
-            {
-                "employeId": ids[0],
-                "nomPrenom": "Zoe Sortie",
-                "cin": "CIN-SOR-1",
-                "periode": "2097-03",
-                "motif": "ABANDON",
-            },
+            _sortie_attendue(ids[1], "Adam Sortie", "CIN-SOR-2", "NON_PRECISE"),
+            _sortie_attendue(ids[0], "Zoe Sortie", "CIN-SOR-1", "ABANDON"),
         ],
     }
     assert vide.json() == {"periode": "2097-04", "nombre": 0, "parMotif": {}, "sorties": []}
