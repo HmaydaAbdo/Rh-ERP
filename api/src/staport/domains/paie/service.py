@@ -129,8 +129,8 @@ def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str,
 
 
 DEFINITIONS_COMPARAISON = {
-    "masse": "Masse salariale du mois récent, en dirhams",
-    "masseReference": "Masse salariale du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
+    "masse": "Montant de la paie du mois récent, en dirhams",
+    "masseReference": "Montant de la paie du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
     "variationMasse": "Masse du mois récent moins masse du mois de comparaison, en dirhams (négative = baisse) ; "
     "absente si un mois manque",
     "variationPourcentage": "Variation de masse divisée par la masse du mois de comparaison, en pourcentage à une "
