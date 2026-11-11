@@ -113,7 +113,7 @@ describe('PaieImportWizardComponent', () => {
   it('un mois bloqué n’affiche qu’un message et ne laisse rien avancer', async () => {
     await ouvrir(['PAIE_IMPORT', 'PAIE_READ']);
     service.analyserImport.mockReturnValue(
-      of({ ...ANALYSE, erreurs: [], chantiersClotures: [], cinInconnus: [], ecarts: [], blocagesPeriode: [{ code: 'MOIS_DEJA_IMPORTE', message: 'La paie de 2026-10 existe déjà.', periodeReference: null }] })
+      of({ ...ANALYSE, erreurs: [], chantiersClotures: [], cinInconnus: [], ecarts: [], blocagesPeriode: [{ code: 'MOIS_ANTERIEUR_AU_DERNIER', message: '2026-10 est plus ancien que la dernière paie.', periodeReference: null }] })
     );
     await analyser();
 

@@ -73,18 +73,20 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     html = rendre(requete, lignes, [ligne_precedente])
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
-    assert '<div class="graphique">' in html and "<svg" in html
-    assert "Masse (DH)" in html
-    assert "Bulletins" in html and "STC bul." in html and "STC (DH)" in html
-    assert "Masse salariale par équipe (DH)" in html
-    assert "1. Masse salariale et montants des STC (DH)" in html
-    assert "2. Bulletins de paie et sorties du personnel (bulletins)" in html
-    assert "3. Répartition par chantier" in html
-    assert "4. Liste des employés" in html
-    assert "Masse mois precedent" in html
+    assert 'table class="recap repartition"' in html and "<svg" not in html
+    for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"):
+        assert f"<th>{entete}</th>" in html
+    assert "2. Répartition par équipe" in html and "<th>ÉQUIPE</th>" in html
+    assert '<tr class="total"><td class="libelle">Total</td>' in html
+    assert "1. Évolution sur 12 mois" in html
+    # « STC » n'existe plus que dans l'intitulé du montant : « STC (DH) » ; le nombre de personnes se dit « Sortants »
+    assert "Masse salariale" not in html and "STC" not in html.replace("STC (DH)", "")
+    assert "2. Répartition par chantier" in html
+    assert "3. Liste des employés" in html
+    assert "Montant mois precedent" in html
     assert '<div class="valeur montant">500 DH</div>' in html
     pages_rapport = html.split('<div class="page">')[1:]
-    assert any('table class="recap fonction"' in page and "4. Liste des employés" in page for page in pages_rapport)
+    assert any('table class="recap fonction"' in page and "3. Liste des employés" in page for page in pages_rapport)
     assert "Écart : +2\u00a0500 DH (+500,0 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
@@ -92,7 +94,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">OP</td>' in html
     assert "Page 1 / 8" in html and "Page 8 / 8" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
-    assert "STC (PERS.)" in html
+    assert "SORTANTS" in html
     html_equipe = rendre(
         PaieRapportRequete(periode="2026-10", equipes_par_chantier={"CH01": ["CH"]}),
         lignes,
@@ -103,11 +105,11 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     )
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
-    assert "Masse salariale par fonction (DH)" in html_equipe
-    assert "STC (PERS.)" in html_equipe
-    assert "3. Répartition par fonction" in html_equipe
-    assert "4. Liste des employés" in html_equipe
-    assert '<div class="label">Masse mois precedent</div><div class="valeur montant"></div>' in html_equipe
+    assert "<th>FONCTION</th>" in html_equipe and "<svg" not in html_equipe
+    assert "SORTANTS" in html_equipe
+    assert "2. Répartition par fonction" in html_equipe
+    assert "3. Liste des employés" in html_equipe
+    assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
     # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
     assert "Page 7 / 7" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
@@ -126,10 +128,10 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
         {1: [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
         {(1, 1): [report.PointEvolution(202610, Decimal("1000"), 1, 0, Decimal(0))]},
     )
-    assert "4. Parc matériel — CAMION" in html_materiel
-    assert "5. Liste des employés" in html_materiel
+    assert "3. Parc matériel — CAMION" in html_materiel
+    assert "4. Liste des employés" in html_materiel
     pages_materiel = html_materiel.split('<div class="page">')[1:]
-    assert any("3. Répartition par fonction" in page and "4. Parc matériel — CAMION" in page for page in pages_materiel)
+    assert any("2. Répartition par fonction" in page and "3. Parc matériel — CAMION" in page for page in pages_materiel)
     chantier_long = SimpleNamespace(id=1, code="CH01", nom="Chantier avec un libellé très long " * 5)
     lignes_longues = [
         (paie, employe, chantier_long, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -170,8 +172,9 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
     assert "Page 7 / 7" in html_nombreux
-    assert html_nombreux.count("<thead><tr>") == 2
+    assert html_nombreux.count('<table class="recap repartition">') == 2
     assert html_nombreux.count('<table class="recap fonction">') == 1
+    assert html_nombreux.count("<thead><tr>") == 4
 
 
 def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
@@ -200,23 +203,66 @@ def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
         rapport.PointEvolution(202512, Decimal("1000"), 2, 1, Decimal("500")),
         rapport.PointEvolution(202602, Decimal("1500"), 3, 0, Decimal(0)),
     ]
-    for groupe in ("MONTANTS", "EFFECTIFS"):
-        svg = rapport._graphique_evolution(points, groupe)
-        assert "12/2025" in svg and "2/2026" in svg
-        assert "1/2026" not in svg
-    indisponible = rapport._graphique_evolution([], "MONTANTS")
-    assert "Aucune donnée historique" in indisponible and "<svg" not in indisponible
+    tableau = rapport._tableau_evolution(points)
+    assert "<svg" not in tableau
+    assert "<th>12/2025</th>" in tableau and "<th>2/2026</th>" in tableau
+    assert "1/2026" not in tableau
+    assert tableau.count('<col class="mois">') == 2
+    assert (
+        '<td class="libelle">Montant de la paie (DH)</td>'
+        '<td class="mois">1\u00a0000</td><td class="mois">1\u00a0500</td>' in tableau
+    )
+    assert '<td class="libelle">STC (DH)</td><td class="mois">500</td><td class="mois">0</td>' in tableau
+    assert '<td class="libelle">Bulletins de paie</td><td class="mois">2</td><td class="mois">3</td>' in tableau
+    assert '<td class="libelle">Sortants</td><td class="mois">1</td><td class="mois">0</td>' in tableau
+    assert '<td class="libelle">Entrants</td><td class="mois">—</td><td class="mois">—</td>' in tableau
+    indisponible = rapport._tableau_evolution([])
+    assert "Aucune donnée historique" in indisponible and "<table" not in indisponible
+
+
+def test_entrants_comptent_les_salaries_absents_le_mois_civil_precedent() -> None:
+    rapport = cast(Any, report)
+    points = [
+        rapport.PointEvolution(202512, Decimal(0), 2, 0, Decimal(0), frozenset({1, 2})),
+        rapport.PointEvolution(202601, Decimal(0), 3, 0, Decimal(0), frozenset({1, 2, 3})),
+        rapport.PointEvolution(202603, Decimal(0), 3, 0, Decimal(0), frozenset({1, 4, 5})),
+    ]
+    fenetre = rapport._FenetreEvolution({202512, 202601, 202602, 202603}, {202601, 202602, 202603})
+
+    avec = rapport._avec_entrees(points, fenetre)
+
+    # 12/2025 est hors fenêtre (simple référence) ; 01/2026 : 3 est nouveau ; 03/2026 : février sans bulletin
+    # du périmètre, mais avec de la paie ailleurs, donc les 3 salariés du périmètre sont tous entrants.
+    assert [(p.periode, p.entrees) for p in avec] == [(202601, 1), (202603, 3)]
+    # sans paie le mois civil d'avant, on ne sait pas : inconnu
+    inconnu = rapport._avec_entrees(points, rapport._FenetreEvolution({202601}, {202601}))
+    assert [p.entrees for p in inconnu] == [None]
+    assert rapport._avec_entrees(points, None) is points
+    tableau = rapport._tableau_evolution(avec)
+    assert '<td class="libelle">Entrants</td><td class="mois">1</td><td class="mois">3</td>' in tableau
+
+
+def test_chapitres_de_chantier_suivent_l_ordre_naturel_des_codes() -> None:
+    rapport = cast(Any, report)
+    codes = ["C302", "C57", "C205", "C108", "c1000", "CH01"]
+
+    assert sorted(codes, key=rapport._cle_code) == ["C57", "C108", "C205", "C302", "c1000", "CH01"]
 
 
 def test_materiel_du_catalogue_apparait_seulement_avec_une_quantite_positive() -> None:
     rapport = cast(Any, report)
-    assert rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 0}) is None
-    assert rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": None}) is None
-    assert rapport._graphique_materiel("C168", "XX", {"CAMION CITERNE": 2}) is None
-    graphique = rapport._graphique_materiel("C168", "CH", {"CAMION CITERNE": 2, "PELLE PNEU": None})
-    assert graphique is not None and "CAMION CITERNE" in graphique
-    assert "<svg" in graphique
-    assert "PELLE PNEU" not in graphique
+    assert rapport._tableau_materiel("C168", "CH", {"CAMION CITERNE": 0}) is None
+    assert rapport._tableau_materiel("C168", "CH", {"CAMION CITERNE": None}) is None
+    assert rapport._tableau_materiel("C168", "XX", {"CAMION CITERNE": 2}) is None
+    resultat = rapport._tableau_materiel("C168", "CH", {"CAMION CITERNE": 2, "PELLE PNEU": None, "PICK UP": 0})
+    assert resultat is not None
+    tableau, hauteur = resultat
+    assert "3. Parc matériel — CAMION" in tableau and "<svg" not in tableau
+    assert "<th>MATÉRIEL</th><th>NOMBRE</th>" in tableau
+    assert '<td class="libelle">CAMION CITERNE</td><td class="nbre">2</td>' in tableau
+    assert '<td class="libelle">PICK UP</td><td class="nbre">0</td>' in tableau
+    assert "PELLE PNEU" not in tableau and "CAMION SR" not in tableau
+    assert hauteur == 15 + 15 + 15
 
 
 def test_contrat_rapport_borne_les_chantiers_et_quantites_materiel() -> None:
@@ -259,8 +305,13 @@ def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> No
         "PETIT": [(faible, None, SimpleNamespace(nom="Petit"), None, None)],
         "GRAND": [(fort, None, SimpleNamespace(nom="Grand"), None, None)],
     }
-    svg = rapport._graphiques_repartition_chantiers(chantiers)[0]
-    assert svg.index("Grand") < svg.index("Petit")
+    tableau, hauteur = rapport._tableaux_repartition_chantiers(chantiers)[0]
+    assert tableau.index("Grand") < tableau.index("Petit")
+    assert tableau.endswith(
+        '<tr class="total"><td class="libelle">Total</td><td class="nombre">1\u00a0000</td>'
+        '<td class="nombre">2</td><td class="nombre">1</td><td class="nombre">900</td></tr></tbody></table>'
+    )
+    assert hauteur == 15 + 15 + 15 + 15
     assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(17)), maximum=16)] == [9, 8]
     assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(33)), maximum=16)] == [11, 11, 11]
 
@@ -277,12 +328,14 @@ def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
         )
         for index in range(16)
     ]
-    graphiques = cast(Any, report)._graphiques_fonctions(lignes)
-    assert len(graphiques) == 2
-    assert all(sum(f"Fonction {index:02}" in graphique for index in range(16)) == 8 for graphique in graphiques)
+    pages = cast(Any, report)._tableaux_fonctions(lignes)
+    assert len(pages) == 2
+    assert all(sum(f"Fonction {index:02}" in tableau for index in range(16)) == 8 for tableau, _ in pages)
+    assert 'class="total"' not in pages[0][0]
+    assert 'class="total"' in pages[1][0] and '<td class="nombre">1\u00a0600</td>' in pages[1][0]
 
 
-def test_graphique_repartition_presente_les_quatre_mesures_spring() -> None:
+def test_tableau_repartition_presente_les_quatre_mesures() -> None:
     chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
     lignes = [
         (
@@ -308,8 +361,9 @@ def test_graphique_repartition_presente_les_quatre_mesures_spring() -> None:
         1,
         Decimal("300"),
     )
-    graphique = rapport._graphique_distribution([point], "Répartition", part_du_total=True)
-    assert all(libelle in graphique for libelle in ("Masse (DH)", "Bulletins", "STC bul.", "STC (DH)"))
+    tableau, _hauteur = rapport._tableaux_repartition([point], "CHANTIER", maximum=16)[0]
+    assert all(entete in tableau for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"))
+    assert '<td class="libelle">Chantier A</td><td class="nombre">1\u00a0000</td><td class="nombre">2</td>' in tableau
 
 
 def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
@@ -412,9 +466,11 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
         assert len(htmls) == 1
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
-        assert htmls[0].count("12/2025") == 6
+        assert htmls[0].count("12/2025") == 3
         assert "1/2026" not in htmls[0]
-        assert "STC / sorties" in htmls[0] and "200" in htmls[0]
+        assert "Sortants" in htmls[0] and "200" in htmls[0]
+        # aucun mois civil précédent avec paie (11/2025 et 1/2026 absents) : entrants inconnus
+        assert htmls[0].count("Entrants") == 3
     finally:
         if ids is not None:
             with plateforme.moteur.begin() as connection:

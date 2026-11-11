@@ -120,9 +120,15 @@ lequel correspond normalement au salaire de la dernière paie. S'il est identiqu
 automatiquement. S'il diffère, le wizard propose la valeur et déduit le type : `salaire <= 500` →
 `JOURNALIER`, `salaire > 500` → `MENSUEL`; la fiche n'est alignée qu'après confirmation.
 
-Un bulletin déjà présent pour le même employé et la même période n'est jamais écrasé automatiquement.
-Toute correction de montant ou de période d'un bulletin existant passe par le wizard et est auditée.
-Les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement par l'import.
+**Réimporter un mois déjà importé le met à jour.** Un bulletin déjà présent pour le même employé et la même période
+est modifié sur place (même identifiant : les heures supplémentaires liées restent attachées), les employés du fichier
+qui n'ont pas encore de bulletin ce mois-là reçoivent le leur, et les bulletins du mois absents du fichier ne sont pas
+touchés. L'analyse annonce le nombre de bulletins concernés (`MOIS_MIS_A_JOUR`) et la mise à jour n'a lieu qu'après
+confirmation explicite ; l'opération est auditée. Les heures supplémentaires liées sont recalculées (marqueur
+STC/sortie, STC en dirhams, forfait annulé en STC, net à payer, fonction) et les fiches Employé suivent leur dernier
+bulletin. Pour un mois existant, les départs et retours ne passent plus par l'étape « Départs » : ils se déduisent des
+observations du fichier (STC ou sortie), comme à la saisie d'un bulletin. Sur un mois nouveau, les départs, STC et
+suppressions d'affectation ne sont pas déduits automatiquement par l'import.
 
 Les montants nuls sont valides, mais un `salaireMensuel` égal à zéro déclenche un avertissement
 bloquant dans l'assistant d'import : l'utilisateur doit choisir explicitement « Ignorer et conserver
@@ -140,8 +146,8 @@ le mois civil précédent) :
 
 | Scénario | Code | Effet |
 |---|---|---|
-| Des bulletins existent déjà pour ce mois | `MOIS_DEJA_IMPORTE` | **Bloque**, un seul message (jamais une erreur par ligne), `blocagesPeriode` |
-| Mois plus ancien que la dernière paie importée | `MOIS_ANTERIEUR_AU_DERNIER` | **Bloque**, `blocagesPeriode` |
+| Des bulletins existent déjà pour ce mois | `MOIS_MIS_A_JOUR` | À confirmer, `controlesPeriode` : le fichier met à jour ces bulletins (les contrôles de calendrier ne s'appliquent plus) |
+| Mois sans bulletin, plus ancien que la dernière paie importée | `MOIS_ANTERIEUR_AU_DERNIER` | **Bloque**, `blocagesPeriode` |
 | Mois égal ou postérieur au mois civil en cours | `PERIODE_COURANTE_OU_FUTURE` | À confirmer, `controlesPeriode` |
 | Mois plus ancien que l'attendu (rattrapage) | `MOIS_HORS_CYCLE` | À confirmer, `controlesPeriode` |
 | Mois attendu mais des mois sont sautés depuis la dernière paie | `MOIS_SAUTE` | À confirmer, `controlesPeriode` |
@@ -171,7 +177,7 @@ Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois l
 | Contrat | Champs et types | Description |
 |---|---|---|
 | `PaieImportAnalyseDto` | `periode:string`, `totalLignes:integer`, `erreurs:Erreur[]`, `chantiersClotures:ChantierCloture[]`, `cinInconnus:CinInconnu[]`, `ecarts:Ecart[]`, `departs:Depart[]`, `retours:Retour[]`, `fonctionsACreer:FonctionACreer[]`, `chantiersARouvrir:ChantierCloture[]`, `controlesPeriode:ControlePeriode[]`, `blocagesPeriode:ControlePeriode[]`, `pret:boolean` | Résultat sans écriture; `pret` exige l'absence d'erreur, chantier clôturé, CIN inconnu, écart et contrôle de période non confirmé. `fonctionsACreer` et `chantiersARouvrir` annoncent ce que l'import fera seul pour qui a `FUNCTION_WRITE` / `CHANTIER_WRITE` ; ils ne bloquent pas. |
-| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|MOIS_HORS_CYCLE|MOIS_SAUTE|CONTENU_DEJA_IMPORTE|MOIS_DEJA_IMPORTE|MOIS_ANTERIEUR_AU_DERNIER`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
+| `ControlePeriode` | `code:PERIODE_COURANTE_OU_FUTURE|MOIS_HORS_CYCLE|MOIS_SAUTE|CONTENU_DEJA_IMPORTE|MOIS_MIS_A_JOUR|MOIS_ANTERIEUR_AU_DERNIER`, `message:string`, `periodeReference:string|null` | Période à confirmer explicitement; `periodeReference` : le mois dont le contenu est repris. |
 | `Erreur` | `numeroLigne:integer`, `cin:string|null`, `nomPrenom:string|null`, `raison:string` | Numéro réel Excel et correction attendue. |
 | `FonctionACreer` | `libelle:string`, `lignes:integer[]` | Fonction du fichier absente du référentiel, créée par l'import (`FUNCTION_WRITE`). |
 | `ChantierCloture` | `chantierId:integer`, `code:string`, `designation:string|null`, `lignes:integer[]` | Marché cité à rouvrir ou à corriger dans le fichier. |

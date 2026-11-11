@@ -206,7 +206,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteEquipe).toContainText('Paie ·');
   await expect(carteEquipe.locator('.app-entity__facts')).toHaveCount(0);
   await expect(carteEquipe.locator('.app-entity__metrics .app-entity__indicator')).toHaveCount(4);
-  await expect(carteEquipe).toContainText('Masse');
+  await expect(carteEquipe).toContainText('Montant de la paie');
 
   // L’analyse Équipe utilise toujours la dernière période Paie ; ne passer que le périmètre d’équipe.
   erreursNavigateur.length = 0;
@@ -260,7 +260,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const carteFonction = page.locator('.app-entity').filter({ hasText: `Fonction e2e ${suffixe}` });
   await expect(carteFonction).not.toContainText('Employés sur les fiches récentes');
   await expect(carteFonction).toContainText('Paie ·');
-  await expect(carteFonction).toContainText('Masse');
+  await expect(carteFonction).toContainText('Montant de la paie');
 
   const syntheseFonction = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }> }>(
     page,
@@ -285,7 +285,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   await expect(carteChantier).not.toContainText('Employés sur les fiches récentes');
   await expect(carteChantier.locator('.app-entity__metrics .app-entity__indicator')).toHaveCount(4);
   await expect(carteChantier).toContainText('Paie ·');
-  await expect(carteChantier).toContainText('Masse');
+  await expect(carteChantier).toContainText('Montant de la paie');
 
   const syntheseChantier = await api<{ kpis: { effectif: number; masse: number }; evolution: Array<{ periode: string }>; parChantier: Array<{ id: number; stc: number }> }>(
     page,
@@ -341,7 +341,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     const carteLimitee = pageLimitee.locator('.app-entity').filter({ hasText: `Équipe e2e ${suffixe}` });
     await expect(carteLimitee).not.toContainText('Employés sur les fiches récentes');
     await expect(carteLimitee).not.toContainText('Payés');
-    await expect(carteLimitee).not.toContainText('Masse');
+    await expect(carteLimitee).not.toContainText('Montant de la paie');
 
     await pageLimitee.goto(`/equipes/analytique?equipeIds=${equipe.id}`);
     await expect(pageLimitee.getByText('L’effectif mensuel par équipe n’est pas disponible pour votre compte.')).toBeVisible();
@@ -351,7 +351,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteChantierLimitee).toBeVisible();
     await expect(carteChantierLimitee).not.toContainText('Employés sur les fiches récentes');
     await expect(carteChantierLimitee).not.toContainText('Payés');
-    await expect(carteChantierLimitee).not.toContainText('Masse');
+    await expect(carteChantierLimitee).not.toContainText('Montant de la paie');
     await pageLimitee.goto(`/chantiers/analytique?chantierIds=${chantier.id}&periode=${moisCourant}`);
     await expect(pageLimitee.getByText('L’effectif mensuel par chantier n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);
@@ -360,7 +360,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     await expect(carteFonctionLimitee).toBeVisible();
     await expect(carteFonctionLimitee).not.toContainText('Employés sur les fiches récentes');
     await expect(carteFonctionLimitee).not.toContainText('Payés');
-    await expect(carteFonctionLimitee).not.toContainText('Masse');
+    await expect(carteFonctionLimitee).not.toContainText('Montant de la paie');
     await pageLimitee.goto(`/functions/analytique?fonctionIds=${fonction.id}&periode=${moisCourant}`);
     await expect(pageLimitee.getByText('L’effectif mensuel par fonction n’est pas disponible pour votre compte.')).toBeVisible();
     await expect(pageLimitee.getByRole('heading', { name: /Paie ·/ })).toHaveCount(0);

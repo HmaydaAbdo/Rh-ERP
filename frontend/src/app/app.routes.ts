@@ -46,7 +46,7 @@ export const routes: Routes = [
   },
   {
     path: 'sorties',
-    title: 'Sorties',
+    title: 'STC / Sortie',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/sortie/sortie.routes').then((m) => m.SORTIE_ROUTES)
   },

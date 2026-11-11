@@ -19,8 +19,8 @@ class Indicateur:
 CATALOGUE: tuple[Indicateur, ...] = (
     Indicateur(
         "paie.masse",
-        "Masse salariale",
-        "Masse salariale du dernier mois de paie, avec sa variation sur le mois précédent",
+        "Montant de la paie",
+        "Montant de la paie du dernier mois, avec sa variation sur le mois précédent",
         "PAIE_READ",
     ),
     Indicateur(
@@ -32,13 +32,13 @@ CATALOGUE: tuple[Indicateur, ...] = (
     Indicateur(
         "paie.cout-moyen",
         "Coût moyen par personne",
-        "Masse salariale divisée par le nombre de bulletins du dernier mois",
+        "Montant de la paie divisé par le nombre de bulletins du dernier mois",
         "PAIE_READ",
     ),
     Indicateur(
         "paie.stc",
-        "Soldes de tout compte",
-        "Nombre et montant des soldes de tout compte du dernier mois de paie",
+        "Sortants et STC",
+        "Nombre de sortants et montant des STC (DH) du dernier mois de paie",
         "PAIE_READ",
     ),
     Indicateur("employe.effectif", "Employés", "Effectif des fiches Employé", "EMPLOYEE_READ"),

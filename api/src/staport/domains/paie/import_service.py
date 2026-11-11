@@ -15,8 +15,10 @@ from staport.domains.common.montant import arrondir_montant
 from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut, TypeSalaire
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
+from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
 
 from .exceptions import ErreurImportPaie
+from .fiche_employe import aligner_fiche
 from .models import Paie
 from .observation import est_stc_ou_sortie
 from .periode import afficher_periode, mois_precedent, mois_suivant
@@ -227,22 +229,31 @@ class ServiceImportPaie:
         return sautes
 
     @staticmethod
-    def _blocage_mois(
-        periode: int, derniere: int | None, bulletins_du_mois: int, lignes_existantes: int, total_lignes: int
-    ) -> PaieImportControlePeriode | None:
-        """Un mois déjà importé, ou plus ancien que la dernière paie, ne s'importe pas : un seul problème."""
-        if bulletins_du_mois:
-            return PaieImportControlePeriode(
-                code="MOIS_DEJA_IMPORTE",
-                message=(
-                    f"La paie de {afficher_periode(periode)} existe déjà : {bulletins_du_mois} bulletin(s) en base, "
-                    f"dont {lignes_existantes} concernent des employés de ce fichier ({total_lignes} lignes). Un mois "
-                    "n'est jamais écrasé : choisissez un autre mois, ou supprimez d'abord la paie de ce mois "
-                    "(suppression en groupe, droit PAIE_PURGE) si elle doit être refaite."
-                ),
-                periode_reference=periode,
-            )
-        if derniere is not None and periode < derniere:
+    def _controle_mise_a_jour(
+        periode: int, bulletins_du_mois: int, lignes_existantes: int, total_lignes: int
+    ) -> PaieImportControlePeriode:
+        """Le mois existe déjà : importer le fichier met à jour ses bulletins (à confirmer), il ne bloque plus."""
+        crees = total_lignes - lignes_existantes
+        absents = bulletins_du_mois - lignes_existantes
+        actions = [f"met à jour {lignes_existantes} bulletin(s) existant(s)"]
+        if crees > 0:
+            actions.append(f"crée {crees} bulletin(s) manquant(s)")
+        suite = f" Les {absents} bulletin(s) de ce mois absents du fichier ne sont pas modifiés." if absents > 0 else ""
+        return PaieImportControlePeriode(
+            code="MOIS_MIS_A_JOUR",
+            message=(
+                f"La paie de {afficher_periode(periode)} existe déjà ({bulletins_du_mois} bulletin(s)). "
+                f"Importer ce fichier {' et '.join(actions)} (jours, salaires, primes, total, observation, fonction, "
+                "chantier, équipe) ; les heures supplémentaires liées sont recalculées et les fiches Employé suivent "
+                f"leur dernier bulletin.{suite} Confirmez la mise à jour de ce mois."
+            ),
+            periode_reference=periode,
+        )
+
+    @staticmethod
+    def _blocage_mois(periode: int, derniere: int | None, bulletins_du_mois: int) -> PaieImportControlePeriode | None:
+        """Un mois sans bulletin plus ancien que la dernière paie ne s'importe pas (un mois existant se met à jour)."""
+        if bulletins_du_mois == 0 and derniere is not None and periode < derniere:
             return PaieImportControlePeriode(
                 code="MOIS_ANTERIEUR_AU_DERNIER",
                 message=(
@@ -350,6 +361,10 @@ class ServiceImportPaie:
             fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
             chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
+        # Un mois déjà importé se met à jour. La fiche Employé suit le dernier mois : ses écarts avec le fichier ne se
+        # comparent que si ce mois est le dernier (ou un mois nouveau), jamais pour un ancien mois.
+        mise_a_jour = bool(employes_avec_bulletin)
+        fiche_a_comparer = not mise_a_jour or periode >= (derniere_periode or 0)
         # La lecture du classeur occupe le processeur : dans un fil, la boucle d'événements reste libre (KAN-233).
         lignes = await asyncio.to_thread(lire_lignes_paie, contenu)
         for numero, ligne in lignes:
@@ -474,7 +489,7 @@ class ServiceImportPaie:
                         raison="équipe introuvable",
                     )
                 )
-            if cin and cin.upper() in employees:
+            if cin and cin.upper() in employees and fiche_a_comparer:
                 employe = employees[cin.upper()]
                 champs: list[PaieImportChamp] = []
                 if nom and employe.nom_prenom != nom:
@@ -664,7 +679,7 @@ class ServiceImportPaie:
                             type_salaire_propose="JOURNALIER",
                         )
                     )
-                if champ == "salaireMensuel" and cin and cin.upper() in employees:
+                if champ == "salaireMensuel" and cin and cin.upper() in employees and fiche_a_comparer:
                     employe = employees[cin.upper()]
                     if employe.salaire != nombre:
                         avertissements.append(
@@ -686,16 +701,22 @@ class ServiceImportPaie:
                             )
                         )
         departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
+        if (
+            mise_a_jour
+        ):  # les départs et retours se déduisent des observations du fichier, comme à la saisie d'un bulletin
+            departs, retours = [], []
         controles_periode: list[PaieImportControlePeriode] = []
-        controle_calendrier = self._controle_calendrier(periode, derniere_periode)
+        controle_calendrier = None if mise_a_jour else self._controle_calendrier(periode, derniere_periode)
+        if mise_a_jour:
+            controles_periode.append(
+                self._controle_mise_a_jour(periode, len(employes_avec_bulletin), lignes_existantes, len(lignes))
+            )
         if controle_calendrier is not None:
             controles_periode.append(controle_calendrier)
         controle_doublon = self._controle_doublon(lignes, employees, bulletins_voisins)
         if controle_doublon is not None:
             controles_periode.append(controle_doublon)
-        blocage = self._blocage_mois(
-            periode, derniere_periode, len(employes_avec_bulletin), lignes_existantes, len(lignes)
-        )
+        blocage = self._blocage_mois(periode, derniere_periode, len(employes_avec_bulletin))
         blocages_periode = [blocage] if blocage is not None else []
         return PaieImportAnalyse(
             periode=periode,
@@ -786,66 +807,84 @@ class ServiceImportPaie:
             )
             employes_mis_a_jour = 0
             retours_cins = {retour.cin.strip().upper() for retour in analyse.retours}
+            # Mois déjà importé : les bulletins du fichier sont mis à jour sur place (même identifiant, les heures
+            # supplémentaires liées restent attachées), les manquants sont créés.
+            existants = {
+                b.employee_id: b for b in (await session.execute(select(Paie).where(Paie.periode == periode))).scalars()
+            }
+            mise_a_jour = bool(existants)
+            bulletins_mis_a_jour: list[Paie] = []
+            employes_a_aligner: list[int] = []
             for _, ligne in lignes:
                 cin = str(ligne[2]).strip().upper()
                 employe = employees[cin]
-                existe = (
-                    await session.execute(
-                        select(Paie.id).where(Paie.employee_id == employe.id, Paie.periode == periode)
-                    )
-                ).scalar_one_or_none()
-                if existe is not None:
-                    raise ErreurImportPaie(f"Bulletin déjà existant pour {cin} et {periode}")
                 equipe = equipes.get(str(ligne[12]).strip().upper()) if len(ligne) > 12 and ligne[12] else None
                 fonction_id = fonctions[str(ligne[1]).strip().upper()]
                 chantier_id = chantiers[str(ligne[11]).strip().upper()]
                 nom = str(ligne[0]).strip() if ligne[0] is not None else ""
                 changement = False
-                if cin in retours_cins:  # statut et affectations changent sans requête intercalée (contrainte V33)
+                if mise_a_jour:
+                    if nom and employe.nom_prenom != nom:
+                        employe.nom_prenom = nom
+                        changement = True
+                    employes_a_aligner.append(employe.id)
+                elif cin in retours_cins:  # statut et affectations changent sans requête intercalée (contrainte V33)
                     if employe.type_salaire is None:
                         raise ErreurImportPaie(
                             f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
                         )
                     employe.salaire = montant_ligne(ligne, 6) or Decimal(0)
                     employe.statut = EmployeeStatut.ACTIF
-                if nom and employe.nom_prenom != nom:
-                    employe.nom_prenom = nom
-                    changement = True
-                if employe.fonction_id != fonction_id:
-                    employe.fonction_id = fonction_id
-                    changement = True
-                if employe.chantier_id != chantier_id:
-                    employe.chantier_id = chantier_id
-                    changement = True
-                if equipe is not None and employe.equipe_id != equipe:
-                    employe.equipe_id = equipe
-                    changement = True
-                elif equipe is None and decisions.get(employe.id) == "VIDER" and employe.equipe_id is not None:
-                    employe.equipe_id = None
-                    changement = True
+                if not mise_a_jour:
+                    if nom and employe.nom_prenom != nom:
+                        employe.nom_prenom = nom
+                        changement = True
+                    if employe.fonction_id != fonction_id:
+                        employe.fonction_id = fonction_id
+                        changement = True
+                    if employe.chantier_id != chantier_id:
+                        employe.chantier_id = chantier_id
+                        changement = True
+                    if equipe is not None and employe.equipe_id != equipe:
+                        employe.equipe_id = equipe
+                        changement = True
+                    elif equipe is None and decisions.get(employe.id) == "VIDER" and employe.equipe_id is not None:
+                        employe.equipe_id = None
+                        changement = True
                 if changement:
                     employes_mis_a_jour += 1
-                session.add(
-                    Paie(
-                        employee_id=employe.id,
-                        periode=periode,
-                        fonction_id=fonction_id,
-                        chantier_id=chantier_id,
-                        equipe_id=equipe,
-                        nombre_jours_travailles=Decimal(str(ligne[3] or 0)),
-                        jours_recuperation_ouvrable=Decimal(str(ligne[4]))
-                        if len(ligne) > 4 and ligne[4] is not None
-                        else None,
-                        jours_recuperation_dimanche=Decimal(str(ligne[5]))
-                        if len(ligne) > 5 and ligne[5] is not None
-                        else None,
-                        salaire_mensuel=montant_ligne(ligne, 6) or Decimal(0),
-                        prime_roulage_ordinaire=montant_ligne(ligne, 7),
-                        prime_roulage_dimanche=montant_ligne(ligne, 8),
-                        salaire_total=montant_ligne(ligne, 9) or Decimal(0),
-                        observation=str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
+                valeurs: dict[str, Any] = {
+                    "fonction_id": fonction_id,
+                    "chantier_id": chantier_id,
+                    "equipe_id": equipe,
+                    "nombre_jours_travailles": Decimal(str(ligne[3] or 0)),
+                    "jours_recuperation_ouvrable": Decimal(str(ligne[4]))
+                    if len(ligne) > 4 and ligne[4] is not None
+                    else None,
+                    "jours_recuperation_dimanche": Decimal(str(ligne[5]))
+                    if len(ligne) > 5 and ligne[5] is not None
+                    else None,
+                    "salaire_mensuel": montant_ligne(ligne, 6) or Decimal(0),
+                    "prime_roulage_ordinaire": montant_ligne(ligne, 7),
+                    "prime_roulage_dimanche": montant_ligne(ligne, 8),
+                    "salaire_total": montant_ligne(ligne, 9) or Decimal(0),
+                    "observation": str(ligne[10]) if len(ligne) > 10 and ligne[10] is not None else None,
+                }
+                bulletin = existants.get(employe.id)
+                if bulletin is None:
+                    session.add(Paie(employee_id=employe.id, periode=periode, **valeurs))
+                else:
+                    for champ, valeur in valeurs.items():
+                        setattr(bulletin, champ, valeur)
+                    bulletins_mis_a_jour.append(bulletin)
+            if mise_a_jour:
+                await session.flush()
+                for employee_id in dict.fromkeys(employes_a_aligner):
+                    await aligner_fiche(session, employee_id, {periode})
+                for bulletin in bulletins_mis_a_jour:
+                    await ecouteur_heures_supp.paie_modifiee(
+                        session, bulletin.id, bulletin.observation, bulletin.fonction_id
                     )
-                )
             par_id = {x.id: x for x in employees.values()}
             for depart in departs_confirmes.departs:
                 employe = par_id[depart.employe_id]
@@ -865,6 +904,7 @@ class ServiceImportPaie:
                 employe.chantier_id = None
                 employe.equipe_id = None
             audit_import.nombre_elements = len(lignes)
+            audit_import.perimetre["bulletins_mis_a_jour"] = len(bulletins_mis_a_jour)
             audit_import.perimetre["employes_mis_a_jour"] = employes_mis_a_jour
             audit_import.perimetre["departs"] = len(departs_confirmes.departs)
             audit_import.perimetre["retours"] = len(analyse.retours)
@@ -873,7 +913,8 @@ class ServiceImportPaie:
             await session.flush()
         return PaieImportResult(
             periode=afficher_periode(periode),
-            crees=len(lignes),
+            crees=len(lignes) - len(bulletins_mis_a_jour),
+            mis_a_jour=len(bulletins_mis_a_jour),
             departs=len(departs_confirmes.departs),
             retours=len(analyse.retours),
             fonctions_creees=len(analyse.fonctions_a_creer),

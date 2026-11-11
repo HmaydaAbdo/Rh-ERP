@@ -42,8 +42,9 @@ aligné sur les colonnes PostgreSQL `DATE` après découverte d'un échec transa
 Règle métier validée pour l'import : la création d'un bulletin est distincte de la mise à jour de la
 fiche Employé. Un salaire identique à celui de la fiche (dernier salaire connu) passe automatiquement;
 un salaire différent passe par le wizard, avec type proposé (`≤ 500` journalier, `> 500` mensuel).
-Un bulletin existant n'est jamais écrasé sans confirmation auditée; les départs, STC et suppressions
-d'affectation ne sont pas déduits automatiquement.
+Réimporter un mois existant met à jour ses bulletins sur place, après confirmation auditée (les heures
+supplémentaires liées sont recalculées, les bulletins absents du fichier ne sont pas touchés) ; sur un mois nouveau,
+les départs, STC et suppressions d'affectation ne sont pas déduits automatiquement.
 L'option « Ignorer et conserver 0 » ne confirme que l'avertissement de salaire nul ; un salaire
 différent de la fiche employé reste à traiter dans le wizard avant la création des bulletins.
 Si le fichier porte `0` et que la fiche porte un autre salaire, seul `SALAIRE_DIFFERENT` est rendu
@@ -88,12 +89,14 @@ Pour l'export, la parité Spring est le comportement par défaut. Le regroupemen
 choix distinct de la sélection des équipes à détailler. Le contrat Python prévoit
 `regroupementsEquipesParChantier`, avec des groupes de libellés par chantier. Son calcul réunit les
 lignes des équipes choisies une seule fois, tandis que la sélection classique garde des sections
-séparées. L'étape facultative de l'assistant et l'agrégation de tous les indicateurs du PDF restent
-à livrer avant l'activation ; cette option n'est pas encore disponible à l'utilisateur.
+séparées. L'étape « Équipes » de l'assistant d'export (PDF) propose ce regroupement **une seule fois pour
+tous les chantiers** : on coche par exemple Chauffeurs et Opérateurs, et chaque chantier qui compte au
+moins deux de ces équipes reçoit une section « Chauffeurs + Opérateurs » (aucun réglage chantier par
+chantier). L'assistant envoie alors `regroupementsEquipesParChantier` ; une équipe réunie n'a plus de
+section ni de tableau matériel propres.
 
-Un prototype PDF FastAPI utilise WeasyPrint 70.0, Pillow 13.0.0 et Matplotlib 3.11.2 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). Matplotlib fournit le rendu SVG statique ; son interface `Figure.savefig` écrit le graphique dans un flux mémoire
-([backends](https://matplotlib.org/stable/users/explain/figure/backends.html), [Figure.savefig](https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.savefig.html)).
+Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
+(CSS, logo et polices). Le rapport ne contient plus de graphique : évolution, répartitions et parc matériel sont des tableaux HTML, et Matplotlib a été retiré des dépendances.
 La couverture, les bandeaux et le tableau de détail reprennent la structure
 HTML Spring ; un essai Linux sur trois bulletins a produit trois pages. Après pagination, un essai
 Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre pages de contenu),
@@ -102,9 +105,9 @@ Le détail emploie les mêmes séparateurs français que Spring (espace insécab
 virgule décimale, tiret pour les valeurs numériques absentes).
 Le rendu Python reprend les six KPI globaux de Spring (masse, masse du mois précédent, bulletins, chantiers, nombre et montant des STC) et leurs comparaisons.
 La vue d'ensemble présente les KPI, les rubriques d'évolution et les courbes sur les périodes réellement disponibles des douze derniers mois, puis la répartition par chantier. Chaque chantier est numéroté en chiffres romains : après la vue globale, le premier chantier est II ; sans vue globale, il est I. Chaque chantier et équipe sélectionnée présente ses KPI, ses rubriques d'évolution et son historique.
-Les graphiques de répartition présentent ensemble les quatre mesures Spring : masse, nombre de bulletins, STC en personnes et montant STC. La vue globale exprime la contribution de chaque chantier au total; les vues de détail conservent les échelles comparables. La répartition globale garde l'ordre de masse décroissante et répartit les chantiers en pages équilibrées, avec au plus seize catégories par page.
+Les tableaux de répartition présentent ensemble quatre mesures : montant de la paie, bulletins, sortants (bulletins) et sortants (DH), avec une ligne Total sur la dernière page. La répartition globale garde l'ordre de montant décroissant et répartit les chantiers en pages équilibrées, avec au plus seize lignes par page (quinze pour les fonctions).
 Le chantier sans équipe choisie présente sa répartition par fonction ; avec une sélection, il présente la répartition de toutes ses équipes. Chaque équipe choisie a sa propre répartition par fonction, poursuivie sur des pages équilibrées au-delà de quinze fonctions. Les rubriques sont numérotées comme dans le rapport Spring : évolutions 1 et 2, répartition 3, matériel 4 si affiché, puis liste des employés 4 ou 5.
-Chaque section d'employés présente un tableau récapitulatif par fonction (bulletins, STC et montant STC), découpé selon la hauteur réelle des libellés et réuni avec le détail lorsque l'espace le permet. Une équipe choisie du catalogue C168 affiche son graphique matériel lorsque le wizard fournit au moins une quantité positive; si les hauteurs le permettent, les répartitions par fonction et matériel partagent la même page.
+Chaque section d'employés présente un tableau récapitulatif par fonction (bulletins, sortants et montant des sortants), découpé selon la hauteur réelle des libellés et réuni avec le détail lorsque l'espace le permet. Une équipe choisie du catalogue C168 affiche son tableau matériel lorsque le wizard fournit au moins une quantité positive; si les hauteurs le permettent, les répartitions par fonction et matériel partagent la même page.
 Les pages propres à une équipe répètent dans leur bandeau et leur pied de page le chantier et le libellé d'équipe, comme le rapport Spring.
 Une seule requête historique groupe les bulletins par chantier, équipe et mois en base, conserve les filtres du rapport et fournit les courbes globales et par chantier par totalisation. Il a une page de périmètre quand un filtre est actif et omet sa synthèse globale quand
 `sansVueEnsemble` est vrai. La recherche de nom et de CIN traite `%` et `_` littéralement.
@@ -127,7 +130,7 @@ fichier `Modele_Import_Paie.xlsx` fourni par le propriétaire : ils sont identiq
 ne porte pas sur les styles ni les propriétés internes du classeur.
 
 Le gabarit du rapport embarque Liberation Serif (`@font-face` dans `rapport.css`) et passe par `common/pdf.py`
-(rendu hors de la boucle d'événements). Un rendu Linux réel a été vérifié le 2026-11-07 pour la page de garde et un tableau paginé. Le portage des sections et graphiques est couvert par des tests ciblés, mais la comparaison côte à côte avec Spring sur les mêmes données reste à faire ; la route reste en `503` jusque-là.
+(rendu hors de la boucle d'événements). Un rendu Linux réel a été vérifié le 2026-11-07 pour la page de garde et un tableau paginé. Le portage des sections et tableaux est couvert par des tests ciblés, mais la comparaison côte à côte avec Spring sur les mêmes données reste à faire ; la route reste en `503` jusque-là.
 
 ## Parcours, effectifs et statuts HTTP (parité Spring, KAN-226)
 

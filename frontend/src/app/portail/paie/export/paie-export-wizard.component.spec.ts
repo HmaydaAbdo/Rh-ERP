@@ -298,6 +298,81 @@ describe('PaieExportWizardComponent', () => {
         expect(store.nombre('CAMION CITERNE')).toBeNull();
     });
 
+    describe('réunion d’équipes (PDF)', () => {
+        function lancer(): void {
+            store.etape.set('recap');
+            store.suivant();
+        }
+
+        it('une seule réunion s’applique à tous les chantiers qui comptent au moins deux de ces équipes', () => {
+            store.suivant();
+            store.basculerRegroupement('Chauffeurs');
+            store.basculerRegroupement('Opérateurs');
+
+            expect(store.chantiersReunis().map((c) => c.code)).toEqual(['C168']);
+            expect(store.texteRegroupement()).toBe('Chauffeurs + Opérateurs : une section commune dans 1 chantier');
+
+            lancer();
+
+            expect(vi.mocked(service.telechargerRapportPdf).mock.lastCall![0].regroupementsEquipesParChantier).toEqual({
+                C168: [['Chauffeurs', 'Opérateurs']]
+            });
+        });
+
+        it('ne demande rien pour un chantier qui ne compte qu’une des équipes, ni sans réunion', () => {
+            store.suivant();
+            lancer();
+            expect(vi.mocked(service.telechargerRapportPdf).mock.lastCall![0].regroupementsEquipesParChantier).toBeNull();
+
+            store.nouvelExport();
+            store.suivant();
+            store.basculerRegroupement('Chauffeurs');
+            store.basculerRegroupement('Labo');
+
+            expect(store.chantiersReunis()).toEqual([]);
+            expect(store.texteRegroupement()).toContain('aucun chantier');
+        });
+
+        it('les équipes réunies n’ont plus de section ni de tableau matériel propres', () => {
+            store.suivant();
+            store.basculerEquipe('C168', 'Chauffeurs');
+            store.basculerEquipe('C168', 'Opérateurs');
+            expect(store.etapes()).toContain('materiel');
+
+            store.basculerRegroupement('Chauffeurs');
+            store.basculerRegroupement('Opérateurs');
+
+            expect(store.etapes()).not.toContain('materiel');
+            lancer();
+            const requete = vi.mocked(service.telechargerRapportPdf).mock.lastCall![0];
+            expect(requete.equipesParChantier).toBeNull();
+            expect(requete.regroupementsEquipesParChantier).toEqual({ C168: [['Chauffeurs', 'Opérateurs']] });
+        });
+
+        it('l’ordre de sélection donne l’ordre du titre, et « Effacer » annule la réunion', () => {
+            store.suivant();
+            store.basculerRegroupement('Opérateurs');
+            store.basculerRegroupement('Chauffeurs');
+            expect(store.equipesReuniesDe(CHANTIERS[0])).toEqual(['Opérateurs', 'Chauffeurs']);
+
+            store.effacerRegroupement();
+
+            expect(store.regroupement()).toEqual([]);
+        });
+
+        it('n’existe pas en Excel et change de mois sans réunion', () => {
+            store.suivant();
+            store.basculerRegroupement('Chauffeurs');
+            store.basculerRegroupement('Opérateurs');
+            store.choisirFormat('EXCEL');
+            expect(store.chantiersReunis()).toEqual([]);
+
+            store.choisirFormat('PDF');
+            store.choisirPeriode('2026-08');
+            expect(store.regroupement()).toEqual([]);
+        });
+    });
+
     describe('étape « chantier » (PDF)', () => {
         it("propose l'étape chantier en PDF seulement, entre le format et les équipes", () => {
             expect(store.etapes()).toEqual(['periode', 'format', 'chantier', 'equipes', 'recap']);

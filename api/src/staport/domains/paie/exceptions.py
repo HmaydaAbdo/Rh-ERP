@@ -24,6 +24,15 @@ class PaieDejaExistante(ErreurMetier):
         super().__init__(f"Un bulletin de paie existe déjà pour l'employé id={employee_id} sur la période {mois}")
 
 
+class RetourSansTypeSalaire(ErreurMetier):
+    """Un employé sorti ne peut revenir par un bulletin tant que son type de salaire est inconnu (comme l'import)."""
+
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self, nom_prenom: str) -> None:
+        super().__init__(f"Le type de salaire de {nom_prenom} doit être renseigné avant son retour")
+
+
 class PeriodeObligatoire(ErreurMetier):
     def __init__(self) -> None:
         super().__init__("La période est obligatoire pour supprimer un groupe de bulletins (format aaaa-MM)")

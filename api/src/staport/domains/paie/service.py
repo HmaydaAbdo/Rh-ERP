@@ -14,7 +14,7 @@ from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 from staport.domains.employee.exceptions import EmployeeIntrouvable
-from staport.domains.employee.models import Employee, EmployeeStatut
+from staport.domains.employee.models import Employee
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
@@ -34,6 +34,7 @@ from .exceptions import (
     PeriodeObligatoire,
     ReferenceInvalide,
 )
+from .fiche_employe import aligner_fiche
 from .models import Paie
 from .periode import afficher_periode, mois_precedent
 from .schemas import (
@@ -128,8 +129,8 @@ def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str,
 
 
 DEFINITIONS_COMPARAISON = {
-    "masse": "Masse salariale du mois récent, en dirhams",
-    "masseReference": "Masse salariale du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
+    "masse": "Montant de la paie du mois récent, en dirhams",
+    "masseReference": "Montant de la paie du mois de comparaison ; absente si le groupe n'a pas de paie ce mois-là",
     "variationMasse": "Masse du mois récent moins masse du mois de comparaison, en dirhams (négative = baisse) ; "
     "absente si un mois manque",
     "variationPourcentage": "Variation de masse divisée par la masse du mois de comparaison, en pourcentage à une "
@@ -338,10 +339,10 @@ class ServicePaie:
             if await repository.existe(s, r.employee_id, r.periode):
                 raise PaieDejaExistante(r.employee_id, r.periode)
             await self._verifier_references(s, r.equipe_id, r.fonction_id, r.chantier_id)
-            self._synchroniser_equipe(employe, r.equipe_id)
             x = Paie(**r.model_dump())
             s.add(x)
             await s.flush()
+            await aligner_fiche(s, r.employee_id, {x.periode})
             cible.identifiant = x.id
             return rep((await repository.fiches(s, [x]))[0])
 
@@ -353,12 +354,10 @@ class ServicePaie:
             if await repository.existe(s, x.employee_id, x.periode, i):
                 raise PaieDejaExistante(x.employee_id, x.periode)
             await self._verifier_references(s, r.equipe_id, r.fonction_id, r.chantier_id)
-            employe = await s.get(Employee, x.employee_id)
-            if employe is not None:
-                self._synchroniser_equipe(employe, r.equipe_id)
             for k, v in r.model_dump(exclude={"version", "employee_id", "periode"}).items():
                 setattr(x, k, v)
             await s.flush()
+            await aligner_fiche(s, x.employee_id, {x.periode})
             await ecouteur_heures_supp.paie_modifiee(s, x.id, x.observation)
             return rep((await repository.fiches(s, [x]))[0])
 
@@ -373,12 +372,6 @@ class ServicePaie:
         if not await repository.ids_existants(s, Chantier, {chantier_id}):
             raise ReferenceInvalide(f"Chantier introuvable avec l'id : {chantier_id}")
 
-    @staticmethod
-    def _synchroniser_equipe(employe: Employee, equipe_id: int | None) -> None:
-        """L'équipe saisie sur le bulletin devient l'affectation courante de l'employé (sauf s'il est inactif)."""
-        if employe.statut != EmployeeStatut.INACTIF and employe.equipe_id != equipe_id:
-            employe.equipe_id = equipe_id
-
     async def supprimer(self, s: AsyncSession, i: int) -> None:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION", TypeOperation.DELETE, "Paie", i)
         async with s.begin(), action:
@@ -389,6 +382,7 @@ class ServicePaie:
                 await s.flush()
             except IntegrityError as e:
                 raise PaieLiee("Une contrainte d'intégrité empêche cette opération.") from e
+            await aligner_fiche(s, x.employee_id, {x.periode})
 
     async def supprimer_groupe(self, s: AsyncSession, criteres: PaieRecherche, nombre_attendu: int) -> int:
         action = self._auditeur.auditer(s, "PAIE_SUPPRESSION_GROUPE", TypeOperation.DELETE, "Paie")
@@ -400,9 +394,13 @@ class ServicePaie:
             if len(groupe) != nombre_attendu:
                 raise PaieGroupeModifie(len(groupe), nombre_attendu)
             await ecouteur_heures_supp.suppression_demandee(s, [bulletin.id for bulletin in groupe])
+            employes = {bulletin.employee_id for bulletin in groupe}
+            periodes = {bulletin.periode for bulletin in groupe}
             for bulletin in groupe:
                 await s.delete(bulletin)
             await s.flush()
+            for employee_id in sorted(employes):
+                await aligner_fiche(s, employee_id, periodes)
             cible.nombre_elements = len(groupe)
             return len(groupe)
 
@@ -420,6 +418,9 @@ class ServicePaie:
                 await s.flush()
             except IntegrityError as e:
                 raise PaieGroupeRestaurationConflit(1) from e
+            periodes_restaurees = {bulletin.periode for bulletin in bulletins}
+            for employee_id in sorted({bulletin.employee_id for bulletin in bulletins}):
+                await aligner_fiche(s, employee_id, periodes_restaurees)
             cible.nombre_elements = len(bulletins)
             return len(bulletins)
 

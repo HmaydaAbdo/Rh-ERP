@@ -6,6 +6,32 @@
       Chaque équipe choisie reçoit sa propre feuille, en plus de la feuille du chantier.
     }
   </p>
+  @if (store.format() === 'PDF' && store.equipesReunissables().length > 1) {
+    <div class="app-wizard__regroupement">
+      <div class="app-wizard__equipes-tete">
+        <span><strong>Réunir des équipes</strong> · s'applique à tous les chantiers</span>
+        @if (store.regroupement().length > 0) {
+          <button type="button" (click)="store.effacerRegroupement()">Effacer</button>
+        }
+      </div>
+      <p class="app-wizard__legende">
+        Cochez les équipes à présenter ensemble, par exemple Chauffeurs et Opérateurs : chaque chantier qui compte au moins deux
+        d'entre elles reçoit une seule section « équipe A + équipe B ». Aucun réglage chantier par chantier.
+      </p>
+      <div class="app-wizard__regroupement-choix">
+        @for (e of store.equipesReunissables(); track e.libelle) {
+          <span class="app-wizard__equipe" [class.app-wizard__equipe--choisie]="store.regroupement().includes(e.libelle)">
+            <button type="button" (click)="store.basculerRegroupement(e.libelle)" [attr.aria-pressed]="store.regroupement().includes(e.libelle)">
+              {{ e.libelle }}<small>{{ e.chantiers }} chantier{{ e.chantiers > 1 ? 's' : '' }}</small>
+            </button>
+          </span>
+        }
+      </div>
+      @if (store.regroupement().length > 0) {
+        <p class="app-wizard__legende app-wizard__regroupement-resume" role="status">{{ store.texteRegroupement() }}</p>
+      }
+    </div>
+  }
   <input
     type="search"
     class="stp-input mb-2"

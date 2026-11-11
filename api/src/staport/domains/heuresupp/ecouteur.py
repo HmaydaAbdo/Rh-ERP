@@ -1,7 +1,8 @@
 """Les lignes suivent leur bulletin (parité de `EcouteurPaieHeuresSupp`), dans la transaction de la paie.
 
-Appelé par `paie.service` : une modification du marqueur STC/sortie recalcule STC et net (le forfait, interdit en
-STC/sortie, est annulé) ; la suppression d'un bulletin lié est refusée. Ce module n'importe rien de `paie.service`.
+Appelé par `paie.service` et par l'import de paie : une modification du marqueur STC/sortie recalcule STC et net (le
+forfait, interdit en STC/sortie, est annulé), un changement de fonction du bulletin est repris ; la suppression d'un
+bulletin lié est refusée. Ce module n'importe rien de `paie.service`.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +13,11 @@ from staport.domains.paie.observation import est_stc_ou_sortie
 from . import calcul, repository
 
 
-async def paie_modifiee(s: AsyncSession, paie_id: int, observation: str | None) -> None:
+async def paie_modifiee(s: AsyncSession, paie_id: int, observation: str | None, fonction_id: int | None = None) -> None:
     stc = est_stc_ou_sortie(observation)
     for ligne in await repository.du_bulletin(s, paie_id):
+        if fonction_id is not None and ligne.fonction_id != fonction_id:
+            ligne.fonction_id = fonction_id
         if ligne.est_stc_ou_sortie == stc:
             continue
         ligne.est_stc_ou_sortie = stc

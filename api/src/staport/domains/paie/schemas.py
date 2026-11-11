@@ -443,7 +443,7 @@ class PaieImportControlePeriode(ModeleApi):
         "MOIS_HORS_CYCLE",
         "MOIS_SAUTE",
         "CONTENU_DEJA_IMPORTE",
-        "MOIS_DEJA_IMPORTE",
+        "MOIS_MIS_A_JOUR",
         "MOIS_ANTERIEUR_AU_DERNIER",
     ]
     message: str
@@ -568,6 +568,7 @@ class PaieImportCorrections(ModeleApi):
 class PaieImportResult(ModeleApi):
     periode: str
     crees: int
+    mis_a_jour: int = 0
     departs: int
     retours: int
     fonctions_creees: int = 0
