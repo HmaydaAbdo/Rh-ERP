@@ -88,8 +88,11 @@ Pour l'export, la parité Spring est le comportement par défaut. Le regroupemen
 choix distinct de la sélection des équipes à détailler. Le contrat Python prévoit
 `regroupementsEquipesParChantier`, avec des groupes de libellés par chantier. Son calcul réunit les
 lignes des équipes choisies une seule fois, tandis que la sélection classique garde des sections
-séparées. L'étape facultative de l'assistant et l'agrégation de tous les indicateurs du PDF restent
-à livrer avant l'activation ; cette option n'est pas encore disponible à l'utilisateur.
+séparées. L'étape « Équipes » de l'assistant d'export (PDF) propose ce regroupement **une seule fois pour
+tous les chantiers** : on coche par exemple Chauffeurs et Opérateurs, et chaque chantier qui compte au
+moins deux de ces équipes reçoit une section « Chauffeurs + Opérateurs » (aucun réglage chantier par
+chantier). L'assistant envoie alors `regroupementsEquipesParChantier` ; une équipe réunie n'a plus de
+section ni de tableau matériel propres.
 
 Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
 (CSS, logo et polices). Le rapport ne contient plus de graphique : évolution, répartitions et parc matériel sont des tableaux HTML, et Matplotlib a été retiré des dépendances.

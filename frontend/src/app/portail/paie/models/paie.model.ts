@@ -366,6 +366,8 @@ export interface PaieRapportPdfRequest {
   /** Retire le chapitre « Vue d'ensemble » : le rapport commence par le premier chantier. */
   sansVueEnsemble?: boolean;
   equipesParChantier?: Record<string, string[]> | null;
+  /** Équipes réunies en une seule section, par chantier : `{ C168: [['Chauffeurs', 'Opérateurs']] }`. */
+  regroupementsEquipesParChantier?: Record<string, string[][]> | null;
   /** Nombre de chaque ligne du parc matériel (clé = libellé de la ligne) ; une ligne absente reste vide. */
   materiel?: Record<string, number> | null;
 }

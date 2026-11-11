@@ -65,6 +65,7 @@ Total en bas de la dernière page. Chaque chantier possède ensuite son chapitre
 évolutions, répartition et liste complète des employés.
 
 - Sans équipe détaillée : une section contient tous les employés du chantier; la répartition est présentée par fonction.
+- Avec équipes réunies (assistant d'export, une seule réunion pour tous les chantiers) : les équipes cochées forment une seule section « A + B » dans chaque chantier qui en compte au moins deux, sans tableau matériel propre.
 - Avec équipes détaillées : chaque équipe choisie a sa section; les autres employés sont regroupés dans le reste du chantier. La répartition du chantier conserve toutes ses équipes, même non détaillées.
 - Un employé apparaît exactement une fois dans le détail PDF, y compris s'il n'a pas d'équipe.
 - Le détail est trié par fonction puis nom. Il conserve nom, fonction, CIN, jours, récupérations, salaire, primes, total et observation. Le reste du chantier indique aussi l'équipe réelle.
