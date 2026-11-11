@@ -358,8 +358,6 @@ class ServiceImportPaie:
                     )
                 ).all():
                     bulletins_voisins.setdefault(b[0], {})[b[1]] = signature_ligne([None, None, None, *b[2:]])
-            fonctions_par_id = {x.id: x.libelle for x in fonctions_lues}
-            chantiers_par_id = {x.id: x for x in chantiers_lus}
             equipes_par_id = {x.id: x.code for x in equipes_lues}
         # Un mois déjà importé se met à jour. La fiche Employé suit le dernier mois : ses écarts avec le fichier ne se
         # comparent que si ce mois est le dernier (ou un mois nouveau), jamais pour un ancien mois.
@@ -492,57 +490,9 @@ class ServiceImportPaie:
             if cin and cin.upper() in employees and fiche_a_comparer:
                 employe = employees[cin.upper()]
                 champs: list[PaieImportChamp] = []
-                if nom and employe.nom_prenom != nom:
-                    champs.append(PaieImportChamp(champ="nomPrenom", base=employe.nom_prenom, fichier=nom))
-                fonction_id = next(
-                    (
-                        ident
-                        for ident, libelle in fonctions_par_id.items()
-                        if libelle.strip().upper() == (fonction or "").upper()
-                    ),
-                    None,
-                )
-                if fonction_id is not None and fonction_id != employe.fonction_id:
-                    champs.append(
-                        PaieImportChamp(
-                            champ="fonction", base=fonctions_par_id.get(employe.fonction_id), fichier=fonction
-                        )
-                    )
-                chantier_id = next(
-                    (
-                        ident
-                        for ident, entite in chantiers_par_id.items()
-                        if entite.code.strip().upper() == (chantier or "").upper()
-                    ),
-                    None,
-                )
+                # Nom, fonction, chantier et équipe du fichier s'appliquent seuls à l'import (la fiche suit le dernier
+                # bulletin) : aucune confirmation. Seule une révision de salaire demande un choix.
                 actif = employe.statut != EmployeeStatut.INACTIF  # un retour est réactivé par l'import
-                if actif and chantier_id is not None and chantier_id != employe.chantier_id:
-                    chantier_actuel = (
-                        chantiers_par_id.get(employe.chantier_id) if employe.chantier_id is not None else None
-                    )
-                    champs.append(
-                        PaieImportChamp(
-                            champ="chantier",
-                            base=chantier_actuel.code if chantier_actuel else None,
-                            fichier=chantier,
-                        )
-                    )
-                equipe_id = (
-                    next(
-                        (
-                            ident
-                            for ident, code in equipes_par_id.items()
-                            if code.strip().upper() == (equipe or "").upper()
-                        ),
-                        None,
-                    )
-                    if equipe
-                    else None
-                )
-                if actif and equipe_id is not None and equipe_id != employe.equipe_id:
-                    equipe_actuelle = equipes_par_id.get(employe.equipe_id) if employe.equipe_id is not None else None
-                    champs.append(PaieImportChamp(champ="equipe", base=equipe_actuelle, fichier=equipe))
                 if actif and not equipe and employe.equipe_id is not None:
                     avertissements.append(
                         PaieImportErreur(
