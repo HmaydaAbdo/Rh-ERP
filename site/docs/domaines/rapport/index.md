@@ -59,9 +59,9 @@ Un rapport filtré contient des pages **Périmètre du rapport** qui détaillent
 avec continuation si nécessaire. Ces pages restent présentes quand la vue d'ensemble est retirée.
 
 La vue d'ensemble présente les KPI, le tableau d'évolution sur douze mois
-(Montant de la paie, STC en DH, Bulletins de paie, Sortants en nombre de personnes et Entrants : salariés payés ce mois-ci
+(Montant de la paie, STC en DH, Effectif, Sortants en nombre de personnes et Entrants : salariés payés ce mois-ci
 mais pas le mois civil précédent, « — » quand ce mois précédent n'a aucune paie) et la répartition par chantier. Chaque répartition (chantier, équipe, fonction) est un tableau trié par montant de la paie
-décroissant, avec les colonnes Montant de la paie (DH), Bulletins, Sortants (personnes) et STC (DH), et une ligne
+décroissant, avec les colonnes Montant de la paie (DH), Effectif, Sortants (personnes) et STC (DH), et une ligne
 Total en bas de la dernière page. Les chapitres de chantier se suivent par code croissant, dans l'ordre naturel des nombres (C57, puis C108, puis C205), et non par montant de la paie. Chaque chantier possède ensuite son chapitre : indicateurs,
 évolutions, répartition et liste complète des employés.
 
@@ -80,12 +80,18 @@ réglage ne vaut que pour son chantier : la même équipe peut être réunie dan
 - Un employé apparaît exactement une fois dans le détail PDF, y compris s'il n'a pas d'équipe.
 - Le détail est trié par fonction puis nom. Il conserve nom, fonction, CIN, jours, récupérations, salaire, primes, total et observation. La colonne Équipe n'apparaît que dans une section réunie et dans la liste d'un chantier sans réglage ; la liste des autres employés d'un chantier réglé ne l'affiche pas.
 - L'assistant refuse de quitter un chantier où une seule équipe est réunie. « Passer les autres chantiers » laisse les chantiers suivants sans réglage. Le récapitulatif résume chaque chantier réglé et le rouvre directement.
-- Chaque section conserve son récapitulatif par fonction. Le parc matériel est un tableau Matériel / Nombre, présent seulement pour une équipe dont le tableau concerné comporte une quantité positive ; les lignes sans quantité sont omises. Le rapport ne contient plus aucun graphique.
+- Il n’y a qu’une répartition par fonction par section : le tableau à 4 indicateurs (Montant de la paie, Effectif, Sortants, STC) ; l’ancien récapitulatif à 3 colonnes est supprimé, et la liste des employés rejoint la page quand elle y tient. Le parc matériel est un tableau Matériel / Nombre, présent seulement pour une équipe dont le tableau concerné comporte une quantité positive ; les lignes sans quantité sont omises. 
+
+**Graphiques** (Pygal, SVG intégré au HTML puis rendu par WeasyPrint) :
+
+- *Évolution* : sous le tableau d'évolution de la vue d'ensemble et de chaque chantier, barres groupées sur 12 mois, Effectif (personnes) sur l'axe de gauche et Montant de la paie (DH) sur l'axe de droite (second axe natif de Pygal). Les graduations sont arrondies à 1, 2 ou 5 × 10ⁿ.
+- *Répartition* : une page de deux graphiques en barres horizontales, Effectif et Montant de la paie, une barre par chantier (vue d'ensemble) ou par fonction ou équipe (chapitre chantier, selon la répartition que le chantier présente) ; chaque libellé porte la valeur exacte et le pourcentage du total. Au-delà de 20 parts, le reste forme « Autres ».
+- Aucun graphique au niveau équipe : le tableau d'évolution et la répartition par fonction de l'équipe partagent la même page quand la place le permet.
 
 Les équipes sont nommées par leur libellé. Les titres chantier présentent le nom suivi du code si le
 nom existe, sinon le code. La répartition globale utilise le nom seul, avec le code comme repli.
-Les libellés longs passent à la ligne. Les tableaux et répartitions importants continuent sur autant
-de pages que nécessaire (16 chantiers ou 15 fonctions au plus par page).
+Les libellés longs passent à la ligne. Les tableaux et répartitions importants se remplissent page après page selon leur hauteur réelle
+(environ 28 lignes par page) et ne passent à la page suivante que lorsque la page est pleine.
 
 ### Contrat PDF
 

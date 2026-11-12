@@ -17,7 +17,7 @@ describe('PaieExportEtapeRecapComponent', () => {
     const { racine } = await monter();
 
     expect(lignes(racine)).toEqual([
-      ['Période', 'août 2026 · 969 bulletins'],
+      ['Période', 'août 2026 · effectif 969'],
       ['Format', 'Rapport PDF de synthèse'],
       ['Marchés', 'Tous les marchés'],
       ['Vue d\'ensemble', 'Incluse'],

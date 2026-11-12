@@ -426,28 +426,7 @@ table.employes td.total { text-align: right; padding-right: 3pt; }
 table.employes td.total { font-weight: bold; }
 table.employes td.equipe { font-size: 9pt; line-height: 10.5pt; }
 
-/* ================================ TABLEAUX RÉCAP (pied de section équipe) ================================ */
-
-.recap-row {
-    margin-top: 4pt;
-    overflow: hidden;
-}
-
-.recap-bloc {
-    float: left;
-    margin-right: 120pt;
-}
-
-.recap-bloc.derniere {
-    margin-right: 0;
-}
-
-.recap-bloc .titre-recap {
-    font-size: 9.5pt;
-    font-weight: bold;
-    font-style: italic;
-    margin-bottom: 2pt;
-}
+/* ================================ TABLEAUX DE RÉCAPITULATIF ================================ */
 
 table.recap {
     border-collapse: collapse;
@@ -478,16 +457,6 @@ table.recap th {
     text-align: center;
 }
 
-table.recap.fonction { width: 370pt; }
-table.recap.fonction col.libelle { width: 160pt; }
-table.recap.fonction col.effectif,
-table.recap.fonction col.stc-personnes { width: 65pt; }
-table.recap.fonction col.stc-montant { width: 80pt; }
-table.recap.fonction td.libelle { text-align: left; }
-table.recap.fonction td.effectif,
-table.recap.fonction td.stc-personnes { text-align: center; }
-table.recap.fonction td.stc-montant { text-align: right; }
-
 table.recap.evolution { margin-top: 4pt; }
 table.recap.evolution col.libelle { width: 130pt; }
 table.recap.evolution col.mois { width: 56pt; }
@@ -512,3 +481,9 @@ table.recap.materiel td.nbre { text-align: right; }
     color: #595959;
     font-size: 9pt;
 }
+
+/* Graphiques Pygal (SVG en ligne) : l'évolution sous le tableau, deux barres de répartition côte à côte pour la répartition. */
+.graphique-evolution { margin-top: 4pt; overflow: hidden; }
+.repartitions { overflow: hidden; margin-top: 4pt; }
+.repartition-graphique { float: left; width: 396pt; height: 400pt; overflow: hidden; }
+.disque + .repartition-graphique { margin-left: 10pt; }

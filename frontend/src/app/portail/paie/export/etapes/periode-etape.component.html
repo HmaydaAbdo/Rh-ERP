@@ -16,7 +16,7 @@
         <div>
           <strong class="app-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} contient de la paie</strong>
           <dl class="app-wizard__chiffres">
-            <div><dt>bulletins</dt><dd [appCountUp]="r.nombreBulletins"></dd></div>
+            <div><dt>effectif</dt><dd [appCountUp]="r.nombreBulletins"></dd></div>
             <div><dt>chantiers</dt><dd [appCountUp]="r.nombreChantiers"></dd></div>
             <div><dt>montant de la paie</dt><dd>{{ store.formaterMontant(r.masse) }} DH</dd></div>
             <div><dt>sortants</dt><dd [appCountUp]="r.stc"></dd></div>
