@@ -114,12 +114,15 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
     assert "<th>FONCTION</th>" in html_equipe
     pages_equipe = [page for page in html_equipe.split('<div class="page">') if "ÉQUIPE : CH</div>" in page]
-    # Une équipe n'a pas de graphique, et son tableau de répartition rejoint l'évolution sur la même page.
-    assert pages_equipe and all("<svg" not in page for page in pages_equipe)
-    assert any("1. Évolution sur 12 mois" in page and "2. Répartition par fonction" in page for page in pages_equipe)
+    # Une équipe d'une seule personne : évolution (graphique et tableau) puis liste sur la même page, sans répartition.
+    assert len(pages_equipe) == 1
+    page_seule = pages_equipe[0]
+    assert (
+        "<svg" in page_seule and "Graphique d&#x27;évolution" in page_seule and "Tableau d&#x27;évolution" in page_seule
+    )
+    assert "1. Évolution sur 12 mois" in page_seule and "2. Liste des employés" in page_seule
+    assert "Répartition" not in page_seule
     assert "SORTANTS" in html_equipe
-    assert "2. Répartition par fonction" in html_equipe
-    assert "3. Liste des employés" in html_equipe
     assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
     # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
     assert "Page 6 / 6" in html_equipe
