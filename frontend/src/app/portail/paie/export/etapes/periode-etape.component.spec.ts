@@ -29,7 +29,7 @@ describe('PaieExportEtapePeriodeComponent', () => {
     expect(racine.querySelector('.app-wizard__carte--ok')).toBeNull();
   });
 
-  it('résume le mois choisi : bulletins, chantiers, montant de la paie et sortants', async () => {
+  it('résume le mois choisi : effectif, chantiers, montant de la paie et sortants', async () => {
     const { fixture, store, racine } = await monterEtape(PaieExportEtapePeriodeComponent);
     store.periodes.set(PERIODES);
 
@@ -39,7 +39,7 @@ describe('PaieExportEtapePeriodeComponent', () => {
     const carte = racine.querySelector('.app-wizard__carte--ok') as HTMLElement;
     expect(carte.getAttribute('role')).toBe('status');
     expect(carte.querySelector('strong')?.textContent).toContain('août 2026 contient de la paie');
-    expect(Array.from(carte.querySelectorAll('dt')).map((dt) => dt.textContent)).toEqual(['bulletins', 'chantiers', 'montant de la paie', 'sortants']);
+    expect(Array.from(carte.querySelectorAll('dt')).map((dt) => dt.textContent)).toEqual(['effectif', 'chantiers', 'montant de la paie', 'sortants']);
     expect(carte.textContent?.replace(/[\s  ]/g, ' ')).toContain('5 500 001 DH');
   });
 

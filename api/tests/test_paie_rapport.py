@@ -73,8 +73,8 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     html = rendre(requete, lignes, [ligne_precedente])
     assert '<div class="valeur">Octobre</div>' in html
     assert "ÉQUIPE : CH + OP" in html
-    assert 'table class="recap repartition"' in html and "<svg" not in html
-    for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"):
+    assert 'table class="recap repartition"' in html and "<svg" in html
+    for entete in ("MONTANT DE LA PAIE (DH)", "EFFECTIF", "SORTANTS", "STC (DH)"):
         assert f"<th>{entete}</th>" in html
     assert "2. Répartition par équipe" in html and "<th>ÉQUIPE</th>" in html
     assert '<tr class="total"><td class="libelle">Total</td>' in html
@@ -86,7 +86,9 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Montant mois precedent" in html
     assert '<div class="valeur montant">500 DH</div>' in html
     pages_rapport = html.split('<div class="page">')[1:]
-    assert any('table class="recap fonction"' in page and "3. Liste des employés" in page for page in pages_rapport)
+    # Une seule répartition par fonction (le tableau à 4 indicateurs) : plus de récapitulatif à 3 colonnes.
+    assert 'table class="recap fonction"' not in html
+    assert any("<th>FONCTION</th>" in page and "Liste des employés" in page for page in pages_rapport)
     assert "Écart : +2\u00a0500 DH (+500 %)" in html
     assert "Écart : +2" in html
     assert html.count('<td class="nom-prenom">') == 3
@@ -110,13 +112,17 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "ÉQUIPE : CH" in html_equipe and "10/2026" in html_equipe
     assert '<td class="equipe">' not in html_equipe
     assert "CHANTIER : Chantier A (CH01) · ÉQUIPE : CH" in html_equipe
-    assert "<th>FONCTION</th>" in html_equipe and "<svg" not in html_equipe
+    assert "<th>FONCTION</th>" in html_equipe
+    pages_equipe = [page for page in html_equipe.split('<div class="page">') if "ÉQUIPE : CH</div>" in page]
+    # Une équipe n'a pas de graphique, et son tableau de répartition rejoint l'évolution sur la même page.
+    assert pages_equipe and all("<svg" not in page for page in pages_equipe)
+    assert any("1. Évolution sur 12 mois" in page and "2. Répartition par fonction" in page for page in pages_equipe)
     assert "SORTANTS" in html_equipe
     assert "2. Répartition par fonction" in html_equipe
     assert "3. Liste des employés" in html_equipe
     assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
     # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
-    assert "Page 7 / 7" in html_equipe
+    assert "Page 8 / 8" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
         (paie, employe, chantier_materiel, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -152,7 +158,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "I — Vue d'ensemble" not in html_filtre
     assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
-    assert "Page 1 / 4" in html_filtre and "Page 4 / 4" in html_filtre
+    assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
 
     # Le contrat Spring découpe les critères longs avant de générer les pages physiques.
     rapport = cast(Any, report)
@@ -176,10 +182,9 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     ]
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
-    assert "Page 7 / 7" in html_nombreux
+    assert "Page 9 / 9" in html_nombreux
     assert html_nombreux.count('<table class="recap repartition">') == 2
-    assert html_nombreux.count('<table class="recap fonction">') == 1
-    assert html_nombreux.count("<thead><tr>") == 4
+    assert html_nombreux.count("<thead><tr>") == 3
 
 
 def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
@@ -218,7 +223,7 @@ def test_evolution_garde_la_fenetre_et_les_mois_reellement_presents() -> None:
         '<td class="mois">1\u00a0000</td><td class="mois">1\u00a0500</td>' in tableau
     )
     assert '<td class="libelle">STC (DH)</td><td class="mois">500</td><td class="mois">0</td>' in tableau
-    assert '<td class="libelle">Bulletins de paie</td><td class="mois">2</td><td class="mois">3</td>' in tableau
+    assert '<td class="libelle">Effectif</td><td class="mois">2</td><td class="mois">3</td>' in tableau
     assert '<td class="libelle">Sortants</td><td class="mois">1</td><td class="mois">0</td>' in tableau
     assert '<td class="libelle">Entrants</td><td class="mois">—</td><td class="mois">—</td>' in tableau
     indisponible = rapport._tableau_evolution([])
@@ -317,13 +322,11 @@ def test_repartition_globale_classe_les_chantiers_par_masse_decroissante() -> No
         '<td class="nombre">2</td><td class="nombre">1</td><td class="nombre">900</td></tr></tbody></table>'
     )
     assert hauteur == 15 + 15 + 15 + 15
-    assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(17)), maximum=16)] == [9, 8]
-    assert [len(tranche) for tranche in rapport._repartir_graphiques(list(range(33)), maximum=16)] == [11, 11, 11]
 
 
-def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
+def _lignes_fonctions(nombre: int) -> list[Any]:
     chantier = SimpleNamespace(id=1, code="CH01", nom="Chantier A")
-    lignes = [
+    return [
         (
             SimpleNamespace(salaire_total=Decimal("100"), observation=None, chantier_id=1),
             SimpleNamespace(nom_prenom=f"Employé {index}"),
@@ -331,13 +334,23 @@ def test_repartition_fonctions_repartit_equitablement_les_pages() -> None:
             None,
             SimpleNamespace(libelle=f"Fonction {index:02}"),
         )
-        for index in range(16)
+        for index in range(nombre)
     ]
-    pages = cast(Any, report)._tableaux_fonctions(lignes)
+
+
+def test_repartition_remplit_la_page_avant_d_en_ouvrir_une_autre() -> None:
+    rapport = cast(Any, report)
+    # 19 fonctions (cas réel d'une équipe) tiennent sur une seule page : plus de coupure à 15 lignes
+    pages = rapport._tableaux_fonctions(_lignes_fonctions(19))
+    assert len(pages) == 1 and 'class="total"' in pages[0][0]
+    # au-delà d'une page pleine, le tableau continue et le total ferme la dernière page seulement
+    pages = rapport._tableaux_fonctions(_lignes_fonctions(40))
     assert len(pages) == 2
-    assert all(sum(f"Fonction {index:02}" in tableau for index in range(16)) == 8 for tableau, _ in pages)
-    assert 'class="total"' not in pages[0][0]
-    assert 'class="total"' in pages[1][0] and '<td class="nombre">1\u00a0600</td>' in pages[1][0]
+    assert 'class="total"' not in pages[0][0] and 'class="total"' in pages[1][0]
+    assert all(hauteur <= 487 - 18 for _, hauteur in pages)
+    # la place déjà prise sur la première page (indicateurs, évolution) réduit ce qu'elle porte
+    pages = rapport._tableaux_fonctions(_lignes_fonctions(19), reserve_premiere=243)
+    assert len(pages) == 2 and pages[0][1] <= 487 - 18 - 243
 
 
 def test_tableau_repartition_presente_les_quatre_mesures() -> None:
@@ -366,8 +379,8 @@ def test_tableau_repartition_presente_les_quatre_mesures() -> None:
         1,
         Decimal("300"),
     )
-    tableau, _hauteur = rapport._tableaux_repartition([point], "CHANTIER", maximum=16)[0]
-    assert all(entete in tableau for entete in ("MONTANT DE LA PAIE (DH)", "BULLETINS", "SORTANTS", "STC (DH)"))
+    tableau, _hauteur = rapport._tableaux_repartition([point], "CHANTIER")[0]
+    assert all(entete in tableau for entete in ("MONTANT DE LA PAIE (DH)", "EFFECTIF", "SORTANTS", "STC (DH)"))
     assert '<td class="libelle">Chantier A</td><td class="nombre">1\u00a0000</td><td class="nombre">2</td>' in tableau
 
 
@@ -375,24 +388,6 @@ def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
     rapport = cast(Any, report)
     cartes = [("Indicateur", "1", "Écart indisponible " * 30, "compte")]
     assert rapport._hauteur_cartes_kpi(cartes) > 54
-
-
-def test_recap_fonctions_decoupe_selon_la_hauteur_des_libelles() -> None:
-    rapport = cast(Any, report)
-    lignes = [
-        (
-            SimpleNamespace(salaire_total=Decimal("0"), observation=None, chantier_id=1),
-            None,
-            None,
-            None,
-            SimpleNamespace(libelle=f"Fonction métier spécialisée numéro {index:02} " * 2),
-        )
-        for index in range(45)
-    ]
-    pages = rapport._recaps_fonctions(lignes)
-    assert len(pages) > 1
-    assert sum(page[0].count("<tr>") - 1 for page in pages) == 45
-    assert "Répartition par fonction (suite)" in pages[1][0]
 
 
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
@@ -471,7 +466,7 @@ def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
         assert asyncio.run(generer(), loop_factory=asyncio.SelectorEventLoop) == b"%PDF-1.7 synthetic"
         assert len(htmls) == 1
         assert "12/2025" in htmls[0] and "2/2026" in htmls[0]
-        assert htmls[0].count("12/2025") == 3
+        assert htmls[0].count("<th>12/2025</th>") == 3
         assert "1/2026" not in htmls[0]
         assert "Sortants" in htmls[0] and "200" in htmls[0]
         # aucun mois civil précédent avec paie (11/2025 et 1/2026 absents) : entrants inconnus

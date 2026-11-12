@@ -1,7 +1,7 @@
 <section class="app-wizard__panneau" [class.app-wizard__panneau--arriere]="store.sens() === 'arriere'">
   <p class="app-wizard__consigne">Vérifiez votre choix avant de générer.</p>
   <div class="app-wizard__recap">
-    <div><stp-icon name="calendar" /><span>Période</span><strong class="app-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · {{ store.resume()?.nombreBulletins }} bulletins</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
+    <div><stp-icon name="calendar" /><span>Période</span><strong class="app-wizard__majuscule">{{ store.libellePeriode(store.periode()) }} · effectif {{ store.resume()?.nombreBulletins }}</strong><button type="button" (click)="store.allerA('periode')">Modifier</button></div>
     <div><stp-icon name="file" /><span>Format</span><strong>{{ store.format() === 'PDF' ? 'Rapport PDF de synthèse' : 'Classeur Excel détaillé' }}</strong><button type="button" (click)="store.allerA('format')">Modifier</button></div>
       @if (store.format() === 'PDF') {
         <div><stp-icon name="building" /><span>Marchés</span><strong>{{ store.texteChantier() }}</strong><button type="button" (click)="store.allerA('chantier')">Modifier</button></div>
