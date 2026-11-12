@@ -223,12 +223,16 @@ class ServiceRapportPaie:
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
             regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
             points_chantier = _avec_entrees((evolution_chantiers or {}).get(chantier.id, []), fenetre)
+            # Une seule personne : aucune répartition à montrer, l'évolution et la liste tiennent sur la même page.
+            seul = not choix and not regroupements and len(lignes_chantier) <= 1
             bloc_chantier = (
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + _rubrique(1, TITRE_EVOLUTION)
                 + _sous_rubrique("Graphique d'évolution")
-                + graphique_evolution(points_chantier, _HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE)
+                + graphique_evolution(
+                    points_chantier, _HAUTEUR_GRAPHIQUE_SEUL if seul else _HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE
+                )
                 + _sous_rubrique("Tableau d'évolution")
                 + _tableau_evolution(points_chantier)
             )
@@ -240,6 +244,8 @@ class ServiceRapportPaie:
                         "équipe", [_tableau_equipes(lignes_chantier)], _groupes_equipes(lignes_chantier)
                     )
                 )
+            elif seul:
+                pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
             else:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
                 pages.extend(
@@ -261,6 +267,7 @@ class ServiceRapportPaie:
                 avec_equipe = est_regroupe or (libelle is None and not choix and not regroupements)
                 hauteur_derniere_analyse: float | None = None
                 materiel: tuple[str, float] | None = None
+                equipe_seule = False
                 if libelle is not None:
                     identifiants_equipes = {detail.valeurs[0].equipe_id for detail in section}
                     lignes_section_precedentes = [
@@ -286,41 +293,69 @@ class ServiceRapportPaie:
                         + _rubrique(1, TITRE_EVOLUTION)
                         + _tableau_evolution(evolutions_section)
                     )
-                    tableaux_fonctions = _tableaux_fonctions(
-                        [detail.valeurs for detail in section], reserve_premiere=_HAUTEUR_TETE_EQUIPE
-                    )
-                    if not est_regroupe:
-                        equipe_section = section[0].valeurs[3]
-                        if equipe_section is not None:
-                            materiel = _tableau_materiel(code, equipe_section.code, requete.materiel or {})
-                    # Une équipe n'a pas de graphique : si le premier tableau de répartition tient sous l'évolution,
-                    # il reste sur la même page (titre 24 + cartes 91 + rubrique 18 + évolution 100, avec marge).
-                    fusion = bool(tableaux_fonctions)
-                    reserve = _HAUTEUR_TETE_EQUIPE if fusion else 0
-                    materiel_avec_fonctions = (
-                        materiel is not None
-                        and len(tableaux_fonctions) == 1
-                        and reserve + tableaux_fonctions[0][1] + materiel[1] + 36 <= 487
-                    )
-                    contenus: list[str] = []
-                    for index_graphique, (tableau, hauteur_tableau) in enumerate(tableaux_fonctions):
-                        titre_repartition = (
-                            "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
+                    if (
+                        len(section) <= 1
+                        and not est_regroupe
+                        and not _tableau_materiel(
+                            code, section[0].valeurs[3].code if section[0].valeurs[3] else "", requete.materiel or {}
                         )
-                        contenu_graphique = _rubrique(2, titre_repartition) + tableau
-                        hauteur_derniere_analyse = (reserve if index_graphique == 0 else 0) + 18 + hauteur_tableau + 8
-                        if materiel is not None and materiel_avec_fonctions:
-                            contenu_graphique += materiel[0]
-                            hauteur_derniere_analyse += 18 + materiel[1] + 8
-                        contenus.append(contenu_graphique)
-                    if fusion:
-                        contenus[0] = page_equipe + contenus[0]
-                    else:
-                        contenus.insert(0, page_equipe)
-                    pages.extend((niveau_section, contenu) for contenu in contenus)
-                    if materiel is not None and not materiel_avec_fonctions:
-                        hauteur_derniere_analyse = 18 + materiel[1] + 8
-                        pages.append((niveau_section, materiel[0]))
+                    ):
+                        # Une seule personne : évolution (graphique et tableau) puis liste, sans répartition.
+                        equipe_seule = True
+                        page_equipe = (
+                            f'<div class="titre-chapitre">{escape(titre)}</div>'
+                            + _cartes_kpi(
+                                [detail.valeurs for detail in section],
+                                lignes_section_precedentes,
+                                inclure_chantiers=False,
+                            )
+                            + _rubrique(1, TITRE_EVOLUTION)
+                            + _sous_rubrique("Graphique d'évolution")
+                            + graphique_evolution(evolutions_section, _HAUTEUR_GRAPHIQUE_SEUL)
+                            + _sous_rubrique("Tableau d'évolution")
+                            + _tableau_evolution(evolutions_section)
+                        )
+                        pages.append((niveau_section, page_equipe))
+                    if not equipe_seule:
+                        tableaux_fonctions = _tableaux_fonctions(
+                            [detail.valeurs for detail in section], reserve_premiere=_HAUTEUR_TETE_EQUIPE
+                        )
+                        if not est_regroupe:
+                            equipe_section = section[0].valeurs[3]
+                            if equipe_section is not None:
+                                materiel = _tableau_materiel(code, equipe_section.code, requete.materiel or {})
+                        # Une équipe n'a pas de graphique : si le premier tableau de répartition tient sous l'évolution,
+                        # il reste sur la même page (titre 24 + cartes 91 + rubrique 18 + évolution 100, avec marge).
+                        fusion = bool(tableaux_fonctions)
+                        reserve = _HAUTEUR_TETE_EQUIPE if fusion else 0
+                        materiel_avec_fonctions = (
+                            materiel is not None
+                            and len(tableaux_fonctions) == 1
+                            and reserve + tableaux_fonctions[0][1] + materiel[1] + 36 <= 487
+                        )
+                        contenus: list[str] = []
+                        for index_graphique, (tableau, hauteur_tableau) in enumerate(tableaux_fonctions):
+                            titre_repartition = (
+                                "Répartition par fonction"
+                                if index_graphique == 0
+                                else "Répartition par fonction (suite)"
+                            )
+                            contenu_graphique = _rubrique(2, titre_repartition) + tableau
+                            hauteur_derniere_analyse = (
+                                (reserve if index_graphique == 0 else 0) + 18 + hauteur_tableau + 8
+                            )
+                            if materiel is not None and materiel_avec_fonctions:
+                                contenu_graphique += materiel[0]
+                                hauteur_derniere_analyse += 18 + materiel[1] + 8
+                            contenus.append(contenu_graphique)
+                        if fusion:
+                            contenus[0] = page_equipe + contenus[0]
+                        else:
+                            contenus.insert(0, page_equipe)
+                        pages.extend((niveau_section, contenu) for contenu in contenus)
+                        if materiel is not None and not materiel_avec_fonctions:
+                            hauteur_derniere_analyse = 18 + materiel[1] + 8
+                            pages.append((niveau_section, materiel[0]))
                 reste = libelle is None and bool(choix)
                 if reste:
                     # Les employés hors des équipes choisies forment un groupe qui a ses propres indicateurs et sa
@@ -394,6 +429,17 @@ class ServiceRapportPaie:
                         )
                         + "</tr>"
                     )
+                if (seul or equipe_seule) and hauteurs:
+                    # Une seule personne : la liste rejoint la page de l'évolution, en rubrique 2.
+                    pages[-1] = (
+                        pages[-1][0],
+                        pages[-1][1]
+                        + _rubrique(2, "Liste des employés")
+                        + _table_entete(avec_equipe=avec_equipe, avec_entete=True)
+                        + "".join(lignes_html)
+                        + "</tbody></table>",
+                    )
+                    continue
                 if (libelle is not None or reste) and hauteurs:
                     # Équipe (séparée ou réunie) ou autres employés : la liste des employés rejoint la dernière page
                     # d'analyse si 3 lignes (ou toutes) y tiennent (`ajouterPagesEmployesEquipe` de Spring).
@@ -467,6 +513,7 @@ def _sous_rubrique(titre: str) -> str:
 # Page « Vue d'ensemble » : le graphique prend la hauteur que le titre, les cartes, le tableau et les deux
 # sous-titres laissent libre (487 pt utiles).
 _HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE = 232
+_HAUTEUR_GRAPHIQUE_SEUL = 150  # une seule personne : évolution et liste partagent la page
 
 
 def _lignes_qui_tiennent(hauteurs: list[float], debut: int, disponible: float) -> int:

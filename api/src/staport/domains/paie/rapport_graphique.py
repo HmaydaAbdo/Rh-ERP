@@ -98,6 +98,11 @@ def graphique_evolution(points: Sequence[_Point], hauteur: int = HAUTEUR_GRAPHIQ
     montants = [float(point.masse) for point in points]
     borne_effectif = _echelle(max(effectifs), entiere=True)
     borne_montant = _echelle(max(montants))
+    # Les deux courbes peuvent se croiser : la série la plus haute écrit ses valeurs au-dessus de ses points, l'autre
+    # en dessous, pour que les étiquettes ne se superposent jamais.
+    niveau_effectif = sum(valeur / borne_effectif for valeur in effectifs)
+    niveau_montant = sum(valeur / borne_montant for valeur in montants)
+    haute = 0 if niveau_effectif >= niveau_montant else 1
     graphique = _pygal.Line(
         width=round(LARGEUR_GRAPHIQUE * _PX_PAR_PT),
         height=round(hauteur * _PX_PAR_PT),
@@ -105,7 +110,7 @@ def graphique_evolution(points: Sequence[_Point], hauteur: int = HAUTEUR_GRAPHIQ
             "file://style.css",
             "file://graph.css",
             "inline:.pygal-chart .series .line{stroke-width:3px !important}",
-            "inline:.pygal-chart .text-overlay text{transform:translateY(-19px)}",
+            f"inline:.pygal-chart .text-overlay .serie-{haute} text{{transform:translateY(-19px)}}",
         ],
         dots_size=4,
         print_values=True,
@@ -168,7 +173,7 @@ def nombre_parts(parts: Sequence[tuple[str, float, float]]) -> int:
 
 
 def graphique_repartition(parts: Sequence[tuple[str, float, float]], hauteur: int) -> str:
-    """Un graphique, deux barres par ligne (effectif et montant de la paie, chacune à sa propre échelle).
+    """Barres horizontales, deux par ligne (effectif et montant de la paie, chacune à sa propre échelle).
 
     La valeur exacte et le pourcentage du total sont écrits au bout de chaque barre ; rien sans donnée."""
     retenues = _reduire(parts)
