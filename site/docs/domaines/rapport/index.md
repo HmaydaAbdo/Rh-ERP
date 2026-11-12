@@ -87,6 +87,7 @@ réglage ne vaut que pour son chantier : la même équipe peut être réunie dan
 - *Évolution* : sous le tableau d'évolution de la vue d'ensemble et de chaque chantier, deux courbes sur 12 mois, Effectif (personnes) sur l'axe de gauche et Montant de la paie (DH) sur l'axe de droite. Les valeurs sont affichées aux points et les graduations sont arrondies à 1, 2 ou 5 × 10ⁿ.
 - *Répartition* : un graphique en barres horizontales présente l'effectif et le montant de la paie par chantier, fonction ou équipe, avec les valeurs et les pourcentages. Le graphique et le tableau partagent la page lorsque la place le permet ; le graphique est omis pour une seule catégorie. Au-delà de 20 parts, le reste forme « Autres ».
 - Aucun graphique au niveau équipe : le tableau d'évolution et la répartition par fonction de l'équipe partagent la même page quand la place le permet.
+- Pour un chantier sans équipe détaillée ou une équipe ne comptant qu'une personne, l'évolution et la liste des employés partagent une page, sans répartition.
 
 Les équipes sont nommées par leur libellé. Les titres chantier présentent le nom suivi du code si le
 nom existe, sinon le code. La répartition globale utilise le nom seul, avec le code comme repli.
