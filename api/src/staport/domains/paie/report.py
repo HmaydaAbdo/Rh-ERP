@@ -25,6 +25,7 @@ from .exceptions import AucunePaiePeriode
 from .materiel import tableaux_materiel
 from .models import Paie
 from .rapport_calcul import BulletinRapport, mesurer, regrouper_sections
+from .rapport_graphique import COULEUR_EFFECTIF, COULEUR_MONTANT, graphique_evolution, graphique_repartition
 from .rapport_texte import (
     decouper,
     decouper_lignes,
@@ -192,12 +193,14 @@ class ServiceRapportPaie:
                 pages.append(("PÉRIMÈTRE", contenu))
         if not requete.sans_vue_ensemble:
             cartes = _cartes_kpi(lignes, lignes_precedentes or [])
+            points_globaux = _avec_entrees(evolution or [], fenetre)
             pages.append(
                 (
                     "GLOBAL",
                     f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}'
                     + _rubrique(1, TITRE_EVOLUTION)
-                    + _tableau_evolution(_avec_entrees(evolution or [], fenetre)),
+                    + _tableau_evolution(points_globaux)
+                    + graphique_evolution(points_globaux),
                 )
             )
             tableaux_globaux = _tableaux_repartition_chantiers(par_chantier)
@@ -211,6 +214,13 @@ class ServiceRapportPaie:
                         _rubrique(2, titre_repartition) + tableau,
                     )
                 )
+            pages.append(
+                (
+                    "GLOBAL",
+                    _rubrique(3, "Effectif et montant de la paie par chantier")
+                    + _graphiques_repartition(_groupes_chantiers(par_chantier), "chantier"),
+                )
+            )
         chantiers_ordonnes = sorted(par_chantier.items(), key=lambda item: _cle_code(item[0]))
         chapitres_fixes = 0 if requete.sans_vue_ensemble else 1
         for rang_chantier, (code, lignes_chantier) in enumerate(chantiers_ordonnes, start=chapitres_fixes + 1):
@@ -220,11 +230,13 @@ class ServiceRapportPaie:
             lignes_chantier_precedentes = [ligne for ligne in lignes_precedentes or [] if ligne[2].code == code]
             choix = set((requete.equipes_par_chantier or {}).get(code, []))
             regroupements = (requete.regroupements_equipes_par_chantier or {}).get(code, [])
+            points_chantier = _avec_entrees((evolution_chantiers or {}).get(chantier.id, []), fenetre)
             bloc_chantier = (
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + _rubrique(1, TITRE_EVOLUTION)
-                + _tableau_evolution(_avec_entrees((evolution_chantiers or {}).get(chantier.id, []), fenetre))
+                + _tableau_evolution(points_chantier)
+                + graphique_evolution(points_chantier)
             )
             if choix or regroupements:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
@@ -232,6 +244,13 @@ class ServiceRapportPaie:
                     (
                         f"CHANTIER : {identifiant}",
                         _rubrique(2, "Répartition par équipe") + _tableau_equipes(lignes_chantier)[0],
+                    )
+                )
+                pages.append(
+                    (
+                        f"CHANTIER : {identifiant}",
+                        _rubrique(3, "Effectif et montant de la paie par équipe")
+                        + _graphiques_repartition(_groupes_equipes(lignes_chantier), "équipe"),
                     )
                 )
             else:
@@ -246,6 +265,13 @@ class ServiceRapportPaie:
                             _rubrique(2, titre_repartition) + tableau,
                         )
                     )
+                pages.append(
+                    (
+                        f"CHANTIER : {identifiant}",
+                        _rubrique(3, "Effectif et montant de la paie par fonction")
+                        + _graphiques_repartition(_groupes_fonctions(lignes_chantier), "fonction"),
+                    )
+                )
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
             for index_section, (libelle, section, est_regroupe) in enumerate(sections):
                 titre = f"ÉQUIPE : {libelle.upper()}" if libelle else f"CHANTIER : {identifiant}"
@@ -255,7 +281,6 @@ class ServiceRapportPaie:
                 # La colonne « Équipe » distingue les équipes d'une section réunie et celles d'un chantier laissé
                 # entier ; la liste du reste (chantier dont des équipes sont séparées ou réunies) ne l'affiche pas.
                 avec_equipe = est_regroupe or (libelle is None and not choix and not regroupements)
-                equipe_choisie = libelle is not None and not est_regroupe and libelle in choix
                 hauteur_derniere_analyse: float | None = None
                 materiel: tuple[str, float] | None = None
                 if libelle is not None:
@@ -273,58 +298,81 @@ class ServiceRapportPaie:
                                     points_section.get(point.periode), point
                                 )
                     evolutions_section = _avec_entrees([points_section[p] for p in sorted(points_section)], fenetre)
-                    pages.append(
-                        (
-                            niveau_section,
-                            f'<div class="titre-chapitre">{escape(titre)}</div>'
-                            + _cartes_kpi(
-                                [detail.valeurs for detail in section],
-                                lignes_section_precedentes,
-                                inclure_chantiers=False,
-                            )
-                            + _rubrique(1, TITRE_EVOLUTION)
-                            + _tableau_evolution(evolutions_section),
+                    page_equipe = (
+                        f'<div class="titre-chapitre">{escape(titre)}</div>'
+                        + _cartes_kpi(
+                            [detail.valeurs for detail in section],
+                            lignes_section_precedentes,
+                            inclure_chantiers=False,
                         )
+                        + _rubrique(1, TITRE_EVOLUTION)
+                        + _tableau_evolution(evolutions_section)
                     )
-                    tableaux_fonctions = _tableaux_fonctions([detail.valeurs for detail in section])
+                    tableaux_fonctions = _tableaux_fonctions(
+                        [detail.valeurs for detail in section], reserve_premiere=_HAUTEUR_TETE_EQUIPE
+                    )
                     if not est_regroupe:
                         equipe_section = section[0].valeurs[3]
                         if equipe_section is not None:
                             materiel = _tableau_materiel(code, equipe_section.code, requete.materiel or {})
+                    # Une équipe n'a pas de graphique : si le premier tableau de répartition tient sous l'évolution,
+                    # il reste sur la même page (titre 24 + cartes 91 + rubrique 18 + évolution 100, avec marge).
+                    fusion = bool(tableaux_fonctions)
+                    reserve = _HAUTEUR_TETE_EQUIPE if fusion else 0
                     materiel_avec_fonctions = (
                         materiel is not None
                         and len(tableaux_fonctions) == 1
-                        and tableaux_fonctions[0][1] + materiel[1] + 36 <= 487
+                        and reserve + tableaux_fonctions[0][1] + materiel[1] + 36 <= 487
                     )
+                    contenus: list[str] = []
                     for index_graphique, (tableau, hauteur_tableau) in enumerate(tableaux_fonctions):
                         titre_repartition = (
                             "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
                         )
                         contenu_graphique = _rubrique(2, titre_repartition) + tableau
-                        hauteur_derniere_analyse = 18 + hauteur_tableau + 8
+                        hauteur_derniere_analyse = (reserve if index_graphique == 0 else 0) + 18 + hauteur_tableau + 8
                         if materiel is not None and materiel_avec_fonctions:
                             contenu_graphique += materiel[0]
                             hauteur_derniere_analyse += 18 + materiel[1] + 8
-                        pages.append((niveau_section, contenu_graphique))
+                        contenus.append(contenu_graphique)
+                    if fusion:
+                        contenus[0] = page_equipe + contenus[0]
+                    else:
+                        contenus.insert(0, page_equipe)
+                    pages.extend((niveau_section, contenu) for contenu in contenus)
                     if materiel is not None and not materiel_avec_fonctions:
                         hauteur_derniere_analyse = 18 + materiel[1] + 8
                         pages.append((niveau_section, materiel[0]))
-                pages_recap = _recaps_fonctions([detail.valeurs for detail in section])
-                if libelle is None and choix and pages_recap:
-                    # Les employés hors des équipes choisies forment un groupe qui a ses propres indicateurs, en tête
-                    # de sa première page de récap (`ajouterPagesEquipe` avec `fusionneeAuChantier` faux).
+                reste = libelle is None and bool(choix)
+                if reste:
+                    # Les employés hors des équipes choisies forment un groupe qui a ses propres indicateurs et sa
+                    # propre répartition par fonction (le même tableau à 4 indicateurs que partout ailleurs).
                     identifiants_reste = {detail.valeurs[0].equipe_id for detail in section}
                     precedentes_reste = [
                         ligne
                         for ligne in lignes_chantier_precedentes
                         if getattr(ligne[0], "equipe_id", None) in identifiants_reste
                     ]
-                    tete_reste = f'<div class="titre-chapitre">{escape(titre)}</div>' + _cartes_kpi(
+                    page_reste = f'<div class="titre-chapitre">{escape(titre)}</div>' + _cartes_kpi(
                         [detail.valeurs for detail in section], precedentes_reste, inclure_chantiers=False
                     )
-                    html_recap, hauteur_recap = pages_recap[0]
-                    # Titre d'équipe (20 pt) + titre des cartes (16 pt) + cartes (54 pt au minimum).
-                    pages_recap[0] = (tete_reste + html_recap, hauteur_recap + 20 + 16 + 54)
+                    tableaux_reste = _tableaux_fonctions(
+                        [detail.valeurs for detail in section], reserve_premiere=_HAUTEUR_TETE_RESTE
+                    )
+                    contenus_reste: list[str] = []
+                    for index_graphique, (tableau, hauteur_tableau) in enumerate(tableaux_reste):
+                        titre_repartition = (
+                            "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
+                        )
+                        contenus_reste.append(_rubrique(1, titre_repartition) + tableau)
+                        hauteur_derniere_analyse = (
+                            (_HAUTEUR_TETE_RESTE if index_graphique == 0 else 0) + 18 + hauteur_tableau + 8
+                        )
+                    if contenus_reste:
+                        contenus_reste[0] = page_reste + contenus_reste[0]
+                    else:
+                        contenus_reste.append(page_reste)
+                    pages.extend((niveau_section, contenu) for contenu in contenus_reste)
                 lignes_html: list[str] = []
                 hauteurs: list[float] = []
                 for detail in section:
@@ -368,8 +416,8 @@ class ServiceRapportPaie:
                         )
                         + "</tr>"
                     )
-                if equipe_choisie and hauteurs:
-                    # Équipe choisie dans l'assistant : pas de récap, la liste des employés rejoint la dernière page
+                if (libelle is not None or reste) and hauteurs:
+                    # Équipe (séparée ou réunie) ou autres employés : la liste des employés rejoint la dernière page
                     # d'analyse si 3 lignes (ou toutes) y tiennent (`ajouterPagesEmployesEquipe` de Spring).
                     pages.extend(
                         _pages_employes_equipe(
@@ -378,7 +426,7 @@ class ServiceRapportPaie:
                             lignes_html,
                             hauteurs,
                             hauteur_derniere_analyse,
-                            numero=4 if materiel else 3,
+                            numero=2 if reste else (4 if materiel else 3),
                             avec_equipe=avec_equipe,
                         )
                     )
@@ -386,12 +434,7 @@ class ServiceRapportPaie:
                 # 495 pt utiles, moins la marge de sécurité et les blocs présents sur la page.
                 # Mêmes hauteurs de base que RapportPageModelBuilder et rapport.css.
                 titre_chantier_hauteur = 24 if index_section == 0 and libelle is not None else 0
-                budget_initial_sans_recap = 495 - 8 - titre_chantier_hauteur - 18 - 40
-                budget_initial_avec_recap = (
-                    487 - titre_chantier_hauteur - 18 - 40 - pages_recap[-1][1] if pages_recap else 0
-                )
-                fusionner_recap_details = bool(hauteurs) and budget_initial_avec_recap >= hauteurs[0]
-                budget_initial = budget_initial_avec_recap if fusionner_recap_details else budget_initial_sans_recap
+                budget_initial = 495 - 8 - titre_chantier_hauteur - 18 - 40
                 budget_suite = 495 - 8 - 8
                 pages_details: list[tuple[str, str]] = []
                 for index_page, tranche in enumerate(decouper_lignes(hauteurs, budget_initial, budget_suite)):
@@ -405,13 +448,7 @@ class ServiceRapportPaie:
                     contenu_page.extend(lignes_html[i] for i in tranche)
                     contenu_page.append("</tbody></table>")
                     pages_details.append((niveau_section, "".join(contenu_page)))
-                if fusionner_recap_details and pages_details and pages_recap:
-                    pages.extend((niveau_section, recap) for recap, _hauteur in pages_recap[:-1])
-                    pages.append((niveau_section, pages_recap[-1][0] + pages_details[0][1]))
-                    pages.extend(pages_details[1:])
-                else:
-                    pages.extend((niveau_section, recap) for recap, _hauteur in pages_recap)
-                    pages.extend(pages_details)
+                pages.extend(pages_details)
         for numero, (niveau, contenu_html) in enumerate(pages, start=1):
             lignes_niveau = min(compter_lignes(niveau, self.LARGEUR_NIVEAU_ENTETE, 9, True), 4)
             niveau = escape(niveau)
@@ -536,21 +573,52 @@ def _tableaux_repartition_chantiers(
         _point_repartition((lignes[0][2].nom or code).strip() or code, lignes) for code, lignes in par_chantier.items()
     ]
     elements.sort(key=lambda element: element.masse, reverse=True)
-    return _tableaux_repartition(elements, "CHANTIER", maximum=16)
+    # Une page porte 28 lignes + le total (15 pt par ligne dans les 487 pt utiles) : le tableau ne se coupe qu'au-delà.
+    return _tableaux_repartition(elements, "CHANTIER")
 
 
-def _repartir_graphiques[T](elements: list[T], *, maximum: int) -> list[list[T]]:
-    if not elements:
-        return [[]]
-    nombre_pages = (len(elements) + maximum - 1) // maximum
-    taille_base, reste = divmod(len(elements), nombre_pages)
-    tranches: list[list[T]] = []
-    debut = 0
-    for page in range(nombre_pages):
-        taille = taille_base + int(page < reste)
-        tranches.append(elements[debut : debut + taille])
-        debut += taille
-    return tranches
+def _graphiques_repartition(
+    groupes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]], entite: str
+) -> str:
+    """Deux graphiques en barres côte à côte : effectif et montant de la paie par `entite` (valeur exacte et %)."""
+    points = [_point_repartition(libelle, lignes) for libelle, lignes in groupes.items()]
+    effectif = graphique_repartition(
+        f"Effectif par {entite}", [(p.libelle, float(p.bulletins)) for p in points], COULEUR_EFFECTIF
+    )
+    montant = graphique_repartition(
+        f"Montant de la paie par {entite} (DH)", [(p.libelle, float(p.masse)) for p in points], COULEUR_MONTANT
+    )
+    return (
+        f'<div class="repartitions"><div class="repartition-graphique">{effectif}</div>'
+        f'<div class="repartition-graphique">{montant}</div></div>'
+    )
+
+
+def _groupes_chantiers(
+    par_chantier: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]],
+) -> dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]]:
+    return {(lignes[0][2].nom or code).strip() or code: lignes for code, lignes in par_chantier.items()}
+
+
+def _groupes_equipes(
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]]:
+    groupes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
+    for ligne in lignes:
+        equipe = ligne[3]
+        groupes.setdefault(equipe.libelle.strip() if equipe and equipe.libelle.strip() else "Sans équipe", []).append(
+            ligne
+        )
+    return groupes
+
+
+def _groupes_fonctions(
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+) -> dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]]:
+    groupes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
+    for ligne in lignes:
+        groupes.setdefault(ligne[4].libelle, []).append(ligne)
+    return groupes
 
 
 def _tableau_equipes(
@@ -567,18 +635,18 @@ def _tableau_equipes(
         autres = elements[15:]
         elements = [*elements[:15], _somme_points("Autres", autres)]
         elements.sort(key=lambda element: element.masse, reverse=True)
-    return _tableaux_repartition(elements, "ÉQUIPE", maximum=len(elements) or 1)[0]
+    return _tableaux_repartition(elements, "ÉQUIPE")[0]
 
 
 def _tableaux_fonctions(
-    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
+    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]], *, reserve_premiere: float = 0.0
 ) -> list[tuple[str, float]]:
     par_fonction: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
     for ligne in lignes:
         par_fonction.setdefault(ligne[4].libelle, []).append(ligne)
     elements = [_point_repartition(libelle, groupe) for libelle, groupe in par_fonction.items()]
     elements.sort(key=lambda element: (-element.masse, element.libelle.casefold()))
-    return _tableaux_repartition(elements, "FONCTION", maximum=15)
+    return _tableaux_repartition(elements, "FONCTION", reserve_premiere=reserve_premiere)
 
 
 def _somme_points(libelle: str, points: Sequence[PointRepartition]) -> PointRepartition:
@@ -594,20 +662,41 @@ def _somme_points(libelle: str, points: Sequence[PointRepartition]) -> PointRepa
 _LARGEUR_LIBELLE_REPARTITION = 242  # colonne libellé (250 pt) moins les marges internes de la cellule
 
 
-def _tableaux_repartition(elements: list[PointRepartition], colonne: str, *, maximum: int) -> list[tuple[str, float]]:
-    """Répartition sous forme de tableau, paginée comme les anciens graphiques. Chaque page renvoie son HTML et sa
-    hauteur en points ; la ligne Total (sur tous les éléments visibles) ferme la dernière page."""
+_HAUTEUR_UTILE_PAGE = 487  # points utiles sous le bandeau, moins la marge de sécurité du rapport
+_HAUTEUR_RUBRIQUE = 18
+
+
+def _tableaux_repartition(
+    elements: list[PointRepartition], colonne: str, *, reserve_premiere: float = 0.0
+) -> list[tuple[str, float]]:
+    """Répartition sous forme de tableau, remplie page après page : une page ne se coupe que lorsqu'elle est pleine.
+
+    `reserve_premiere` est la hauteur déjà prise sur la première page par ce qui la précède (indicateurs, évolution).
+    Chaque page renvoie son HTML et sa hauteur en points ; la ligne Total (sur tous les éléments visibles) ferme la
+    dernière page."""
     visibles = [element for element in elements if element.bulletins > 0]
     total = _somme_points("Total", visibles)
-    tranches = _repartir_graphiques(visibles, maximum=maximum)
+    plein = _HAUTEUR_UTILE_PAGE - _HAUTEUR_RUBRIQUE
+    tranches: list[tuple[list[PointRepartition], float]] = [([], 15.0)]
+    capacite = plein - reserve_premiere
+    for element in visibles:
+        hauteur_ligne = max(15, compter_lignes(element.libelle, _LARGEUR_LIBELLE_REPARTITION, 9) * 11 + 1)
+        tranche, hauteur = tranches[-1]
+        if tranche and hauteur + hauteur_ligne > capacite:
+            tranches.append(([], 15.0))
+            capacite = plein
+            tranche, hauteur = tranches[-1]
+        tranche.append(element)
+        tranches[-1] = (tranche, hauteur + hauteur_ligne)
+    if tranches[-1][1] + 15 > capacite and len(tranches[-1][0]) > 1:
+        dernier = tranches[-1][0].pop()
+        hauteur_dernier = max(15, compter_lignes(dernier.libelle, _LARGEUR_LIBELLE_REPARTITION, 9) * 11 + 1)
+        tranches[-1] = (tranches[-1][0], tranches[-1][1] - hauteur_dernier)
+        tranches.append(([dernier], 15.0 + hauteur_dernier))
     pages: list[tuple[str, float]] = []
-    for index, tranche in enumerate(tranches):
+    for index, (tranche, hauteur) in enumerate(tranches):
         derniere = index == len(tranches) - 1
-        lignes_html: list[str] = []
-        hauteur = 15.0
-        for element in tranche:
-            lignes_html.append(_ligne_repartition(element.libelle, element, gras=False))
-            hauteur += max(15, compter_lignes(element.libelle, _LARGEUR_LIBELLE_REPARTITION, 9) * 11 + 1)
+        lignes_html = [_ligne_repartition(element.libelle, element, gras=False) for element in tranche]
         if derniere:
             lignes_html.append(_ligne_repartition(total.libelle, total, gras=True))
             hauteur += 15
@@ -615,7 +704,7 @@ def _tableaux_repartition(elements: list[PointRepartition], colonne: str, *, max
             (
                 '<table class="recap repartition"><col class="libelle"><col class="nombre"><col class="nombre">'
                 '<col class="nombre"><col class="nombre"><thead><tr>'
-                f"<th>{escape(colonne)}</th><th>MONTANT DE LA PAIE (DH)</th><th>BULLETINS</th>"
+                f"<th>{escape(colonne)}</th><th>MONTANT DE LA PAIE (DH)</th><th>EFFECTIF</th>"
                 "<th>SORTANTS</th><th>STC (DH)</th></tr></thead><tbody>" + "".join(lignes_html) + "</tbody></table>",
                 hauteur,
             )
@@ -667,55 +756,9 @@ def _tableau_materiel(chantier_code: str, equipe_code: str, nombres: dict[str, i
     )
 
 
-def _recaps_fonctions(
-    lignes: list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]],
-) -> list[tuple[str, float]]:
-    par_fonction: dict[str, list[Paie]] = {}
-    for paie, _, _, _, fonction in lignes:
-        par_fonction.setdefault(fonction.libelle, []).append(paie)
-    lignes_recaps: list[str] = []
-    fonctions_triees = sorted(par_fonction.items(), key=lambda item: item[0].casefold())
-    for fonction, bulletins in fonctions_triees:
-        mesures = mesurer(cast(list[BulletinRapport], bulletins))
-        lignes_recaps.append(
-            f'<tr><td class="libelle">{escape(fonction)}</td>'
-            f'<td class="effectif">{_entier(mesures.effectif)}</td>'
-            f'<td class="stc-personnes">{_entier(mesures.stc)}</td>'
-            f'<td class="stc-montant">{_montant(mesures.montant_stc)}</td></tr>'
-        )
-    tranches: list[tuple[list[str], float]] = []
-    tranche: list[str] = []
-    hauteur_tranche = 34
-    for ligne, (fonction, _bulletins) in zip(lignes_recaps, fonctions_triees, strict=True):
-        hauteur_ligne = max(15, compter_lignes(fonction, 151, 9) * 11 + 1)
-        if tranche and hauteur_tranche + hauteur_ligne > 487:
-            tranches.append((tranche, hauteur_tranche))
-            tranche = []
-            hauteur_tranche = 34
-        tranche.append(ligne)
-        hauteur_tranche += hauteur_ligne
-    if tranche:
-        tranches.append((tranche, hauteur_tranche))
-    pages: list[tuple[str, float]] = []
-    for index, (tranche, hauteur) in enumerate(tranches):
-        titre = "Répartition par fonction" if index == 0 else "Répartition par fonction (suite)"
-        pages.append(
-            (
-                f'<div class="recap-row" style="height: {hauteur}pt"><div class="recap-bloc derniere">'
-                f'<div class="titre-recap">{titre}</div>'
-                '<table class="recap fonction"><col class="libelle"><col class="effectif">'
-                '<col class="stc-personnes"><col class="stc-montant">'
-                "<thead><tr><th>FONCTION</th><th>BULLETINS</th>"
-                "<th>SORTANTS</th><th>STC (DH)</th></tr></thead><tbody>"
-                + "".join(tranche)
-                + "</tbody></table></div></div>",
-                hauteur,
-            )
-        )
-    return pages
-
-
 TITRE_EVOLUTION = "Évolution sur 12 mois"
+_HAUTEUR_TETE_RESTE = 120  # titre, indicateurs (cartes de 70 au plus) du groupe « autres employés », avec marge
+_HAUTEUR_TETE_EQUIPE = 243  # titre, cartes (70 au plus), rubrique 1 et tableau d'évolution d'une équipe, avec marge
 
 
 def _cle_code(code: str) -> list[str | int]:
@@ -734,7 +777,7 @@ def _tableau_evolution(points: list[PointEvolution]) -> str:
     lignes: tuple[tuple[str, list[str]], ...] = (
         ("Montant de la paie (DH)", [_masse(point.masse) for point in points]),
         ("STC (DH)", [_masse(point.montant_stc) for point in points]),
-        ("Bulletins de paie", [_entier(point.effectif) for point in points]),
+        ("Effectif", [_entier(point.effectif) for point in points]),
         ("Sortants", [_entier(point.stc) for point in points]),
         ("Entrants", ["—" if point.entrees is None else _entier(point.entrees) for point in points]),
     )
@@ -857,9 +900,9 @@ def _cartes_kpi(
             "montant",
         ),
         (
-            "Bulletins de paie",
+            "Effectif",
             _entier(courant.effectif),
-            _ecart_compte(courant.effectif, precedent.effectif if precedent else None, "bulletin", "bulletins"),
+            _ecart_compte(courant.effectif, precedent.effectif if precedent else None, "personne", "personnes"),
             "compte",
         ),
         (
@@ -873,7 +916,7 @@ def _cartes_kpi(
         (
             "Sortants",
             _entier(courant.stc),
-            _ecart_compte(courant.stc, precedent.stc if precedent else None, "bulletin", "bulletins"),
+            _ecart_compte(courant.stc, precedent.stc if precedent else None, "personne", "personnes"),
             "compte",
         ),
         (

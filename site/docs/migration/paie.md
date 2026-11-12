@@ -96,7 +96,7 @@ réunies du même chantier. L'assistant envoie `equipesParChantier` pour les éq
 matériel propres (détail dans `site/docs/domaines/rapport/index.md`).
 
 Un prototype PDF FastAPI utilise WeasyPrint 70.0 et Pillow 13.0.0 avec les ressources visuelles Spring embarquées
-(CSS, logo et polices). Le rapport ne contient plus de graphique : évolution, répartitions et parc matériel sont des tableaux HTML, et Matplotlib a été retiré des dépendances.
+(CSS, logo et polices). Les tableaux (évolution, répartitions, parc matériel) sont en HTML ; les graphiques d'évolution et de répartition sont tracés par Pygal (SVG en ligne, LGPL), qui a remplacé Matplotlib dans les dépendances.
 La couverture, les bandeaux et le tableau de détail reprennent la structure
 HTML Spring ; un essai Linux sur trois bulletins a produit trois pages. Après pagination, un essai
 Linux sur 65 bulletins a produit cinq pages physiques (couverture et quatre pages de contenu),
