@@ -20,7 +20,16 @@ def tableaux_materiel() -> list[PaieMaterielTableau]:
             chantier_code="C168",
             equipe_code="OP",
             titre="ENGINS",
-            libelles=["PELLE PNEU", "PELLE CHENILLE", "NIVELEUSE", "COMPACTEURS", "CHARGEUR", "BULL", "TRACTOPELLE"],
+            libelles=[
+                "PELLE PNEU",
+                "PELLE CHENILLE",
+                "NIVELEUSE",
+                "COMPACTEURS",
+                "CHARGEUR",
+                "BULL",
+                "TRACTOPELLE",
+                "GRUE",
+            ],
         ),
     ]
 
