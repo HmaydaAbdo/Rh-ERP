@@ -36,11 +36,15 @@ class _Point(Protocol):
     def effectif(self) -> int: ...
 
 
-def _echelle(maximum: float) -> float:
-    """Borne haute d'un axe partant de zéro, graduée de 1, 2 ou 5 fois une puissance de dix, en 5 intervalles."""
+def _echelle(maximum: float, *, entiere: bool = False) -> float:
+    """Borne haute d'un axe partant de zéro, graduée de 1, 2 ou 5 fois une puissance de dix, en 5 intervalles.
+
+    `entiere` impose un pas d'au moins 1 : un effectif ne se gradue pas en 0,2 personne."""
     if maximum <= 0:
         return float(_GRADUATIONS)
     brut = maximum / _GRADUATIONS
+    if entiere:
+        brut = max(brut, 1.0)
     puissance = 10 ** floor(log10(brut))
     pas = next(m * puissance for m in _GRAND_PAS if m * puissance >= brut)
     return pas * _GRADUATIONS
@@ -78,29 +82,41 @@ def _style(**surcharges: Any) -> Any:
         "major_label_font_size": 9,
         "title_font_size": 9,
         "legend_font_size": 9,
+        "value_font_size": 9,
+        "value_label_font_size": 9,
         "guide_stroke_dasharray": "3,3",
         "major_guide_stroke_dasharray": "3,3",
     }
     return _Style(**{**reglages, **surcharges})
 
 
-def graphique_evolution(points: Sequence[_Point]) -> str:
-    """Le SVG du graphique, ou rien sans donnée. Un mois par groupe de barres, dans l'ordre reçu."""
+def graphique_evolution(points: Sequence[_Point], hauteur: int = HAUTEUR_GRAPHIQUE) -> str:
+    """Le SVG du graphique, ou rien sans donnée. Deux courbes, un point par mois, dans l'ordre reçu."""
     if not points:
         return ""
     effectifs = [point.effectif for point in points]
     montants = [float(point.masse) for point in points]
-    borne_effectif = _echelle(max(effectifs))
+    borne_effectif = _echelle(max(effectifs), entiere=True)
     borne_montant = _echelle(max(montants))
-    graphique = _pygal.Bar(
+    graphique = _pygal.Line(
         width=round(LARGEUR_GRAPHIQUE * _PX_PAR_PT),
-        height=round(HAUTEUR_GRAPHIQUE * _PX_PAR_PT),
+        height=round(hauteur * _PX_PAR_PT),
+        css=[
+            "file://style.css",
+            "file://graph.css",
+            "inline:.pygal-chart .series .line{stroke-width:3px !important}",
+            "inline:.pygal-chart .text-overlay text{transform:translateY(-19px)}",
+        ],
+        dots_size=4,
+        print_values=True,
+        print_values_position="top",
         explicit_size=True,
         style=_style(),
         js=[],
         interactive=False,
         disable_xml_declaration=True,
         legend_at_bottom=True,
+        legend_at_bottom_columns=2,
         legend_box_size=10,
         margin=4,
         range=(0, borne_effectif),
@@ -108,73 +124,106 @@ def graphique_evolution(points: Sequence[_Point]) -> str:
         y_labels=[borne_effectif / _GRADUATIONS * rang for rang in range(_GRADUATIONS + 1)],
         y_title="Effectif (personnes)",
         value_formatter=_format,
-        rounded_bars=1,
         x_label_rotation=0,
     )
-    graphique.x_labels = [f"{point.periode % 100}/{point.periode // 100}" for point in points]
-    graphique.add("Effectif (personnes), axe de gauche", effectifs)
-    graphique.add("Montant de la paie (DH), axe de droite", montants, secondary=True)
+    # Une case vide à chaque bout garde les premiers et derniers points à distance des axes.
+    graphique.x_labels = ["", *(f"{point.periode % 100}/{point.periode // 100}" for point in points), ""]
+    graphique.add("Effectif (personnes), axe de gauche", [None, *effectifs, None], formatter=_entier)
+    graphique.add("Montant de la paie (DH), axe de droite", [None, *montants, None], secondary=True, formatter=_entier)
     return (
-        f'<div class="graphique-evolution" style="height: {HAUTEUR_GRAPHIQUE + 4}pt">'
+        f'<div class="graphique-evolution" style="height: {hauteur + 4}pt">'
         + graphique.render(is_unicode=True)
         + "</div>"
     )
 
 
-LARGEUR_REPARTITION = 396  # points : deux graphiques côte à côte dans la largeur utile
-HAUTEUR_REPARTITION = 400
-_PARTS_VISIBLES = 20  # au-delà, le reste forme « Autres » pour que chaque barre garde sa hauteur
+LARGEUR_REPARTITION = 802  # points : la largeur utile d'une page
+_PARTS_VISIBLES = 20  # au-delà, le reste forme « Autres » pour que chaque ligne garde sa hauteur
+_HAUTEUR_PAR_PART = 28  # points : deux barres et leur marge
+_HAUTEUR_FIXE_REPARTITION = 50  # légende et marges
+HAUTEUR_MAX_REPARTITION = _HAUTEUR_FIXE_REPARTITION + _HAUTEUR_PAR_PART * (_PARTS_VISIBLES + 1)
 
 
 def _pourcentage(valeur: float, total: float) -> str:
     return f"{valeur * 100 / total:.1f}".replace(".", ",") + " %" if total else "0 %"
 
 
-def _reduire(parts: Sequence[tuple[str, float]]) -> list[tuple[str, float]]:
-    """Les plus grandes parts d'abord ; les suivantes se regroupent en « Autres »."""
-    triees = sorted((part for part in parts if part[1] > 0), key=lambda part: -part[1])
+def hauteur_repartition(parts: int, minimale: bool = False) -> int:
+    """Hauteur du graphique pour `parts` lignes : chaque ligne garde la même épaisseur, quelle que soit la page."""
+    parts = min(parts, _PARTS_VISIBLES + 1)
+    return _HAUTEUR_FIXE_REPARTITION + (18 if minimale else _HAUTEUR_PAR_PART) * parts
+
+
+def _reduire(parts: Sequence[tuple[str, float, float]]) -> list[tuple[str, float, float]]:
+    """Les plus grands montants d'abord ; les suivants se regroupent en « Autres »."""
+    triees = sorted((part for part in parts if part[1] > 0 or part[2] > 0), key=lambda part: -part[2])
     if len(triees) <= _PARTS_VISIBLES + 1:
         return triees
-    reste = sum(valeur for _, valeur in triees[_PARTS_VISIBLES:])
-    return [*triees[:_PARTS_VISIBLES], ("Autres", reste)]
+    reste = triees[_PARTS_VISIBLES:]
+    return [*triees[:_PARTS_VISIBLES], ("Autres", sum(p[1] for p in reste), sum(p[2] for p in reste))]
 
 
-def graphique_repartition(titre: str, parts: Sequence[tuple[str, float]], couleur: str) -> str:
-    """Barres horizontales triées : la valeur exacte et le pourcentage du total sont écrits au bout de chaque barre."""
+def nombre_parts(parts: Sequence[tuple[str, float, float]]) -> int:
+    return len(_reduire(parts))
+
+
+def graphique_repartition(parts: Sequence[tuple[str, float, float]], hauteur: int) -> str:
+    """Un graphique, deux barres par ligne (effectif et montant de la paie, chacune à sa propre échelle).
+
+    La valeur exacte et le pourcentage du total sont écrits au bout de chaque barre ; rien sans donnée."""
     retenues = _reduire(parts)
     if not retenues:
         return ""
-    total = sum(valeur for _, valeur in retenues)
+    total_effectif = sum(part[1] for part in retenues)
+    total_montant = sum(part[2] for part in retenues)
 
-    def etiquette(libelle: str, valeur: float) -> str:
-        nom = libelle if len(libelle) <= 26 else libelle[:25] + "…"
-        return f"{nom} : {_entier(valeur)} ({_pourcentage(valeur, total)})"
+    def point(valeur: float, total: float) -> dict[str, Any]:
+        return {"value": valeur, "label": f"{_entier(valeur)} ({_pourcentage(valeur, total)})"}
 
     graphique = _pygal.HorizontalBar(
         width=round(LARGEUR_REPARTITION * _PX_PAR_PT),
-        height=round(HAUTEUR_REPARTITION * _PX_PAR_PT),
+        height=round(hauteur * _PX_PAR_PT),
         explicit_size=True,
-        style=_style(
-            colors=(couleur,), value_font_size=8, label_font_size=8, major_label_font_size=8, title_font_size=11
-        ),
+        style=_style(value_font_size=9, value_label_font_size=9, label_font_size=9, major_label_font_size=9),
         js=[],
         interactive=False,
         disable_xml_declaration=True,
-        show_legend=False,
+        legend_at_bottom=True,
+        legend_at_bottom_columns=2,
+        legend_box_size=10,
         # Sur un graphique horizontal Pygal échange les axes : « x » désigne les valeurs, « y » les noms.
         show_x_labels=False,
         show_y_labels=True,
         show_x_guides=False,
         show_y_guides=False,
-        title=titre,
         margin=4,
         truncate_label=-1,
         rounded_bars=1,
+        print_labels=True,
+        print_values=False,
+        print_values_position="top",
+        # Une marge à droite des barres les plus longues pour que leur étiquette reste dans le graphique.
+        range=(0, max(part[1] for part in retenues) * 1.45),
+        secondary_range=(0, max(part[2] for part in retenues) * 1.45),
     )
     # La première étiquette se dessine en bas : la plus grande part est donnée en dernier pour apparaître en haut.
-    graphique.x_labels = [etiquette(libelle, valeur) for libelle, valeur in reversed(retenues)]
-    graphique.add(titre, [valeur for _, valeur in reversed(retenues)])
-    return graphique.render(is_unicode=True)
+    ordre = list(reversed(retenues))
+    graphique.x_labels = [libelle if len(libelle) <= 30 else libelle[:29] + "…" for libelle, _, _ in ordre]
+    graphique.add("Effectif (personnes)", [point(effectif, total_effectif) for _, effectif, _ in ordre])
+    graphique.add("Montant de la paie (DH)", [point(montant, total_montant) for _, _, montant in ordre], secondary=True)
+    return (
+        f'<div class="repartition-graphique" style="height: {hauteur + 4}pt">'
+        + graphique.render(is_unicode=True)
+        + "</div>"
+    )
 
 
-__all__ = ["COULEUR_EFFECTIF", "COULEUR_MONTANT", "HAUTEUR_GRAPHIQUE", "graphique_evolution", "graphique_repartition"]
+__all__ = [
+    "COULEUR_EFFECTIF",
+    "COULEUR_MONTANT",
+    "HAUTEUR_GRAPHIQUE",
+    "graphique_evolution",
+    "graphique_repartition",
+    "hauteur_repartition",
+    "nombre_parts",
+]

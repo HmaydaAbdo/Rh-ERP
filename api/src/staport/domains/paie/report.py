@@ -25,7 +25,7 @@ from .exceptions import AucunePaiePeriode
 from .materiel import tableaux_materiel
 from .models import Paie
 from .rapport_calcul import BulletinRapport, mesurer, regrouper_sections
-from .rapport_graphique import COULEUR_EFFECTIF, COULEUR_MONTANT, graphique_evolution, graphique_repartition
+from .rapport_graphique import graphique_evolution, graphique_repartition, hauteur_repartition, nombre_parts
 from .rapport_texte import (
     decouper,
     decouper_lignes,
@@ -199,26 +199,18 @@ class ServiceRapportPaie:
                     "GLOBAL",
                     f'<div class="titre-chapitre">I — Vue d\'ensemble</div>{cartes}'
                     + _rubrique(1, TITRE_EVOLUTION)
-                    + _tableau_evolution(points_globaux)
-                    + graphique_evolution(points_globaux),
+                    + _sous_rubrique("Graphique d'évolution")
+                    + graphique_evolution(points_globaux, _HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE)
+                    + _sous_rubrique("Tableau d'évolution")
+                    + _tableau_evolution(points_globaux),
                 )
             )
-            tableaux_globaux = _tableaux_repartition_chantiers(par_chantier)
-            for index_graphique, (tableau, _hauteur) in enumerate(tableaux_globaux):
-                titre_repartition = (
-                    "Répartition par chantier" if index_graphique == 0 else "Répartition par chantier (suite)"
-                )
-                pages.append(
-                    (
-                        "GLOBAL",
-                        _rubrique(2, titre_repartition) + tableau,
-                    )
-                )
-            pages.append(
-                (
-                    "GLOBAL",
-                    _rubrique(3, "Effectif et montant de la paie par chantier")
-                    + _graphiques_repartition(_groupes_chantiers(par_chantier), "chantier"),
+            pages.extend(
+                ("GLOBAL", contenu)
+                for contenu in _pages_repartition(
+                    "chantier",
+                    _tableaux_repartition_chantiers(par_chantier),
+                    _groupes_chantiers(par_chantier),
                 )
             )
         chantiers_ordonnes = sorted(par_chantier.items(), key=lambda item: _cle_code(item[0]))
@@ -235,41 +227,27 @@ class ServiceRapportPaie:
                 f'<div class="titre-chapitre">{escape(titre_chantier)}</div>'
                 f"{_cartes_kpi(lignes_chantier, lignes_chantier_precedentes, inclure_chantiers=False)}"
                 + _rubrique(1, TITRE_EVOLUTION)
+                + _sous_rubrique("Graphique d'évolution")
+                + graphique_evolution(points_chantier, _HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE)
+                + _sous_rubrique("Tableau d'évolution")
                 + _tableau_evolution(points_chantier)
-                + graphique_evolution(points_chantier)
             )
             if choix or regroupements:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
-                pages.append(
-                    (
-                        f"CHANTIER : {identifiant}",
-                        _rubrique(2, "Répartition par équipe") + _tableau_equipes(lignes_chantier)[0],
-                    )
-                )
-                pages.append(
-                    (
-                        f"CHANTIER : {identifiant}",
-                        _rubrique(3, "Effectif et montant de la paie par équipe")
-                        + _graphiques_repartition(_groupes_equipes(lignes_chantier), "équipe"),
+                pages.extend(
+                    (f"CHANTIER : {identifiant}", contenu)
+                    for contenu in _pages_repartition(
+                        "équipe", [_tableau_equipes(lignes_chantier)], _groupes_equipes(lignes_chantier)
                     )
                 )
             else:
                 pages.append((f"CHANTIER : {identifiant}", bloc_chantier))
-                for index_graphique, (tableau, _hauteur) in enumerate(_tableaux_fonctions(lignes_chantier)):
-                    titre_repartition = (
-                        "Répartition par fonction" if index_graphique == 0 else "Répartition par fonction (suite)"
-                    )
-                    pages.append(
-                        (
-                            f"CHANTIER : {identifiant}",
-                            _rubrique(2, titre_repartition) + tableau,
-                        )
-                    )
-                pages.append(
-                    (
-                        f"CHANTIER : {identifiant}",
-                        _rubrique(3, "Effectif et montant de la paie par fonction")
-                        + _graphiques_repartition(_groupes_fonctions(lignes_chantier), "fonction"),
+                pages.extend(
+                    (f"CHANTIER : {identifiant}", contenu)
+                    for contenu in _pages_repartition(
+                        "fonction",
+                        _tableaux_fonctions(lignes_chantier, reserve_premiere=_HAUTEUR_SOUS_RUBRIQUE),
+                        _groupes_fonctions(lignes_chantier),
                     )
                 )
             sections = regrouper_sections([_LigneDetail(*ligne) for ligne in lignes_chantier], choix, regroupements)
@@ -482,6 +460,15 @@ def _rubrique(numero: int, titre: str) -> str:
     return f'<div class="titre-section rubrique-titre">{numero}. {escape(titre)}</div>'
 
 
+def _sous_rubrique(titre: str) -> str:
+    return f'<div class="sous-rubrique-titre">{escape(titre)}</div>'
+
+
+# Page « Vue d'ensemble » : le graphique prend la hauteur que le titre, les cartes, le tableau et les deux
+# sous-titres laissent libre (487 pt utiles).
+_HAUTEUR_GRAPHIQUE_VUE_ENSEMBLE = 232
+
+
 def _lignes_qui_tiennent(hauteurs: list[float], debut: int, disponible: float) -> int:
     cumul, nombre = 0.0, 0
     for hauteur in hauteurs[debut:]:
@@ -574,24 +561,53 @@ def _tableaux_repartition_chantiers(
     ]
     elements.sort(key=lambda element: element.masse, reverse=True)
     # Une page porte 28 lignes + le total (15 pt par ligne dans les 487 pt utiles) : le tableau ne se coupe qu'au-delà.
-    return _tableaux_repartition(elements, "CHANTIER")
+    return _tableaux_repartition(elements, "CHANTIER", reserve_premiere=_HAUTEUR_SOUS_RUBRIQUE)
 
 
-def _graphiques_repartition(
-    groupes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]], entite: str
-) -> str:
-    """Deux graphiques en barres côte à côte : effectif et montant de la paie par `entite` (valeur exacte et %)."""
+_HAUTEUR_SOUS_RUBRIQUE = 18
+
+
+def _pages_repartition(
+    critere: str,
+    tableaux: list[tuple[str, float]],
+    groupes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]],
+) -> list[str]:
+    """Pages de la répartition par `critere` : le graphique à deux barres par ligne, puis le tableau.
+
+    Quand le tableau tient en une page, graphique et tableau partagent la page et la remplissent (le graphique prend
+    la hauteur laissée libre) ; sinon le graphique ouvre une page qu'il remplit, et le tableau suit. Le graphique est
+    omis quand il n'y a qu'une ligne : une barre unique à 100 % n'apprend rien."""
+    titre = f"Répartition par {critere}"
+    sous_graphique = _sous_rubrique(f"Graphique de répartition par {critere}")
+    sous_tableau = _sous_rubrique(f"Tableau de répartition par {critere}")
+
+    def pages_tableau(debut: str) -> list[str]:
+        return [
+            (debut if index == 0 else _rubrique(2, f"{titre} (suite)") + sous_tableau) + tableau
+            for index, (tableau, _) in enumerate(tableaux)
+        ]
+
     points = [_point_repartition(libelle, lignes) for libelle, lignes in groupes.items()]
-    effectif = graphique_repartition(
-        f"Effectif par {entite}", [(p.libelle, float(p.bulletins)) for p in points], COULEUR_EFFECTIF
+    parts = [(point.libelle, float(point.bulletins), float(point.masse)) for point in points]
+    lignes_graphique = nombre_parts(parts)
+    if lignes_graphique < 2 or not tableaux:
+        return pages_tableau(_rubrique(2, titre) + sous_tableau)
+    entete = _HAUTEUR_RUBRIQUE + 2 * _HAUTEUR_SOUS_RUBRIQUE
+    libre = _HAUTEUR_UTILE_PAGE - entete - tableaux[0][1] - 22
+    if len(tableaux) == 1 and libre >= hauteur_repartition(lignes_graphique, minimale=True):
+        return [
+            _rubrique(2, titre)
+            + sous_graphique
+            + graphique_repartition(parts, int(libre))
+            + sous_tableau
+            + tableaux[0][0]
+        ]
+    page_graphique = (
+        _rubrique(2, titre)
+        + sous_graphique
+        + graphique_repartition(parts, _HAUTEUR_UTILE_PAGE - _HAUTEUR_RUBRIQUE - _HAUTEUR_SOUS_RUBRIQUE - 6)
     )
-    montant = graphique_repartition(
-        f"Montant de la paie par {entite} (DH)", [(p.libelle, float(p.masse)) for p in points], COULEUR_MONTANT
-    )
-    return (
-        f'<div class="repartitions"><div class="repartition-graphique">{effectif}</div>'
-        f'<div class="repartition-graphique">{montant}</div></div>'
-    )
+    return [page_graphique, *pages_tableau(_rubrique(2, f"{titre} (suite)") + sous_tableau)]
 
 
 def _groupes_chantiers(
