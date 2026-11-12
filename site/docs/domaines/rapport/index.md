@@ -84,8 +84,8 @@ réglage ne vaut que pour son chantier : la même équipe peut être réunie dan
 
 **Graphiques** (Pygal, SVG intégré au HTML puis rendu par WeasyPrint) :
 
-- *Évolution* : sous le tableau d'évolution de la vue d'ensemble et de chaque chantier, barres groupées sur 12 mois, Effectif (personnes) sur l'axe de gauche et Montant de la paie (DH) sur l'axe de droite (second axe natif de Pygal). Les graduations sont arrondies à 1, 2 ou 5 × 10ⁿ.
-- *Répartition* : une page de deux graphiques en barres horizontales, Effectif et Montant de la paie, une barre par chantier (vue d'ensemble) ou par fonction ou équipe (chapitre chantier, selon la répartition que le chantier présente) ; chaque libellé porte la valeur exacte et le pourcentage du total. Au-delà de 20 parts, le reste forme « Autres ».
+- *Évolution* : sous le tableau d'évolution de la vue d'ensemble et de chaque chantier, deux courbes sur 12 mois, Effectif (personnes) sur l'axe de gauche et Montant de la paie (DH) sur l'axe de droite. Les valeurs sont affichées aux points et les graduations sont arrondies à 1, 2 ou 5 × 10ⁿ.
+- *Répartition* : un graphique en barres horizontales présente l'effectif et le montant de la paie par chantier, fonction ou équipe, avec les valeurs et les pourcentages. Le graphique et le tableau partagent la page lorsque la place le permet ; le graphique est omis pour une seule catégorie. Au-delà de 20 parts, le reste forme « Autres ».
 - Aucun graphique au niveau équipe : le tableau d'évolution et la répartition par fonction de l'équipe partagent la même page quand la place le permet.
 
 Les équipes sont nommées par leur libellé. Les titres chantier présentent le nom suivi du code si le

@@ -98,7 +98,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert '<td class="equipe">Autre</td>' not in html
     html_entier = rendre(PaieRapportRequete(periode="2026-10"), lignes, [])
     assert '<td class="equipe">Autre</td>' in html_entier
-    assert "Page 1 / 8" in html and "Page 8 / 8" in html
+    assert "Page 1 / 6" in html and "Page 6 / 6" in html
     assert "II — CHANTIER : Chantier A (CH01)" in html
     assert "SORTANTS" in html
     html_equipe = rendre(
@@ -122,7 +122,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "3. Liste des employés" in html_equipe
     assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
     # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
-    assert "Page 8 / 8" in html_equipe
+    assert "Page 6 / 6" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
         (paie, employe, chantier_materiel, equipe, fonction) for paie, employe, _, equipe, fonction in lignes[:1]
@@ -158,7 +158,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Nom &amp; prénom contient : Ali%" in html_filtre
     assert "I — Vue d'ensemble" not in html_filtre
     assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
-    assert "Page 1 / 5" in html_filtre and "Page 5 / 5" in html_filtre
+    assert "Page 1 / 4" in html_filtre and "Page 4 / 4" in html_filtre
 
     # Le contrat Spring découpe les critères longs avant de générer les pages physiques.
     rapport = cast(Any, report)
@@ -182,7 +182,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     ]
     html_nombreux = rendre(PaieRapportRequete(periode="2026-10"), lignes_nombreuses)
     assert html_nombreux.count('<td class="nom-prenom">') == 65
-    assert "Page 9 / 9" in html_nombreux
+    assert "Page 7 / 7" in html_nombreux
     assert html_nombreux.count('<table class="recap repartition">') == 2
     assert html_nombreux.count("<thead><tr>") == 3
 

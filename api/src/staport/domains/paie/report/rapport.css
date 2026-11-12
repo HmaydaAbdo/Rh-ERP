@@ -282,6 +282,14 @@ html, body {
     margin-top: 5pt;
 }
 
+.sous-rubrique-titre {
+    font-size: 10pt;
+    line-height: 12pt;
+    font-weight: bold;
+    margin-top: 6pt;
+    color: #333333;
+}
+
 .titre-indicateurs {
     margin-top: 4pt;
     font-size: 10pt;
@@ -484,6 +492,4 @@ table.recap.materiel td.nbre { text-align: right; }
 
 /* Graphiques Pygal (SVG en ligne) : l'évolution sous le tableau, deux barres de répartition côte à côte pour la répartition. */
 .graphique-evolution { margin-top: 4pt; overflow: hidden; }
-.repartitions { overflow: hidden; margin-top: 4pt; }
-.repartition-graphique { float: left; width: 396pt; height: 400pt; overflow: hidden; }
-.disque + .repartition-graphique { margin-left: 10pt; }
+.repartition-graphique { margin-top: 4pt; overflow: hidden; }
