@@ -54,4 +54,4 @@ def test_routes_cartes_et_catalogue_materiel(plateforme: Plateforme, connecter: 
     materiel = plateforme.client.get("/paie/materiel", headers=entetes)
     assert materiel.status_code == 200
     assert materiel.json()[0]["titre"] == "CAMION"
-    assert materiel.json()[1]["libelles"][-1] == "TRACTOPELLE"
+    assert materiel.json()[1]["libelles"][-1] == "GRUE"
