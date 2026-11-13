@@ -54,6 +54,7 @@ sidebar_position: 13
 | | `EMPLOYEE_WRITE` | Créer, modifier | V4 |
 | | `EMPLOYEE_DELETE` | Supprimer | V4 |
 | | `EMPLOYEE_IMPORT` | Importer depuis Excel (et télécharger le modèle) | V4 |
+| | `EMPLOYEE_EXPORT` | Générer les PDF des mouvements (sortants, entrants, entrées et sorties du mois) ; accordée à `SYSTEM_ADMIN` et aux rôles qui ont `PAIE_EXPORT` | V5 (`0005_permission_employee_export`) |
 | Fonction | `FUNCTION_READ` | Consulter | V4 |
 | | `FUNCTION_WRITE` | Créer, modifier | V4 |
 | | `FUNCTION_DELETE` | Supprimer | V4 |

@@ -1,0 +1,33 @@
+/* Polices du rapport de paie (même police, mêmes fichiers) : le dossier `fonts/` est résolu depuis la base du rendu. */
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Regular.ttf"); font-weight: normal; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; font-style: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Italic.ttf"); font-weight: normal; font-style: italic; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-BoldItalic.ttf"); font-weight: bold; font-style: italic; }
+/* Rapports PDF en A4 paysage (heures supplémentaires, mouvements du mois) : tableau qui s'écoule (aucun nombre de lignes par page fixé : chaque ligne
+   prend la place dont elle a besoin), bandeau et pied répétés sur chaque page par les marges de @page, même police et même bandeau
+   que le rapport de paie. */
+@page {
+  size: 842pt 595pt;
+  margin: 84pt 20pt 34pt 20pt;
+  @top-left { content: element(entete); width: 802pt; vertical-align: top; }
+  @bottom-left { content: element(pied); width: 640pt; }
+  @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: 'Liberation Serif', serif; font-size: 8pt; width: 162pt; text-align: right; }
+}
+html, body { margin: 0; padding: 0; font-family: 'Liberation Serif', serif; color: #1a1a1a; }
+
+.page-header { position: running(entete); width: 802pt; height: 56pt; }
+.page-header .logo { position: absolute; left: 0; top: 20pt; width: 60pt; height: 40pt; }
+.page-header .sep { position: absolute; top: 24pt; height: 32pt; width: 0; border-left: 1pt solid #8a8a8a; }
+.page-header .sep.s1 { left: 68pt; }
+.page-header .sep.s2 { left: 212pt; }
+.page-header .sep.s3 { left: 600pt; }
+.page-header .bloc { position: absolute; top: 28pt; font-size: 11pt; font-weight: bold; }
+.page-header .bloc.b1 { left: 78pt; width: 130pt; }
+.page-header .bloc.b2 { left: 222pt; width: 330pt; }
+.page-header .bloc.b2 { top: 22pt; font-size: 14pt; }
+.page-header .bloc.b2 .contexte { display: block; margin-top: 4pt; font-size: 9pt; font-weight: normal; line-height: 11pt; color: #444; }
+.page-header .filtres { position: absolute; left: 614pt; top: 22pt; width: 188pt; font-size: 8.5pt; line-height: 11pt; }
+.page-header .filtres .lib { display: inline-block; width: 52pt; font-weight: bold; }
+.page-header .filet { position: absolute; left: 0; top: 66pt; width: 802pt; border-top: 1.2pt solid #1a1a1a; }
+
+.pied { position: running(pied); font-size: 8pt; color: #444; border-top: 0.6pt solid #8a8a8a; padding-top: 4pt; }

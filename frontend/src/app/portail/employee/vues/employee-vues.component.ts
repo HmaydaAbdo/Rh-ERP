@@ -29,7 +29,7 @@ const CONFIGURATION_EMPLOYES: CollectionShellConfig = {
   imports: [CollectionShellComponent, EmployeeActionsComponent, EmployeeFiltresComponent],
   template: `
     <app-collection-shell [configuration]="configuration" [contentVisible]="vueAffichee()">
-      <app-employee-actions collection-actions (importe)="rafraichirVue()"></app-employee-actions>
+      <app-employee-actions collection-actions [filtres]="filtres()" (importe)="rafraichirVue()"></app-employee-actions>
       <app-employee-filtres collection-filters [value]="filtres()" (valueChange)="appliquer($event)"></app-employee-filtres>
     </app-collection-shell>
   `,
