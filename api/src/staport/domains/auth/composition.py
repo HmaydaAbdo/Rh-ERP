@@ -15,6 +15,7 @@ from staport.domains.auth.service_role import ServiceRole
 from staport.domains.auth.service_utilisateur import ServiceUtilisateur
 from staport.domains.chantier.service import ServiceChantier
 from staport.domains.common.audit_contexte import Auditeur
+from staport.domains.employee.mouvements_pdf import ServiceMouvementsPdf
 from staport.domains.employee.service import ServiceEmployee
 from staport.domains.equipe.service import ServiceEquipe
 from staport.domains.function.service import ServiceFonction
@@ -52,6 +53,7 @@ class ContexteAuth:
     equipes: ServiceEquipe
     chantiers: ServiceChantier
     employees: ServiceEmployee
+    mouvements_pdf: ServiceMouvementsPdf
     paies: ServicePaie
     export_paie: ServiceExportPaie
     materiel_paie: ServiceMaterielPaie
@@ -117,6 +119,7 @@ def creer_contexte(
         equipes=service_equipe,
         chantiers=service_chantier,
         employees=service_employee,
+        mouvements_pdf=ServiceMouvementsPdf(service_employee),
         paies=service_paie,
         export_paie=ServiceExportPaie(),
         materiel_paie=ServiceMaterielPaie(),

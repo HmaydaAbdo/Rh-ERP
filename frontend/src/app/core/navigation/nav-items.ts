@@ -1,6 +1,6 @@
 export interface NavItem {
   label: string;
-  icon: 'house' | 'wallet' | 'users' | 'building' | 'map-pinned' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'settings' | 'history' | 'clock-3' | 'log-out';
+  icon: 'house' | 'wallet' | 'users' | 'building' | 'map-pinned' | 'briefcase' | 'network' | 'user-cog' | 'shield' | 'settings' | 'history' | 'clock-3' | 'log-out' | 'log-in';
   route: string;
   /** Permission de lecture qui donne accès à l'écran (jamais un rôle codé en dur). */
   permission: string;
@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Heures sup.', icon: 'clock-3', route: '/heures-supp', permission: 'HEURES_SUP_READ' },
   { label: 'Employés', icon: 'users', route: '/employees', permission: 'EMPLOYEE_READ' },
   { label: 'STC / Sortie', icon: 'log-out', route: '/sorties', permission: 'EMPLOYEE_READ' },
+  { label: 'Entrants', icon: 'log-in', route: '/entrants', permission: 'EMPLOYEE_READ' },
   { label: 'Chantiers', icon: 'building', route: '/chantiers', permission: 'CHANTIER_READ' },
   { label: 'Carte', icon: 'map-pinned', route: '/carte', permission: 'CARTE_READ' },
   { label: 'Fonctions', icon: 'briefcase', route: '/functions', permission: 'FUNCTION_READ' },

@@ -19,9 +19,12 @@ export interface Sortie {
   salaire?: number | null;
   typeSalaire?: 'MENSUEL' | 'JOURNALIER' | null;
   /** Fonction du dernier bulletin, sinon celle de la fiche. */
+  fonctionId?: number | null;
   fonction?: string | null;
+  chantierId?: number | null;
   chantier?: string | null;
   chantierDesignation?: string | null;
+  equipeId?: number | null;
   equipe?: string | null;
   /** Mois du dernier bulletin pris en compte (`aaaa-MM`). */
   dernierePaie?: string | null;
@@ -30,7 +33,10 @@ export interface Sortie {
   observation?: string | null;
 }
 
-/** Les sorties d'un mois, avec leur répartition par motif (`NON_PRECISE` quand aucun motif n'a été saisi). */
+/**
+ * Les sorties d'un mois selon les filtres. `parMotif` compte le périmètre sans le filtre de motif (`NON_PRECISE` sans motif
+ * saisi) : c'est la liste des motifs proposés au filtre.
+ */
 export interface SortiesMois {
   periode: string;
   nombre: number;

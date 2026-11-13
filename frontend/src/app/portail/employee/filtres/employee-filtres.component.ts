@@ -55,7 +55,9 @@ const DEBOUNCE_RECHERCHE_MS = 300;
         placeholder="Équipe"
       ></app-lazy-select>
 
-      <stp-select [formField]="formulaire.statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
+      @if (avecStatut()) {
+        <stp-select [formField]="formulaire.statut" [options]="statutOptions" ariaLabel="Statut" placeholder="Statut"></stp-select>
+      }
 
       <button stp-button variant="text" icon="x" class="app-toolbar__clear" type="button" (click)="reinitialiser()">Réinitialiser</button>
     </form>
@@ -70,6 +72,8 @@ export class EmployeeFiltresComponent {
   /** Les filtres affichés : ils viennent de la page (l'URL), le composant les émet à chaque changement (`valueChange`). */
   readonly value = input<EmployeeFiltres>(AUCUN_FILTRE);
   readonly valueChange = output<EmployeeFiltres>();
+  /** Faux pour les écrans de mouvements du mois (sorties, entrants) : le statut courant n'y filtre rien. */
+  readonly avecStatut = input(true);
 
   protected readonly statutOptions = STATUT_EMPLOYE_OPTIONS;
 

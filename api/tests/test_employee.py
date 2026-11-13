@@ -132,7 +132,7 @@ def test_la_reponse_imbrique_fonction_chantier_et_equipe_comme_spring(plateforme
     assert "fonctionId" not in lu and "chantierId" not in lu and "equipeId" not in lu
 
 
-def _sortie_attendue(identifiant: int, nom: str, cin: str, motif: str) -> dict[str, Any]:
+def _sortie_attendue(identifiant: int, nom: str, cin: str, motif: str, fonction_id: int) -> dict[str, Any]:
     """Sortie sans bulletin : détails de la fiche seulement (fonction de la fiche, aucune affectation de paie)."""
     return {
         "employeId": identifiant,
@@ -145,9 +145,12 @@ def _sortie_attendue(identifiant: int, nom: str, cin: str, motif: str) -> dict[s
         "statutActuel": "ACTIF",
         "salaire": None,
         "typeSalaire": None,
+        "fonctionId": fonction_id,
         "fonction": "Sortie fonction",
+        "chantierId": None,
         "chantier": None,
         "chantierDesignation": None,
+        "equipeId": None,
         "equipe": None,
         "dernierePaie": None,
         "joursTravailles": None,
@@ -195,8 +198,8 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         "nombre": 2,
         "parMotif": {"ABANDON": 1, "NON_PRECISE": 1},
         "sorties": [
-            _sortie_attendue(ids[1], "Adam Sortie", "CIN-SOR-2", "NON_PRECISE"),
-            _sortie_attendue(ids[0], "Zoe Sortie", "CIN-SOR-1", "ABANDON"),
+            _sortie_attendue(ids[1], "Adam Sortie", "CIN-SOR-2", "NON_PRECISE", fonction["id"]),
+            _sortie_attendue(ids[0], "Zoe Sortie", "CIN-SOR-1", "ABANDON", fonction["id"]),
         ],
     }
     assert vide.json() == {"periode": "2097-04", "nombre": 0, "parMotif": {}, "sorties": []}

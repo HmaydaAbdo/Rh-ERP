@@ -39,3 +39,10 @@ def arrondir_si_nombre(valeur: Any) -> Any:
     except InvalidOperation:
         return valeur
     return arrondir_entier(nombre)
+
+
+def formater_nombre(valeur: Decimal | None) -> str:
+    """Format français d'une valeur métier entière (espace des milliers) ; « — » sans valeur."""
+    if valeur is None:
+        return "—"
+    return f"{arrondir_montant(valeur):,.0f}".replace(",", " ")

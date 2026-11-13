@@ -1,0 +1,39 @@
+<div class="app-toolbar" role="group" aria-label="Mois et export">
+  <div class="app-toolbar__period" role="group" aria-label="Mois">
+    <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois précédent" (click)="moisPrecedent()"></button>
+    <button
+      stp-button
+      variant="text"
+      icon="calendar"
+      class="app-toolbar__period-month"
+      type="button"
+      cdkOverlayOrigin
+      #origine="cdkOverlayOrigin"
+      [attr.aria-label]="'Choisir le mois : ' + libelleMois()"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="panneauMoisOuvert()"
+      (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
+    >
+      <span class="app-capitalize">{{ libelleMois() }}</span>
+    </button>
+    <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois suivant" (click)="moisSuivant()"></button>
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="origine"
+      [cdkConnectedOverlayOpen]="panneauMoisOuvert()"
+      [cdkConnectedOverlayPositions]="positions"
+      (overlayOutsideClick)="panneauMoisOuvert.set(false)"
+      (overlayKeydown)="surToucheMois($event)"
+      (detach)="panneauMoisOuvert.set(false)"
+    >
+      <div class="stp-popover" role="dialog" aria-label="Choisir un mois">
+        <app-month-picker [value]="periode()" (valueChange)="choisir($event)"></app-month-picker>
+      </div>
+    </ng-template>
+  </div>
+  <ng-content />
+  @if (exportVisible()) {
+    <button stp-button variant="secondary" icon="download" type="button" [loading]="exportEnCours()" (click)="exporter.emit()">Exporter en PDF</button>
+  }
+</div>
+<app-employee-filtres [value]="filtres()" [avecStatut]="false" (valueChange)="filtresChange.emit($event)"></app-employee-filtres>

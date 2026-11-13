@@ -16,7 +16,11 @@ sidebar_position: 3
 | `POST /employees/search` | `EMPLOYEE_READ` |
 | `POST /employees/regroupements` | `EMPLOYEE_READ` (aucun salaire) |
 | `POST /employees/analytique` | `EMPLOYEE_READ` (aucun salaire) |
-| `POST /employees/sorties-mois` | `EMPLOYEE_READ` |
+| `POST /employees/sorties-mois` | `EMPLOYEE_READ` (filtres : fonctions, chantiers, équipes, nom, CIN, motifs) |
+| `POST /employees/entrants-mois` | `EMPLOYEE_READ` (mêmes filtres, plus les types d'entrée) |
+| `POST /employees/sorties-mois/pdf` | `EMPLOYEE_EXPORT` |
+| `POST /employees/entrants-mois/pdf` | `EMPLOYEE_EXPORT` |
+| `POST /employees/mouvements-mois/pdf` | `EMPLOYEE_EXPORT` |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` |
@@ -30,6 +34,8 @@ sidebar_position: 3
 | Routes `/employees/new` et `/employees/:id/edit` | `authGuard` + `permissionGuard` (`EMPLOYEE_WRITE`) |
 | Boutons « Nouvel employé » et « Modifier » (liste, détail) | `EMPLOYEE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `EMPLOYEE_IMPORT` — `canImport()` |
+| Boutons « Exporter en PDF » (STC / Sortie, Entrants) et « Mouvements du mois (PDF) » (Employés) | `EMPLOYEE_EXPORT` — `canExport()` / `peutExporter` |
+| Lien sidebar « Entrants » et route `/entrants` | `EMPLOYEE_READ` |
 | Bouton « Supprimer » (liste) | `EMPLOYEE_DELETE` — `canDelete()` |
 
 ## Salaire : donnée de paie

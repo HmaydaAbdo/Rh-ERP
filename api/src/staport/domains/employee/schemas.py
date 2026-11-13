@@ -139,8 +139,31 @@ class EmployeeRegroupementReponse(ModeleApi):
     actifs: int
 
 
-class EmployeeSortiesRecherche(ModeleApi):
+class EmployeeMouvementsRecherche(ModeleApi):
+    """Mois et filtres communs aux sorties, aux entrants et aux PDF de mouvements (mêmes critères que l'écran)."""
+
     periode: PeriodePaie
+    nom_prenom: Annotated[str | None, Field(max_length=150)] = None
+    cin: Annotated[str | None, Field(max_length=30)] = None
+    fonction_ids: Annotated[list[int] | None, Field(max_length=50)] = None
+    chantier_ids: Annotated[list[int] | None, Field(max_length=50)] = None
+    # `0` désigne les mouvements sans équipe, comme dans les autres recherches.
+    equipe_ids: Annotated[list[int] | None, Field(max_length=50)] = None
+
+
+class EmployeeSortiesRecherche(EmployeeMouvementsRecherche):
+    motifs: Annotated[list[str] | None, Field(max_length=50)] = None
+
+
+class TypeEntree(StrEnum):
+    """Nouvelle embauche : aucun bulletin avant ce mois. Retour : déjà payé auparavant, absent le mois d'avant."""
+
+    NOUVELLE_EMBAUCHE = "NOUVELLE_EMBAUCHE"
+    RETOUR = "RETOUR"
+
+
+class EmployeeEntrantsRecherche(EmployeeMouvementsRecherche):
+    types: Annotated[list[TypeEntree] | None, Field(max_length=2)] = None
 
 
 class EmployeeSortieReponse(ModeleApi):
@@ -156,9 +179,12 @@ class EmployeeSortieReponse(ModeleApi):
     statut_actuel: EmployeeStatut | None = None
     salaire: Nombre | None = None
     type_salaire: TypeSalaire | None = None
+    fonction_id: int | None = None
     fonction: str | None = None
+    chantier_id: int | None = None
     chantier: str | None = None
     chantier_designation: str | None = None
+    equipe_id: int | None = None
     equipe: str | None = None
     derniere_paie: PeriodePaie | None = None
     jours_travailles: Nombre | None = None
@@ -171,6 +197,43 @@ class EmployeeSortiesMoisReponse(ModeleApi):
     nombre: int
     par_motif: dict[str, int]
     sorties: list[EmployeeSortieReponse]
+
+
+class EmployeeEntrantReponse(ModeleApi):
+    """Un entrant du mois : payé ce mois-ci, pas le mois civil précédent. Les champs de paie exigent `PAIE_READ`."""
+
+    employe_id: int
+    nom_prenom: str
+    cin: str
+    periode: PeriodePaie
+    type: TypeEntree
+    date_embauche: date | None = None
+    statut_actuel: EmployeeStatut | None = None
+    fonction_id: int
+    fonction: str
+    chantier_id: int
+    chantier: str
+    chantier_designation: str | None = None
+    equipe_id: int | None = None
+    equipe: str | None = None
+    # Dernier chantier payé avant ce mois, pour un retour ; vide pour une nouvelle embauche.
+    chantier_precedent: str | None = None
+    derniere_paie_precedente: PeriodePaie | None = None
+    salaire: Nombre | None = None
+    type_salaire: TypeSalaire | None = None
+    jours_travailles: Nombre | None = None
+    montant_bulletin: Nombre | None = None
+    observation: str | None = None
+
+
+class EmployeeEntrantsMoisReponse(ModeleApi):
+    periode: PeriodePaie
+    # Faux quand le mois ou le mois civil précédent n'a aucun bulletin : on ne peut pas dire qui entre.
+    comparable: bool
+    nombre: int
+    nouvelles_embauches: int
+    retours: int
+    entrants: list[EmployeeEntrantReponse]
 
 
 class EmployeeLigneIgnoree(ModeleApi):
