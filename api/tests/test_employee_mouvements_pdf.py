@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from conftest import ADMIN, Plateforme
-from test_employee_mouvements import Jeu, jeu  # noqa: F401  (fixture partagée)
+from test_employee_mouvements import Jeu, jeu  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
 from staport.domains.employee import mouvements_pdf
 from staport.domains.employee.mouvements_pdf import Mouvements
