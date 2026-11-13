@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from staport.domains.auth.dependencies import Authentifie, Contexte, exiger
 from staport.domains.auth.securite import JetonAcces
 from staport.domains.common.pagination import Pagination, pagination
+from staport.domains.paie.periode import afficher_periode
 from staport.platform.base_de_donnees import session_requete
 
 from .repository import CHAMPS_DE_PAIE, TRIS_PUBLICS
@@ -15,7 +16,10 @@ from .schemas import (
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
+    EmployeeEntrantsMoisReponse,
+    EmployeeEntrantsRecherche,
     EmployeeModificationRequete,
+    EmployeeMouvementsRecherche,
     EmployeeRecherche,
     EmployeeRegroupementReponse,
     EmployeeReponse,
@@ -91,7 +95,50 @@ async def regroupements(
 async def sorties_mois(
     corps: EmployeeSortiesRecherche, session: Session, contexte: Contexte, acces: Authentifie
 ) -> EmployeeSortiesMoisReponse:
-    return await contexte.employees.sorties_mois(session, corps.periode, avec_paie=paie(acces))
+    return await contexte.employees.sorties_mois(session, corps.periode, avec_paie=paie(acces), filtres=corps)
+
+
+@employees.post("/entrants-mois", dependencies=[Depends(exiger("EMPLOYEE_READ"))])
+async def entrants_mois(
+    corps: EmployeeEntrantsRecherche, session: Session, contexte: Contexte, acces: Authentifie
+) -> EmployeeEntrantsMoisReponse:
+    return await contexte.employees.entrants_mois(session, corps.periode, avec_paie=paie(acces), filtres=corps)
+
+
+def _pdf(contenu: bytes, nom: str) -> Response:
+    return Response(
+        contenu, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename={nom}"}
+    )
+
+
+@employees.post("/sorties-mois/pdf", dependencies=[Depends(exiger("EMPLOYEE_EXPORT"))])
+async def sorties_mois_pdf(
+    corps: EmployeeSortiesRecherche, session: Session, contexte: Contexte, acces: Authentifie
+) -> Response:
+    contenu = await contexte.mouvements_pdf.generer(session, sorties=corps, avec_paie=paie(acces))
+    return _pdf(contenu, f"Sortants_{afficher_periode(corps.periode)}.pdf")
+
+
+@employees.post("/entrants-mois/pdf", dependencies=[Depends(exiger("EMPLOYEE_EXPORT"))])
+async def entrants_mois_pdf(
+    corps: EmployeeEntrantsRecherche, session: Session, contexte: Contexte, acces: Authentifie
+) -> Response:
+    contenu = await contexte.mouvements_pdf.generer(session, entrants=corps, avec_paie=paie(acces))
+    return _pdf(contenu, f"Entrants_{afficher_periode(corps.periode)}.pdf")
+
+
+@employees.post("/mouvements-mois/pdf", dependencies=[Depends(exiger("EMPLOYEE_EXPORT"))])
+async def mouvements_mois_pdf(
+    corps: EmployeeMouvementsRecherche, session: Session, contexte: Contexte, acces: Authentifie
+) -> Response:
+    commun = corps.model_dump()
+    contenu = await contexte.mouvements_pdf.generer(
+        session,
+        sorties=EmployeeSortiesRecherche.model_validate(commun),
+        entrants=EmployeeEntrantsRecherche.model_validate(commun),
+        avec_paie=paie(acces),
+    )
+    return _pdf(contenu, f"Mouvements_{afficher_periode(corps.periode)}.pdf")
 
 
 @employees.get("/import/modele", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))])

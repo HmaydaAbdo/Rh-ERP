@@ -1,4 +1,7 @@
 <div class="app-page__actions app-page__actions--liste">
+  @if (canExport()) {
+    <button stp-button icon="download" type="button" variant="secondary" (click)="ouvrirMouvements()">Mouvements du mois (PDF)</button>
+  }
   @if (canImport()) {
     <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" [disabled]="importing()" (clicked)="onTriggerImport()"></stp-split-button>
   }
@@ -21,4 +24,12 @@
       <stp-table label="Lignes d’employés ignorées à l’import" [value]="result.lignesIgnorees" [columns]="colonnesIgnorees" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
     }
   }
+</stp-dialog>
+
+<stp-dialog header="Mouvements du mois (PDF)" width="420px" [(open)]="dialogueMouvements">
+  <p>Entrées et sorties du mois, par chantier, pour les filtres actuels de la page.</p>
+  <app-month-picker [value]="moisMouvements()" (valueChange)="moisMouvements.set($event)"></app-month-picker>
+  <div class="flex justify-end mt-4">
+    <button stp-button icon="download" type="button" [loading]="mouvementsEnCours()" (click)="telechargerMouvements()">Télécharger</button>
+  </div>
 </stp-dialog>

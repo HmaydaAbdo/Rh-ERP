@@ -102,9 +102,18 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0004_nombres_metier_entiers"
+        assert (
+            c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0005_permission_employee_export"
+        )
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
+        titulaires = c.execute(
+            text(
+                "SELECT r.nom FROM role r JOIN role_permission rp ON rp.role_id = r.id "
+                "JOIN permission p ON p.id = rp.permission_id WHERE p.code = 'EMPLOYEE_EXPORT' ORDER BY r.nom"
+            )
+        ).scalars()
+        assert list(titulaires) == ["PAIE_MANAGER", "SYSTEM_ADMIN"]
         assert c.execute(text("SELECT count(*) FROM permission")).scalar_one() > 0
         assert (
             c.execute(text("SELECT count(*) FROM pg_extension WHERE extname IN ('vector','pgcrypto')")).scalar_one()
@@ -157,7 +166,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0004_nombres_metier_entiers"
+            == "0005_permission_employee_export"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -198,7 +207,7 @@ def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0004_nombres_metier_entiers"
+            == "0005_permission_employee_export"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
         assert not connexion.execute(

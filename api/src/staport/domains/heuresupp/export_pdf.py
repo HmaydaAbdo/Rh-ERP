@@ -13,10 +13,10 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from staport.domains.common.montant import arrondir_montant
-from staport.domains.common.pdf import rendre_pdf
+from staport.domains.common.montant import arrondir_montant, formater_nombre
+from staport.domains.common.pdf import css_paysage, entete_paysage, pied_edition, rendre_pdf
 from staport.domains.paie import report as _rapport_paie
-from staport.domains.paie.periode import afficher_periode
+from staport.domains.paie.periode import afficher_periode, mois_en_toutes_lettres
 
 from . import repository
 from .exceptions import HeuresSuppInvalide
@@ -26,20 +26,7 @@ from .service import rep
 LIGNES_MAX = 5000
 RESSOURCES = Path(__file__).with_name("report")
 RESSOURCES_PAIE = Path(_rapport_paie.__file__).with_name("report")
-MOIS = (
-    "janvier",
-    "février",
-    "mars",
-    "avril",
-    "mai",
-    "juin",
-    "juillet",
-    "août",
-    "septembre",
-    "octobre",
-    "novembre",
-    "décembre",
-)
+nombre = formater_nombre
 LIBELLES_TRI = {
     "periode": "Mois",
     "chantier.code": "Chantier",
@@ -86,22 +73,10 @@ def trier(tri: str | None) -> tuple[tuple[str, bool], ...]:
     return ((propriete, not (len(parties) == 2 and parties[1].strip().lower() == "desc")),)
 
 
-def mois_en_toutes_lettres(periode: int) -> str:
-    annee, mois = divmod(periode, 100)
-    return f"{MOIS[mois - 1]} {annee}"
-
-
-def nombre(valeur: Decimal | None) -> str:
-    """Format français d'une valeur métier entière ; « — » sans valeur."""
-    if valeur is None:
-        return "—"
-    return f"{arrondir_montant(valeur):,.0f}".replace(",", " ")
-
-
 def nombre_heures(valeur: Decimal | None) -> str:
     """Affiche les heures à l'entier selon la règle commune HALF_DOWN."""
     if valeur is None:
-        return nombre(None)
+        return formater_nombre(None)
     return nombre(arrondir_montant(valeur))
 
 
@@ -150,26 +125,12 @@ def filtres(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSuppReponse]
 
 
 def construire_html(requete: HeuresSuppExportRequete, lignes: Sequence[HeureSuppReponse], maintenant: datetime) -> str:
-    css = (RESSOURCES / "rapport.css").read_text(encoding="utf-8")
+    css = css_paysage() + (RESSOURCES / "rapport.css").read_text(encoding="utf-8")
     mois = requete.mois_demandes()
     titre = "Heures supplémentaires" + (" — " + ", ".join(mois_en_toutes_lettres(m) for m in mois) if mois else "")
-    entete = [
-        '<div class="page-header"><img class="logo" src="logo-staport.png">',
-        '<div class="sep s1"></div><div class="bloc b1">Ressources Humaines</div><div class="sep s2"></div>',
-        f'<div class="bloc b2"><span>{escape(titre)}</span><span class="contexte">'
-        f"{escape(contexte(requete, lignes))}</span></div>",
-    ]
-    zone = filtres(requete, lignes)
-    if zone:
-        entete.append('<div class="sep s3"></div><div class="filtres">')
-        entete.extend(
-            f'<div><span class="lib">{escape(nom)}</span><span>{escape(valeur)}</span></div>' for nom, valeur in zone
-        )
-        entete.append("</div>")
-    entete.append('<div class="filet"></div></div>')
     corps = [
-        "".join(entete),
-        f'<div class="pied">Édité le {maintenant:%d/%m/%Y} à {maintenant:%H:%M}</div>',
+        entete_paysage(titre, contexte(requete, lignes), filtres(requete, lignes)),
+        pied_edition(maintenant),
         '<table class="heures"><thead><tr>',
         "".join(
             f'<th class="{classe}">{escape(nom)}</th>' if classe else f"<th>{escape(nom)}</th>"

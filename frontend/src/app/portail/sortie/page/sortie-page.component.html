@@ -3,40 +3,25 @@
     <h1>STC / Sortie</h1>
   </div>
 
-  <div class="app-toolbar" role="group" aria-label="Mois de sortie">
-    <div class="app-toolbar__period" role="group" aria-label="Mois">
-      <button stp-button variant="text" icon="chevron-left" iconOnly type="button" aria-label="Mois précédent" (click)="moisPrecedent()"></button>
-      <button
-        stp-button
-        variant="text"
-        icon="calendar"
-        class="app-toolbar__period-month"
-        type="button"
-        cdkOverlayOrigin
-        #origine="cdkOverlayOrigin"
-        [attr.aria-label]="'Choisir le mois : ' + libelleMois()"
-        aria-haspopup="dialog"
-        [attr.aria-expanded]="panneauMoisOuvert()"
-        (click)="panneauMoisOuvert.set(!panneauMoisOuvert())"
-      >
-        <span class="app-capitalize">{{ libelleMois() }}</span>
-      </button>
-      <button stp-button variant="text" icon="chevron-right" iconOnly type="button" aria-label="Mois suivant" (click)="moisSuivant()"></button>
-      <ng-template
-        cdkConnectedOverlay
-        [cdkConnectedOverlayOrigin]="origine"
-        [cdkConnectedOverlayOpen]="panneauMoisOuvert()"
-        [cdkConnectedOverlayPositions]="positions"
-        (overlayOutsideClick)="panneauMoisOuvert.set(false)"
-        (overlayKeydown)="surToucheMois($event)"
-        (detach)="panneauMoisOuvert.set(false)"
-      >
-        <div class="stp-popover" role="dialog" aria-label="Choisir un mois">
-          <app-month-picker [value]="periode()" (valueChange)="choisir($event)"></app-month-picker>
-        </div>
-      </ng-template>
-    </div>
-  </div>
+  <app-mouvement-barre
+    [periode]="filtres().periode"
+    [filtres]="filtres().employes"
+    [exportVisible]="peutExporter"
+    [exportEnCours]="exportEnCours()"
+    (periodeChange)="choisirMois($event)"
+    (filtresChange)="changerEmployes($event)"
+    (exporter)="exporter()"
+  >
+    <stp-select
+      [value]="filtres().valeurs"
+      (valueChange)="changerMotifs($event)"
+      [options]="optionsMotifs()"
+      [multiple]="true"
+      summaryLabel="{0} motifs"
+      ariaLabel="Motif"
+      placeholder="Motif"
+    ></stp-select>
+  </app-mouvement-barre>
 
   @if (chiffres(); as c) {
     <section class="app-kpis" aria-label="Chiffres du mois">

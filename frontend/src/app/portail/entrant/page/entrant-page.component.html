@@ -1,0 +1,131 @@
+<div class="app-page">
+  <div class="app-page__header">
+    <h1>Entrants</h1>
+  </div>
+
+  <app-mouvement-barre
+    [periode]="filtres().periode"
+    [filtres]="filtres().employes"
+    [exportVisible]="peutExporter"
+    [exportEnCours]="exportEnCours()"
+    (periodeChange)="choisirMois($event)"
+    (filtresChange)="changerEmployes($event)"
+    (exporter)="exporter()"
+  >
+    <stp-select
+      [value]="filtres().valeurs"
+      (valueChange)="changerTypes($event)"
+      [options]="optionsType"
+      [multiple]="true"
+      summaryLabel="{0} types"
+      ariaLabel="Type d’entrée"
+      placeholder="Type d’entrée"
+    ></stp-select>
+  </app-mouvement-barre>
+
+  @if (resultat(); as entrants) {
+    @if (!entrants.comparable) {
+      <stp-message
+        severity="warn"
+        text="Entrants indisponibles : ce mois ou le mois civil précédent n’a aucun bulletin de paie, on ne peut pas dire qui entre."
+      />
+    }
+  }
+
+  @if (chiffres(); as c) {
+    <section class="app-kpis" aria-label="Chiffres du mois">
+      <div class="app-kpi">
+        <span>Entrants du mois</span>
+        <strong>{{ c.nombre }}</strong>
+        <small class="app-capitalize">{{ libelleMois() }}</small>
+      </div>
+      <div class="app-kpi">
+        <span>Nouvelles embauches</span>
+        <strong>{{ c.nouvelles }}</strong>
+        <small>aucun bulletin avant ce mois</small>
+      </div>
+      <div class="app-kpi">
+        <span>Retours</span>
+        <strong>{{ c.retours }}</strong>
+        <small>déjà payés auparavant</small>
+      </div>
+      <div class="app-kpi">
+        <span>Chantiers concernés</span>
+        <strong>{{ c.chantiers }}</strong>
+        <small>où les entrants sont affectés</small>
+      </div>
+      @if (c.montant !== null) {
+        <div class="app-kpi">
+          <span>Montant des bulletins</span>
+          <strong>{{ c.montant | number: '1.0-0' }} DH</strong>
+          <small>somme des entrants du mois</small>
+        </div>
+      }
+    </section>
+  }
+
+  <div class="app-table-bar">
+    <div class="app-table-bar__summary">
+      <p class="app-table-bar__total" role="status" aria-live="polite">
+        @if (!chargement() && resultat(); as entrants) {
+          {{ entrants.nombre }} {{ entrants.nombre > 1 ? 'entrants' : 'entrant' }} sur la période {{ entrants.periode }}
+        }
+      </p>
+    </div>
+    <div class="app-table-bar__tools">
+      <app-column-chooser class="en-ligne" [state]="colonnes" />
+    </div>
+  </div>
+  <stp-table
+    label="Entrants du mois"
+    [value]="lignes()"
+    [columns]="colonnes.visible"
+    [loading]="chargement()"
+    [rowActionsVisible]="false"
+    [rowsPerPageOptions]="[10, 20, 50, 100]"
+    emptyMessage="Aucun entrant sur cette période."
+  >
+    <ng-template stpCell let-entrant let-col="col">
+      @switch (col.field) {
+        @case ('nomPrenom') {
+          <a [routerLink]="['/employees', entrant.employeId]">{{ entrant.nomPrenom }}</a>
+        }
+        @case ('type') {
+          <stp-badge [severity]="severiteType(entrant.type)" [value]="libelleType(entrant.type)" />
+        }
+        @case ('dernierePaiePrecedente') {
+          @if (entrant.dernierePaiePrecedente) {
+            <span class="app-capitalize">{{ libellePeriode(entrant.dernierePaiePrecedente) }}</span>
+          } @else {
+            —
+          }
+        }
+        @case ('joursTravailles') {
+          {{ entrant.joursTravailles === null || entrant.joursTravailles === undefined ? '—' : (entrant.joursTravailles | number: '1.0-2') }}
+        }
+        @case ('montantBulletin') {
+          {{ entrant.montantBulletin === null || entrant.montantBulletin === undefined ? '—' : (entrant.montantBulletin | number: '1.0-0') }}
+        }
+        @case ('salaire') {
+          @if (entrant.salaire === null || entrant.salaire === undefined) {
+            —
+          } @else {
+            {{ entrant.salaire | number: '1.0-0' }}{{ entrant.typeSalaire === 'JOURNALIER' ? ' / jour' : '' }}
+          }
+        }
+        @case ('statutActuel') {
+          @if (entrant.statutActuel === 'ACTIF') {
+            <stp-badge severity="success" value="En poste" />
+          } @else if (entrant.statutActuel === 'INACTIF') {
+            <stp-badge severity="neutral" value="Sorti" />
+          } @else {
+            —
+          }
+        }
+        @default {
+          {{ entrant[col.field] ?? '—' }}
+        }
+      }
+    </ng-template>
+  </stp-table>
+</div>

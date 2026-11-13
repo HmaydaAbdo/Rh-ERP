@@ -44,3 +44,25 @@ PeriodePaie = Annotated[
     BeforeValidator(lire_periode),
     PlainSerializer(afficher_periode, return_type=str, when_used="json"),
 ]
+
+
+MOIS = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+)
+
+
+def mois_en_toutes_lettres(periode: int) -> str:
+    """« mars 2026 » pour 202603."""
+    annee, mois = divmod(periode, 100)
+    return f"{MOIS[mois - 1]} {annee}"
