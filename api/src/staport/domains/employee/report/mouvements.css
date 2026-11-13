@@ -1,0 +1,23 @@
+/* PDF des mouvements du mois : cartes KPI en première page, puis un chapitre par chantier avec un tableau de sortants et un tableau
+   d'entrants. La page, le bandeau et le pied sont dans `common/report/paysage.css`. */
+.kpis { width: 802pt; margin: 0 0 10pt 0; }
+.kpi { display: inline-block; width: 150pt; margin: 0 8pt 8pt 0; padding: 6pt 8pt; border: 0.8pt solid #8a8a8a; vertical-align: top; page-break-inside: avoid; }
+.kpi .lib { display: block; font-size: 8pt; color: #444; text-transform: uppercase; }
+.kpi .val { display: block; margin-top: 2pt; font-size: 16pt; font-weight: bold; }
+.kpi .detail { display: block; margin-top: 1pt; font-size: 7.5pt; color: #444; }
+.note { margin: 0 0 10pt 0; padding: 5pt 8pt; border: 0.8pt solid #8a8a8a; background: #f5f5f5; font-size: 9pt; }
+
+section.chantier { margin: 0 0 14pt 0; }
+section.chantier.tient { page-break-inside: avoid; }
+section.chantier h2 { margin: 0 0 4pt 0; padding-bottom: 2pt; border-bottom: 1.2pt solid #1a1a1a; font-size: 11pt; page-break-after: avoid; }
+section.chantier h2 .compte { font-size: 8.5pt; font-weight: normal; color: #444; }
+section.chantier h3 { margin: 6pt 0 3pt 0; font-size: 9.5pt; page-break-after: avoid; }
+section.chantier p.vide { margin: 2pt 0 6pt 0; font-size: 8.5pt; color: #444; }
+
+table.mv { width: 802pt; border-collapse: collapse; font-size: 8pt; }
+table.mv thead { display: table-header-group; }
+table.mv tr { page-break-inside: avoid; }
+table.mv th, table.mv td { padding: 4pt 4pt; border: 0.5pt solid #9a9a9a; }
+table.mv th { background: #e6e6e6; font-weight: bold; text-align: left; }
+table.mv td.num, table.mv th.num { text-align: right; white-space: nowrap; }
+table.mv tr.total td { font-weight: bold; background: #f0f0f0; }

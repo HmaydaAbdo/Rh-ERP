@@ -9,11 +9,11 @@ import { EmployeeActionsComponent } from './employee-actions.component';
 
 describe('EmployeeActionsComponent', () => {
   let fixture: ComponentFixture<EmployeeActionsComponent>;
-  let service: { importer: ReturnType<typeof vi.fn>; telechargerModele: ReturnType<typeof vi.fn> };
+  let service: { importer: ReturnType<typeof vi.fn>; telechargerModele: ReturnType<typeof vi.fn>; exporterMouvementsPdf: ReturnType<typeof vi.fn> };
   const racine = () => fixture.nativeElement as HTMLElement;
 
   function afficher(permissions: string[]): void {
-    service = { importer: vi.fn(), telechargerModele: vi.fn() };
+    service = { importer: vi.fn(), telechargerModele: vi.fn(), exporterMouvementsPdf: vi.fn().mockReturnValue(of(new Blob(['pdf']))) };
     TestBed.configureTestingModule({
       providers: [provideRouter([]), fournirPermissions(permissions).providers, { provide: EmployeeService, useValue: service }]
     });
@@ -52,5 +52,26 @@ describe('EmployeeActionsComponent', () => {
     expect(service.importer).toHaveBeenCalledTimes(1);
     expect(TestBed.inject(NotificationService).notifications()[0]).toMatchObject({ summary: 'Import terminé', detail: '4 créé(s) sur 5 ligne(s)' });
     expect(importe).toHaveBeenCalledTimes(1);
+  });
+
+  it('propose le PDF des mouvements avec EMPLOYEE_EXPORT seulement', () => {
+    afficher(['EMPLOYEE_READ']);
+    expect(racine().textContent).not.toContain('Mouvements du mois');
+  });
+
+  it('télécharge le PDF des mouvements du mois choisi avec les filtres de la page', () => {
+    afficher(['EMPLOYEE_EXPORT']);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x');
+    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockReturnValue();
+    fixture.componentRef.setInput('filtres', { nomPrenom: 'ali', cin: '', fonctionIds: [], chantierIds: [3], equipeIds: [], statut: 'ACTIF' });
+    const composant = fixture.componentInstance as unknown as { moisMouvements: { set(m: string): void }; telechargerMouvements(): void };
+    composant.moisMouvements.set('2026-09');
+
+    composant.telechargerMouvements();
+
+    const requete = service.exporterMouvementsPdf.mock.calls[0][0];
+    expect(requete).toMatchObject({ periode: '2026-09', nomPrenom: 'ali', chantierIds: [3] });
+    expect(requete.statut).toBeUndefined();
   });
 });

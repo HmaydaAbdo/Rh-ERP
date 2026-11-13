@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
@@ -9,7 +8,6 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils.datetime import from_excel  # pyright: ignore
 from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +19,6 @@ from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
-from staport.domains.paie.models import Paie
 
 from . import repository
 from .exceptions import (
@@ -32,11 +29,14 @@ from .exceptions import (
     ReferenceInvalide,
 )
 from .models import Employee, EmployeeSortie
+from .mouvements import anciennete_mois, correspond, derniers_bulletins, entrants_mois
 from .schemas import (
     ChantierResume,
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
+    EmployeeEntrantsMoisReponse,
+    EmployeeEntrantsRecherche,
     EmployeeImportReponse,
     EmployeeLigneIgnoree,
     EmployeeModificationRequete,
@@ -45,6 +45,7 @@ from .schemas import (
     EmployeeReponse,
     EmployeeSortieReponse,
     EmployeeSortiesMoisReponse,
+    EmployeeSortiesRecherche,
     EquipeResume,
     FonctionResume,
     TrancheReponse,
@@ -352,10 +353,10 @@ class ServiceEmployee:
         return sorted(stable, key=cle[tri], reverse=not croissant)
 
     async def sorties_mois(
-        self, s: AsyncSession, periode: int, *, avec_paie: bool = False
+        self, s: AsyncSession, periode: int, *, avec_paie: bool = False, filtres: EmployeeSortiesRecherche | None = None
     ) -> EmployeeSortiesMoisReponse:
         """Départs du mois avec l'affectation du dernier bulletin ; salaire, jours, montant et observation ne sont
-        rendus qu'avec `avec_paie` (droit `PAIE_READ`)."""
+        rendus qu'avec `avec_paie` (droit `PAIE_READ`). Les filtres portent sur ce que l'écran affiche."""
         async with s.begin():
             rows = (
                 await s.execute(
@@ -366,13 +367,25 @@ class ServiceEmployee:
                     .order_by(Employee.nom_prenom, EmployeeSortie.employee_id)
                 )
             ).all()
-            derniers = await _derniers_bulletins(s, [employe.id for _, employe, _ in rows], periode)
+            derniers = await derniers_bulletins(s, [employe.id for _, employe, _ in rows], periode)
         motifs: dict[str, int] = {}
         sorties: list[EmployeeSortieReponse] = []
         for brut, employe, fonction_fiche in rows:
             motif = brut.strip() or "NON_PRECISE"
-            motifs[motif] = motifs.get(motif, 0) + 1
             dernier = derniers.get(employe.id)
+            if filtres is not None and not correspond(
+                filtres,
+                nom_prenom=employe.nom_prenom,
+                cin=employe.cin,
+                fonction_id=dernier.fonction_id if dernier else employe.fonction_id,
+                chantier_id=dernier.chantier_id if dernier else None,
+                equipe_id=dernier.equipe_id if dernier else None,
+            ):
+                continue
+            # Motifs proposés : le périmètre sans le filtre de motif (STC choisi, les autres restent).
+            motifs[motif] = motifs.get(motif, 0) + 1
+            if filtres is not None and filtres.motifs and motif not in filtres.motifs:
+                continue
             sorties.append(
                 EmployeeSortieReponse(
                     employe_id=employe.id,
@@ -381,13 +394,16 @@ class ServiceEmployee:
                     periode=periode,
                     motif=motif,
                     date_embauche=employe.date_embauche,
-                    anciennete_mois=_anciennete_mois(employe.date_embauche, periode),
+                    anciennete_mois=anciennete_mois(employe.date_embauche, periode),
                     statut_actuel=employe.statut,
                     salaire=employe.salaire if avec_paie else None,
                     type_salaire=employe.type_salaire if avec_paie else None,
+                    fonction_id=dernier.fonction_id if dernier else employe.fonction_id,
                     fonction=dernier.fonction if dernier else fonction_fiche,
+                    chantier_id=dernier.chantier_id if dernier else None,
                     chantier=dernier.chantier if dernier else None,
                     chantier_designation=dernier.chantier_designation if dernier else None,
+                    equipe_id=dernier.equipe_id if dernier else None,
                     equipe=dernier.equipe if dernier else None,
                     derniere_paie=dernier.periode if dernier else None,
                     jours_travailles=dernier.jours if dernier and avec_paie else None,
@@ -398,6 +414,17 @@ class ServiceEmployee:
         return EmployeeSortiesMoisReponse(
             periode=periode, nombre=len(sorties), par_motif=dict(sorted(motifs.items())), sorties=sorties
         )
+
+    async def entrants_mois(
+        self,
+        s: AsyncSession,
+        periode: int,
+        *,
+        avec_paie: bool = False,
+        filtres: EmployeeEntrantsRecherche | None = None,
+    ) -> EmployeeEntrantsMoisReponse:
+        """Entrants du mois : payés ce mois-ci, pas le mois civil précédent (voir `mouvements.py`)."""
+        return await entrants_mois(s, periode, filtres, avec_paie=avec_paie)
 
     @staticmethod
     def modele_import() -> BytesIO:
@@ -491,48 +518,3 @@ class ServiceEmployee:
         if x is None:
             raise EmployeeIntrouvable(i)
         return x
-
-
-@dataclass(frozen=True)
-class _DernierBulletin:
-    periode: int
-    fonction: str
-    chantier: str
-    chantier_designation: str | None
-    equipe: str | None
-    jours: Decimal
-    montant: Decimal
-    observation: str | None
-
-
-async def _derniers_bulletins(s: AsyncSession, employes: list[int], periode: int) -> dict[int, _DernierBulletin]:
-    """Le dernier bulletin de chaque employé au mois du départ ou avant (une requête, `DISTINCT ON`)."""
-    if not employes:
-        return {}
-    lignes = (
-        await s.execute(
-            select(
-                Paie.employee_id,
-                Paie.periode,
-                Fonction.libelle,
-                Chantier.code,
-                Chantier.designation,
-                Equipe.libelle,
-                Paie.nombre_jours_travailles,
-                Paie.salaire_total,
-                Paie.observation,
-            )
-            .join(Fonction, Fonction.id == Paie.fonction_id)
-            .join(Chantier, Chantier.id == Paie.chantier_id)
-            .outerjoin(Equipe, Equipe.id == Paie.equipe_id)
-            .where(Paie.employee_id.in_(employes), Paie.periode <= periode)
-            .ext(distinct_on(Paie.employee_id))
-            .order_by(Paie.employee_id, Paie.periode.desc())
-        )
-    ).all()
-    return {ligne[0]: _DernierBulletin(*ligne[1:]) for ligne in lignes}
-
-
-def _anciennete_mois(embauche: date, periode: int) -> int:
-    """Mois entiers entre le mois d'embauche et le mois de départ (jamais négatif)."""
-    return max(0, (periode // 100 - embauche.year) * 12 + (periode % 100 - embauche.month))

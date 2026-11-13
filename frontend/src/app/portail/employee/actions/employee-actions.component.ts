@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -11,6 +11,10 @@ import { TableComponent } from '../../../shared/ui/table/table.component';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
+import { MonthPickerComponent } from '../../../shared/ui/month-picker/month-picker.component';
+import { telechargerFichier } from '../../../shared/utils/telecharger-fichier';
+import { moisCourant, versRequete } from '../../mouvement/mouvement-filtres';
+import { AUCUN_FILTRE, EmployeeFiltres } from '../filtres/employee-filtres';
 import { EmployeeImportResult } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 
@@ -21,7 +25,7 @@ import { EmployeeService } from '../services/employee.service';
  */
 @Component({
   selector: 'app-employee-actions',
-  imports: [TableComponent, RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent],
+  imports: [TableComponent, RouterLink, ButtonComponent, DialogComponent, SplitButtonComponent, MonthPickerComponent],
   templateUrl: './employee-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -29,6 +33,8 @@ export class EmployeeActionsComponent {
   protected readonly colonnesIgnorees: TableColumn[] = [{ field: 'numeroLigne', header: 'Ligne' }, { field: 'cin', header: 'CIN' }, { field: 'nomPrenom', header: 'Nom & prénom' }, { field: 'raison', header: 'Raison' }];
   /** Des employés ont été importés : la vue affichée doit se recharger. */
   readonly importe = output<void>();
+  /** Les filtres de la page : le PDF des mouvements couvre le même périmètre que la liste affichée. */
+  readonly filtres = input<EmployeeFiltres>(AUCUN_FILTRE);
 
   private readonly employeeService = inject(EmployeeService);
   private readonly messageService = inject(NotificationService);
@@ -38,6 +44,12 @@ export class EmployeeActionsComponent {
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
   protected readonly canImport = computed(() => this.authService.hasPermission('EMPLOYEE_IMPORT'));
+
+  protected readonly canExport = computed(() => this.authService.hasPermission('EMPLOYEE_EXPORT'));
+
+  protected readonly dialogueMouvements = signal(false);
+  protected readonly moisMouvements = signal(moisCourant());
+  protected readonly mouvementsEnCours = signal(false);
 
   protected readonly importing = signal(false);
   protected readonly importResult = signal<EmployeeImportResult | null>(null);
@@ -107,6 +119,27 @@ export class EmployeeActionsComponent {
             this.showImportResultDialog.set(true);
           }
         }
+      });
+  }
+
+  protected ouvrirMouvements(): void {
+    this.dialogueMouvements.set(true);
+  }
+
+  /** Télécharge le PDF des entrées et sorties du mois choisi, pour les filtres de la page (le statut ne filtre pas ici). */
+  protected telechargerMouvements(): void {
+    const periode = this.moisMouvements();
+    const requete = versRequete({ periode, employes: { ...this.filtres(), statut: null }, valeurs: [] }, 'motifs');
+    this.mouvementsEnCours.set(true);
+    this.employeeService
+      .exporterMouvementsPdf(requete)
+      .pipe(finalize(() => this.mouvementsEnCours.set(false)))
+      .subscribe({
+        next: (pdf) => {
+          telechargerFichier(pdf, `Mouvements_${periode}.pdf`);
+          this.dialogueMouvements.set(false);
+        },
+        error: () => this.messageService.add({ severity: 'error', summary: 'Impossible de générer le PDF des mouvements.' })
       });
   }
 }

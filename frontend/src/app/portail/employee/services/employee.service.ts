@@ -2,6 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { MouvementRequete } from '../../mouvement/mouvement-filtres';
+
 import { Page } from '../../../shared/models/page.model';
 import {
   Employee,
@@ -68,5 +70,10 @@ export class EmployeeService {
 
   telechargerModele(): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/import/modele`, { responseType: 'blob' });
+  }
+
+  /** Le PDF des entrées et sorties d'un mois, regroupé par chantier, pour le périmètre filtré (`EMPLOYEE_EXPORT`). */
+  exporterMouvementsPdf(requete: MouvementRequete): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/mouvements-mois/pdf`, requete, { responseType: 'blob' });
   }
 }

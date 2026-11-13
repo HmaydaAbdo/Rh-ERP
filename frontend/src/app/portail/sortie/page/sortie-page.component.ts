@@ -1,18 +1,21 @@
-import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/services/auth.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { BadgeComponent, BadgeSeverity } from '../../../shared/ui/badge/badge.component';
-import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { ColumnChooserComponent } from '../../../shared/ui/column-chooser/column-chooser.component';
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
-import { MonthPickerComponent } from '../../../shared/ui/month-picker/month-picker.component';
+import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { TableCellDirective, TableComponent } from '../../../shared/ui/table/table.component';
-import { libellePeriode, periodePrecedente, periodeSuivante } from '../../paie/paie-format';
+import { telechargerFichier } from '../../../shared/utils/telecharger-fichier';
+import { EmployeeFiltres } from '../../employee/filtres/employee-filtres';
+import { MouvementBarreComponent } from '../../mouvement/barre/mouvement-barre.component';
+import { lireMouvementFiltres, moisCourant, MouvementFiltres, versParametresMouvement, versRequete } from '../../mouvement/mouvement-filtres';
+import { libellePeriode } from '../../paie/paie-format';
 import { Sortie, SortiesMois } from '../models/sortie.model';
 import { SortieService } from '../services/sortie.service';
 
@@ -21,11 +24,6 @@ export const LIBELLE_MOTIF_NON_PRECISE = 'Non précisé';
 
 export function libelleMotif(motif: string): string {
   return motif === 'NON_PRECISE' ? LIBELLE_MOTIF_NON_PRECISE : motif;
-}
-
-/** Mois courant au format `aaaa-MM`, celui de l'API. */
-export function moisCourant(maintenant: Date = new Date()): string {
-  return `${maintenant.getFullYear()}-${String(maintenant.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /** `878` -> « 73 ans 2 mois », `14` -> « 1 an 2 mois », `5` -> « 5 mois » : l'ancienneté au mois du départ. */
@@ -47,23 +45,12 @@ export function severiteMotif(motif: string): BadgeSeverity {
 /**
  * STC / Sortie : qui a quitté son poste le mois choisi, pourquoi, depuis quand il était là et ce qu'il touchait. C'est la
  * source de l'équipe RH pour le calcul des STC et le suivi des abandons de poste ; chaque nom ouvre la fiche de l'employé.
- * Même organisation que les autres écrans de mois : titre, barre du mois, chiffres du mois, puis le tableau (nombre de
- * lignes à gauche, choix des colonnes à droite).
+ * Même organisation que les autres écrans de mois : titre, barre du mois et des filtres (dans l'URL), chiffres du mois, puis
+ * le tableau (nombre de lignes à gauche, choix des colonnes à droite). Le PDF exporté regroupe par chantier ce que l'écran affiche.
  */
 @Component({
   selector: 'app-sortie-page',
-  imports: [
-    CdkConnectedOverlay,
-    CdkOverlayOrigin,
-    DecimalPipe,
-    BadgeComponent,
-    ButtonComponent,
-    ColumnChooserComponent,
-    MonthPickerComponent,
-    RouterLink,
-    TableComponent,
-    TableCellDirective
-  ],
+  imports: [DecimalPipe, BadgeComponent, ColumnChooserComponent, MouvementBarreComponent, RouterLink, SelectComponent, TableComponent, TableCellDirective],
   templateUrl: './sortie-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -71,41 +58,49 @@ export class SortiePageComponent {
   private readonly service = inject(SortieService);
   private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private requete: Subscription | null = null;
 
-  protected readonly periode = signal(moisCourant());
+  protected readonly peutExporter = inject(AuthService).hasPermission('EMPLOYEE_EXPORT');
+  protected readonly filtres = signal<MouvementFiltres>(lireMouvementFiltres(this.route.snapshot.queryParamMap, moisCourant()));
   protected readonly resultat = signal<SortiesMois | null>(null);
   protected readonly chargement = signal(false);
-  protected readonly panneauMoisOuvert = signal(false);
-  protected readonly positions: ConnectedPosition[] = [
-    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
-    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 }
-  ];
+  protected readonly exportEnCours = signal(false);
 
-  protected readonly libelleMois = computed(() => libellePeriode(this.periode()));
+  protected readonly libelleMois = computed(() => libellePeriode(this.filtres().periode));
   protected readonly lignes = computed<Sortie[]>(() => this.resultat()?.sorties ?? []);
 
-  /** Les chiffres du mois : total, STC, autres motifs, montant des derniers bulletins (si la paie est lisible), ancienneté. */
+  /** Les motifs proposés au filtre : ceux du périmètre (avec leur nombre) et ceux déjà choisis. */
+  protected readonly optionsMotifs = computed<SelectOption<string>[]>(() => {
+    const parMotif = this.resultat()?.parMotif ?? {};
+    const motifs = new Set([...Object.keys(parMotif), ...this.filtres().valeurs]);
+    return [...motifs].sort().map((motif) => ({ value: motif, label: parMotif[motif] ? `${libelleMotif(motif)} (${parMotif[motif]})` : libelleMotif(motif) }));
+  });
+
+  /** Les chiffres du mois, calculés sur les lignes affichées : total, STC, autres motifs, montant des derniers bulletins, ancienneté. */
   protected readonly chiffres = computed(() => {
     const resultat = this.resultat();
     if (!resultat) {
       return null;
     }
-    const stc = resultat.parMotif['STC'] ?? 0;
-    const autresMotifs = Object.entries(resultat.parMotif)
-      .filter(([motif]) => motif !== 'STC')
-      .map(([motif, nombre]) => `${libelleMotif(motif)} : ${nombre}`);
-    const montants = resultat.sorties.map((s) => s.montantDernierBulletin).filter((m): m is number => m !== null && m !== undefined);
-    const anciennetes = resultat.sorties.map((s) => s.ancienneteMois).filter((m): m is number => m !== null && m !== undefined);
+    const sorties = resultat.sorties;
+    const stc = sorties.filter((s) => s.motif === 'STC').length;
+    const autresMotifs = new Map<string, number>();
+    for (const sortie of sorties.filter((s) => s.motif !== 'STC')) {
+      autresMotifs.set(sortie.motif, (autresMotifs.get(sortie.motif) ?? 0) + 1);
+    }
+    const montants = sorties.map((s) => s.montantDernierBulletin).filter((m): m is number => m !== null && m !== undefined);
+    const anciennetes = sorties.map((s) => s.ancienneteMois).filter((m): m is number => m !== null && m !== undefined);
     return {
-      nombre: resultat.nombre,
+      nombre: sorties.length,
       stc,
-      partStc: resultat.nombre > 0 ? Math.round((stc * 100) / resultat.nombre) : 0,
-      autres: resultat.nombre - stc,
-      detailAutres: autresMotifs.join(', '),
+      partStc: sorties.length > 0 ? Math.round((stc * 100) / sorties.length) : 0,
+      autres: sorties.length - stc,
+      detailAutres: [...autresMotifs].sort().map(([motif, nombre]) => `${libelleMotif(motif)} : ${nombre}`).join(', '),
       montant: montants.length > 0 ? montants.reduce((a, b) => a + b, 0) : null,
       anciennete: anciennetes.length > 0 ? Math.round(anciennetes.reduce((a, b) => a + b, 0) / anciennetes.length) : null,
-      revenus: resultat.sorties.filter((s) => s.statutActuel === 'ACTIF').length
+      revenus: sorties.filter((s) => s.statutActuel === 'ACTIF').length
     };
   });
 
@@ -134,35 +129,51 @@ export class SortiePageComponent {
   ]);
 
   constructor() {
-    this.charger(this.periode());
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const filtres = lireMouvementFiltres(params, moisCourant());
+      this.filtres.set(filtres);
+      this.charger(filtres);
+    });
     this.destroyRef.onDestroy(() => this.requete?.unsubscribe());
   }
 
-  protected choisir(periode: string): void {
-    this.panneauMoisOuvert.set(false);
-    this.periode.set(periode);
-    this.charger(periode);
+  protected choisirMois(periode: string): void {
+    this.appliquer({ ...this.filtres(), periode }, false);
   }
 
-  protected moisPrecedent(): void {
-    this.choisir(periodePrecedente(this.periode()));
+  protected changerEmployes(employes: EmployeeFiltres): void {
+    this.appliquer({ ...this.filtres(), employes });
   }
 
-  protected moisSuivant(): void {
-    this.choisir(periodeSuivante(this.periode()));
+  protected changerMotifs(valeur: unknown): void {
+    this.appliquer({ ...this.filtres(), valeurs: Array.isArray(valeur) ? (valeur as string[]) : [] });
   }
 
-  protected surToucheMois(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      this.panneauMoisOuvert.set(false);
-    }
+  /** Le mois et les filtres deviennent l'URL de l'écran ; c'est son changement qui recharge la liste. */
+  private appliquer(filtres: MouvementFiltres, remplacer = true): void {
+    void this.router.navigate([], { replaceUrl: remplacer, queryParams: versParametresMouvement(filtres), queryParamsHandling: 'merge' });
   }
 
-  private charger(periode: string): void {
+  protected exporter(): void {
+    const filtres = this.filtres();
+    this.exportEnCours.set(true);
+    this.service
+      .exporterPdf(versRequete(filtres, 'motifs'))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.exportEnCours.set(false))
+      )
+      .subscribe({
+        next: (pdf) => telechargerFichier(pdf, `Sortants_${filtres.periode}.pdf`),
+        error: () => this.notifications.add({ severity: 'error', summary: 'Impossible de générer le PDF des sortants.' })
+      });
+  }
+
+  private charger(filtres: MouvementFiltres): void {
     this.requete?.unsubscribe();
     this.chargement.set(true);
     this.requete = this.service
-      .sortiesDuMois(periode)
+      .sortiesDuMois(versRequete(filtres, 'motifs'))
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.chargement.set(false))
