@@ -45,7 +45,7 @@ reprenne là où il s'est arrêté.
 | T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
 | T32 — Sélection d'outils juste-à-temps | **Fait (2026-11-03)** : une compétence `SKILL.md` par domaine dans `ia/src/staport_ia/competences/` (6 domaines, 7 outils au plus chacune, les 31 outils couverts une fois), `SkillsMiddleware(tools=résolveur)` sur le catalogue MCP de l'utilisateur, `routage.py` calculant `pinned_skills` hors modèle (embeddings MiniLM locaux), repli par lecture du `SKILL.md`, aucun plafond de domaines épinglés, évaluation `ia/evaluation/routage.json` (41 demandes, 39 couvertes, p50 5,9 ms) ; 22 définitions d'outils complétées (cas de non-usage, limites) | Fonctions officielles de Deep Agents ≥ 0.7.23 ; seule pièce maison **déclarée** : la fonction de routage | Tests verts (66), ruff et pyright stricts verts ; **banc réel (2026-11-03, routage actif)** : 23/24, latence p50 8,25 s contre 9,09 s avant (sélecteur LLM), l'échec restant est un chemin valide différent du chemin attendu (`fonction_rechercher` au lieu de `employes_rechercher`) ; le p95 (68 s) vient des offres gratuites, pas du routage |
 | T33 (KAN-203) — Migration du service IA vers Deep Agents | **Fait (2026-11-03)** : `create_deep_agent` dans `agent.py` (middlewares de contexte, surfaces, plafonds, reprise et `CopilotKitMiddleware` reportés dans `middleware`), harnais limité à `read_file` et `write_todos`, sous-agent généraliste désactivé par profil d'harnais, `LLMToolSelectorMiddleware` retiré, image Docker avec modèle d'embeddings préchargé. Le groupe de passerelle `tool-selection` est retiré (configuration, clés virtuelles, tests de fumée, README) | Point d'entrée officiel documenté de Deep Agents (`create_deep_agent(model, tools, middleware, backend, ...)`) | Test de contrat vert ; écriture refusée par `FilesystemPermission` (test : aucun outil métier dans `tools=`, `write_file` refusé même lié) ; espace de fichiers par identité (`backend_par_identite`, isolation testée) ; **reste** : magasin PostgreSQL avec l'épopée d'écriture |
-| T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
+| T31 — Contrôle d'accès du runtime | `app.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire | Gestionnaire officiel `createCopilotExpressHandler` et ses crochets `onRequest` (401/403), `onBeforeHandler` (route et fil), `onError`, `forwardHeaders` ; `identifyUser` est réservé à Intelligence, donc la table de propriété `(thread_id, user_id)` de la doc officielle (`proprietaires.mjs`, ~20 lignes de SQLite) reste à nous ; testé : accès croisé refusé (KAN-79) | ✅ |
 
 ## Middlewares officiels de LangChain et LangGraph : tous adoptés, sans exception
 
@@ -109,7 +109,7 @@ Inventaire des points d'extension officiels lus dans les paquets installés (`@a
 
 | Middleware | Rôle | État |
 |---|---|---|
-| `FunctionMiddleware` (`agent.use(fn)`) | Fonction `(input, next) => Observable<événements>` : filtre ou transforme le flux | ✅ utilisé : masque les messages `<skill name=…>` de `MESSAGES_SNAPSHOT` (`copilot-runtime/src/serveur.mjs`) |
+| `FunctionMiddleware` (`agent.use(fn)`) | Fonction `(input, next) => Observable<événements>` : filtre ou transforme le flux | ✅ utilisé : masque les messages `<skill name=…>` de `MESSAGES_SNAPSHOT` (`copilot-runtime/src/app.mjs`) |
 | `FilterToolCallsMiddleware` | Retire des appels d'outils du flux | ⬜ non nécessaire : les outils sont déjà bornés par les permissions des compétences |
 | `A2UIMiddleware` (`@ag-ui/a2ui-middleware`) | Fait offrir `generate_a2ui` et transforme son flux en surfaces | ✅ activé par `a2ui: { injectA2UITool: true }` du runtime |
 | `MCPAppsMiddleware` | Applications MCP rendues dans le chat | ⬜ à évaluer avec le catalogue MCP |
@@ -179,7 +179,7 @@ humaine (KAN-260, KAN-264).
 `ag-ui-langgraph` 0.0.47 est la dernière version publiée (2026-10-08), et la branche principale amont est aussi en
 0.0.47. L'issue [ag-ui-protocol/ag-ui#3343](https://github.com/ag-ui-protocol/ag-ui/issues/3343) (compétences épinglées
 envoyées au client comme messages utilisateur) est ouverte ; un contributeur a proposé le correctif, non fusionné.
-Le contournement par `FunctionMiddleware` (`copilot-runtime/src/serveur.mjs`) est donc **maintenu** ; à retirer à la
+Le contournement par `FunctionMiddleware` (`copilot-runtime/src/app.mjs`) est donc **maintenu** ; à retirer à la
 sortie d'une version qui contient le correctif, à vérifier à chaque montée de version.
 
 ### Fiches de compétences dans le Store, sans accès disque (KAN-259, décision du propriétaire du 2026-11-15)

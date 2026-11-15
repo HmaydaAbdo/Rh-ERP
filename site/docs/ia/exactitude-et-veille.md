@@ -91,3 +91,5 @@ payant est écarté et noté dans la tâche.
    LiteLLM proposée et retour arrière. **La revue peut préparer cette proposition, mais l'adoption ou la modification
    de la configuration attend la confirmation humaine du propriétaire.** Après confirmation, rejouer le jeu de
    référence conformément au § 4 et à T3.7 avant de déclarer le changement réussi.
+
+**Montée du 2026-11-15 (KAN-79).** `@copilotkit/runtime` et `@copilotkit/sqlite-runner` passent de 1.85.0 à 1.88.0 (dernière version stable) avec le gestionnaire Express officiel `createCopilotExpressHandler` (`express` 5.3.0) ; l'adaptateur Angular reste en 0.6.0 (dernière version) et les tests de sécurité du runtime tournent avec `npm test`.
