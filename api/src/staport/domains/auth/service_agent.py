@@ -15,11 +15,14 @@ from staport.domains.auth.mappage import noms_des_roles, permissions_effectives
 from staport.domains.auth.schemas import JetonAgentReponse
 from staport.domains.auth.securite import (
     DUREE_JETON_AGENT,
+    DUREE_REFERENCE_EXPORT,
     PERMISSION_IA,
     JetonInvalide,
     JeuDeCles,
     emettre_jeton_agent,
+    emettre_reference_export,
     verifier_jeton_agent,
+    verifier_reference_export,
 )
 from staport.domains.common.audit_contexte import Auditeur
 from staport.domains.common.securite import ActionSecurite, EvenementSecurite
@@ -60,6 +63,21 @@ class ServiceAgent:
         return JetonAgentReponse(
             jeton=jeton, type_jeton="Bearer", expire_dans_secondes=int(DUREE_JETON_AGENT.total_seconds())
         )
+
+    def emettre_reference_export(
+        self, utilisateur_id: int, username: str, periode: int, chantier_ids: list[int]
+    ) -> tuple[str, int]:
+        """Référence de téléchargement d'un export préparé par l'agent, et sa durée en secondes (KAN-266)."""
+        if self._cles is None:
+            raise IaDesactivee
+        reference = emettre_reference_export(self._cles, utilisateur_id, username, periode, chantier_ids)
+        return reference, int(DUREE_REFERENCE_EXPORT.total_seconds())
+
+    def lire_reference_export(self, reference: str) -> tuple[int, int, list[int]]:
+        """`(utilisateur_id, periode, chantier_ids)` d'une référence valide ; `JetonInvalide` sinon."""
+        if self._cles is None:
+            raise IaDesactivee
+        return verifier_reference_export(self._cles, reference)
 
     def cles_publiques(self) -> dict[str, Any]:
         if self._cles is None:

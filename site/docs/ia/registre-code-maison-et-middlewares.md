@@ -204,3 +204,17 @@ PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
 - **Sécurité** : le service n'accepte plus un message d'outil comme dernier message d'un run ; seules la question de
   l'utilisateur et la reprise d'interruption (vérifiée par le fil propre à l'utilisateur) sont admises. La réponse est
   bornée à 500 caractères. Test de bout en bout par `/agui` (`ia/tests/test_agui.py`).
+
+### Exports de l'ERP : référence signée, sans stockage (KAN-266)
+
+- **Outil MCP** `paie_export_preparer` (`PAIE_EXPORT` + `PAIE_READ`) : vérifie qu'il y a des bulletins, puis rend les
+  chantiers concernés et une **référence de téléchargement** : un JWT RS256 de 5 minutes (audience propre
+  `staport-intelligence-export`), lié à l'utilisateur, au mois et aux identifiants de chantier. Aucun chiffre ne passe par
+  le modèle.
+- **Téléchargement** : `GET /paie/export/agent/{reference}` exige la connexion REST de l'utilisateur et `PAIE_EXPORT`,
+  puis vérifie que la référence lui a été émise ; sinon 404 (expirée, altérée, autre utilisateur ou jeton d'un autre
+  usage, sans dire laquelle). Le classeur est généré à ce moment, par le service d'export existant ; rien n'est stocké.
+- **Interface** : `registerRenderToolCall` de CopilotKit dessine le résultat de l'outil comme un bouton « Télécharger » ;
+  la référence n'apparaît pas dans la discussion (la fiche de compétence demande au modèle de ne pas la recopier).
+- **Pas de `CompositeBackend` ici** : le classeur est binaire et généré à la demande ; l'espace de fichiers texte de
+  l'utilisateur (`/espace/`, KAN-267) garde son routage `CompositeBackend` + Store.

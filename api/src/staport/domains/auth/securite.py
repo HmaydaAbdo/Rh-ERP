@@ -27,9 +27,11 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 EMETTEUR = "staport-intelligence"
 AUDIENCE_IA = "staport-intelligence-ia"
 AUDIENCE_MCP = "staport-intelligence-mcp"
+AUDIENCE_EXPORT = "staport-intelligence-export"
 SCOPE_LECTURE = "mcp:lecture"
 PERMISSION_IA = "IA_UTILISER"
 DUREE_JETON_AGENT = timedelta(minutes=5)
+DUREE_REFERENCE_EXPORT = timedelta(minutes=5)
 TAILLE_CLE_MINIMALE = 3072
 TOLERANCE_HORLOGE = 60  # secondes, comme le décodeur JWT de Spring Security
 
@@ -266,3 +268,36 @@ def verifier_jeton_agent(cles: JeuDeCles, jeton: str) -> tuple[int, str, str]:
     if isinstance(uid, bool) or not isinstance(uid, int):
         raise JetonInvalide("claim uid absent")
     return uid, claims["sub"], str(claims.get("scope") or "")
+
+
+def emettre_reference_export(
+    cles: JeuDeCles, utilisateur_id: int, username: str, periode: int, chantier_ids: list[int]
+) -> str:
+    """Référence de téléchargement d'un export de paie préparé par l'agent (KAN-266) : un JWT RS256 de 5 minutes, lié à
+    l'utilisateur, au mois et aux chantiers. Elle ne donne aucun droit : la route de téléchargement exige en plus la
+    connexion de cet utilisateur et la permission d'export."""
+    maintenant = datetime.now(UTC)
+    claims: dict[str, Any] = {
+        "iss": EMETTEUR,
+        "sub": username,
+        "aud": AUDIENCE_EXPORT,
+        "iat": maintenant,
+        "nbf": maintenant,
+        "exp": maintenant + DUREE_REFERENCE_EXPORT,
+        "jti": str(uuid.uuid4()),
+        "uid": utilisateur_id,
+        "periode": periode,
+        "chantierIds": chantier_ids,
+    }
+    return jwt.encode(claims, cles.privee, algorithm="RS256", headers={"kid": cles.identifiant})
+
+
+def verifier_reference_export(cles: JeuDeCles, reference: str) -> tuple[int, int, list[int]]:
+    """Vérifie une référence d'export. Retourne `(utilisateur_id, periode, chantier_ids)`."""
+    claims = _decoder(reference, cles, audience=AUDIENCE_EXPORT)
+    uid, periode, chantiers = claims.get("uid"), claims.get("periode"), claims.get("chantierIds")
+    if isinstance(uid, bool) or not isinstance(uid, int) or isinstance(periode, bool) or not isinstance(periode, int):
+        raise JetonInvalide("claims d'export absents")
+    if not isinstance(chantiers, list) or not all(isinstance(c, int) and not isinstance(c, bool) for c in chantiers):  # pyright: ignore[reportUnknownVariableType]
+        raise JetonInvalide("chantiers d'export invalides")
+    return uid, periode, list(chantiers)  # pyright: ignore[reportUnknownArgumentType]

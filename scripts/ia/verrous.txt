@@ -48,4 +48,4 @@ seuil resume_jetons 40000
 seuil resume_messages 12
 seuil appels_modele 8
 seuil appels_outils 8
-seuil outils_mcp 31
+seuil outils_mcp 32

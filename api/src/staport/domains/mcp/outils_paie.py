@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from staport.domains.auth.composition import ContexteAuth
 from staport.domains.common.pagination import Pagination
 from staport.domains.heuresupp.schemas import HeuresSuppRecherche
+from staport.domains.mcp.acces import exiger_permission
 from staport.domains.mcp.formats import (
     CHANTIERS_DOC,
     FONCTIONS_DOC,
@@ -585,6 +586,51 @@ def enregistrer(
                 for c in concernes
             ],
             "vue": vue("paie", "tabulaire", parametres),
+        }
+
+    @serveur.tool(
+        name="paie_export_preparer",
+        title="Préparer le classeur Excel de paie",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Prépare le classeur Excel de paie d'un mois (une feuille globale, une par chantier) et rend une "
+            "référence de téléchargement valable 5 minutes, réservée à l'utilisateur qui la demande : il télécharge "
+            "lui-même le fichier depuis la discussion, avec sa propre connexion. Ne génère rien ici et ne contient "
+            "aucun chiffre : pour des montants, utiliser `paie_indicateurs`. Réservé aux utilisateurs qui peuvent "
+            "exporter la paie. `chantierIds` accepte 50 identifiants au plus (ceux de `chantier_rechercher`) ; "
+            "absent = tous les chantiers du mois. Pour seulement ouvrir l'assistant d'export réglé, `rapport_preparer`."
+        ),
+    )
+    @outil("paie_export_preparer", ("PAIE_EXPORT", "PAIE_READ"), nombre_de("chantiers"))
+    async def paie_export_preparer(  # pyright: ignore[reportUnusedFunction]
+        periode: Periode = None,
+        chantierIds: Annotated[
+            list[Annotated[int, Field(ge=1)]] | None,
+            Field(
+                max_length=50,
+                description="Identifiants des chantiers (rendus par `chantier_rechercher`). Absent = tous.",
+            ),
+        ] = None,
+    ) -> dict[str, Any]:
+        chantiers = ids(chantierIds)
+        jeton = exiger_permission("PAIE_EXPORT")
+        async with fabrique()() as session:
+            courant = await mois_de_paie(session, periode)
+            concernes = await contexte().paies.chantiers_periode(session, _criteres(courant, chantiers, None, None))
+        if not concernes:
+            raise ToolError("Aucun bulletin de paie pour ce mois et ces chantiers : rien à exporter.")
+        reference, expire = contexte().agent.emettre_reference_export(
+            int(jeton.subject or 0), jeton.client_id, courant, [c.id for c in concernes]
+        )
+        return {
+            "periode": afficher_periode(courant),
+            "nombreChantiers": len(concernes),
+            "chantiers": [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in concernes],
+            "telechargement": {
+                "reference": reference,
+                "expireDansSecondes": expire,
+                "nomFichier": f"Paie_Export_{afficher_periode(courant)}.xlsx",
+            },
         }
 
     # --- Heures supplémentaires ------------------------------------------------------------------------
