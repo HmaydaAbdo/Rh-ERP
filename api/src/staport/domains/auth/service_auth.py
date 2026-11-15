@@ -1,8 +1,8 @@
-"""Connexion, session, mot de passe oublié (parité avec `AuthService` de Spring).
+"""Connexion, session, mot de passe oublié.
 
 Chaque méthode publique ouvre sa transaction (`session.begin()`). Quand un refus doit laisser une trace en base
 (compteur d'échecs, famille de jetons révoquée), la méthode retourne l'erreur au lieu de la lever dans la transaction,
-puis la lève après le commit : c'est le `noRollbackFor` de Spring.
+puis la lève après le commit.
 """
 
 import logging
@@ -105,7 +105,7 @@ class ServiceAuth:
             await self._enregistrer_echec(utilisateur, maintenant_utc)
             return IdentifiantsInvalides()
         _reinitialiser_echecs(utilisateur)
-        if nouvelle_empreinte is not None:  # empreinte BCrypt de Spring remplacée par Argon2
+        if nouvelle_empreinte is not None:  # empreinte BCrypt existante remplacée par Argon2
             utilisateur.mot_de_passe_hash = nouvelle_empreinte
         connexion = await self._emettre_connexion(session, utilisateur, str(uuid.uuid4()))
         await self._evenements.publier(

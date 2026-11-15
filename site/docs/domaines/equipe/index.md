@@ -27,35 +27,30 @@ en bout pour pouvoir être relue et commentée séparément.
 
 ### Couche application
 
-**FastAPI (KAN-223)** (`api/src/staport/domains/equipe/`)
+**Backend** (`api/src/staport/domains/equipe/`)
 
-- Les routes CRUD et recherche sont maintenant servies par FastAPI avec `EQUIPE_READ`, `EQUIPE_WRITE` et
-  `EQUIPE_DELETE`, normalisation du code, unicité, version optimiste et audit compatible Envers.
-- Les outils MCP `equipe_rechercher` et `equipe_fiche` sont en lecture seule et contrôlés par `EQUIPE_READ`.
-- Le backend Spring reste conservé jusqu'à la bascule finale.
-
-**Ancien backend** (`backend/src/main/java/staport/rh/equipe/`)
-
-- **Contrôleurs.** `EquipeController` (`/equipes`) et `EquipeImportController` (`/equipes/import`). Chaque route porte
-  `@PreAuthorize` sur sa permission (voir [Permissions](#permissions)) ; l'interface n'est jamais la seule barrière.
-- **Service.** `EquipeService`, exposé aux autres domaines par la façade `IEquipeService` (ils n'accèdent pas au
+- **Routes.** Les routes CRUD et la recherche (`router.py`) exigent `EQUIPE_READ`, `EQUIPE_WRITE` et `EQUIPE_DELETE` :
+  normalisation du code, unicité, version optimiste et audit. Chaque route déclare sa permission (voir
+  [Permissions](#permissions)) ; l'interface n'est jamais la seule barrière.
+- **Outils MCP.** `equipe_rechercher` et `equipe_fiche` sont en lecture seule et contrôlés par `EQUIPE_READ`.
+- **Service.** `service.py`, exposé aux autres domaines comme façade publique (ils n'accèdent pas au
   repository). À la création et à la modification il : retire les espaces extérieurs du libellé, normalise le code
-  (`strip` puis majuscules, `Locale.ROOT`), contrôle l'unicité du code **puis** du libellé sans casse
-  (`findByCodeIgnoreCase`, `findByLibelleIgnoreCase`, en excluant l'équipe courante lors d'une modification) et, à la
-  modification, compare la version reçue à la version stockée (`VersionOptimiste.verifier`).
-- **Recherche.** `EquipeSpecification` : filtres `code` et `libelle` en « contient » sans casse, avec échappement des
-  caractères spéciaux du motif (`MotifRecherche`) ; `recherche` cherche dans l'un **ou** l'autre champ ; les filtres se
-  combinent par ET ; le tri et la pagination viennent du `Pageable`.
+  (suppression des espaces puis majuscules), contrôle l'unicité du code **puis** du libellé sans casse
+  (en excluant l'équipe courante lors d'une modification) et, à la
+  modification, compare la version reçue à la version stockée (verrouillage optimiste).
+- **Recherche.** `repository.py` : filtres `code` et `libelle` en « contient » sans casse, avec échappement des
+  caractères spéciaux du motif (`common/recherche.py`) ; `recherche` cherche dans l'un **ou** l'autre champ ; les filtres se
+  combinent par ET ; le tri et la pagination viennent de la pagination serveur commune.
 - **Suppression.** Le service ne vérifie pas lui-même les références : la clé étrangère `fk_paie_equipe` et celle de la
-  fiche Employé refusent la suppression, et `EquipeExceptionHandler` traduit cette `DataIntegrityViolationException`
+  fiche Employé refusent la suppression, et `exceptions.py` traduit cette violation d'intégrité
   en `409` avec « Cette équipe est utilisée par au moins un bulletin de paie ou un employé et ne peut pas être
   supprimée ».
 - **Erreurs.** `404` équipe inconnue ; `409` code ou libellé déjà pris (message distinct pour chacun) ou contrainte
   d'intégrité ; `400` fichier d'import illisible ou colonnes inattendues.
-- **Audit.** L'entité est `@Audited` (historique Envers) et les écritures portent `@AuditableAction` :
-  `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` ; l'import est audité par `PerimetreImportEquipe`
+- **Audit.** L'entité est historisée et les écritures sont des actions auditées :
+  `EQUIPE_CREATION`, `EQUIPE_MODIFICATION`, `EQUIPE_SUPPRESSION` ; l'import est audité (périmètre d'import)
   (nombre de lignes, résultat). Les lectures de l'assistant ont leurs propres entrées (`MCP_EQUIPE_*`).
-- **Import.** `EquipeImportService` lit un classeur `.xlsx` (colonnes « Code » puis « Libellé », dans cet ordre), valide
+- **Import.** `import_fichier.py` lit un classeur `.xlsx` (colonnes « Code » puis « Libellé », dans cet ordre), valide
   **tout** avant d'écrire, puis crée en une fois. Motifs de rejet exacts : « Code obligatoire », « Libellé
   obligatoire », « Code trop long (max 50 caractères) », « Libellé trop long (max 100 caractères) », « Colonnes
   supplémentaires non prises en charge », « Code déjà présent dans le fichier », « Libellé déjà présent dans le
@@ -122,7 +117,7 @@ propriétaire du référentiel et de ses fiches : il n'existe pas de second agr�
 
 ### Couche IA
 
-L'assistant RH n'accède à Équipe que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il n'écrit
+L'assistant RH n'accède à Équipe que par des **outils MCP de lecture** exposés par l'API ; il n'écrit
 rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté peut voir.
 
 | Outil | Ce qu'il fait | Permission | Audit |
@@ -181,36 +176,36 @@ par une modification de l'équipe courante sur la fiche Employé.
 
 | Champ | Type | Contraintes | Rôle |
 |---|---|---|---|
-| `id` | `Long` / `BIGINT` | Clé primaire, générée par la base | Référence technique des fiches et bulletins |
-| `version` | `Long` / `BIGINT` | Obligatoire, version optimiste | Détecte une modification concurrente |
-| `code` | `String` / `VARCHAR(50)` | Obligatoire, unique sans casse et espaces extérieurs | Identifiant d'échange et d'import |
-| `libelle` | `String` / `VARCHAR(100)` | Obligatoire, unique sans casse et espaces extérieurs | Nom sémantique affiché et utilisé dans les sélections/regroupements |
+| `id` | `entier` / `BIGINT` | Clé primaire, générée par la base | Référence technique des fiches et bulletins |
+| `version` | `entier` / `BIGINT` | Obligatoire, version optimiste | Détecte une modification concurrente |
+| `code` | `texte` / `VARCHAR(50)` | Obligatoire, unique sans casse et espaces extérieurs | Identifiant d'échange et d'import |
+| `libelle` | `texte` / `VARCHAR(100)` | Obligatoire, unique sans casse et espaces extérieurs | Nom sémantique affiché et utilisé dans les sélections/regroupements |
 
 ## DTO exposés par le domaine
 
-Les contrôleurs exposent des DTO et jamais les entités JPA. Les types ci-dessous décrivent le contrat
+Les routes exposent des schémas Pydantic et jamais les modèles de persistance. Les types ci-dessous décrivent le contrat
 public actuel du domaine Équipe.
 
 | DTO | Champ | Type | Contraintes | Description |
 |---|---|---|---|---|
-| `EquipeCreateRequestDto` | `code` | `String` | Obligatoire, non blanc, 50 caractères maximum | Identifiant d'échange à créer |
-| `EquipeCreateRequestDto` | `libelle` | `String` | Obligatoire, non blanc, 100 caractères maximum | Nom sémantique à créer |
-| `EquipeUpdateRequestDto` | `version` | `Long` | Obligatoire | Version reçue lors de la lecture; prévient l'écrasement concurrent |
-| `EquipeUpdateRequestDto` | `code` | `String` | Obligatoire, non blanc, 50 caractères maximum | Nouveau code d'échange |
-| `EquipeUpdateRequestDto` | `libelle` | `String` | Obligatoire, non blanc, 100 caractères maximum | Nouveau nom sémantique |
-| `EquipeSearchCriteria` | `code` | `String?` | Facultatif, 50 caractères maximum | Filtre de liste sur le code |
-| `EquipeSearchCriteria` | `libelle` | `String?` | Facultatif, 100 caractères maximum | Filtre de liste sur le libellé |
-| `EquipeSearchCriteria` | `recherche` | `String?` | Facultatif, 100 caractères maximum | Recherche libre dans le code ou le libellé |
-| `EquipeResponseDto` | `id` | `Long` | Présent dans la réponse | Identifiant interne utilisé par les relations |
-| `EquipeResponseDto` | `version` | `Long` | Présent dans la réponse | Version à renvoyer lors d'une modification |
-| `EquipeResponseDto` | `code` | `String` | Présent dans la réponse | Identifiant d'échange |
-| `EquipeResponseDto` | `libelle` | `String` | Présent dans la réponse | Nom utilisé dans l'interface et les regroupements |
+| `EquipeCreateRequestDto` | `code` | `texte` | Obligatoire, non blanc, 50 caractères maximum | Identifiant d'échange à créer |
+| `EquipeCreateRequestDto` | `libelle` | `texte` | Obligatoire, non blanc, 100 caractères maximum | Nom sémantique à créer |
+| `EquipeUpdateRequestDto` | `version` | `entier` | Obligatoire | Version reçue lors de la lecture; prévient l'écrasement concurrent |
+| `EquipeUpdateRequestDto` | `code` | `texte` | Obligatoire, non blanc, 50 caractères maximum | Nouveau code d'échange |
+| `EquipeUpdateRequestDto` | `libelle` | `texte` | Obligatoire, non blanc, 100 caractères maximum | Nouveau nom sémantique |
+| `EquipeRecherche` | `code` | `texte?` | Facultatif, 50 caractères maximum | Filtre de liste sur le code |
+| `EquipeRecherche` | `libelle` | `texte?` | Facultatif, 100 caractères maximum | Filtre de liste sur le libellé |
+| `EquipeRecherche` | `recherche` | `texte?` | Facultatif, 100 caractères maximum | Recherche libre dans le code ou le libellé |
+| `EquipeResponseDto` | `id` | `entier` | Présent dans la réponse | Identifiant interne utilisé par les relations |
+| `EquipeResponseDto` | `version` | `entier` | Présent dans la réponse | Version à renvoyer lors d'une modification |
+| `EquipeResponseDto` | `code` | `texte` | Présent dans la réponse | Identifiant d'échange |
+| `EquipeResponseDto` | `libelle` | `texte` | Présent dans la réponse | Nom utilisé dans l'interface et les regroupements |
 | `EquipeImportResultDto` | `totalLignes` | `int` | Présent dans la réponse | Nombre de lignes du fichier traitées |
 | `EquipeImportResultDto` | `crees` | `int` | Présent dans la réponse | Nombre d'équipes créées |
 | `EquipeImportResultDto` | `ignores` | `int` | Présent dans la réponse | Nombre de lignes rejetées |
-| `EquipeImportResultDto` | `lignesIgnorees` | `List<LigneIgnoreeDto>` | Présent dans la réponse | Détail des lignes rejetées |
+| `EquipeImportResultDto` | `lignesIgnorees` | `liste de LigneIgnoreeDto` | Présent dans la réponse | Détail des lignes rejetées |
 | `LigneIgnoreeDto` | `numeroLigne` | `int` | Présent dans chaque ligne rejetée | Numéro de ligne dans le classeur |
-| `LigneIgnoreeDto` | `code`, `libelle`, `raison` | `String` | Présents dans chaque ligne rejetée | Valeurs lues et motif de rejet |
+| `LigneIgnoreeDto` | `code`, `libelle`, `raison` | `texte` | Présents dans chaque ligne rejetée | Valeurs lues et motif de rejet |
 
 Une recherche retourne une page de `EquipeResponseDto`. Les critères `code` et `libelle` se combinent;
 `recherche` trouve une correspondance dans l'un ou l'autre champ. Les champs sensibles à la casse sont
@@ -316,16 +311,16 @@ reste un modèle d'import, pas un export.
 
 | Règle ou parcours | Suites qui portent les vérifications |
 |---|---|
-| Création, modification, normalisation et unicité | `EquipeServiceTest`, `ReferentielUniciteInsensibleCasseTest`, tests du formulaire Équipe |
-| Équipe facultative et synchronisation bulletin/fiche Employé | `PaieServiceTest`, tests du formulaire Paie |
-| Suppression bloquée si l'équipe est référencée | `PaieServiceTest`, tests d'audit, `EndpointSecurityTest` |
-| Import atomique et rejet des lignes invalides | `EquipeImportServiceTest`, `AuditImportTest`, tests d'actions d'import |
+| Création, modification, normalisation et unicité | `test_equipe.py`, tests du formulaire Équipe |
+| Équipe facultative et synchronisation bulletin/fiche Employé | `test_paie_contrat.py`, tests du formulaire Paie |
+| Suppression bloquée si l'équipe est référencée | `test_paie_contrat.py`, tests d'audit, `test_auth_acces.py` |
+| Import atomique et rejet des lignes invalides | `test_import_referentiels.py`, `test_audit.py`, tests d'actions d'import |
 | Sélection, tri et nom de groupe par libellé | `equipe-module.spec.ts`, `reference-services.spec.ts`, `perimetre-groupes.spec.ts`, tests des formulaires Employé/Paie |
 | Cartes : quatre mesures Paie lisibles, dernier mois et comparaison au mois précédent | `CartesPerimetreComponent.spec.ts`, `perimetre-groupes.spec.ts`, `frontend/e2e/equipes.spec.ts` |
 | Orphelins proposés dans les filtres d'équipe, présents dans la répartition et suivis dans l'historique | `reference-services.spec.ts`, `paie-option.sources.spec.ts`, `employee-filtres.component.spec.ts`, `analytique-perimetre.component.spec.ts` |
 | Orphelins absents du Tabulaire et des Cartes; graphique en anneau uniquement dans la section qualité Analytique si leur nombre est supérieur à zéro, filtres Chantier/Fonction et accès protégé par `PAIE_READ` | `cartes-perimetre.component.spec.ts`, `analytique-perimetre.component.spec.ts`, `equipe-vues.component.spec.ts` |
 | Filtres URL et parcours Tabulaire, Cartes, Analytique | tests des hôtes de vue, tests du socle `portail/perimetre/`, `frontend/e2e/equipes.spec.ts` |
-| Accès autorisé/refusé sur chaque route Équipe | `EndpointSecurityTest` et tests d'interface des permissions |
+| Accès autorisé/refusé sur chaque route Équipe | `test_auth_acces.py` et tests d'interface des permissions |
 
 Les commandes et prérequis des suites sont décrits dans la documentation des tests ([exploitation/tests](../../exploitation/tests.md)).
 
@@ -413,7 +408,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 | Couche | Ce qu'elle contient | À vérifier quand on la modifie |
 |---|---|---|
-| **Application** | `EquipeController`, `EquipeImportController`, `EquipeService` / `IEquipeService`, `EquipeSpecification`, import atomique, audit (`EQUIPE_*`, `PerimetreImportEquipe`), migrations `V7`, `V8`, `V25`, `V32`, `V34` ; côté Angular `portail/equipe/` (routes gardées, liste, formulaire, détail, actions, filtres) | Normalisation du code et unicité (service **et** index `UPPER(BTRIM)`) ; `409` à la suppression par la clé étrangère ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture ; migration testée sur base vide |
+| **Application** | `router.py`, `service.py`, `repository.py`, `import_fichier.py`, import atomique, audit (`EQUIPE_*`), migrations `V7`, `V8`, `V25`, `V32`, `V34` ; côté Angular `portail/equipe/` (routes gardées, liste, formulaire, détail, actions, filtres) | Normalisation du code et unicité (service **et** index `UPPER(BTRIM)`) ; `409` à la suppression par la clé étrangère ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture ; migration testée sur base vide |
 | **Analytique** | `equipe-module.ts` (dimension `EQUIPE`, parcours Équipe → Chantier → Fonction, source `PAIE`), `POST /paie/analytique` (`parEquipe`, `evolution`, `qualite`), orphelins `equipeIds = 0` | Dernier mois de paie fixe ; effectif, masse et STC d'une seule source (les bulletins) ; comparaison indisponible plutôt que zéro ; « Orphelins » jamais enregistré ; sans `PAIE_READ` aucun appel ; mêmes définitions que le rapport PDF et l'assistant |
 | **IA** | Outils MCP `equipe_rechercher`, `equipe_fiche`, `paie_repartition` (`EQUIPE`), filtres `equipeIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/equipes` | Lecture seule ; permission `EQUIPE_READ` / `PAIE_READ` par outil ; description d'outil à jour (l'agent y lit comment filtrer) ; identifiant `0` = sans équipe ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
 

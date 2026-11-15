@@ -1,4 +1,4 @@
-"""Suppression et restauration de groupes de bulletins (parité `deleteGroupe` / `restaurerGroupeDepuisAudit`).
+"""Suppression et restauration de groupes de bulletins.
 
 PostgreSQL réel : la suppression passe par l'API, donc par la session auditée, les révisions `paie_aud` et le journal.
 """
@@ -303,7 +303,7 @@ def equipe(plateforme: Plateforme, jeu: Jeu) -> Iterator[int]:
         c.execute(text("DELETE FROM equipe WHERE id = :i"), {"i": identifiant})
 
 
-def test_creation_rejette_les_references_inexistantes_avec_les_messages_de_spring(
+def test_creation_rejette_les_references_inexistantes_avec_les_messages_du_contrat(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
 ) -> None:
     entetes = _entetes(connecter)
@@ -379,7 +379,7 @@ def test_la_modification_met_a_jour_l_equipe_de_l_employe(
 def test_la_synchronisation_d_equipe_n_ecrit_qu_une_entree_de_journal_et_une_revision_employe(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu, equipe: int
 ) -> None:
-    """Comme `GenericAuditAspect` : seule l'action la plus externe écrit une entrée ; l'historique garde l'employé."""
+    """Seule l'action la plus externe écrit une entrée ; l'historique garde l'employé."""
     corps = _corps_bulletin(jeu, jeu.employes[0], "2098-06", equipeId=equipe)
 
     reponse = plateforme.client.post("/paie", headers=_entetes(connecter), json=corps)

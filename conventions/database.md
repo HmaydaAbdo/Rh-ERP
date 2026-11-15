@@ -102,7 +102,7 @@ documentation.
 
 Tester la migration sur une base PostgreSQL vierge et depuis la version précédente supportée, avec
 la même version majeure et les mêmes extensions que l'environnement cible. Vérifier
-`ddl-auto=validate`, les invariants et le résultat des backfills. Pour une migration modifiant des
+la cohérence des modèles SQLAlchemy avec le schéma (test de comparaison Alembic), les invariants et le résultat des backfills. Pour une migration modifiant des
 données, prévoir une restauration ou une stratégie de retour arrière ; consigner les risques de
 verrouillage et de volume.
 
@@ -118,13 +118,13 @@ verrouillage et de volume.
 | Colonne renommée | `ALTER TABLE … RENAME COLUMN …` (préserve les données, contrairement à un DROP+ADD). **Entité auditée** : voir « Tables auditées » (jamais de `RENAME` sur une table d'audit) |
 | Colonne supprimée | `ALTER TABLE … DROP COLUMN …` — vérifier qu'aucun code ne la lit plus avant de fusionner. **Entité auditée** : la colonne de la table d'audit reste |
 | Type de colonne modifié | `ALTER TABLE … ALTER COLUMN … TYPE …` — vérifier la compatibilité/conversion implicite PostgreSQL |
-| Valeur d'enum Java ajoutée (`VARCHAR` + `CHECK`) | `ALTER TABLE … DROP CONSTRAINT …`, puis `ADD CONSTRAINT … CHECK (… IN (…))` avec la liste étendue |
-| Valeur d'enum Java supprimée | Migrer les lignes concernées **avant** de resserrer le `CHECK` — voir « Cas fréquents » |
+| Valeur d'énumération ajoutée (`VARCHAR` + `CHECK`) | `ALTER TABLE … DROP CONSTRAINT …`, puis `ADD CONSTRAINT … CHECK (… IN (…))` avec la liste étendue |
+| Valeur d'énumération supprimée | Migrer les lignes concernées **avant** de resserrer le `CHECK` — voir « Cas fréquents » |
 | Contrainte `UNIQUE` ajoutée | Vérifier/nettoyer les doublons existants avant la migration, sinon elle échoue au déploiement |
 | Index ajouté | `CREATE INDEX` — acceptable sans précaution particulière |
-| Nouvelle entité auditée (`@Audited`) | `CREATE TABLE <table>_aud` dans **la même migration** que la table — voir « Tables auditées » |
+| Nouvelle entité auditée | `CREATE TABLE <table>_aud` dans **la même migration** que la table — voir « Tables auditées » |
 | Nouvelle colonne sur une entité auditée | `ADD COLUMN` sur la table **et** sur sa table `_aud` (nullable), dans la même migration |
-| Nouvelle propriété explicitement exclue de l'audit (`@NotAudited`) | Colonne sur la table métier uniquement ; documenter la finalité et journaliser séparément les événements de sécurité si nécessaire |
+| Nouvelle propriété explicitement exclue de l'audit | Colonne sur la table métier uniquement ; documenter la finalité et journaliser séparément les événements de sécurité si nécessaire |
 | Données modifiées par la migration (backfill, correction, seed, fusion de doublons) sur une table auditée | Le gabarit d'audit — voir « Migrations qui modifient des données auditées » |
 
 Toute case marquée comme nécessitant un backfill ou une vérification de données existantes doit
@@ -231,7 +231,7 @@ l'évaluation (voir [`rag.md`](rag.md)), après un ADR. Elle reste une projectio
 source de vérité métier, jamais une copie des tables transactionnelles d'un domaine.
 
 * Retenir l'édition Community (open source) sauf besoin documenté ; vérifier la version, sa licence et
-  sa compatibilité avec le client Java retenu, puis verrouiller l'image Docker par empreinte comme les
+  sa compatibilité avec le client retenu, puis verrouiller l'image Docker par empreinte comme les
   autres images.
 * Le schéma (contraintes d'unicité, index vectoriels et plein texte) est créé par des scripts versionnés
   appliqués au déploiement, comme une migration ; le démarrage applicatif ne le crée pas implicitement.
@@ -248,7 +248,7 @@ source de vérité métier, jamais une copie des tables transactionnelles d'un d
 
 PostgreSQL accepte la plupart des mots ci-dessous comme identifiants non-réservés en pratique,
 mais certains sont strictement réservés et font échouer du SQL non échappé. Éviter comme nom de
-colonne/table sans guillemets, ou utiliser `@Column(name = "...")` :
+colonne/table sans guillemets, ou utiliser un nom de colonne explicite dans le modèle (`mapped_column("nom")`) :
 
 `ALL`, `ANALYSE`, `ANALYZE`, `AND`, `ANY`, `ARRAY`, `AS`, `ASC`, `ASYMMETRIC`, `BOTH`, `CASE`,
 `CAST`, `CHECK`, `COLLATE`, `COLUMN`, `CONSTRAINT`, `CREATE`, `CURRENT_DATE`, `CURRENT_ROLE`,

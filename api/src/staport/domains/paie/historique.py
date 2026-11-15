@@ -1,4 +1,4 @@
-"""Parcours d'un employé et tendances des effectifs, déduits des bulletins et des départs (parité Spring, ADR 0010).
+"""Parcours d'un employé et tendances des effectifs, déduits des bulletins et des départs (ADR 0010).
 
 Rien n'est recopié dans une table d'historique : les bulletins sont les instantanés du mois, `employe_sortie` porte les
 départs. Les requêtes sont en lot (une par table) ; le calcul est pur et se teste sans base.
@@ -21,7 +21,7 @@ from .models import Paie
 from .periode import mois_precedent
 from .schemas import PaieEffectifMois, PaieParcoursEvenement, PaieParcoursMois, PaieRecherche
 
-# Rang des types dans l'énumération Spring `TypeEvenement` ; le tri les prend en ordre inverse.
+# Rang des types d'événement ; le tri les prend en ordre inverse.
 _RANG_TYPE = {
     "ENTREE": 0,
     "CHANGEMENT_CHANTIER": 1,

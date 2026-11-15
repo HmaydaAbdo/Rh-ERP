@@ -1,6 +1,6 @@
-"""Pagination serveur (parité avec `Pageable` de Spring Data : `page`, `size`, `sort=champ,sens`, taille plafonnée).
+"""Pagination serveur (`page`, `size`, `sort=champ,sens`, taille plafonnée).
 
-Le tri n'accepte que des champs déclarés par la route : une propriété inconnue donne 400 (Spring répondait 500).
+Le tri n'accepte que des champs déclarés par la route : une propriété inconnue donne 400.
 """
 
 from collections.abc import Callable
@@ -11,7 +11,7 @@ from fastapi import Query
 
 from staport.platform.erreurs import ErreurMetier
 
-TAILLE_MAX = 2000  # mesuré sur Spring (java-final) : 2000 lignes, le `max-page-size: 200` du YAML étant sans effet
+TAILLE_MAX = 2000  # taille de page maximale acceptée
 TAILLE_DEFAUT = 20
 
 
@@ -52,7 +52,7 @@ def pagination(
         size: Annotated[str | None, Query()] = None,
         sort: Annotated[list[str] | None, Query()] = None,
     ) -> Pagination:
-        # `PageableHandlerMethodArgumentResolver` : une page négative ou illisible vaut 0, une taille hors 1..max
+        # règle de pagination : une page négative ou illisible vaut 0, une taille hors 1..max
         # illisible ou nulle vaut la taille par défaut, jamais une erreur.
         numero = _entier(page, 0)
         numero = 0 if numero < 0 else numero
@@ -63,7 +63,7 @@ def pagination(
             champ, _, sens = brut.partition(",")
             champ = champ.strip()
             if champ not in autorises:
-                if tri_ignore_si_inconnu:  # Spring : tri de liste d'options fixe, `sort` ignoré
+                if tri_ignore_si_inconnu:  # liste d'options à tri fixe : `sort` ignoré
                     continue
                 raise TriInvalide(champ)
             criteres.append((champ, sens.strip().lower() != "desc"))

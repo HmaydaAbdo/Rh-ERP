@@ -1,4 +1,4 @@
-"""Déclaration de l'historique Envers de `fonction` pour l'écouteur d'audit Python."""
+"""Déclaration de l'historique de `fonction` pour l'écouteur d'audit Python."""
 
 from sqlalchemy import BigInteger, Column, ForeignKey, Index, SmallInteger, String, Table
 
@@ -23,7 +23,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Fonction,
             nom="Function",
-            nom_hibernate="staport.rh.function.entities.Function",
+            nom_stocke="staport.rh.function.entities.Function",
             table_aud=fonction_aud,
             champs=(ChampAudite("libelle", "libelle", "libelle"),),
         )

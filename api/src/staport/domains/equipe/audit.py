@@ -22,7 +22,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Equipe,
             nom="Equipe",
-            nom_hibernate="staport.rh.equipe.entities.Equipe",
+            nom_stocke="staport.rh.equipe.entities.Equipe",
             table_aud=equipe_aud,
             champs=(ChampAudite("code", "code", "code"), ChampAudite("libelle", "libelle", "libelle")),
         )

@@ -1,4 +1,4 @@
-"""Import Excel des fonctions : une colonne, une ligne d'en-tête, atomique (parité `FunctionImportService`)."""
+"""Import Excel des fonctions : une colonne, une ligne d'en-tête, atomique."""
 
 from io import BytesIO
 from typing import cast

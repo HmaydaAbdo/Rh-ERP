@@ -1,6 +1,6 @@
 """Historique du domaine parametre (Flyway V16) : table `parametre_aud` et champs de `Parametre`.
 
-Les noms de champs et le nom d'entité enregistré sont ceux de Spring : l'historique existant et le nouveau forment une
+Les noms de champs et le nom d'entité enregistré sont stables : l'historique existant et le nouveau forment une
 seule chronologie.
 """
 
@@ -29,7 +29,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Parametre,
             nom="Parametre",
-            nom_hibernate="staport.rh.parametre.entities.Parametre",
+            nom_stocke="staport.rh.parametre.entities.Parametre",
             table_aud=parametre_aud,
             champs=(ChampAudite("cle", "cle", "cle"), ChampAudite("valeur", "valeur", "valeur")),
         )

@@ -24,7 +24,7 @@ _JOINTURES: dict[str, tuple[Any, ColumnElement[bool]]] = {
     "chantier": (_CHANTIER, _CHANTIER.id == Employee.chantier_id),
     "equipe": (_EQUIPE, _EQUIPE.id == Employee.equipe_id),
 }
-# Nom de tri public (celui du JSON, comme Spring Data) -> (colonne, jointure externe nécessaire ou None).
+# Nom de tri public (celui du JSON) -> (colonne, jointure externe nécessaire ou None).
 _TRIS: dict[str, tuple[Any, str | None]] = {
     "id": (Employee.id, None),
     "version": (Employee.version, None),
@@ -39,13 +39,13 @@ _TRIS: dict[str, tuple[Any, str | None]] = {
     "chantier.code": (_CHANTIER.code, "chantier"),
     "equipe.libelle": (_EQUIPE.libelle, "equipe"),
 }
-# Spring Data accepte toute propriété JPA de l'association (`chantier.designation`, `equipe.code`…), pas seulement
+# Le tri accepte toute propriété de l'association (`chantier.designation`, `equipe.code`…), pas seulement
 # celles que l'écran utilise : mêmes noms (camelCase des attributs) pour les trois associations.
 for _prefixe, _alias in (("fonction", _FONCTION), ("chantier", _CHANTIER), ("equipe", _EQUIPE)):
     for _attribut in sa_inspect(_alias).mapper.column_attrs:
         _TRIS.setdefault(f"{_prefixe}.{to_camel(_attribut.key)}", (getattr(_alias, _attribut.key), _prefixe))
 TRIS_PUBLICS = frozenset(_TRIS)
-# Données de paie : réservées à `PAIE_READ` (Spring : `ProjectionPaieEmployee.CHAMPS_DE_PAIE`, tris retirés sinon).
+# Données de paie : réservées à `PAIE_READ` (tris retirés sinon).
 CHAMPS_DE_PAIE = frozenset({"salaire", "typeSalaire"})
 # Noms internes (appels programmatiques, p. ex. outils MCP) acceptés en plus des noms publics.
 _ALIAS_INTERNES = {"nom_prenom": "nomPrenom", "date_embauche": "dateEmbauche", "date_naissance": "dateNaissance"}
@@ -63,7 +63,7 @@ async def existe_cin(s: AsyncSession, cin: str, sauf_id: int | None = None) -> b
 
 
 def filtres(c: EmployeeRecherche) -> list[ColumnElement[bool]]:
-    """Filtres de la recherche (`EmployeeSpecification`), partagés par la liste, l'analyse et les regroupements."""
+    """Filtres de la recherche, partagés par la liste, l'analyse et les regroupements."""
     f: list[ColumnElement[bool]] = []
     if c.nom_prenom and c.nom_prenom.strip():
         f.append(func.lower(Employee.nom_prenom).like(motif_contient(c.nom_prenom), escape=ECHAPPEMENT))
@@ -112,7 +112,7 @@ async def regrouper(
     s: AsyncSession, c: EmployeeRecherche, dimension: DimensionEmployes
 ) -> list[tuple[int | None, str | None, str | None, int, int]]:
     """Effectif et nombre en poste par chantier, équipe ou fonction, comptés par la base (`GROUP BY`), du plus grand
-    groupe au plus petit puis par code (`EmployeeAnalytiqueService.regrouper`). Les employés sans chantier ou sans
+    groupe au plus petit puis par code. Les employés sans chantier ou sans
     équipe forment le groupe d'identifiant nul."""
     effectif = func.count(Employee.id)
     en_poste = func.sum(case((Employee.statut == EmployeeStatut.ACTIF, 1), else_=0))

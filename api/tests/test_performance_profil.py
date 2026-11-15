@@ -1,4 +1,4 @@
-"""Profil de performance de l'API (KAN-233, remplace `PerformanceProfileTest` et la porte CI `performance-profile`).
+"""Profil de performance de l'API (KAN-233 : porte CI `performance-profile`).
 
 Opt-in localement (`PERFORMANCE_PROFILE=1`) et exécuté comme porte CI dédiée ; les objectifs et la commande sont dans
 `site/docs/exploitation/tests.md`. PostgreSQL réel (testcontainers), données uniquement synthétiques, appels HTTP réels
@@ -55,7 +55,7 @@ ECHANTILLONS_LOURDS = 20
 PERIODE_COURANTE = (2026, 8)
 SORTIE = Path(__file__).resolve().parents[1] / "target"
 
-# Objectifs en millisecondes. Recherche relevée à 1 000 / 2 000 ms (750 / 1 500 au départ, backend retiré) : sur le
+# Objectifs en millisecondes. Recherche relevée à 1 000 / 2 000 ms (750 / 1 500 au départ) : sur le
 # runner partagé à 2 vCPU, le même code mesure de 382 à 949 ms de p95 et jusqu'à 1 531 ms de p99, médiane 25 ms.
 OBJECTIFS = {
     "recherche_p95": 1_000,

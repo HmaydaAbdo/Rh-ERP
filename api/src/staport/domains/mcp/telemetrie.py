@@ -25,7 +25,7 @@ def outil[**P, R](
     """Enveloppe d'un outil : permission exigée (relue en base à chaque requête), span, nombre de résultats.
 
     `permission=None` : l'outil n'exige que le droit d'utiliser l'assistant en lecture (identité de l'appelant). Un
-    tuple exige toutes ses permissions, dans l'ordre (`hasAuthority('A') and hasAuthority('B')` de Spring) : le refus
+    tuple exige toutes ses permissions, dans l'ordre : le refus
     nomme la première qui manque.
     """
     exigees = (permission,) if isinstance(permission, str) else permission or (SCOPE_LECTURE,)

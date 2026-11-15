@@ -1,6 +1,6 @@
 """Import de paie : départs (STC, sortie, absents) et retours, de bout en bout sur PostgreSQL réel.
 
-Parité avec `PaieImportService.examiner` / `importer` : l'analyse propose, l'import n'enregistre que les départs
+L'analyse propose, l'import n'enregistre que les départs
 confirmés, repasse les inactifs présents en ACTIF, le tout dans une seule transaction.
 """
 

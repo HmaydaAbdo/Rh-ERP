@@ -4,17 +4,17 @@ sidebar_position: 4
 ---
 
 :::note Page reprise de l'ancien document IA
-Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions de Spring, de Java et des tâches T* décrivent l'état avant la bascule vers FastAPI : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
+Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions des tâches T* décrivent l'état au 2026-11-06 : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
 :::
 
 ## 5. Sécurité
 
 - **Périmètres.** Département → fiche de poste → rôles et permissions + périmètre de données
-  (chantiers, équipes, département, ou « tous »). Appliqué dans les requêtes Spring, même règle pour
+  (chantiers, équipes, département, ou « tous »). Appliqué dans les requêtes de l'API, même règle pour
   REST et MCP. Le salaire devient une politique de projection du domaine (`EMPLOYEE_READ` sans
   `PAIE_READ` : ni salaire, ni tri, ni agrégat salarial). Le modèle exact est présenté et validé au
   lancement de J2.
-- **Identité de l'agent.** Spring émet pour l'utilisateur connecté un jeton court RS256 (clé
+- **Identité de l'agent.** L'API émet pour l'utilisateur connecté un jeton court RS256 (clé
   publique JWKS), audience `mcp`, scopes réduits ; le `JWT_SECRET` n'est jamais partagé. Chaque appel
   MCP revalide émetteur, audience, expiration, permissions et périmètre.
 - **Champs rendus.** Les mêmes que les écrans pour un utilisateur donné (CIN, dates et montants compris) ; seules
@@ -36,7 +36,7 @@ l'agent appelle `generate_a2ui` (injecté par `CopilotKitMiddleware` quand le ru
 du runtime transforme son flux en surface, rendue par CopilotKit Angular avec le catalogue de base officiel aux
 couleurs Staport. La surface reprend les valeurs des résultats d'outils, qui restent leur source.
 **Vues pilotées retirées** (décision du propriétaire du 2026-10-26) : l'assistant n'ouvre plus les écrans de l'ERP.
-Les outils Spring décrivent toujours la vue correspondante (`VueProposeeDto`), réutilisable si un lien est un jour
+Les outils de l'API décrivent toujours la vue correspondante (`VueProposeeDto`), réutilisable si un lien est un jour
 proposé.
 
 **Staport Intelligence (T8).** L'en-tête présente le monogramme officiel de Staport, le nom de l'assistant et la mention

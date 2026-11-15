@@ -96,7 +96,7 @@ async def test_excel_materiel_reste_sur_la_feuille_equipe_concernee() -> None:
 
 
 @pytest.mark.asyncio
-async def test_excel_un_bulletin_sans_equipe_n_a_pas_de_feuille_equipe_comme_spring() -> None:
+async def test_excel_un_bulletin_sans_equipe_n_a_pas_de_feuille_equipe() -> None:
     sans_equipe = bulletin("Carl", "X", "X", 202610, "500")
     sans_equipe = (*sans_equipe[:3], None, sans_equipe[4])
     courant = [bulletin("Alice", "CH", "Chauffeurs", 202610, "1000"), sans_equipe]
@@ -120,6 +120,6 @@ async def test_excel_la_selection_personnalisee_cite_des_libelles_jamais_des_cod
 
 
 @pytest.mark.parametrize("nombre", [-1, 1000])
-def test_le_materiel_est_borne_entre_0_et_999_comme_spring(nombre: int) -> None:
+def test_le_materiel_est_borne_entre_0_et_999(nombre: int) -> None:
     with pytest.raises(ValueError, match="materiel"):
         PaieExportRequete(periode=202610, materiel={"PICK UP": nombre})

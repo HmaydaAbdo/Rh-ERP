@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 
 /** Une page de résultats — même forme que `Page<T>` (voir `shared/models/page.model.ts`) mais réduite
  * aux deux informations dont un sélecteur a besoin, pour ne pas coupler ce composant partagé au
- * modèle de pagination Spring exposé par chaque domaine. */
+ * modèle de pagination exposé par chaque domaine. */
 export interface LazySelectPage<T> {
   items: T[];
   totalRecords: number;

@@ -4,7 +4,7 @@ sidebar_position: 6
 ---
 
 :::note Page reprise de l'ancien document IA
-Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions de Spring, de Java et des tâches T* décrivent l'état avant la bascule vers FastAPI : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
+Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions des tâches T* décrivent l'état au 2026-11-06 : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
 :::
 
 ## Décisions à prendre
@@ -36,14 +36,14 @@ reprenne là où il s'est arrêté.
 | T21 — Liste titrée des anciennes conversations | Aucune : fonction absente. Le fil est rejoué, mais l'utilisateur ne peut pas revenir à un ancien fil | `injectThreads` et `CopilotThreadsDrawer` de CopilotKit sur les routes locales de fils du runtime (`LocalThreadEndpointRunner`) ; contribuer ou étendre le runner SQLite officiel ; titre tiré de la première question ; sinon petit code **temporaire** avec date de retrait | ⬜ |
 | T22 — Vérificateur de chiffres | `verification.py` et `VerificateurChiffres` | **Décision du propriétaire (2026-10-27) appliquée en V1f après V1d** : suppression complète sans remplaçant maison. Les règles de réponse et les calculs relèvent des outils métier et des middlewares officiels ; le jeu de référence mesure l'exactitude | ✅ V1f |
 | T23 — Surfaces déterministes | `surfaces.py` : liste d'outil vers `DataTable`/`Chart`, enveloppe A2UI | Motif officiel à schéma fixe (`copilotkit.a2ui`) déjà utilisé ; évaluer MCP Apps (`@copilotkit/mcp-apps-renderer`, `@copilotkit/angular/mcp-apps`) pour que l'interface d'un outil vienne de son serveur MCP | ⬜ |
-| T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
+| T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de FastMCP lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
 | T25 — Mémoire des conversations | `memoire.py` : préfixe de fil par utilisateur, purge des conversations inactives | Isolation par espaces de noms du `Store` LangGraph ; expiration par une tâche `pg_cron` (extension PostgreSQL gratuite) ou par le TTL du `Store` PostgreSQL | ⬜ |
-| T26 — Échange de jeton | `outils.py` : `jeton_agent` appelle `/auth/jetons/agent` ; côté Java, émission par l'encodeur JWT | Échange de jetons OAuth2 (RFC 8693) de Spring Authorization Server et client OAuth2 Authlib | ⬜ |
+| T26 — Échange de jeton | `outils.py` : `jeton_agent` appelle `/auth/jetons/agent` ; côté API, émission par l'encodeur JWT | Échange de jetons OAuth2 (RFC 8693) et client OAuth2 Authlib | ⬜ |
 | T27 — Enveloppe du service IA | `agui.py` : authentification, validation de la question, flux SSE, erreurs sans détail | `add_langgraph_fastapi_endpoint` avec dépendances FastAPI ; outils par requête via les crochets dynamiques de LangChain | ⬜ |
 | T28 — Banc d'évaluation | `evaluation.py` : rejoueur et notation | `agentevals` et `openevals` sous pytest, sans LangSmith ; supprimer le rejoueur | ⬜ |
 | T29 — Scripts de la passerelle | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` | `include` de fichiers de configuration LiteLLM par fournisseur ; contrôles de santé et sondes natifs ; clés virtuelles par l'API gérée en base | ⬜ |
 | T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
-| T32 — Sélection d'outils juste-à-temps | **Fait (2026-11-03)** : une compétence `SKILL.md` par domaine dans `ia/src/staport_ia/competences/` (6 domaines, 7 outils au plus chacune, les 31 outils couverts une fois), `SkillsMiddleware(tools=résolveur)` sur le catalogue MCP de l'utilisateur, `routage.py` calculant `pinned_skills` hors modèle (embeddings MiniLM locaux), repli par lecture du `SKILL.md`, aucun plafond de domaines épinglés, évaluation `ia/evaluation/routage.json` (41 demandes, 39 couvertes, p50 5,9 ms) ; 22 définitions d'outils Spring complétées (cas de non-usage, limites) | Fonctions officielles de Deep Agents ≥ 0.7.23 ; seule pièce maison **déclarée** : la fonction de routage | Tests verts (66), ruff et pyright stricts verts ; **banc réel (2026-11-03, routage actif)** : 23/24, latence p50 8,25 s contre 9,09 s avant (sélecteur LLM), l'échec restant est un chemin valide différent du chemin attendu (`fonction_rechercher` au lieu de `employes_rechercher`) ; le p95 (68 s) vient des offres gratuites, pas du routage |
+| T32 — Sélection d'outils juste-à-temps | **Fait (2026-11-03)** : une compétence `SKILL.md` par domaine dans `ia/src/staport_ia/competences/` (6 domaines, 7 outils au plus chacune, les 31 outils couverts une fois), `SkillsMiddleware(tools=résolveur)` sur le catalogue MCP de l'utilisateur, `routage.py` calculant `pinned_skills` hors modèle (embeddings MiniLM locaux), repli par lecture du `SKILL.md`, aucun plafond de domaines épinglés, évaluation `ia/evaluation/routage.json` (41 demandes, 39 couvertes, p50 5,9 ms) ; 22 définitions d'outils complétées (cas de non-usage, limites) | Fonctions officielles de Deep Agents ≥ 0.7.23 ; seule pièce maison **déclarée** : la fonction de routage | Tests verts (66), ruff et pyright stricts verts ; **banc réel (2026-11-03, routage actif)** : 23/24, latence p50 8,25 s contre 9,09 s avant (sélecteur LLM), l'échec restant est un chemin valide différent du chemin attendu (`fonction_rechercher` au lieu de `employes_rechercher`) ; le p95 (68 s) vient des offres gratuites, pas du routage |
 | T33 (KAN-203) — Migration du service IA vers Deep Agents | **Fait (2026-11-03)** : `create_deep_agent` dans `agent.py` (middlewares de contexte, surfaces, plafonds, reprise et `CopilotKitMiddleware` reportés dans `middleware`), harnais limité à `read_file` et `write_todos`, sous-agent généraliste désactivé par profil d'harnais, `LLMToolSelectorMiddleware` retiré, image Docker avec modèle d'embeddings préchargé. Le groupe de passerelle `tool-selection` est retiré (configuration, clés virtuelles, tests de fumée, README) | Point d'entrée officiel documenté de Deep Agents (`create_deep_agent(model, tools, middleware, backend, ...)`) | Test de contrat vert ; écriture refusée par `FilesystemPermission` (test : aucun outil métier dans `tools=`, `write_file` refusé même lié) ; espace de fichiers par identité (`backend_par_identite`, isolation testée) ; **reste** : magasin PostgreSQL avec l'épopée d'écriture |
 | T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
 
@@ -115,7 +115,7 @@ Autres points non terminés, gardés ouverts :
 | Latence d'une réponse sous 30 s à tenir sur le jeu de référence | ⬜ |
 | Évaluation de l'agent étendue (cas complexes, tri, questions à l'utilisateur) | ⬜ |
 | Historique SQLite du runtime : pas d'expiration | ⬜ |
-| Lint : frontend à 0 avertissement (règles en `error`), Checkstyle Java et ESLint du runtime Node, branchés dans la CI | ✅ |
+| Lint : frontend à 0 avertissement (règles en `error`), Ruff, pyright et ESLint du runtime Node, branchés dans la CI | ✅ |
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) | ✅ Cause isolée et corrigée le 2026-11-02 (E5.6) : flux de run coupé côté client, le serveur garde la réponse ; rattachement par `connectAgent` |
 
@@ -158,7 +158,7 @@ Décision : **garder `langchain.mcp`**. `langchain-mcp-adapters` ne s'installe p
 capacité qui nous manque. Le risque de la bêta (API susceptible de changer) est couvert par les tests MCP et la
 veille de versions. Pistes ouvertes, chacune dans son ticket : passer l'authentification par `Client(url, auth=jeton)`
 au lieu de l'en-tête construit à la main, et vérifier le mode MCP `auto` maintenant que le serveur MCP est celui de
-l'API FastAPI (`mode="legacy"` datait de la compatibilité Spring) ; l'interruption d'élicitation sert la validation
+l'API FastAPI (`mode="legacy"` est un choix de transport du client FastMCP) ; l'interruption d'élicitation sert la validation
 humaine (KAN-260, KAN-264).
 
 ### ag-ui-langgraph : état amont (KAN-257, 2026-11-15)

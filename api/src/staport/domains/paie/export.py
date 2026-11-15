@@ -24,7 +24,7 @@ from .schemas import PaieExportRequete
 
 
 def _police(**options: bool) -> Font:
-    """Calibri 11 comme les polices créées par POI : une police sans nom n'est pas celle du classeur de référence."""
+    """Calibri 11 comme les polices créées par défaut dans le classeur : une police sans nom n'est pas la bonne."""
     return Font(name="Calibri", size=11, **options)  # pyright: ignore
 
 
@@ -92,7 +92,7 @@ def _construire_classeur(
         )
         equipes: dict[str, list[tuple[Paie, Employee, Chantier, Equipe | None, Fonction]]] = {}
         for ligne in chantier_lignes:
-            if ligne[3] is None:  # Spring : pas de feuille pour les bulletins sans équipe
+            if ligne[3] is None:  # pas de feuille pour les bulletins sans équipe
                 continue
             equipes.setdefault(groupes.get(ligne[3].code, ligne[3].code), []).append(ligne)
         if requete.feuilles_equipe_mode == "AUCUNE":
@@ -277,7 +277,7 @@ def _largeur_texte(valeur: object, format_nombre: str) -> float:
         valeur = f"{valeur:,.0f}"
     elif isinstance(valeur, float):
         valeur = f"{valeur:g}"
-    # Calibri 11 : majuscule ≈ 1,1 chiffre, minuscule ≈ 0,9, espace ≈ 0,5 (approximation des métriques de POI)
+    # Calibri 11 : majuscule ≈ 1,1 chiffre, minuscule ≈ 0,9, espace ≈ 0,5 (approximation des métriques de la police)
     return sum(
         1.1 if caractere.isupper() else 0.5 if caractere == " " else 0.9 if caractere.isalpha() else 1.0
         for caractere in str(valeur or "")
@@ -285,7 +285,7 @@ def _largeur_texte(valeur: object, format_nombre: str) -> float:
 
 
 def _ajuster_largeurs(feuille: Worksheet) -> None:
-    """`autoSizeColumn` de POI ignore les cellules fusionnées ; la feuille ajoute 3 caractères (minimum 3000/256)."""
+    """L'ajustement automatique de colonne ignore les cellules fusionnées ; on ajoute 3 caractères (min. 3000/256)."""
     fusionnees = {cellule for plage in feuille.merged_cells.ranges for cellule in plage.cells}
     for index in range(1, 14):
         longueur = max(

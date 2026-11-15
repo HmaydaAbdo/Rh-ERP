@@ -19,6 +19,5 @@ d'un processus ou d'une règle métier met à jour la page correspondante dans l
 | [Exploitation](./exploitation) | Déploiement, configuration, sauvegarde |
 | [IA](./ia) | Assistant, MCP, RAG, agents |
 | [Frontend](./frontend) | Interface, composants partagés, vues par périmètre |
-| [Migration](./migration) | Suivi de la migration vers FastAPI |
 | [Règles transverses](./regles-transverses.md) | Décisions de fonctionnement valables pour tout le produit |
 | [Glossaire](./glossaire.md) | Termes métier et techniques |

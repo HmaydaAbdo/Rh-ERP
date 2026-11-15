@@ -1,4 +1,4 @@
-"""Erreurs du domaine parametre : statuts et messages identiques à `ParametreExceptionHandler` de Spring."""
+"""Erreurs du domaine parametre : statuts HTTP et messages français."""
 
 from http import HTTPStatus
 

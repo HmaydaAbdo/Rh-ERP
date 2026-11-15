@@ -31,16 +31,16 @@ src/staport/
 
 ## Correspondance des couches
 
-| Couche Java (avant) | Python (après) | Règle |
+| Couche | Fichier | Règle |
 | --- | --- | --- |
-| Entity | `models.py` (SQLAlchemy, `Mapped`/`mapped_column`) | Persistance uniquement, jamais exposée par l'API, aucune logique métier |
+| Entité | `models.py` (SQLAlchemy, `Mapped`/`mapped_column`) | Persistance uniquement, jamais exposée par l'API, aucune logique métier |
 | Repository | `repository.py` | Pas de logique métier ; requêtes `select()` explicites ; jamais appelé hors de son domaine |
 | Service | `service.py` + `api.py` | Toute la logique métier ; `api.py` est la façade publique |
-| Controller | `router.py` | Routes fines : valider via Pydantic, déléguer au service, jamais de repository |
-| DTO (records) | modèles Pydantic `BaseModel` | Entrée et sortie séparées ; contraintes déclarées dans le modèle |
-| Mapper (MapStruct) | fonctions de conversion explicites ou `model_validate(..., from_attributes=True)` | Conversion uniquement |
-| Specification | `criteria.py` : un objet de critères et une fonction qui renvoie les conditions `where` | Toute liste filtrable passe par là |
-| `@RestControllerAdvice` | gestionnaires d'exceptions enregistrés sur l'application | Voir ci-dessous |
+| Routeur | `router.py` | Routes fines : valider via Pydantic, déléguer au service, jamais de repository |
+| DTO | modèles Pydantic `BaseModel` | Entrée et sortie séparées ; contraintes déclarées dans le modèle |
+| Mapper | fonctions de conversion explicites ou `model_validate(..., from_attributes=True)` | Conversion uniquement |
+| Critères | `criteria.py` : un objet de critères et une fonction qui renvoie les conditions `where` | Toute liste filtrable passe par là |
+| Gestionnaires d'erreurs | gestionnaires d'exceptions enregistrés sur l'application | Voir ci-dessous |
 | Injection par constructeur | `Depends()` avec `Annotated` ; dépendances explicites en paramètres | Pas d'état global ni de singleton caché |
 
 ### Pydantic et ORM
@@ -60,8 +60,7 @@ par domaine, appelé depuis `main.py`), chacun limité aux classes d'exception d
 * Une hiérarchie d'erreurs métier par domaine, héritant d'une base commune de `platform` ; un gestionnaire par classe de base de domaine.
 * Le gestionnaire générique (`Exception`) ne traite que l'imprévu ; une erreur attendue sans gestionnaire spécifique retomberait
   silencieusement sur la réponse générique : chaque nouvelle exception transverse est testée (refus d'accès, conflit de version, validation).
-* `RequestValidationError` et `HTTPException` ont des gestionnaires par défaut ; on les remplace pour garder le **format d'erreur actuel de
-  Spring** (ADR 0016, § 6), jamais pour exposer le détail interne.
+* `RequestValidationError` et `HTTPException` ont des gestionnaires par défaut ; on les remplace pour garder le **format d'erreur unique** de l'API, jamais pour exposer le détail interne.
 
 ## `async def` ou `def`
 
@@ -91,8 +90,7 @@ Les migrations ne s'exécutent jamais dans le `lifespan` (voir [persistance](./p
 ## Encapsulation des domaines
 
 * Un `repository.py` appartient à son domaine ; aucun autre domaine ne l'importe.
-* Un domaine n'appelle un autre que par `api.py` (la façade). Cette règle est **vérifiée par import-linter** (contrats de type `layers` et d'interdiction
-  d'import), exécuté en CI à la place d'ArchUnit.
+* Un domaine n'appelle un autre que par `api.py` (la façade). Cette règle est **vérifiée par un test statique des imports** (`api/tests/test_architecture.py`), exécuté en CI.
 * Pour référencer l'entité d'un autre domaine : valider l'existence par la façade du domaine propriétaire, puis ne conserver que l'identifiant ou une
   référence résolue localement ; jamais de relation ORM entre deux domaines.
 * Suppression et états du cycle de vie : règle inchangée (invariants métier d'abord, backend fait autorité, frontend reflète l'état).
@@ -101,5 +99,5 @@ Les migrations ne s'exécutent jamais dans le `lifespan` (voir [persistance](./p
 
 DRY, SOLID, ACID, KISS, YAGNI, échec rapide, idempotence, source unique de vérité et « zéro code mort » (suppression immédiate du code inutilisé, ticket Jira
 si impossible) s'appliquent sans changement. Les patrons de conception ne s'introduisent que sur besoin réel ; en Python, une fonction ou un `Protocol` suffit
-souvent là où Java exigeait une interface et une usine : la stratégie, le registre de handlers, l'observateur d'événements, l'adaptateur et la fabrique
+souvent là où une interface et une usine seraient excessives : la stratégie, le registre de handlers, l'observateur d'événements, l'adaptateur et la fabrique
 gardent leurs règles d'usage (voir [design-patterns](../index.md)), exprimées avec des fonctions, des `Protocol` et des dictionnaires de handlers.

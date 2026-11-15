@@ -1,4 +1,4 @@
-"""Création de l'application FastAPI unique (ADR 0016 § 1).
+"""Création de l'application FastAPI unique.
 
 `creer_app()` sans argument monte le transverse seul (gestionnaires d'erreurs, identifiant de requête) : c'est la base
 des tests de `common`. Avec une configuration, elle monte aussi les domaines migrés (auth) et leur cycle de vie.
@@ -61,7 +61,7 @@ TAILLE_MAX_TELEVERSEMENT = 20 * 1024 * 1024
 async def _amorcer_admin(
     contexte: ContexteAuth, configuration_: Configuration, fabrique: async_sessionmaker[AsyncSession]
 ) -> None:
-    """Crée le compte SYSTEM_ADMIN initial s'il n'existe aucun administrateur (équivalent d'`AdminBootstrapRunner`)."""
+    """Crée le compte SYSTEM_ADMIN initial s'il n'existe aucun administrateur."""
     async with fabrique() as session:
         if await contexte.utilisateurs.admin_existe(session):
             return
@@ -177,7 +177,7 @@ def creer_app(
 
         @app.middleware("http")
         async def _limiter_televersement(requete: Request, suite: Callable[[Request], Awaitable[Response]]) -> Response:
-            """`spring.servlet.multipart.max-request-size: 20MB` : Spring coupe la connexion, l'API répond 413."""
+            """Téléversement limité à 20 Mo : l'API répond 413."""
             taille = requete.headers.get("content-length", "")
             multipart = requete.headers.get("content-type", "").startswith("multipart/form-data")
             if multipart and taille.isdigit() and int(taille) > TAILLE_MAX_TELEVERSEMENT:
@@ -193,7 +193,7 @@ def creer_app(
         async def _refuser_origine_inconnue(
             requete: Request, suite: Callable[[Request], Awaitable[Response]]
         ) -> Response:
-            """Comme `DefaultCorsProcessor` de Spring : origine inconnue (hors même origine) = 403."""
+            """Origine inconnue (hors même origine) = 403."""
             origine = requete.headers.get("origin")
             if origine is not None and origine not in origines and origine != str(requete.base_url).rstrip("/"):
                 return Response("Invalid CORS request", status_code=403, headers=EN_TETES_SECURITE)

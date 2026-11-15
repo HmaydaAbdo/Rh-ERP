@@ -24,7 +24,7 @@ fonction/chantier/équipe sont dupliqués »). L'historique d'un employé existe
    chantier; l'équipe est facultative. Un employé `INACTIF` n'a ni chantier ni équipe courants. Salaire et type restent
    nullables lorsqu'aucune paie ne les a renseignés.
 2. **L'historique est calculé à partir des bulletins**, jamais recopié dans une seconde table : une copie finirait par
-   diverger. Les modifications faites à l'écran restent tracées par l'audit (Envers).
+   diverger. Les modifications faites à l'écran restent tracées par l'audit.
 3. **Les départs sont la seule donnée nouvelle** : table `employe_sortie` (employé, mois, motif « STC » ou saisi), un
    départ par mois au plus. Elle garde chaque départ, même quand l'employé revient puis repart.
 4. **Le statut suit la paie** : ACTIF si l'employé est payé au dernier mois importé sans STC ; INACTIF sinon (STC, ou absent
@@ -35,7 +35,7 @@ fonction/chantier/équipe sont dupliqués »). L'historique d'un employé existe
    import, même d'un fichier déjà importé, et empêchait de choisir le mois. Le mois est libre ; le mois en cours ou à
    venir et un fichier déjà importé sous un autre mois demandent une confirmation explicite.)*
 6. **Le salaire et son type sont des données de paie** : sans `PAIE_READ`, l'API ne les renvoie pas, ignore ceux qu'on
-   saisit, et ne trie pas par salaire. Le masquage est fait au contrôleur, pour que les autres domaines lisent le vrai
+   saisit, et ne trie pas par salaire. Le masquage est fait à la route, pour que les autres domaines lisent le vrai
    salaire par `IEmployeeService`.
 7. **Une seule source pour les indicateurs Équipe** : les Cartes et l'Analytique Équipe calculent leurs effectifs depuis
    les bulletins du dernier mois enregistré. Les effectifs courants des fiches Employé ne sont pas mélangés à ces mesures.

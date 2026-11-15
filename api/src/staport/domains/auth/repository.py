@@ -25,7 +25,7 @@ _CHARGEMENT_UTILISATEUR = (
 
 
 def _normalise(colonne: QueryableAttribute[str], valeur: str) -> ColumnElement[bool]:
-    """`upper(trim(colonne)) = upper(trim(valeur))`, comme les requêtes JPQL de Spring (index V27)."""
+    """`upper(trim(colonne)) = upper(trim(valeur))` (index V27)."""
     return func.upper(func.trim(colonne)) == valeur.strip().upper()
 
 

@@ -6,7 +6,7 @@ from .periode import afficher_periode
 
 
 class PaieIntrouvable(ErreurMetier):
-    """Bulletin absent (HTTP 404, comme `PaieNotFoundException`)."""
+    """Bulletin absent (HTTP 404)."""
 
     statut = HTTPStatus.NOT_FOUND
 
@@ -15,7 +15,7 @@ class PaieIntrouvable(ErreurMetier):
 
 
 class PaieDejaExistante(ErreurMetier):
-    """Doublon employé/mois (HTTP 409, comme `PaieAlreadyExistsException`) ; le mois s'affiche AAAA-MM."""
+    """Doublon employé/mois (HTTP 409) ; le mois s'affiche AAAA-MM."""
 
     statut = HTTPStatus.CONFLICT
 
@@ -61,15 +61,15 @@ class PaieGroupeRestaurationConflit(ErreurMetier):
 
 
 class ReferenceInvalide(ErreurMetier):
-    """Employé, fonction, chantier ou équipe inexistant (HTTP 400, comme `InvalidReferenceException`)."""
+    """Employé, fonction, chantier ou équipe inexistant (HTTP 400)."""
 
 
 class ErreurImportPaie(ErreurMetier):
-    """Import de paie refusé (HTTP 400, comme `PaieImportException`)."""
+    """Import de paie refusé (HTTP 400)."""
 
 
 class PeriodeInvalide(ErreurMetier):
-    """Mois absent ou invalide (HTTP 400, comme `InvalidPeriodeException`)."""
+    """Mois absent ou invalide (HTTP 400)."""
 
 
 class AucunePaiePeriode(ErreurMetier):
@@ -80,7 +80,7 @@ class AucunePaiePeriode(ErreurMetier):
 
 
 class PaieLiee(ErreurMetier):
-    """Bulletin encore référencé par des heures supplémentaires (HTTP 409, comme `PaieLieeException`)."""
+    """Bulletin encore référencé par des heures supplémentaires (HTTP 409)."""
 
     statut = HTTPStatus.CONFLICT
 

@@ -18,7 +18,7 @@ class EmployeeDejaExistant(ErreurMetier):
 
 
 class ReferenceInvalide(ErreurMetier):
-    """Fonction, chantier ou équipe inexistant (HTTP 400, comme `InvalidReferenceException`)."""
+    """Fonction, chantier ou équipe inexistant (HTTP 400)."""
 
     statut = HTTPStatus.BAD_REQUEST
 
@@ -37,4 +37,4 @@ class EmployeeUtilise(ErreurMetier):
 
 
 class ErreurImportEmployee(ErreurMetier):
-    """Fichier illisible, vide ou au mauvais format (HTTP 400, comme `EmployeeImportException`)."""
+    """Fichier illisible, vide ou au mauvais format (HTTP 400)."""

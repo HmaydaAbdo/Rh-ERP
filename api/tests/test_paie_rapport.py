@@ -124,7 +124,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "Répartition" not in page_seule
     assert "SORTANTS" in html_equipe
     assert '<div class="label">Montant mois precedent</div><div class="valeur montant"></div>' in html_equipe
-    # La liste des employés rejoint la page de répartition par fonction quand elle y tient, comme Spring.
+    # La liste des employés rejoint la page de répartition par fonction quand elle y tient.
     assert "Page 6 / 6" in html_equipe
     chantier_materiel = SimpleNamespace(id=1, code="C168", nom="Chantier C168")
     lignes_materiel = [
@@ -163,7 +163,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert "I — CHANTIER : Chantier A (CH01)" in html_filtre
     assert "Page 1 / 4" in html_filtre and "Page 4 / 4" in html_filtre
 
-    # Le contrat Spring découpe les critères longs avant de générer les pages physiques.
+    # Le rapport découpe les critères longs avant de générer les pages physiques.
     rapport = cast(Any, report)
     original_filtres = rapport._filtres_actifs
 
@@ -190,7 +190,7 @@ def test_gabarit_pdf_et_regroupement_des_equipes() -> None:
     assert html_nombreux.count("<thead><tr>") == 3
 
 
-def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport_spring() -> None:
+def test_format_des_nombres_du_tableau_pdf_correspond_au_rapport() -> None:
     rapport = cast(Any, report)
     assert rapport._montant(Decimal("1234567.80")) == "1\u00a0234\u00a0568"
     assert rapport._montant(None) == "-"

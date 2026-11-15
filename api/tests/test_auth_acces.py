@@ -1,8 +1,6 @@
-"""Parité du domaine auth avec Spring (KAN-213) : chaîne de sécurité JWT, permissions par route, jeton agent, clés.
+"""Domaine auth (KAN-213) : chaîne de sécurité JWT, permissions par route, jeton agent, clés.
 
-Reprend `JwtSecurityChainTest`, `EndpointSecurityTest`, `SecurityConfigCorsTest`, `AgentSigningKeysTest`,
-`PolitiqueMotDePasseTest` et `EffectivePermissionResolverTest`, ainsi que la partie émission du jeton agent de
-`McpSecuriteIntegrationTest` (le serveur MCP lui-même relève de KAN-216).
+Couvre aussi l'émission du jeton agent (le serveur MCP lui-même relève de KAN-216).
 """
 
 # Le client de test de Starlette n'expose pas de types complets : cette règle n'est levée que pour ce fichier.
@@ -235,7 +233,7 @@ def test_le_rafraichissement_par_cookie_refuse_une_origine_non_autorisee_ou_abse
     sans_origine = plateforme.client.post("/auth/refresh")
     mauvaise = plateforme.client.post("/auth/refresh", headers={"Origin": "http://evil.example"})
     assert sans_origine.status_code == 401 and sans_origine.content == b""
-    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # `DefaultCorsProcessor` de Spring
+    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # refus CORS
 
 
 def test_le_rafraichissement_accepte_une_origine_autorisee_jusqu_a_la_resolution_du_controleur(

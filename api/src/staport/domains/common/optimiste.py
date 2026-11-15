@@ -1,4 +1,4 @@
-"""Verrouillage optimiste applicatif (parité avec `VersionOptimiste` de Spring) : 409 si la version lue a changé."""
+"""Verrouillage optimiste applicatif : 409 si la version lue a changé."""
 
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm.attributes import flag_modified
@@ -14,7 +14,7 @@ def verifier_version(version_attendue: int | None, version_courante: int | None)
 def incrementer_version(entite: object) -> None:
     """Force l'incrément de version quand seule une collection (liaison N-N) change.
 
-    Hibernate incrémente la version d'une entité propriétaire quand sa collection change ; SQLAlchemy ne le fait pas :
+    SQLAlchemy n'incrémente pas la version d'une entité propriétaire quand sa collection change :
     sans cet appel, deux administrateurs modifiant les seules permissions d'un rôle ne se verraient pas en conflit.
     L'UPDATE est provoqué en marquant une colonne ordinaire comme modifiée (la colonne de version ne peut pas l'être).
     """

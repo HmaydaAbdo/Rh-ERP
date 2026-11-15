@@ -1,6 +1,6 @@
 """Preuve T4 (site/docs/ia) : le client MCP Python officiel appelle la vraie route /mcp avec un jeton agent.
 
-Lancé par `McpClientPythonIntegrationTest` (application complète, base de test) avec MCP_STAPORT_URL,
+Lancé par `api/tests/test_mcp_clients_externes.py` (application complète, base de test) avec MCP_STAPORT_URL,
 MCP_STAPORT_JETON et MCP_STAPORT_UTILISATEUR ; ignoré sinon. Seul un serveur loopback est admis.
 """
 

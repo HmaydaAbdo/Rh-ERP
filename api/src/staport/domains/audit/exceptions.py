@@ -1,4 +1,4 @@
-"""Erreurs du domaine audit : mêmes statuts et messages que `AuditExceptionHandler` de Spring."""
+"""Erreurs du domaine audit : statuts HTTP et messages français."""
 
 from http import HTTPStatus
 

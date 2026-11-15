@@ -4,7 +4,7 @@
 //
 // Sécurité par les crochets officiels du runtime (`onBeforeHandler`, autorisation par route) : sans CopilotKit
 // Intelligence, le runner en mémoire garde les fils de tous les utilisateurs et ses routes `/threads` les rendraient à
-// quiconque. Chaque requête est donc authentifiée auprès de Spring (`/auth/me`, droit IA_UTILISER), seules les routes de
+// quiconque. Chaque requête est donc authentifiée auprès de l'API (`/auth/me`, droit IA_UTILISER), seules les routes de
 // l'assistant sont servies, et un fil n'est lu ou prolongé que par son propriétaire (identifiant `u<id>-…`).
 import { HttpAgent } from '@ag-ui/client';
 import { EventType } from '@ag-ui/core';
@@ -38,7 +38,7 @@ const masquerSkills = (input, next) =>
 
 const runtime = new CopilotRuntime({
   // Un agent par requête (fabrique officielle) : il porte le jeton de l'utilisateur jusqu'au service IA, qui le fait
-  // valider par Spring.
+  // valider par l'API.
   agents: ({ request }) => ({
     default: new HttpAgent({
       url: urlAgent,
@@ -77,7 +77,7 @@ const ecouteur = createCopilotNodeListener({
   }
 });
 
-/** L'identifiant de l'utilisateur, tel que Spring le lit dans son jeton ; 401 ou 403 sinon, sans détail. */
+/** L'identifiant de l'utilisateur, tel que l'API le lit dans son jeton ; 401 ou 403 sinon, sans détail. */
 async function authentifier(request) {
   const autorisation = request.headers.get('authorization') ?? '';
   if (!autorisation.startsWith('Bearer ')) {

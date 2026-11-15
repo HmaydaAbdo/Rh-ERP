@@ -15,7 +15,7 @@ Principes inchangés : 12-factor, configuration par l'environnement, échec rapi
   **Aucun secret n'a de valeur par défaut** : une valeur manquante empêche le démarrage.
 * `extra="forbid"` : une variable inconnue du préfixe est une erreur, pas un silence (évite les fautes de frappe qui laissent un réglage de sécurité à sa valeur par défaut).
 * Validation à la construction (bornes, URL, durées) ; la configuration est construite **une fois** et injectée par une dépendance, pas lue à la volée dans le code métier.
-* Les profils Spring disparaissent : un environnement = un jeu de variables. Le comportement ne change pas selon un nom de profil caché dans le code.
+* Pas de profil : un environnement = un jeu de variables. Le comportement ne change pas selon un nom de profil caché dans le code.
 
 ## Tests
 
@@ -24,5 +24,5 @@ Un test vérifie que le démarrage échoue si un secret requis manque.
 
 ## Variables existantes
 
-Les noms de variables d'environnement actuels (`.env.example`) sont conservés tant que possible pour que le déploiement ne change pas ; tout renommage est listé dans
-[règles supprimées ou changées](./regles-changees.md) et dans `docs/deployment.md`.
+Les noms de variables d'environnement sont ceux de `.env.example` ; tout renommage est consigné dans le
+[guide de déploiement](../../exploitation/deploiement.md).

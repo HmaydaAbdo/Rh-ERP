@@ -1,6 +1,6 @@
-"""Base Alembic équivalente à Flyway V1-V44 sur un vrai PostgreSQL (KAN-212, ADR 0016 § 3).
+"""Base Alembic équivalente à l'historique Flyway V1-V44 sur un vrai PostgreSQL (KAN-212).
 
-Même image que les tests Java (`PostgresPartage`). Sans Docker, les tests sont ignorés avec la cause.
+Même image PostgreSQL que les autres tests (`conftest.py`). Sans Docker, les tests sont ignorés avec la cause.
 """
 
 from collections.abc import Callable

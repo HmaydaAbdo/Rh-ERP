@@ -1,4 +1,4 @@
-"""Configuration : mêmes variables que Spring, démarrage refusé si l'une manque, secrets jamais affichés (KAN-212)."""
+"""Configuration : démarrage refusé si l'une manque, secrets jamais affichés (KAN-212)."""
 
 import pytest
 from pydantic import ValidationError
@@ -39,7 +39,7 @@ def _poser(monkeypatch: pytest.MonkeyPatch, **retirer: str) -> None:
             monkeypatch.setenv(nom, valeur)
 
 
-def test_les_variables_de_spring_suffisent(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_les_variables_obligatoires_suffisent(monkeypatch: pytest.MonkeyPatch) -> None:
     _poser(monkeypatch)
     c = Configuration()  # pyright: ignore[reportCallIssue]
     assert c.db_port == 5432 and c.cookie_secure is False and c.smtp_auth is False

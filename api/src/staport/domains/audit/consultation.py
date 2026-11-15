@@ -1,4 +1,4 @@
-"""Lecture du journal et de l'historique (parité avec `AuditJournalService` et `EnversDiffService`).
+"""Lecture du journal et de l'historique.
 
 Les différences avant / après sont calculées à la demande à partir des instantanés `*_aud` : jamais stockées. Ajout :
 valeurs après ; modification : comparaison avec la version précédente ; suppression : valeurs avant (le contenu de la
@@ -55,7 +55,7 @@ COLONNES_TRIABLES = {
 }
 
 LIBELLES = ("nom", "nom_prenom", "libelle", "designation", "intitule", "reference", "numero", "code", "username")
-"""Colonnes qui donnent le libellé d'une cible, dans l'ordre de `AuditLabelResolver`."""
+"""Colonnes qui donnent le libellé d'une cible, dans un ordre fixe."""
 
 _journal = cast(Any, EntreeJournal.__table__)
 _revision = cast(Any, RevisionAudit.__table__)
@@ -133,7 +133,7 @@ async def lire(session: AsyncSession, identifiant: int) -> EntreeJournalReponse:
 async def instantanes_suppression(
     session: AsyncSession, identifiant: int, action: str, entite: str
 ) -> list[dict[str, Any]]:
-    """Instantanés `*_aud` des éléments supprimés par l'entrée `identifiant` (parité `instantanesPaiePourRestauration`).
+    """Instantanés `*_aud` des éléments supprimés par l'entrée `identifiant`.
 
     L'entrée doit être une suppression réussie de l'action et de l'entité attendues, avec une révision, et la révision
     doit contenir exactement le nombre d'instantanés consigné : sinon la restauration serait partielle.
@@ -190,7 +190,7 @@ async def details(session: AsyncSession, identifiant: int, pagination: Paginatio
             select(audit_revision_entite.c.entite).where(audit_revision_entite.c.revision_id.in_(revisions)).distinct()
         )
     ).scalars()
-    entites = sorted((e for e in (registre.par_nom_hibernate(n) for n in noms) if e is not None), key=lambda e: e.nom)
+    entites = sorted((e for e in (registre.par_nom_stocke(n) for n in noms) if e is not None), key=lambda e: e.nom)
     total = 0
     a_ignorer, restant = pagination.decalage, pagination.taille
     contenu: list[Changement] = []
@@ -336,7 +336,7 @@ async def _champs(
             await session.execute(
                 select(liaison.c.revtype, liaison.c[collection.colonne_element]).where(
                     # Les liens modifiés dans une révision où l'entité elle-même n'a pas de version (un droit ajouté
-                    # par migration) sont rattachés à la version suivante, comme Spring.
+                    # par migration) sont rattachés à la version suivante.
                     liaison.c.rev > (avant["rev"] if avant is not None else 0),
                     liaison.c.rev <= apres["rev"],
                     liaison.c[collection.colonne_proprietaire] == apres["id"],

@@ -1,4 +1,4 @@
-"""Modèles de persistance du domaine auth (KAN-213, ADR 0016 § 2).
+"""Modèles de persistance du domaine auth (KAN-213).
 
 Reflètent exactement le schéma Flyway V3 + V10/V13/V18/V21/V27. Les tables d'historique (`*_aud`) et les index
 d'unicité sur expression (V27) ne sont pas modélisés : l'historique est écrit par l'écouteur d'audit (KAN-214) et les

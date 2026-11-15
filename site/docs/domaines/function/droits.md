@@ -8,7 +8,7 @@ sidebar_position: 3
 
 ## Endpoints backend
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /functions` | `FUNCTION_WRITE` |
 | `PUT /functions/{id}` | `FUNCTION_WRITE` |
@@ -33,7 +33,7 @@ sidebar_position: 3
 
 ## Note — import automatique de fonctions depuis Paie
 
-`PaieImportService` crée automatiquement des fonctions manquantes lors d'un import Paie (voir
+L'import de paie crée automatiquement des fonctions manquantes lors d'un import Paie (voir
 `docs/paie/README.md`). Cette création interne n'est pas soumise à `FUNCTION_WRITE` (appel
 service-à-service, pas un endpoint HTTP) — seul l'utilisateur qui déclenche l'import Paie a besoin
 de `PAIE_IMPORT`.

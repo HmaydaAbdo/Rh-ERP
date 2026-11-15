@@ -126,7 +126,7 @@ def _cible(
     chantier_url: Annotated[int | None, Query(alias="chantierId")] = None,
     chantier_formulaire: Annotated[int | None, Form(alias="chantierId")] = None,
 ) -> _Cible:
-    """Mois et chantier d'un import, lus dans l'URL ou dans le formulaire comme `@RequestParam` de Spring."""
+    """Mois et chantier d'un import, lus dans l'URL ou dans le formulaire indifféremment."""
     periode = periode_url if periode_url is not None else periode_formulaire
     chantier = chantier_url if chantier_url is not None else chantier_formulaire
     if periode is None:

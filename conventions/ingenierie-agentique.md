@@ -14,7 +14,7 @@ ou une variation réelle ; sinon elle ajoute une couche à lire sans rien retire
 Règles :
 
 * **Le framework est la première abstraction.** Avant d'en écrire une, chercher celle que le framework retenu fournit
-  (Spring Data, Angular, Deep Agents, LangGraph, CopilotKit, `openevals`…). L'abstraction maison n'existe que pour le
+  (SQLAlchemy, Angular, Deep Agents, LangGraph, CopilotKit, `openevals`…). L'abstraction maison n'existe que pour le
   métier de Staport Intelligence ou pour le raccordement de deux briques, branchée sur un point d'extension officiel.
 * **Une abstraction maison se justifie par deux usages réels au moins, ou par une frontière** (réseau, base de données,
   identité, modèle). Un seul usage reste concret (YAGNI, [`design-patterns.md`](design-patterns.md)).
@@ -56,12 +56,12 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 | Conversations durables | `AsyncPostgresSaver` (LangGraph) | raccordement dans `memoire.py` |
 | Protocole agent ↔ interface | AG-UI via `LangGraphAGUIAgent` | filtres de sortie de `agui.py` (événements RAW, erreur générique) |
 | Passerelle de modèles | LiteLLM | configuration |
-| Outils métier exposés à l'agent | serveur MCP Spring AI (backend), client MCP LangChain | définitions d'outils (métier) |
+| Outils métier exposés à l'agent | serveur FastMCP (API), client MCP LangChain | définitions d'outils (métier) |
 | Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | rejoueur et critères déterministes de `evaluation.py` (dette déclarée, KAN-208 puis E10) |
 | Traces et métriques | OpenTelemetry, Phoenix | configuration |
-| Droits, périmètre, audit | Spring Security, `@PreAuthorize`, `@AuditableAction` | règles métier (permanentes) |
+| Droits, périmètre, audit | dépendances d'authentification FastAPI, décorateur d'action auditée | règles métier (permanentes) |
 | Schéma de base de données | Alembic | aucune |
-| Mapping objet ↔ DTO | MapStruct | aucune |
+| Mapping objet ↔ schéma | modèles Pydantic (`from_attributes`) | aucune |
 | Tableaux de données (frontend) | AG Grid | coque partagée (configuration par domaine) |
 | Interface agentique (frontend) | CopilotKit + AG-UI ; Next.js (React) à l'épopée E3 | un seul outil côté navigateur à ce jour (KAN-210) |
 
@@ -112,7 +112,7 @@ Le transfert suit quatre étapes écrites dans la description de la tâche ou l'
 
 1. **Source** : la pratique, son domaine d'origine, la preuve qu'elle y fonctionne.
 2. **Ce qui se transfère** : le principe, pas la syntaxe. Exemples déjà en place : le RBAC, le périmètre et l'audit de
-   Spring deviennent les garde-fous de chaque outil MCP ; la mesure `pass^k` de l'évaluation des modèles devient la
+   l'API deviennent les garde-fous de chaque outil MCP ; la mesure `pass^k` de l'évaluation des modèles devient la
    mesure de stabilité de l'agent ; la tolérance aux pannes des services (reprise, délai maximal) devient les
    middlewares de l'agent.
 3. **Ce qui ne se transfère pas** : ce qui dépend du contexte d'origine (un typage statique, un cycle de vie de

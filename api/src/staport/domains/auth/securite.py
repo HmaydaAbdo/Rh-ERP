@@ -1,6 +1,6 @@
-"""Mécanismes de sécurité du domaine auth : mots de passe, jetons opaques, clés et jetons JWT RS256 (ADR 0016 § 4).
+"""Mécanismes de sécurité du domaine auth : mots de passe, jetons opaques, clés et jetons JWT RS256.
 
-- Mots de passe : `pwdlib`, Argon2 pour tout nouveau hachage ; les empreintes BCrypt de Spring sont vérifiées puis
+- Mots de passe : `pwdlib`, Argon2 pour tout nouveau hachage ; les empreintes BCrypt existantes sont vérifiées puis
   remplacées à la première connexion réussie (`verifier_et_mettre_a_jour`). Le hachage, coûteux par conception, tourne
   hors de la boucle d'événements.
 - Jetons opaques (rafraîchissement, réinitialisation) : 256 bits aléatoires, seule leur empreinte SHA-256 est stockée.
@@ -33,7 +33,7 @@ PERMISSION_IA = "IA_UTILISER"
 DUREE_JETON_AGENT = timedelta(minutes=5)
 DUREE_REFERENCE_EXPORT = timedelta(minutes=5)
 TAILLE_CLE_MINIMALE = 3072
-TOLERANCE_HORLOGE = 60  # secondes, comme le décodeur JWT de Spring Security
+TOLERANCE_HORLOGE = 60  # secondes d'écart d'horloge admis sur l'échéance d'un jeton
 
 
 class ConfigurationCles(ValueError):
@@ -44,7 +44,7 @@ class ConfigurationCles(ValueError):
 
 
 class Hacheur:
-    """Hachage des mots de passe (Argon2 courant, BCrypt de Spring accepté en lecture)."""
+    """Hachage des mots de passe (Argon2 courant, BCrypt existant accepté en lecture)."""
 
     def __init__(self) -> None:
         self._hash = PasswordHash((Argon2Hasher(), BcryptHasher()))
@@ -77,7 +77,7 @@ def generer_jeton_brut() -> str:
 
 
 def hasher_jeton(jeton_brut: str) -> str:
-    """SHA-256 puis Base64 standard : même empreinte que `TokenHasher` de Spring (jetons existants valides)."""
+    """SHA-256 puis Base64 standard : empreinte stable (les jetons existants restent valides)."""
     return base64.b64encode(hashlib.sha256(jeton_brut.encode("utf-8")).digest()).decode("ascii")
 
 

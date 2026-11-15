@@ -28,7 +28,7 @@ registre.enregistrer(
     EntiteAuditee(
         classe=Chantier,
         nom="Chantier",
-        nom_hibernate="staport.rh.chantier.entities.Chantier",
+        nom_stocke="staport.rh.chantier.entities.Chantier",
         table_aud=chantier_aud,
         champs=tuple(
             ChampAudite(c, c, c)

@@ -1,4 +1,4 @@
-"""DTO du domaine auth : mêmes champs, contraintes et noms JSON que les `record` Java (contrat du frontend)."""
+"""DTO du domaine auth : champs, contraintes et noms JSON du contrat du frontend."""
 
 from typing import Annotated, Any
 
@@ -12,7 +12,7 @@ def _strip(valeur: Any) -> Any:
 
 
 Rogne = Annotated[str, BeforeValidator(_strip)]
-"""Les constructeurs compacts Java retirent les espaces extérieurs avant la validation."""
+"""Les espaces extérieurs sont retirés avant la validation."""
 
 Identifiants = set[PositiveInt]
 

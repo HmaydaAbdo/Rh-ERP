@@ -22,18 +22,17 @@ reste une action du domaine Paie avec sa propre permission.
 
 | Couche | Contenu | Alimentée par |
 |---|---|---|
-| **Instantanés** (Hibernate Envers) | Chaque version de chaque ligne des entités métier et de sécurité : tables `<table>_aud`, révisions `audit_revision` | Automatiquement, à chaque écriture JPA |
-| **Journal** (`audit_journal`) | Une entrée par opération (`OPERATION`), événement de sécurité (`SECURITE`) ou accès (`ACCES`) : action, auteur, origine, périmètre, résultat | `@AuditableAction` (aspect `GenericAuditAspect`), événements de sécurité et `AuditLectureResponseAdvice` pour les lectures et écritures HTTP |
+| **Instantanés** (écouteurs de session SQLAlchemy) | Chaque version de chaque ligne des entités métier et de sécurité : tables `<table>_aud`, révisions `audit_revision` | Automatiquement, à chaque écriture de la session |
+| **Journal** (`audit_journal`) | Une entrée par opération (`OPERATION`), événement de sécurité (`SECURITE`) ou accès (`ACCES`) : action, auteur, origine, périmètre, résultat | Décorateur d'action auditée et événements de sécurité |
 | **Garde-fous** | Tests d'architecture (CI), deux comptes PostgreSQL, vérification au démarrage | — |
 
 Les composants transverses, dont la sécurité, écrivent via la façade `IAuditJournalWriter`. Son implémentation
-`AuditJournalWriter` gère les écritures dans la transaction courante ou dans une transaction séparée ; les consommateurs
+`Audit` (`api/src/staport/domains/audit/service.py`) gère les écritures dans la transaction courante ou dans une transaction séparée ; les consommateurs
 hors du domaine audit dépendent de l'interface.
 
 > **Backend Python (FastAPI)** : sur décision du propriétaire (2026-11-03), l'audit ne trace que les opérations qui
 > changent l'état et les événements de sécurité. Les catégories `ACCES` et `LECTURE_METIER` (lectures, exports, appels MCP
-> de lecture) ne sont plus écrites ; l'historique déjà produit par Spring reste lisible. Voir
-> site de documentation, page Migration › Domaine audit (`site/docs/migration/audit.md`).
+> de lecture) ne sont plus écrites ; l'historique déjà produit reste lisible.
 
 ### Ce qui est audité
 
@@ -54,7 +53,7 @@ donc un « avant ».
 
 Chaque révision et chaque entrée portent : l'identifiant et le nom du compte **figés** (renommer ou désactiver un compte
 ne réécrit pas l'histoire), l'origine, l'identifiant de requête et l'adresse IP. Ordre de résolution
-(`ResolveurContexteAudit`) : contexte de traitement hors requête (`BatchAuditContext`) → utilisateur du JWT de la requête
+(`contexte_audit_courant`) : contexte de traitement hors requête (`contexte_batch`) → utilisateur du JWT de la requête
 → `Anonyme` (requête sans authentification : connexion, mot de passe oublié) → `Système` d'origine `INCONNUE`.
 
 | Origine | Quand |
@@ -65,14 +64,14 @@ ne réécrit pas l'histoire), l'origine, l'identifiant de requête et l'adresse 
 | `MIGRATION` | Migration de base de données qui écrit des données (état initial, gabarit) |
 | `INCONNUE` | Une écriture hors de tout contexte : **un oubli rendu visible**, jamais attribué à tort. Un test vérifie qu'aucun scénario couvert n'en produit |
 
-**Identifiant de requête** : `MdcRequestFilter` en génère un par requête (jamais repris du client), le pose dans les logs
-(`requestId` uniquement) et le renvoie dans l'en-tête de réponse **`X-Request-Id`**. Le `TaskDecorator` Spring propage ce
-contexte aux appels `@Async` sans transporter de donnée d'identité. Il relie une entrée du journal, ses
+**Identifiant de requête** : Le middleware de requête (`platform/requete.py`) en génère un par requête (jamais repris du client), le pose dans les logs
+(`requestId` uniquement) et le renvoie dans l'en-tête de réponse **`X-Request-Id`**. Le contexte est porté par une variable de
+contexte, sans donnée d'identité. Il relie une entrée du journal, ses
 révisions et les logs techniques ; un utilisateur peut le citer pour qu'on retrouve sa requête. Un traitement planifié
 reçoit son propre identifiant d'exécution.
 
-**Adresse IP** : `X-Forwarded-For` posé par nginx, honoré par Tomcat uniquement de proxys internes
-(`server.forward-headers-strategy: native`) ; le backend n'est joignable que par nginx (voir
+**Adresse IP** : `X-Forwarded-For` posé par nginx, honoré par uvicorn uniquement de proxys internes
+(`--forwarded-allow-ips`) ; le backend n'est joignable que par nginx (voir
 deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md))).
 
 ---
@@ -93,7 +92,7 @@ deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md))).
 échoue ; si un événement de sécurité ne peut pas s'écrire, la connexion continue, l'erreur est logguée et comptée
 (`rh.audit.ecriture.echec`).
 
-L'ordre des intercepteurs est explicite (`OrdreIntercepteurs`, `AuditConfig`) : la transaction enveloppe l'aspect. Le test
+L'écouteur de session SQLAlchemy écrit le journal dans la transaction de l'opération (`ecouteur.py`). Le test
 d'atomicité le prouve : une transaction annulée après une opération réussie ne laisse **ni entrée ni révision**.
 
 ---
@@ -109,9 +108,7 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | Paie | `PAIE_IMPORT_CORRECTION` | `OPERATION` | Corrections de l'assistant d'import : le fichier de référence (nom, taille, empreinte), le mois, le nombre de fiches alignées et d'employés créés ; chaque version de fiche (et fonction créée) est dans la révision de l'entrée |
 | Paie | `PAIE_EXPORT_EXCEL`, `PAIE_RAPPORT_PDF` | `ACCES` | Mois, format, chantiers / filtres demandés — aucun contenu |
 | Heures supplémentaires | `HEURES_SUP_EXPORT_PDF` | `ACCES` | Mois, format, filtres et tri demandés — aucun contenu |
-| API métier | `LECTURE_METIER` | `ACCES` | Chaque réponse HTTP métier réussie ou en erreur de lecture : modèle de route, méthode, statut HTTP, nombre d'éléments ; période valide si fournie en paramètre. Aucun corps, montant, filtre nominatif, identifiant d'URL ou paramètre libre n'est copié |
-| Assistant IA | `MCP_<OUTIL>` (backend Spring seulement) | `ACCES` | Chaque appel d'un outil MCP de lecture, par `@AuditableAction`, pour l'utilisateur pour qui l'agent agit. **Non repris par le serveur MCP Python** (décision du propriétaire, 2026-11-04) : le diagnostic des appels d'outils (outil, utilisateur, statut, nombre de résultats) est dans les traces Phoenix, conservées sans limite ; l'émission du jeton agent et les accès refusés restent des événements de sécurité |
-| API métier | `ECRITURE_HTTP_SANS_TRACE_METIER`, `TENTATIVE_ECRITURE_HTTP_REJETEE` | `OPERATION` | Garde-fou pour une écriture HTTP sans annotation métier ; méthode, route et statut, sans corps |
+| Assistant IA | `MCP_<OUTIL>` (historique existant seulement) | `ACCES` | Chaque appel d'un outil MCP de lecture, pour l'utilisateur pour qui l'agent agit. **Plus écrit par le serveur MCP** (décision du propriétaire, 2026-11-04) : le diagnostic des appels d'outils (outil, utilisateur, statut, nombre de résultats) est dans les traces Phoenix, conservées sans limite ; l'émission du jeton agent et les accès refusés restent des événements de sécurité |
 | API sécurité | `TENTATIVE_HTTP_REJETEE` | `SECURITE` | Écriture HTTP d’authentification rejetée ; méthode, route et statut, sans secret |
 | Employé | `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`, `EMPLOYE_IMPORT` ; `EMPLOYE_SORTIE` (départs enregistrés — première écriture : la reprise `V30`, origine `MIGRATION`, qui écrit aussi une `EMPLOYE_MODIFICATION` et une `EMPLOYE_SUPPRESSION` groupées) | `OPERATION` | Import : le fichier ; `V30` : la migration, le dernier mois de paie, le nombre de lignes |
 | Fonction | `FONCTION_CREATION`, `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`, `FONCTION_IMPORT` | `OPERATION` | Import : le fichier |
@@ -138,7 +135,7 @@ d'atomicité le prouve : une transaction annulée après une opération réussie
 | `MOT_DE_PASSE_OUBLIE` | À chaque demande : le compte seulement s'il existe, **jamais l'adresse saisie** ; IP (repère les rafales) |
 | `MOT_DE_PASSE_REINITIALISE` | Compte (par lien de courriel) |
 | `MOT_DE_PASSE_REINITIALISE_PAR_ADMIN` | L'administrateur (acteur), le compte visé et le nombre de sessions coupées (détail) |
-| `ACCES_REFUSE` | Compte, méthode et route refusées — **tous les `403`**, qu'ils viennent d'un `@PreAuthorize` ou de la chaîne de filtres (Spring Security publie un événement de refus unique, `EcouteurEvenementsSecurite`) |
+| `ACCES_REFUSE` | Compte, méthode et route refusées — **tous les `403`**, qu'ils viennent d'un contrôle de permission de route ou de la dépendance d'authentification (un événement de refus unique) |
 
 Jamais de mot de passe, de jeton ni de contenu de fichier. Les renouvellements de session réussis, les refus sur jeton
 inconnu ou expiré, les réutilisations d'un jeton révoqué, les révocations groupées, les déconnexions et les changements de
@@ -157,13 +154,13 @@ mot de passe sont tracés sans conserver les secrets. La réponse HTTP ne change
 
 Le journal reste non modifiable. La restauration d'un groupe n'altère pas l'entrée source : le bouton visible sur une suppression
 de groupe réussie appelle `POST /paie/restauration/{idEntreeAudit}` (`PAIE_RESTORE`). L'audit fournit à Paie les instantanés
-Envers ; Paie vérifie les références et les conflits employé × mois, puis recrée le groupe dans une transaction avec de nouveaux
+`*_aud` ; Paie vérifie les références et les conflits employé × mois, puis recrée le groupe dans une transaction avec de nouveaux
 identifiants. Un conflit rejette tout le groupe (`409`). L'opération `PAIE_RESTAURATION_GROUPE` trace son succès ou son échec et
 référence l'entrée d'audit source sans recopier les données salariales dans son périmètre.
 
-Aucune route ne modifie ni ne supprime le journal. Les différences sont calculées à la demande (`EnversDiffService`) :
+Aucune route ne modifie ni ne supprime le journal. Les différences sont calculées à la demande (`consultation.py`) :
 ajout → valeurs après ; modification → comparaison avec la version précédente ; suppression → valeurs avant ; relations →
-`« <id> — <libellé> »` (`AuditLabelResolver`) ; collections de droits → éléments ajoutés et retirés ; les champs `@NotAudited`
+`« <id> — <libellé> »` (`consultation.py`) ; collections de droits → éléments ajoutés et retirés ; les champs absents du registre d'audit
 n'apparaissent jamais.
 
 **Écrans** : **Journal** (menu latéral, `/audit`, permission `AUDIT_READ`) — tableau aux conventions du projet, filtres en
@@ -184,20 +181,20 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
 
 ## Intégrité — l'application ne réécrit pas l'historique
 
-- **Deux comptes PostgreSQL** : le propriétaire (`DB_MIGRATION_USER`, Flyway seulement) et le compte applicatif (`DB_USER`).
-  Le rappel Flyway `db/migration/afterMigrate.sql` (idempotent, rejoué après chaque migration) **crée** le compte applicatif
-  s'il n'existe pas et lui donne `SELECT, INSERT, UPDATE, DELETE` sur les tables métier, **`SELECT, INSERT` seulement** sur
-  `audit_*` et `*_aud`, `SELECT` sur `flyway_schema_history`. Quand les deux comptes sont identiques (développement, CI), il
+- **Deux comptes PostgreSQL** : le propriétaire (`DB_MIGRATION_USER`, migrations seulement) et le compte applicatif (`DB_USER`).
+  Les droits sont recalculés après chaque migration (`api/src/staport/migrations/droits.py`, idempotent) : le module **crée** le
+  compte applicatif s'il n'existe pas et lui donne `SELECT, INSERT, UPDATE, DELETE` sur les tables métier, **`SELECT, INSERT` seulement** sur
+  `audit_*` et `*_aud`, `SELECT` sur l'historique des migrations. Quand les deux comptes sont identiques (développement, CI), il
   ne fait rien.
-- **Vérification au démarrage** (`VerificationIntegriteAudit`) : si le compte applicatif peut modifier une table d'audit, un
-  `WARN` explicite et la jauge `rh.audit.integrite.compromise` (1) le signalent. En développement avec un seul compte,
+- **Vérification au démarrage** (`VerificationIntegrite`) : si le compte applicatif peut modifier une table d'audit, un
+  `WARN` explicite et la jauge `rh_audit_integrite_compromise` (1) le signalent. En développement avec un seul compte,
   c'est attendu.
-- **Preuve** : `AuditIntegriteTest` démarre l'application *comme en production* (Flyway propriétaire, application avec le
+- **Preuve** : `test_audit.py` démarre l'application *comme en production* (migrations par le propriétaire, application avec le
   compte restreint) : les opérations métier et la suppression en groupe fonctionnent, et `UPDATE`, `DELETE`, `TRUNCATE`,
   `ALTER` sur les tables d'audit sont refusés par PostgreSQL.
 - **Chaîne locale** (`V19`) : chaque entrée de `audit_journal` porte le SHA-256 de son contenu et le hash précédent ; le
   chaînage existant est initialisé par migration, puis un trigger sérialise les ajouts. La chaîne est vérifiée au démarrage
-  et une fois par jour ; une rupture produit une erreur et la jauge `rh.audit.chaine.invalide`. Elle détecte une altération
+  et une fois par jour ; une rupture produit une erreur et la jauge `rh_audit_chaine_invalide`. Elle détecte une altération
   incohérente, mais ne résiste pas à un superutilisateur qui réécrit les données et recalcule toute la chaîne : aucun ancrage
   externe n'est configuré.
 - **SQL PostgreSQL direct dans la base Staport Intelligence uniquement** (`pgAudit`, `V20`) : l'image PostgreSQL 18 du projet précharge l'extension ; en production,
@@ -205,7 +202,7 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
   suppression de rôles et changements de privilèges). Aucune classe pgAudit n'est exclue. `log_parameter=off` évite de
   recopier les valeurs de paramètres préparés. pgAudit remplace le texte après le mot-clé `PASSWORD` par `<REDACTED>` dans
   les commandes directes `CREATE ROLE` et `ALTER ROLE`. Sa propre documentation précise que cette protection ne couvre pas
-  tous les cas : `afterMigrate.sql` masque donc le texte SQL uniquement pendant son bloc Flyway qui reçoit le secret, tout
+  tous les cas : `droits.py` masque donc le texte SQL uniquement pendant la transaction qui reçoit le secret, tout
   en conservant les événements de classe, commande et objet ; le réglage est rétabli ensuite. Aucun secret brut ne doit être
   ajouté à une migration ou à une commande SQL sans avoir confirmé sa redaction effective. Le réglage est au niveau
   de la base Staport Intelligence, pas du cluster : les commandes exécutées dans une autre base ne sont pas couvertes.
@@ -213,7 +210,7 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
   pgAudit préchargé, `CREATE EXTENSION pgaudit` réussit et une requête de contrôle produit une ligne `AUDIT: SESSION`.
   Cette preuve ne remplace pas l'activation et le contrôle sur le serveur de production.
   Les journaux CSV tournent quotidiennement dans le volume PostgreSQL. Décision RH du 2026-10-15 : leur conservation est
-  limitée à 90 jours, distincte de la conservation à vie décidée pour `audit_journal` et Envers. Le service Compose
+  limitée à 90 jours, distincte de la conservation à vie décidée pour `audit_journal` et les tables `*_aud`. Le service Compose
   `postgres-log-retention` purge au démarrage puis chaque jour à 03:00 UTC les fichiers `postgresql-*.csv*` âgés de plus
   de 90 jours. Le nom configuré omet le suffixe `.csv`, que PostgreSQL ajoute lui-même. L'activation et la purge effective
   doivent encore être vérifiées en production ; les droits d'accès au volume et les alertes d'exploitation restent suivis
@@ -224,26 +221,25 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
 
 ---
 
-## Angles morts d'Envers et leur fermeture
+## Angles morts de l'historique et leur fermeture
 
 | Angle mort | Fermé par | Preuve |
 |---|---|---|
-| Suppression en groupe invisible (`deleteAllInBatch` : mesuré, 1 000 bulletins supprimés = 0 trace) | Suppression **entité par entité** ; test d'architecture qui interdit `deleteAllInBatch`, `@Modifying`, `executeUpdate`, `JdbcTemplate.update` | `AuditOperationTest`, `AuditArchitectureTest` |
-| Retrait silencieux de droits (`ON DELETE CASCADE`) | `ON DELETE RESTRICT` (`V13`) ; un rôle attribué n'est pas supprimable (`409`), `SYSTEM_ADMIN` protégé | `AuditOperationTest` |
-| Migrations qui écrivent des données | État initial (`V14`) et gabarit de migration auditée (`conventions/database.md` (`conventions/database.md`)) | `AuditRevisionTest`, `AuditMigrationGabaritTest` |
-| Compte PostgreSQL unique | Deux comptes, `afterMigrate.sql`, vérification au démarrage | `AuditIntegriteTest` |
-| Événements sans modification de données | Événements de sécurité, un seul écouteur | `AuditSecurityEventsTest` |
-| Écritures sans utilisateur (tâche planifiée, démarrage) | `BatchAuditContext`, origine explicite, `INCONNUE` visible | `AuditSynchronisationTest`, `AuditRevisionTest` |
-| Opération en plusieurs transactions | Une entrée, révisions reliées par `request_id` | `AuditSynchronisationTest`, `AuditConsultationTest` |
-| Import rejeté sans exception | Le périmètre de l'import le déclare en échec | `AuditImportTest` |
-| Sorties de données | Catégorie `ACCES` | `AuditAccesTest` |
-| Champ volontairement non audité (mot de passe) | `@NotAudited` + événement de sécurité | `AuditRevisionTest`, `AuditSecurityEventsTest` |
-| Audit impossible à écrire | Fermé pour les données, ouvert pour la sécurité, compteur | `AuditDefaillanceTest` |
-| Contenu supprimé non conservé | `store_data_at_delete = true` | `AuditRevisionTest`, `AuditConsultationTest` |
-| Oubli futur (entité, colonne, écriture) | Tests d'architecture ; `ddl-auto: validate` | `AuditArchitectureTest` |
-| Logs sans identité ni requête, avec données personnelles | `MdcRequestFilter` ; plus aucun texte saisi dans le log de suppression en groupe | `AuditSecurityEventsTest` (identifiant de requête), revue de code |
+| Suppression en groupe invisible (1 000 bulletins supprimés = 0 trace) | Suppression **entité par entité** ; test d'architecture qui interdit les écritures ORM en masse sur une entité auditée | `test_architecture.py`, `test_audit.py` |
+| Retrait silencieux de droits (`ON DELETE CASCADE`) | `ON DELETE RESTRICT` (`V13`) ; un rôle attribué n'est pas supprimable (`409`), `SYSTEM_ADMIN` protégé | `test_audit.py` |
+| Migrations qui écrivent des données | État initial (`V14`) et gabarit de migration auditée (`conventions/database.md`) | `test_audit.py`, `test_migrations.py` |
+| Compte PostgreSQL unique | Deux comptes, droits recalculés après chaque migration (`migrations/droits.py`), vérification au démarrage | `test_audit.py` |
+| Événements sans modification de données | Événements de sécurité, un seul écouteur | `test_audit.py` |
+| Écritures sans utilisateur (tâche planifiée, démarrage) | Contexte d'audit explicite, origine explicite, `INCONNUE` visible | `test_chantier_synchronisation.py`, `test_audit.py` |
+| Opération en plusieurs transactions | Une entrée, révisions reliées par `request_id` | `test_audit_consultation.py` |
+| Import rejeté sans exception | Le périmètre de l'import le déclare en échec | `test_audit.py` |
+| Champ volontairement non audité (mot de passe) | Absent du registre d'audit + événement de sécurité | `test_audit.py` |
+| Audit impossible à écrire | Fermé pour les données, ouvert pour la sécurité, compteur | `test_audit.py` |
+| Contenu supprimé non conservé | L'instantané de suppression garde les valeurs d'avant | `test_audit_consultation.py` |
+| Oubli futur (entité, colonne, écriture) | Tests d'architecture ; contrôle de dérive Alembic | `test_architecture.py`, `test_migrations.py` |
+| Logs sans identité ni requête, avec données personnelles | Identifiant de requête généré par le middleware (`platform/requete.py`) | `test_common.py` |
 | Faux refus `403` qui noieraient le journal | La barre de filtres de la paie masque les sélecteurs dont la permission manque | `paie-filtres.component.spec.ts` |
-| Identité qui change après coup | `utilisateur_nom` figé, `utilisateur_id` sans clé étrangère | `AuditRevisionTest` |
+| Identité qui change après coup | `utilisateur_nom` figé, `utilisateur_id` sans clé étrangère | `test_audit.py` |
 | Modification directe en base | Limite assumée (voir ci-dessus) | — |
 
 ---
@@ -252,7 +248,7 @@ Il n'existe ni import ni export du journal, ni vue Cartes ou Analytique : la con
 
 ### Bascule de la production sur deux comptes
 1. Ajouter dans `.env` du serveur `POSTGRES_APP_USER` et `POSTGRES_APP_PASSWORD` (voir `.env.example` ; mot de passe sans apostrophe).
-2. `docker compose pull && docker compose up -d` : Flyway (compte propriétaire) applique les migrations d'audit, **crée le
+2. `docker compose pull && docker compose up -d` : l'étape `api-migrate` (compte propriétaire) applique les migrations d'audit, **crée le
    compte applicatif et ses droits**, puis l'application se connecte avec ce compte.
 3. Vérifier dans les logs : « Intégrité de l'audit : le compte applicatif ne peut pas modifier les tables d'audit ».
 4. **Retour arrière** : retirer les deux variables — l'application retrouve le compte unique (le compte applicatif reste
@@ -267,7 +263,7 @@ passé entre la sauvegarde et la restauration n'existe plus, audit compris — �
 
 ### Écrire une migration qui modifie des données auditées
 Suivre le gabarit de `conventions/database.md` (`conventions/database.md`) (« Migrations qui modifient des données
-auditées ») ; il est exécuté tel quel par `AuditMigrationGabaritTest`. Exemple — attribuer une nouvelle permission à un rôle :
+auditées ») ; il est exécuté tel quel par `api/tests/test_migrations.py`. Exemple — attribuer une nouvelle permission à un rôle :
 
 ```sql
 DO $$
@@ -293,9 +289,9 @@ END $$;
 
 ### Ajouter une entité, une colonne, une opération
 Voir la checklist de `conventions/audit.md` (`conventions/audit.md`). Les tests d'architecture font échouer la CI si
-une entité n'est ni `@Audited` ni explicitement exclue, ou si une méthode d'écriture d'un service n'a ni
-`@AuditableAction` ni exception justifiée (`ECRITURES_NON_ANNOTEES` dans `AuditArchitectureTest`) ; `ddl-auto: validate`
-fait échouer le démarrage si une colonne manque à une table `_aud`.
+une entité n'est pas déclarée dans le registre d'audit ou explicitement exclue, ou si une route d'écriture n'a ni
+action d'audit déclarée ni exception justifiée (`AUDITEES` dans `test_audit.py`) ; le test de comparaison Alembic
+fait échouer la CI si une colonne manque à une table `_aud`.
 
 ---
 
@@ -303,7 +299,7 @@ fait échouer le démarrage si une colonne manque à une table `_aud`.
 
 | Opération | Sans audit | Avec audit |
 |---|---|---|
-| Import dans une transaction (comme `PaieImportService`) | ≈ 1,0 s | ≈ 1,1 à 1,5 s |
+| Import dans une transaction (comme l'import de paie) | ≈ 1,0 s | ≈ 1,1 à 1,5 s |
 | Suppression en groupe, entité par entité | 0,07 à 0,15 s | 0,16 à 0,26 s |
 
 L'écriture regroupée (`hibernate.jdbc.batch_size=50`, `order_inserts`, `order_updates`) rend le coût de l'audit négligeable :
@@ -316,46 +312,29 @@ d'audit par an.
 
 | Sujet | Décision |
 |---|---|
-| Durée de conservation | **Conservation à vie, sans purge**, pour `OPERATION`, `SECURITE` et `ACCES`, y compris les adresses IP, les consultations de salaires et les instantanés Envers (décision RH du 2026-10-11) |
+| Durée de conservation | **Conservation à vie, sans purge**, pour `OPERATION`, `SECURITE` et `ACCES`, y compris les adresses IP, les consultations de salaires et les instantanés `*_aud` (décision RH du 2026-10-11) |
 | Qui lit le journal | **`SYSTEM_ADMIN` seulement** à l'installation ; `AUDIT_READ` administrable depuis l'écran Rôles |
-| Lectures métier | **Toutes journalisées** au niveau HTTP par `AuditLectureResponseAdvice`, tous domaines confondus ; les écritures sont journalisées par `@AuditableAction`, les événements de sécurité et le repli HTTP global |
+| Lectures métier | **Non journalisées** (décision du propriétaire, 2026-11-03) ; les écritures sont journalisées par le décorateur d'action auditée, les événements de sécurité par leur propre port |
 | Chaîne d'intégrité locale | **Oui** depuis `V19` ; aucun ancrage externe, donc pas de preuve opposable face à un superutilisateur PostgreSQL |
 | `pgAudit` pour le SQL direct et les requêtes de base Staport Intelligence | Toutes les classes sont configurées dans `V20` ; activation de production à effectuer avec la bascule PG18 |
-| Restauration d'un groupe supprimé | Mise en œuvre : instantanés conservés par Envers, recréation avec nouveaux identifiants, contrôle atomique des conflits, permission `PAIE_RESTORE`, journalisation de l'action |
+| Restauration d'un groupe supprimé | Mise en œuvre : instantanés conservés dans `*_aud`, recréation avec nouveaux identifiants, contrôle atomique des conflits, permission `PAIE_RESTORE`, journalisation de l'action |
 | Suppression d'un rôle | Refusée s'il est attribué ; `SYSTEM_ADMIN` protégé (réversible) |
 
 Données personnelles (loi 09-08) : l'audit contient des noms, des CIN, des salaires et des adresses IP — accès restreint à
 `AUDIT_READ`, minimisation (voir « Événements de sécurité »), aucune route d'export du journal. La durée de conservation est
 à vie et aucune purge n'est effectuée, conformément à la décision de la RH.
 
-### Portée des consultations métier
+### Portée de l'audit
 
-`AuditLectureResponseAdvice` journalise avant la sérialisation les réponses 2xx, redirections et erreurs de toute route HTTP gérée par
-Spring MVC en `GET` ou `HEAD`, ainsi que les recherches et exports `POST` protégés par une permission `*_READ`, `*_MANAGE`
-ou `*_EXPORT`. Les routes Actuator et Swagger/OpenAPI ne sont plus filtrées par l'advice. Cela couvre les lectures
-déclenchées depuis l'interface et celles appelées directement sur l'API. L'événement garde le modèle de route (sans
-valeur d'identifiant), la méthode HTTP, le statut, le nombre d'éléments renvoyés et, si disponible, une période au format
-`aaaa-MM`. Les corps de réponse, montants, corps de requête, filtres nom/CIN et paramètres libres ne sont pas recopiés.
-L'écriture du journal est fermée pour la réponse : si elle échoue, le corps n'est pas servi.
-
-### Portée et limites explicites
-
-Toute écriture HTTP non déjà tracée en détail par `@AuditableAction` reçoit une trace globale de repli, succès comme échec,
-qui conserve route, méthode et statut sans recopier le corps. Les tentatives rejetées avant l'appel d'un service annoté
-(validation HTTP, corps invalide ou route de mutation rejetée par MVC) produisent une entrée `ECHEC` de repli. Les refus `401`
-émis par Spring Security avant MVC produisent aussi un événement `ACCES_ANONYME_REFUSE` avec un identifiant de requête,
-la méthode et la route demandée dont les identifiants numériques/UUID sont masqués.
-Les actions déjà
-tracées par `@AuditableAction` ou un événement de sécurité portent un marqueur de requête pour éviter les doublons. La
-lecture publique de `/auth/password-policy` est incluse dans `ACCES`. Les exports et rapports déjà tracés par
-`@AuditableAction` gardent leurs événements détaillés et ne reçoivent pas un second événement `LECTURE_METIER`.
+Seules les opérations qui changent l'état et les événements de sécurité sont écrits dans le journal (décision du propriétaire,
+2026-11-03) : les lectures, les exports et les appels d'outils MCP de lecture n'y laissent aucune entrée. Le diagnostic des appels
+d'outils (outil, utilisateur, statut, nombre de résultats) est dans les traces Phoenix. Les refus `401` et `403` produisent un
+événement de sécurité (`ACCES_ANONYME_REFUSE`, `ACCES_REFUSE`) avec l'identifiant de requête, la méthode et la route.
 
 Les appels SQL internes à un cas d'usage ne créent pas chacun une entrée métier distincte ; pgAudit les conserve dans les
-journaux de la base Staport Intelligence, sans identité HTTP, request ID ni périmètre fonctionnel. Les requêtes non HTTP traitées par des
-composants Spring qui ne passent pas par Spring MVC ne reçoivent pas de trace générique d'accès ; les écritures métier
-internes restent couvertes lorsqu'elles passent par les services audités, et toute instruction SQL dans la base Staport Intelligence est
-tracée techniquement par pgAudit. Les ressources statiques servies directement par le serveur web, les réponses servies
-depuis un cache/navigateur sans appel backend, les requêtes arrêtées avant le backend et les accès aux fichiers, volumes
+journaux de la base Staport Intelligence, sans identité HTTP, request ID ni périmètre fonctionnel, et toute instruction SQL dans la
+base est tracée techniquement par pgAudit. Les ressources statiques servies directement par le serveur web, les réponses servies
+depuis un cache ou le navigateur sans appel à l'API, les requêtes arrêtées avant l'API et les accès aux fichiers, volumes
 ou console du serveur ne sont pas des opérations HTTP/SQL vues par ces mécanismes. Les commandes SQL dans les autres bases
 du même cluster sont hors du périmètre pgAudit choisi. L'empreinte locale ne protège pas contre un superutilisateur qui
 réécrit puis recalcule les empreintes.
@@ -364,18 +343,18 @@ réécrit puis recalcule les empreintes.
 
 ## Tests
 
-Tous sur une vraie base PostgreSQL (`AuditIntegrationTestBase`) sauf l'architecture : `AuditArchitectureTest`,
-`AuditRevisionTest` (socle), `AuditOperationTest` (S1 à S5, S11 à S17, 1 000 bulletins), `AuditImportTest`,
-`AuditSynchronisationTest`, `AuditSecurityEventsTest`, `AuditAccesTest`, `AuditDefaillanceTest`, `AuditMigrationGabaritTest`,
-`AuditIntegriteTest`, `AuditConsultationTest` ; côté frontend `journal.component.spec.ts`,
+Tous sur une vraie base PostgreSQL (`conftest.py`) sauf l'architecture : `test_audit.py`,
+`test_audit.py` (socle), `test_audit.py` (S1 à S5, S11 à S17, 1 000 bulletins), `test_audit.py`,
+`test_audit.py`, `test_migrations.py`,
+`test_audit.py`, `test_audit_consultation.py` ; côté frontend `journal.component.spec.ts`,
 `audit-historique.component.spec.ts`, `audit-champs.component.spec.ts`, `audit-format.spec.ts`. Voir testing.md ([exploitation/tests](../../exploitation/tests.md)).
 Les specs du journal et de l'historique couvrent aussi la remise à zéro du paginateur, les réponses tardives,
 les erreurs de lecture et le réessai de la page en échec. Les événements de sécurité ne déclenchent pas une
-lecture inutile de différences Envers.
+lecture inutile de différences d'historique.
 
 ## Couche IA
 
-L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture (Spring AI), en plus de `IA_UTILISER` ; il n'écrit rien dans le journal et ne peut ni le purger ni le corriger. Chaque lecture de l'assistant est elle-même auditée (catégorie `ACCES`, action `MCP_*`).
+L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture, en plus de `IA_UTILISER` ; il n'écrit rien dans le journal et ne peut ni le purger ni le corriger. Ses lectures ne sont pas écrites dans le journal ; leur diagnostic est dans les traces Phoenix.
 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
@@ -397,7 +376,7 @@ L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture
 
 ### Garde-fous
 
-- Distinguer instantanés Envers, journal d'actions et garde-fous PostgreSQL ; ne pas écrire à la
+- Distinguer instantanés `*_aud`, journal d'actions et garde-fous PostgreSQL ; ne pas écrire à la
   main dans les tables d'historique hors migrations documentées.
 - Les écritures de succès restent cohérentes avec la transaction métier ; les échecs suivent le
   mécanisme séparé documenté.
@@ -411,7 +390,7 @@ L'assistant RH peut interroger le journal d'audit par deux outils MCP de lecture
 - Les filtres reviennent à la première page ; une réponse tardive ne remplace pas une sélection récente.
   Un échec de page d'historique se réessaie avant d'avancer, sans perdre les versions déjà lues.
 - Annoncer chargement, erreur et vide séparément. Les événements de sécurité ne demandent pas de
-  différences Envers quand ils ne portent aucune opération métier réussie.
+  différences d'historique quand ils ne portent aucune opération métier réussie.
 
 ### Vérification
 

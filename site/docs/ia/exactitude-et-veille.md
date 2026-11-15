@@ -4,12 +4,12 @@ sidebar_position: 3
 ---
 
 :::note Page reprise de l'ancien document IA
-Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions de Spring, de Java et des tâches T* décrivent l'état avant la bascule vers FastAPI : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
+Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions des tâches T* décrivent l'état au 2026-11-06 : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
 :::
 
 ## 4. Exactitude
 
-1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils Spring. **Priorité du
+1. Le modèle ne calcule pas : effectifs, montants, taux et périodes viennent des outils de l'API. **Priorité du
    propriétaire (2026-10-27) : faire disparaître le besoin de calcul** : tout total, écart, variation, pourcentage,
    moyenne, rang ou effectif qu'une question peut demander est renvoyé tel quel par un outil déterministe (V1d), de sorte
    que le modèle n'ait jamais qu'à reprendre des valeurs.
@@ -24,7 +24,7 @@ Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions 
    ≈ 100 ; réponses calculées en appelant l'outil de référence sur la base synthétique ; critères et types de cas :
    conventions (`conventions/agents-ia.md`) ;
    chaque cas rejoué plusieurs fois, `-Dia.evaluation.repetitions=3`) est rejoué à chaque
-   changement de modèle, prompt, outil ou graphe par `EvaluationAgentIaTest`. Il décide des
+   changement de modèle, prompt, outil ou graphe par `ia/tests/test_evaluation.py`. Il décide des
    modèles de chaque tag LiteLLM : exactitude, latence p95, coût.
 5. Sorties structurées validées par Pydantic côté service et par schéma côté Angular ;
    `enable_json_schema_validation` côté LiteLLM.

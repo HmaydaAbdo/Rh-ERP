@@ -32,7 +32,7 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
 * `Security(...)` et `SecurityScopes` de FastAPI documentent des *scopes* OAuth2 dans OpenAPI ; ils servent de modèle pour exposer les permissions dans le contrat, sans
   remplacer le contrôle côté serveur. La décision (permission + périmètre par fiche de poste) reste dans `platform/identite`.
 * Le périmètre de la ressource est toujours vérifié en plus de la permission d'action.
-* **Test de couverture des routes** (remplace `EndpointSecurityTest`) : parcourt les routes de l'application et échoue pour toute route sans permission déclarée
+* **Test de couverture des routes** (remplace `test_auth_acces.py`) : parcourt les routes de l'application et échoue pour toute route sans permission déclarée
   qui n'est pas explicitement publique (liste blanche courte et commentée). Le test parcourt `app.routes` (les routes d'`APIRouter` incluses y figurent, avec les `dependencies`
   du routeur et de la route, paramètres documentés de `APIRouter`, `include_router` et des décorateurs de route) et vérifie la présence de la dépendance de permission ; il se prouve
   lui-même par une route de test volontairement non protégée qui doit le faire échouer.

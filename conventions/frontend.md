@@ -608,7 +608,7 @@ Le frontend consomme uniquement les DTO exposés par l'API.
 
 Ne jamais dépendre :
 
-* des entités JPA ;
+* des modèles de persistance du backend ;
 * des structures internes du backend.
 
 Toute évolution d'un contrat API doit être répercutée sur le frontend.

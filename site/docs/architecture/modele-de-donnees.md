@@ -84,7 +84,7 @@ Détail : [auth/README.md](../domaines/auth/index.md).
 
 ## Tables d'audit
 
-Écrites par les écouteurs de session SQLAlchemy (`api/src/staport/domains/audit/ecouteur.py`, qui remplace Hibernate Envers) et par le service d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
+Écrites par les écouteurs de session SQLAlchemy (`api/src/staport/domains/audit/ecouteur.py`) et par le service d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
 `conventions/database.md` (`conventions/database.md`)). Description fonctionnelle : [audit/README.md](../domaines/audit/index.md).
 
 | Table | Rôle |
@@ -172,7 +172,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V15` | Permission `PAIE_PURGE` (suppression en groupe), attribuée à `SYSTEM_ADMIN` et aux rôles qui ont `PAIE_DELETE` ; écrit sa révision d'audit (premier usage du gabarit de migration auditée) |
 | `V16` | Paramètres de fonctionnement administrables et permissions `PARAMETRE_READ/WRITE` attribuées à `SYSTEM_ADMIN` |
 | `V17` | Permission `PAIE_RESTORE`, attribuée à `SYSTEM_ADMIN` seul à l'installation et administrable ensuite depuis l'écran Rôles |
-| `V18` | Verrou optimiste `@Version` sur les entités persistées modifiables |
+| `V18` | Verrou optimiste (colonne de version) sur les entités persistées modifiables |
 | `V19` | Chaînage SHA-256 du journal d'audit |
 | `V20` | Activation conditionnelle de pgAudit pour la base Staport Intelligence en production |
 | `V21` | Compteur de tentatives et blocage temporaire après cinq échecs de connexion |
@@ -207,7 +207,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 - **Depuis `V14`, une migration qui modifie des données d'une table auditée écrit aussi sa révision, ses lignes d'audit et son
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](../domaines/audit/index.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
-- Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
+- Les tests (`test_paie_contrat.py` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
   toute la chaîne de migrations est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

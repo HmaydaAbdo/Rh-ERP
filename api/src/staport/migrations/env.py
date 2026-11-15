@@ -1,8 +1,8 @@
-"""Environnement Alembic (KAN-212, ADR 0016 § 3).
+"""Environnement Alembic (KAN-212).
 
 Les migrations s'exécutent avec le compte PROPRIÉTAIRE du schéma, dans une étape de déploiement dédiée, jamais
 dans le `lifespan` de l'application. Après chaque montée de version, les droits du compte applicatif sont
-recalculés (équivalent du rappel Flyway `afterMigrate.sql`).
+recalculés (étape finale de chaque montée de version).
 
 `target_metadata` sert au contrôle de dérive (`alembic check`, test `test_migrations`) : les modèles de chaque domaine
 migré sont comparés à la base construite par les migrations. Les tables encore gérées par Flyway seulement

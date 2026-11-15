@@ -1,4 +1,4 @@
-"""Formats et libellés partagés par les paramètres des outils MCP (parité de `Formats`, `SensTri` et `Perimetres`).
+"""Formats et libellés partagés par les paramètres des outils MCP.
 
 Un seul énoncé par notion, pour que le modèle lise partout les mêmes consignes : format des mois, sens de
 l'identifiant 0, plafonds des listes d'identifiants. Les contraintes sont des `Field` Pydantic, validées par
@@ -103,12 +103,12 @@ def parametres_url(
 
 
 def vue(module: str, nom: str, parametres: dict[str, str] | None = None) -> dict[str, Any]:
-    """Vue partagée proposée à l'utilisateur (`VueProposeeDto`) : elle n'accorde aucun droit."""
+    """Vue partagée proposée à l'utilisateur : elle n'accorde aucun droit."""
     return {"module": module, "vue": nom, "parametres": parametres or {}}
 
 
 def voit_la_paie() -> bool:
-    """L'appelant détient `PAIE_READ` (règle `ProjectionPaieEmployee.voitLaPaie` de Spring)."""
+    """L'appelant détient `PAIE_READ` (règle de visibilité de la paie)."""
     jeton = get_access_token()
     return jeton is not None and "PAIE_READ" in jeton.scopes
 

@@ -1,4 +1,4 @@
-"""Import Excel des équipes : colonnes Code et Libellé, atomique (parité `EquipeImportService`)."""
+"""Import Excel des équipes : colonnes Code et Libellé, atomique."""
 
 from io import BytesIO
 from typing import cast
@@ -121,7 +121,7 @@ async def importer(
 def _raison(
     code: str, libelle: str, cellules: Cellules, connus: tuple[set[str], set[str], set[str], set[str]]
 ) -> str | None:
-    """Premier motif de rejet, dans l'ordre de `EquipeImportService`."""
+    """Premier motif de rejet, dans l'ordre des contrôles."""
     codes_fichier, libelles_fichier, codes_existants, libelles_existants = connus
     if not code:
         return "Code obligatoire"

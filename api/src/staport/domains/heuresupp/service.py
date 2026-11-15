@@ -1,4 +1,4 @@
-"""Heures supplémentaires et forfaits mensuels (parité de `HeuresSuppService` et `HeuresSuppAnalytiqueService`)."""
+"""Heures supplémentaires et forfaits mensuels."""
 
 from decimal import Decimal
 

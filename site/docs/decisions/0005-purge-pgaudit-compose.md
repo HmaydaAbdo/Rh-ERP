@@ -9,7 +9,7 @@ sidebar_position: 6
 ## Contexte
 
 La RH a fixé à 90 jours la conservation des journaux CSV PostgreSQL, distincte de la conservation
-à vie de `audit_journal` et Envers. La rotation quotidienne configurée dans PostgreSQL ne supprime
+à vie de `audit_journal` et des tables `*_aud`. La rotation quotidienne configurée dans PostgreSQL ne supprime
 pas les fichiers expirés. L'hôte de production est Windows ; aucun accès SSH ni déploiement
 automatisé n'est souhaité. Le propriétaire a choisi un service planifié Compose.
 
@@ -37,4 +37,4 @@ pour `csvlog`.
   et cible seulement les fichiers CSV au premier niveau.
 - Les droits effectifs, la santé et les journaux de purge doivent être contrôlés sur la production.
 - Les alertes de capacité et les alertes des événements d'audit restent à configurer.
-- La conservation des CSV n'altère pas `audit_journal`, Envers ou les archives de sauvegarde.
+- La conservation des CSV n'altère pas `audit_journal`, les tables `*_aud` ou les archives de sauvegarde.

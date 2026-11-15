@@ -12,7 +12,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 - Configuration typée (`src/staport_ia/config.py`) ; le service refuse de démarrer sans
   `IA_ENABLED`, `IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY` (8 caractères au moins) ou `IA_ERP_API_URL`.
 - **AG-UI** — `agui.py`, `POST /agui` (SSE) : `LangGraphAGUIAgent` (CopilotKit, sur `ag-ui-langgraph`).
-  Entrée : `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de Spring contre le jeton
+  Entrée : `RunAgentInput` et `Authorization: Bearer <jeton de connexion>`, échangé auprès de l'API contre le jeton
   agent ; refus HTTP avant tout flux (`401`, `403`, `422`, `503`). Sortie : `RUN_STARTED`, `REASONING_*` (raisonnement
   du modèle), `TEXT_MESSAGE_*` (texte en flux), `TOOL_CALL_*`, `STATE_SNAPSHOT` (état partagé du run),
   `MESSAGES_SNAPSHOT`, `RUN_FINISHED`. Ne reste à nous que : l'identité (jeton) et une frontière de sécurité (ni
@@ -35,7 +35,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 - **Exactitude** — aucun vérificateur de réponse maison : les outils métier renvoient leurs calculs et l'agent reprend
   leurs valeurs, s'appuie sur les faits déjà établis dans la conversation, relit l'ERP si une valeur a pu changer et
   pose une question si l'ambiguïté peut changer le résultat. Le jeu de référence mesure l'exactitude.
-- **Outils** — `outils.py` : le MCP intégré à LangChain (`langchain.mcp`, FastMCP) charge les outils de Spring avec le
+- **Outils** — `outils.py` : le MCP intégré à LangChain (`langchain.mcp`, FastMCP) charge les outils de l'API avec le
   jeton agent de l'utilisateur ; l'échange de jeton est le seul code à nous.
 - **Évaluation** — `evaluation.py` (`openevals`, `agentevals`) sur le vrai agent ; `tests/test_passerelle_simulee.py`
   rejoue l'agent sur une passerelle simulée par CopilotKit `aimock`, sans réseau ni quota.
@@ -46,8 +46,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur appelle l'outil attendu
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
-Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui remplace `EvaluationAgentIaTest` du backend Java retiré
-en E2 : il démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory staport_ia.app:creer_app`)
+Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory staport_ia.app:creer_app`)
 puis `python -m staport_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
 s'active avec `IA_EVALUATION=1`.
 

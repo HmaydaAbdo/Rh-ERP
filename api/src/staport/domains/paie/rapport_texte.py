@@ -1,6 +1,6 @@
 """Mesure les lignes du gabarit PDF avec les polices embarquées.
 
-Port de RapportMesureTexte.java : les largeurs servent au découpage physique
+Les largeurs servent au découpage physique
 du rapport, avant le rendu WeasyPrint. Pillow mesure les mêmes fichiers TTF.
 """
 
@@ -24,7 +24,7 @@ def _police(gras: bool) -> ImageFont.FreeTypeFont:
 
 
 def largeur(texte: str, taille_pt: float, gras: bool = False) -> float:
-    """Largeur en points, majorée de 3 % comme le calcul Spring."""
+    """Largeur en points, majorée de 3 %."""
     return _police(gras).getlength(texte) * taille_pt / _TAILLE_MESURE * _MARGE_LARGEUR
 
 
@@ -70,7 +70,7 @@ def lignes(texte: str | None, largeur_pt: float, taille_pt: float, gras: bool = 
 
 
 def hauteur_ligne_employe(valeurs: Sequence[str], *, avec_equipe: bool) -> float:
-    """Hauteur de la cellule la plus haute, suivant les colonnes du tableau Spring."""
+    """Hauteur de la cellule la plus haute, suivant les colonnes du tableau."""
     colonnes = (
         (120.0 if avec_equipe else 192.0, 10.5, 12.0, False),
         (100.0, 8.0, 9.5, False),

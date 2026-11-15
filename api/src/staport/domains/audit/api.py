@@ -1,4 +1,4 @@
-"""Façade publique du domaine `audit` : seul module que les autres domaines importent (ADR 0016 § 1)."""
+"""Façade publique du domaine `audit` : seul module que les autres domaines importent."""
 
 from staport.domains.audit.consultation import instantanes_suppression
 from staport.domains.audit.integrite import VerificationIntegrite

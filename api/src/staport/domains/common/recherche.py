@@ -1,4 +1,4 @@
-"""Motif d'une recherche « contient, sans tenir compte de la casse » (parité avec `MotifRecherche` de Spring).
+"""Motif d'une recherche « contient, sans tenir compte de la casse ».
 
 Ce que tape l'utilisateur est du *texte*, jamais un motif : les jokers `%` et `_` et le caractère d'échappement
 sont échappés. Toute requête `LIKE` construite sur une saisie passe par ici et déclare `ECHAPPEMENT`

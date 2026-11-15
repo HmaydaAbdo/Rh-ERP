@@ -1,4 +1,4 @@
-"""Fixtures partagées : PostgreSQL réel (même image que les tests Java), schéma Alembic, application complète.
+"""Fixtures partagées : PostgreSQL réel (image PostgreSQL partagée), schéma Alembic, application complète.
 
 Sans Docker, les tests qui en ont besoin sont ignorés avec la cause (jamais un faux succès).
 """
@@ -190,7 +190,7 @@ def plateforme(creer_base: Callable[[str], str], cle_rsa_b64: str) -> Iterator[P
 
 @pytest.fixture
 def creer_utilisateur(plateforme: Plateforme) -> Callable[..., tuple[int, str]]:
-    """Insère un compte (hors API) et retourne `(id, mot de passe)`. `bcrypt=True` : empreinte au format de Spring."""
+    """Insère un compte (hors API) et retourne `(id, mot de passe)`. `bcrypt=True` : empreinte au format BCrypt."""
 
     def creer(
         prefixe: str = "u",

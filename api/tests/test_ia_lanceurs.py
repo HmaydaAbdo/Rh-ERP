@@ -1,12 +1,11 @@
-"""Lanceurs du service IA contre l'API Python (KAN-234, remplacent `FluxAgUiIntegrationTest`, `EvaluationAgentIaTest` et
-`BancAssistantTest` du backend Spring retiré).
+"""Lanceurs du service IA contre l'API Python (KAN-234 : flux AG-UI, évaluation et banc de démonstration).
 
 L'application complète écoute sur un port loopback (base PostgreSQL réelle, données synthétiques) et le service IA
 (`uvicorn --factory staport_ia.app:creer_app`) est lancé relié à elle :
 
 - le test de fumée (toujours joué si `uv` est présent) vérifie le démarrage du service, l'activation de l'IA et le refus
   d'un appel `POST /agui` sans jeton valide ; il n'appelle aucun modèle ;
-- les trois lanceurs avec un vrai modèle sont opt-in, comme leurs ancêtres Java : `IA_AGUI=1` (client AG-UI officiel),
+- les trois lanceurs avec un vrai modèle sont opt-in : `IA_AGUI=1` (client AG-UI officiel),
   `IA_EVALUATION=1` (évaluation sur le jeu de référence) et `IA_BANC=1` (banc de démonstration pour le navigateur), avec
   une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`). Journaux et rapports dans `api/target/`.
 """

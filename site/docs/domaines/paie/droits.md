@@ -8,7 +8,7 @@ sidebar_position: 3
 
 ## Endpoints backend
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /paie` | `PAIE_WRITE` **et** `EMPLOYEE_WRITE` (l'équipe choisie met aussi à jour la fiche Employé) |
 | `PUT /paie/{id}` | `PAIE_WRITE` **et** `EMPLOYEE_WRITE` (l'équipe choisie met aussi à jour la fiche Employé) |

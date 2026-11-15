@@ -1,4 +1,4 @@
-"""Contrat du parcours : Angular lit `indicateurs` imbriqué, comme `ParcoursEmployeDto` de Spring."""
+"""Contrat du parcours : Angular lit `indicateurs` imbriqué."""
 # ruff: noqa: F811  (les fixtures `jeu` et `entetes` importées de test_heuresupp sont reprises par nom)
 
 import uuid
@@ -25,7 +25,7 @@ def test_le_parcours_imbrique_ses_indicateurs(plateforme: Plateforme, entetes: d
     assert isinstance(corps["indicateurs"]["totalPercu"], int | float)
 
 
-# --- Parité Spring : libellés, événements, effectifs, codes HTTP (KAN-226) ---
+# --- Contrat : libellés, événements, effectifs, codes HTTP (KAN-226) ---
 
 
 @dataclass
@@ -148,7 +148,7 @@ def test_les_mois_du_parcours_portent_les_libelles_et_les_codes(
     }
 
 
-def test_les_evenements_du_parcours_suivent_spring_entree_changements_depart_retour(
+def test_les_evenements_du_parcours_suivent_le_contrat_entree_changements_depart_retour(
     plateforme: Plateforme, entetes: dict[str, str], scenario: Scenario
 ) -> None:
     reponse = plateforme.client.get(f"/paie/employes/{scenario.employes['A']}/parcours", headers=entetes)
@@ -216,7 +216,7 @@ def test_mois_precedent_enjambe_l_annee() -> None:
     assert mois_precedent(202603) == 202602
 
 
-def test_les_statuts_http_des_bulletins_suivent_spring(
+def test_les_statuts_http_des_bulletins_suivent_le_contrat(
     plateforme: Plateforme, entetes: dict[str, str], scenario: Scenario
 ) -> None:
     absent = plateforme.client.get("/paie/999999999", headers=entetes)

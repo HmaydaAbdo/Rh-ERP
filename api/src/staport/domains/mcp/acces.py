@@ -1,4 +1,4 @@
-"""Authentification de la route `/mcp` (parité avec `McpSecurityConfig` de Spring).
+"""Authentification de la route `/mcp`.
 
 Seul le jeton délégué RS256 de l'agent est accepté (`verifier_jeton_agent` : émetteur, audience MCP, échéance, clé).
 À chaque requête, le compte et ses droits sont relus en base : un compte désactivé est refusé (401) même avec un jeton

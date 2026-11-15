@@ -11,7 +11,7 @@ sidebar_position: 2
 
 ## Contexte
 
-Staport Intelligence possède déjà PostgreSQL + Flyway, un RBAC dynamique par domaine, Envers et un journal
+Staport Intelligence possède déjà PostgreSQL + Alembic, un RBAC dynamique par domaine, un historique par instantanés et un journal
 d'audit. La normalisation doit préserver ces règles métier et rendre le socle commun réutilisable
 par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (migré le 2026-10-10 vers Angular 22 et le kit Staport sur Angular Aria/CDK : aucun usage PrimeNG ne subsiste).
 
@@ -21,7 +21,7 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
    éprouvé par Staport Intelligence. Les applications suivantes peuvent reprendre ce corpus puis documenter leurs
    différences de métier et de pile dans leurs propres `docs/` et ADR. Les règles métier et
    permissions restent locales à chaque application.
-2. PostgreSQL + Flyway, RBAC dynamique par domaine et modèle d'audit Staport Intelligence sont les références
+2. PostgreSQL + Alembic, RBAC dynamique par domaine et modèle d'audit Staport Intelligence sont les références
    communes. Chaque application garde sa propre base et son propre historique de migration.
 3. La cible UI est Angular 22 stable (baseline vérifiée au 2026-10-10 : 22.2.2), Signals/Signal Forms
    adaptés au cas, Tailwind CSS 4, Angular Aria/CDK et le design system Staport avec Lucide. AG Grid
@@ -30,12 +30,12 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 4. Les skills métier restent dans le domaine de chaque application. Dans Staport Intelligence, elles indexent les
    README et RBAC existants ; elles ne dupliquent pas les règles et ne donnent aucune autorisation.
    Le squelette commun conserve son dossier `domains/` vide.
-5. Pour les applications Spring Boot, Spring AI est le choix IA par défaut ; LangChain4j peut être
+5. Pour les applications Python, LangChain, LangGraph et Deep Agents sont le choix IA par défaut ; un autre cadre peut être
    retenu si un besoin vérifié le justifie et si le choix est documenté. Chaque application qui
    fournit des capacités aux agents les expose au moyen d'outils MCP authentifiés, reliés à ses
    propres cas d'usage métier. Une IA globale d'entreprise est une étape ultérieure, après la
    conformité des applications connectées ; elle consommera leurs outils MCP et n'accédera pas à
-   leurs bases. Un graphe d'orchestration ou un composant Python n'est retenu que si un besoin le
+   leurs bases. Un graphe d'orchestration n'est retenu que si un besoin le
    justifie. Les mesures BI conservent une définition unique dans les services/projections du domaine.
 6. La stratégie de test couvre les niveaux statique, unitaire, composant, intégration PostgreSQL,
    contrat, E2E et non-fonctionnel selon le risque ; les accès, migrations, exports et futurs outils
@@ -46,7 +46,7 @@ par G-Banque et les futurs projets. Le frontend était Angular 17 / PrimeNG (mig
 | Étape | Travail | Critère de sortie |
 |---|---|---|
 | 0 — Socle | Version locale, instructions agents et skills par domaine | Un agent trouve les sources communes, métier et RBAC sans recopier les règles |
-| 1 — Baseline | Java/Maven/README/CI alignés ; fixer Node/NPM au runtime requis par Angular 22 | Backend Java 21 testé ; build frontend/CI sur runtime explicite et supporté |
+| 1 — Baseline | Python/uv/README/CI alignés ; fixer Node/NPM au runtime requis par Angular 22 | Backend Python testé ; build frontend/CI sur runtime explicite et supporté |
 | 2 — Frontend | Monter Angular par majors supportées ; valider un écran pilote avec Signals, Aria/CDK, Tailwind, Lucide et tests de composants | Pilote accessible, responsive, testé et validé visuellement avant généralisation |
 | 3 — Composants | Remplacer progressivement les dépendances de présentation et leurs tests | Aucun écran migré ne dépend de PrimeFlex/PrimeIcons ; pas de bascule globale non testée |
 | 4 — Qualité | Ajouter une suite E2E ciblée et couvrir les trous identifiés par `docs/testing.md` | Parcours login, permissions et paie critiques exécutables en CI |

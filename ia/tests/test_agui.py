@@ -1,4 +1,4 @@
-"""Point d'entrée AG-UI avec le faux modèle de LangChain et Spring simulé : flux officiel, refus HTTP et pannes."""
+"""Point d'entrée AG-UI avec le faux modèle de LangChain et API simulée : flux officiel, refus HTTP et pannes."""
 
 import json
 from collections.abc import Sequence
@@ -26,7 +26,7 @@ REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."
 
 
 class AccesSimule:
-    """Spring simulé : échange de jeton (ou refus HTTP), puis catalogue d'outils au nom du jeton agent."""
+    """API simulée : échange de jeton (ou refus HTTP), puis catalogue d'outils au nom du jeton agent."""
 
     def __init__(self, outils: Sequence[BaseTool], refus: int | None = None) -> None:
         self._outils = outils
@@ -153,9 +153,9 @@ def test_un_outil_declare_par_le_navigateur_est_propose_au_modele() -> None:
     [
         (False, "c", None, 503),  # IA désactivée
         (True, None, None, 401),  # pas de jeton
-        (True, "c", 401, 401),  # connexion expirée côté Spring
+        (True, "c", 401, 401),  # connexion expirée côté API
         (True, "c", 403, 403),  # droit IA_UTILISER absent
-        (True, "c", 404, 503),  # IA non activée côté Spring
+        (True, "c", 404, 503),  # IA non activée côté API
     ],
 )
 def test_les_refus_sont_des_erreurs_http_avant_tout_flux(

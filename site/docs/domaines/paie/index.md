@@ -13,46 +13,31 @@ sidebar_position: 1
 
 | | |
 |---|---|
-| Backend | `backend/src/main/java/staport/rh/paie/` |
+| Backend | `api/src/staport/domains/paie/` |
 | Frontend | `frontend/src/app/portail/paie/` |
 | Table | `paie` |
 | Endpoints | `/paie`, `/paie/search`, `/paie/periodes`, `/paie/chantiers`, `/paie/materiel`, `/paie/import`, `/paie/export`, `/paie/report/pdf` |
 
-La migration FastAPI est en cours sous `api/src/staport/domains/paie/`. Son contrat HTTP emploie
-`AAAA-MM` pour les mois et restitue les résumés des références dans les réponses de bulletin.
-La route PDF Python répond `503` jusqu'à preuve de parité avec le rapport Spring ; voir
-Migration Paie (`site/docs/migration/paie.md`).
+Le contrat HTTP emploie `AAAA-MM` pour les mois et restitue les résumés des références dans les réponses de bulletin.
 
-La façade `IPaieService.findByEmployeeIdAndPeriode` fournit aux domaines consommateurs le bulletin exact d'un employé pour un
+La façade `service.py` du domaine (recherche d'un bulletin par employé et mois) fournit aux domaines consommateurs le bulletin exact d'un employé pour un
 mois. Heures supplémentaires l'utilise pour vérifier l'existence de la paie et lire l'observation STC/sortie ; le marqueur et
 les montants sont ensuite conservés dans son propre instantané.
 
 ```text
 paie/
-├── controller/PaieController.java
-├── dtos/
-│   ├── request/ (Create, Update, SearchCriteria)
-│   └── response/ (PaieResponseDto, EmployeeSummaryDto, FunctionSummaryDto, ChantierSummaryDto)
-├── entities/ (Paie)
-├── exceptions/ (NotFound, AlreadyExists, InvalidReference, InvalidPeriode, ExceptionHandler)
-├── mappers/PaieMapper.java
-├── repositories/PaieRepository.java
-├── services/ (PaieService + IPaieService)
-├── specifications/PaieSpecification.java
-├── imports/
-│   ├── PaieImportService.java       ← assistant d'import : analyse, corrections des fiches, import (voir « Import Excel »)
-│   ├── LecteurFichierPaie.java      ← lecture du fichier (LigneFichierPaie) et génération du modèle
-│   ├── PaieImportController.java    ← POST /paie/import/analyse, /paie/import/corrections, /paie/import ; GET /paie/import/modele
-│   └── PaieImportAnalyseDto, PaieImportCorrectionsDto, PaieImportDepartsDto, PaieImportResultDto, PaieImportException
-├── export/
-│   ├── PaieExportService.java       ← orchestration (regroupement, totaux, période précédente)
-│   ├── PaieSheetWriter.java         ← mise en page d'une feuille (partagée GLB/chantier/équipe)
-│   ├── PaieExcelStyles.java         ← styles de cellule créés une fois par classeur
-│   ├── SqueletteMateriel.java       ← tableaux « parc matériel » du chantier C168
-│   ├── PaieExportRequestDto.java    ← périmètre équipe de l'export (voir section Export Excel)
-│   └── PaieExportController.java    ← POST /paie/export (corps : PaieExportRequestDto)
-├── reporting/                       ← périmètre commun à l'export Excel et au rapport PDF (chantiers, équipes, exclusions)
-└── report/                          ← rapport PDF BI (voir docs/report/README.md)
+├── router.py            ← routes /paie, /paie/search, /paie/import/*, /paie/export, /paie/report/pdf
+├── schemas.py           ← requêtes et réponses Pydantic
+├── models.py            ← modèle SQLAlchemy `paie`
+├── exceptions.py        ← introuvable, doublon, référence ou période invalide
+├── repository.py        ← requêtes `select()` explicites, filtre et tri
+├── service.py           ← règles métier et façade publique du domaine
+├── import_service.py    ← assistant d'import : analyse, corrections des fiches, import (voir « Import Excel »)
+├── export.py            ← export Excel : regroupement, totaux, période précédente, feuilles, styles
+├── materiel.py          ← tableaux « parc matériel » du chantier C168
+├── report.py, rapport_*.py, report/ ← rapport PDF BI (polices, CSS et logo embarqués, rendu WeasyPrint)
+├── analytique.py, cartes.py, historique.py, fiche_employe.py, periode.py, observation.py ← lectures dérivées
+└── audit.py             ← déclaration de l'historique `paie_aud`
 ```
 
 ---
@@ -122,7 +107,7 @@ Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonct
 | Bulletins de paie | Nombre de bulletins du mois (un par employé) |
 | Masse salariale | Somme des salaires totaux du mois, en DH |
 | Coût moyen | Masse ÷ effectif ; indisponible sans bulletin |
-| STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (`ObservationStc.estStcOuSortie`, règle du rapport) et leur montant |
+| STC (personnes / DH) | Bulletins en solde de tout compte ou sortie ce mois-là (`est_stc_ou_sortie`, règle du rapport) et leur montant |
 | Entrées | Payés ce mois-ci et absents de la paie du mois précédent |
 | Plus payés | Payés le mois précédent et absents ce mois-ci |
 | Variation nette | Effectif − effectif du mois précédent ; entrées − plus payés = variation |
@@ -136,7 +121,7 @@ Les vues Cartes et Analytique de **tous** les domaines (Chantier, Équipe, Fonct
 
 ### Couche IA
 
-L'assistant RH lit la paie par **neuf outils MCP de lecture** (Spring AI), tous soumis à `PAIE_READ` (et `IA_UTILISER`) ;
+L'assistant RH lit la paie par **neuf outils MCP de lecture**, tous soumis à `PAIE_READ` (et `IA_UTILISER`) ;
 il n'écrit, n'importe, ne supprime et ne restaure rien, et n'exécute aucun SQL.
 
 | Outil | Ce qu'il fait | Permission | Audit |
@@ -182,7 +167,7 @@ Table `paie` :
 | `id` | `BIGINT` | PK, auto-incrément | Identifiant interne |
 | `version` | `BIGINT` | `NOT NULL`, verrou optimiste | Version attendue pour une modification; une version périmée est refusée en `409` |
 | `employee_id` | `BIGINT` | `NOT NULL`, FK → `employe.id` | Employé concerné |
-| `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) via `YearMonthAttributeConverter` (`common/`) |
+| `periode` | `INT` | `NOT NULL` | Année-mois, stocké `aaaaMM` (ex. 202609) (type de colonne dédié) |
 | `fonction_id` | `BIGINT` | `NOT NULL`, FK → `fonction.id` | **Snapshot** — fonction occupée ce mois-là |
 | `chantier_id` | `BIGINT` | `NOT NULL`, FK → `chantier.id` | **Snapshot** — chantier d'affectation ce mois-là |
 | `equipe_id` | `BIGINT` | nullable, FK → `equipe.id` | **Snapshot** — équipe ce mois-là (voir `docs/equipe/README.md`) ; `NULL` = employé sans équipe |
@@ -256,12 +241,12 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `POST` | `/paie` | Créer un bulletin | 201, 400, 409 |
 | `PUT` | `/paie/{id}` | Modifier un bulletin (employé/période non modifiables) | 200, 400, 404 |
 | `GET` | `/paie/{id}` | Consulter un bulletin | 200, 404 |
-| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieSearchCriteria` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe (« Orphelins » dans le filtre) | 200 |
+| `POST` | `/paie/search` | Rechercher (paginé, triable) — body `PaieRecherche` (`cin`, `nomPrenom`, `periode`, `fonctionIds`, `chantierIds`, `equipeIds`) — `fonctionIds`/`chantierIds`/`equipeIds` : filtres multi-valeurs, `null`/vide = pas de filtre sur cette dimension ; `equipeIds=0` sélectionne les bulletins sans équipe (« Orphelins » dans le filtre) | 200 |
 | `POST` | `/paie/options/chantiers?page=0&size=30` (corps `PaieOptionsChantierRequest`: `periode`, `recherche`) | Page triée par code des chantiers avec paie sur le mois ; option `id`, `code`, `nom`, `designation`, `actif`; recherche serveur sur code, nom et désignation | 200, 400 |
 | `POST` | `/paie/options/equipes?page=0&size=30` (corps `PaieOptionsEquipeRequest`: `periode`, `chantierIds`, `recherche`) | Page triée par libellé des équipes présentes sur le mois et les chantiers choisis ; recherche serveur sur code et libellé | 200, 400 |
 | `DELETE` | `/paie/{id}` | Supprimer | 204, 404 |
 | `POST` | `/paie/suppression` (corps `PaieSuppressionGroupeRequestDto` : `criteres` avec `periode` obligatoire, `nombreAttendu`) | Supprimer d'un coup un groupe de bulletins (carte de la vue Cartes) — voir « Suppression en groupe » | 200, 400, 409 |
-| `POST` | `/paie/effectifs` (corps `EffectifsCriteria` : `nomPrenom`, `cin`, `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Indicateurs mensuels sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : effectif payé, effectif du mois calendaire précédent, écart net (`variation`), entrées, plus payés, sorties enregistrées et mutations de chantier. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` si le mois calendaire précédent n'a pas de paie dans le périmètre. Les filtres sont appliqués en base avant le calcul | 200, 400 |
+| `POST` | `/paie/effectifs` (corps `PaieRecherche` : `nomPrenom`, `cin`, `chantierIds`, `fonctionIds`, `equipeIds`, 0 = sans équipe) | Indicateurs mensuels sur le périmètre — chantier, fonction et équipe **du bulletin du mois** : effectif payé, effectif du mois calendaire précédent, écart net (`variation`), entrées, plus payés, sorties enregistrées et mutations de chantier. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` si le mois calendaire précédent n'a pas de paie dans le périmètre. Les filtres sont appliqués en base avant le calcul | 200, 400 |
 | `GET` | `/paie/employes/{id}/parcours` | Parcours d'un employé (voir « Parcours d'un employé ») | 200, 404 |
 | `POST` | `/paie/import/analyse?periode=aaaa-MM` | Analyser un fichier sans rien enregistrer (assistant, étape Contrôle) | 200, 400 |
 | `POST` | `/paie/import/corrections?periode=aaaa-MM` | Corriger les fiches à partir du fichier, renvoie la nouvelle analyse | 200, 400 |
@@ -269,9 +254,9 @@ n'altèrent pas les affectations déjà conservées dans les bulletins.
 | `GET` | `/paie/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
 | `GET` | `/paie/periodes` | Mois qui contiennent de la paie, avec leur contenu résumé (sélecteur de mois de l'export) | 200 |
 | `GET` | `/paie/chantiers?periode=2026-08` | Chantiers du mois avec leurs équipes, effectifs et masses (étape « équipes » de l'export) | 200 |
-| `POST` | `/paie/analytique` (corps `PaieSearchCriteria`, `periode` obligatoire) | Indicateurs d'un mois sur le périmètre filtré : synthèse, évolution, répartitions par chantier, équipe et fonction (STC compris), tranches (vues Analytique et Cartes de tous les modules) | 200, 400 |
-| `POST` | `/paie/periodes/search` (corps `PaieSearchCriteria`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré, avec masse et STC (Cartes) | 200 |
-| `POST` | `/paie/chantiers/search` (corps `PaieSearchCriteria`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (assistant d'export) | 200, 400 |
+| `POST` | `/paie/analytique` (corps `PaieRecherche`, `periode` obligatoire) | Indicateurs d'un mois sur le périmètre filtré : synthèse, évolution, répartitions par chantier, équipe et fonction (STC compris), tranches (vues Analytique et Cartes de tous les modules) | 200, 400 |
+| `POST` | `/paie/periodes/search` (corps `PaieRecherche`, `periode` ignorée) | Les mois qui contiennent de la paie sur le périmètre filtré, avec masse et STC (Cartes) | 200 |
+| `POST` | `/paie/chantiers/search` (corps `PaieRecherche`, `periode` obligatoire) | Chantiers et équipes du mois, avec masse, effectif et STC du mois ainsi que leurs valeurs du mois civil précédent (assistant d'export) | 200, 400 |
 | `GET` | `/paie/materiel` | Tableaux du parc matériel prévus et leurs lignes (étape « matériel » de l'export) | 200 |
 | `GET` | `/paie/materiel/valeurs?periode=` | Derniers nombres saisis par ligne du parc, au plus tard pour le mois (mémoire `paie_materiel`, KAN-229) | 200 |
 | `POST` | `/paie/export` (corps `PaieExportRequestDto`) | Exporter en Excel (GLB + par chantier + par équipe selon la configuration) | 200 |
@@ -293,17 +278,14 @@ permission et `conventions/security.md` pour la conception du RBAC.
 
 ## Import Excel (assistant)
 
-Les étapes ci-dessous décrivent l'assistant Spring encore utilisé. Pour la migration Python,
-la décision métier plus récente automatise le nom, la fonction, le chantier et l'équipe renseignée
+Les étapes ci-dessous décrivent l'assistant d'import. La décision métier automatise le nom, la fonction, le chantier et l'équipe renseignée
 de la fiche lors de l'import ; un salaire différent passe toujours par le wizard, un salaire nul
 demande une confirmation distincte, et aucun départ ou STC n'est déduit automatiquement.
-Le suivi du portage (`site/docs/migration/paie.md`) distingue ce qui est déjà implémenté de ce
-qui reste à prouver avant la bascule.
 
 L'import se fait dans un **assistant** qui ne laisse passer qu'un fichier **en accord avec les fiches des employés** :
 la fiche porte l'état du dernier mois de paie, et un import la tient à jour (voir
 [ADR 0010](../../decisions/0010-employe-etat-du-dernier-mois-de-paie.md)). Le serveur ne garde rien entre les étapes : chacune
-reçoit le fichier et refait l'analyse (`PaieImportService`, lecture par `LecteurFichierPaie`).
+reçoit le fichier et refait l'analyse (`import_service.py`, lecture du classeur).
 
 | Étape | Route | Ce qui se passe |
 |---|---|---|
@@ -334,8 +316,8 @@ les autres bulletins.
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 
 Le **type de salaire** (mensuel ou journalier) n'est pas dans le fichier : quand le salaire change, l'assistant propose
-celui de la fiche ; il est obligatoire si la fiche n'en a pas encore. Pour la migration Python,
-un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent l'import (les chantiers viennent de
+celui de la fiche ; il est obligatoire si la fiche n'en a pas encore.
+Un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent l'import (les chantiers viennent de
 l'ERP, les équipes ont leur propre domaine). Une **fonction** inconnue est **créée par l'import** pour qui a `FUNCTION_WRITE`
 (`fonctionsACreer` dans l'analyse, qui n'écrit rien ; libellé tel que dans le fichier, 100 caractères au plus) ; de même, un
 chantier clôturé est **rouvert par l'import** pour qui a `CHANTIER_WRITE` (`chantiersARouvrir`). Les deux opérations ont lieu
@@ -353,7 +335,7 @@ d'abord ses bulletins (le dernier mois redevient alors celui d'avant, et c'est l
 
 `GET /paie/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer ») renvoie un
 fichier `.xlsx` vierge avec les trois lignes d'en-tête et les 13 colonnes dans l'ordre attendu
-(`LecteurFichierPaie.genererModele()`).
+(modèle de classeur généré par le service).
 
 ### Format attendu
 
@@ -441,15 +423,15 @@ groupée**) :
 
 - `GET /paie/periodes` : un résumé par mois qui contient de la paie, du plus récent au plus ancien
   (`periode` `aaaa-MM`, `nombreBulletins`, `nombreChantiers`, `masse`, `stc`). L'assistant l'utilise pour
-  proposer uniquement ces mois et afficher aussitôt leur contenu. Le décompte STC reproduit
-  `ObservationStc.estStcOuSortie` en JPQL.
+  proposer uniquement ces mois et afficher aussitôt leur contenu. Le décompte STC applique
+  `est_stc_ou_sortie` (`api/src/staport/domains/paie/observation.py`) en SQL.
 - `GET /paie/chantiers?periode=aaaa-MM` : les chantiers du mois du plus gros (masse) au plus petit, chacun avec
   `id`, `code`, `libelle` (nom, à défaut désignation), `effectif`, `masse` et ses équipes (`id`, `code`, `libelle`,
   `effectif`, `masse`). Les bulletins sans équipe comptent dans l'effectif du chantier mais n'ont pas d'équipe listée.
   La sélection utilisateur et les contrats PDF/Excel utilisent le **libellé** de l'équipe. Le code
   reste disponible pour les imports et les traitements techniques.
 - `GET /paie/materiel` : les tableaux du parc matériel prévus (`chantierCode`, `equipeCode`, `titre`, `libelles`),
-  lus dans `MaterielChantierCatalogue` pour que l'assistant sache quels nombres demander sans dupliquer la règle
+  lus dans `ServiceMaterielPaie` pour que l'assistant sache quels nombres demander sans dupliquer la règle
   (voir `docs/report/README.md`, « Parc matériel »).
 
 ### Sélection métier par libellé d'équipe
@@ -538,8 +520,8 @@ fil et l'étape courante de la hiérarchie.
 | Cartes | niveau « mois » (une carte par mois) | chantier → équipe → fonction → employés (voir ci-dessous) |
 | Analytique | le mois le plus récent est ouvert uniquement si aucun mois n'est déjà sélectionné | ce mois |
 
-Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par `PaieSpecification`, les agrégats des
-Cartes et de l'Analytique par `FiltresPaie` (mêmes règles : nom et CIN « contient » sans casse (les jokers `%` et `_` tapés sont des caractères ordinaires, `MotifRecherche`), identifiants multiples, un
+Le même périmètre est appliqué **de la même façon partout** : la liste le filtre par les filtres du dépôt de paie, les agrégats des
+Cartes et de l'Analytique par les filtres du dépôt de paie (mêmes règles : nom et CIN « contient » sans casse (les jokers `%` et `_` tapés sont des caractères ordinaires), identifiants multiples, un
 filtre vide est ignoré).
 
 ### Vue Cartes
@@ -575,10 +557,10 @@ importé par erreur. Le bouton est fourni par `PaieCartesComponent` (gabarit `#a
   bouton « Supprimer ». L'action est annoncée irréversible (pas de corbeille : seul le mois entier peut être réimporté
   depuis son fichier) — mais elle est **tracée** : chaque bulletin supprimé est conservé, avec tout son contenu, dans
   l'historique d'audit (voir [../audit/README.md](../audit/index.md)).
-- **Garde-fous serveur** (`PaieService.deleteGroupe`) : le mois est obligatoire (jamais « toute la paie » par erreur) ; le
+- **Garde-fous serveur** (`ServicePaie`, suppression de groupe) : le mois est obligatoire (jamais « toute la paie » par erreur) ; le
   serveur revérifie le nombre de bulletins du groupe et **ne supprime rien (`409`) s'il diffère du nombre confirmé** (import
   ou suppression entre-temps) ; le tout dans une transaction. Le groupe est calculé avec le même filtre que la liste
-  (`PaieSpecification`).
+  (filtres du dépôt de paie).
 - Les bulletins **sans équipe** ne se suppriment pas par leur carte : le bouton n'y est pas proposé.
   Après une suppression, le niveau affiché est rechargé.
 
@@ -603,9 +585,9 @@ utilise les rattachements du bulletin mensuel. Les entrées et mutations ne sont
 le premier mois disponible; les départs sont ceux enregistrés pour un employé payé sur le périmètre
 ce mois-ci ou le mois civil précédent.
 
-**Backend** : `PaieAnalytiqueService` (façade `IPaieAnalytiqueService`), appelé par `POST /paie/analytique` (`PAIE_READ`).
-Tout est agrégé en base par des requêtes JPQL de `PaieRepository` qui partagent le même fragment de filtres (`FiltresPaie`) ; le
-STC reprend la définition de `ObservationStc` (comme `/paie/periodes`) et la masse est `SUM(salaireTotal)` comme partout. Les
+**Backend** : `ServicePaie` (`api/src/staport/domains/paie/service.py`), appelé par `POST /paie/analytique` (`PAIE_READ`).
+Tout est agrégé en base par des requêtes SQLAlchemy du dépôt de paie qui partagent les mêmes filtres ; le
+STC reprend la définition de `est_stc_ou_sortie` (comme `/paie/periodes`) et la masse est `SUM(salaireTotal)` comme partout. Les
 répartitions `parEquipe` et `parFonction` portent chacune le nombre et le montant des STC de leur groupe (`stc`, `stcMontant`). Le
 mois précédent est celui du calendrier (`periode - 1`), même s'il n'y a pas de paie. Si le mois choisi n'a aucun bulletin sur le périmètre, la réponse porte des indicateurs à zéro et des listes vides, **sauf l'historique mensuel (`evolution`)**, qui reste celui du périmètre (ex. une équipe qui a payé un autre mois). **Les tranches** n'ont pas de seuil
 métier : la largeur est celle qui couvre le plus gros total du périmètre en 6 tranches, arrondie à 500 DH au-dessus, donc des
@@ -670,16 +652,16 @@ les résultats des filtres courants. Les quantités et montants sont affichés a
 
 | Scénario | Tests |
 |---|---|
-| Unicité, références, conservation du total et synchronisation de l'équipe | `PaieServiceTest` |
-| Version attendue et conflit de modification | `VersionOptimisteTest` |
-| Bornes et arrondi entier des valeurs métier | `PaieRequestValidationTest`, `PaieImportServiceTest`, specs du formulaire |
-| Trois lignes d'en-tête, trous de lignes, cellules invalides | `LecteurFichierPaieTest` |
-| Mois autorisé, corrections, départs, retours et import atomique | `PaieImportServiceTest`, `AuditImportTest`, specs de l'assistant d'import |
-| Filtres cohérents, jokers littéraux, options paginées | `PaieRechercheJokersTest`, `FiltresPaieTest`, specs de filtre et service |
-| Analytique, mois vide, historique et STC | `PaieAnalytiqueServiceTest` |
-| Mouvements et parcours historique | `PaieEffectifsServiceTest`, `PaieParcoursServiceTest` |
+| Unicité, références, conservation du total et synchronisation de l'équipe | `test_paie_contrat.py` |
+| Version attendue et conflit de modification | `test_function.py` |
+| Bornes et arrondi entier des valeurs métier | `test_paie_contrat.py`, `test_paie_import_departs.py`, specs du formulaire |
+| Trois lignes d'en-tête, trous de lignes, cellules invalides | `test_paie_import_montants.py` |
+| Mois autorisé, corrections, départs, retours et import atomique | `test_paie_import_departs.py`, `test_audit.py`, specs de l'assistant d'import |
+| Filtres cohérents, jokers littéraux, options paginées | `test_paie_options.py`, specs de filtre et service |
+| Analytique, mois vide, historique et STC | `test_paie_analytique.py` |
+| Mouvements et parcours historique | `test_paie_periode.py`, `test_paie_parcours_contrat.py` |
 | Chargement, erreurs, reprise et recherche courante | Specs Liste, Formulaire et Détail Paie |
-| Autorisations et refus | `EndpointSecurityTest`, specs des actions et routes |
+| Autorisations et refus | `test_auth_acces.py`, specs des actions et routes |
 | Documents et périmètres d'export | [Scénarios Rapport](../rapport/index.md#mise-en-œuvre-et-scénarios) |
 
 Les décisions et accords à recueillir sont dans le PV global ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)).
@@ -707,7 +689,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 | Couche | Ce qu'elle contient | À vérifier quand on la modifie |
 |---|---|---|
-| **Application** | `PaieController` et ses services (saisie, suppression, restauration), assistant d'import (`/paie/import/*`), export Excel, rapport PDF, parcours d'un employé ; audit `PAIE_*` ; côté Angular `portail/paie/` | Un bulletin par employé et par mois ; l'affectation du mois reste dans le bulletin ; `PAIE_WRITE` **et** `EMPLOYEE_WRITE` pour la saisie ; import atomique et corrections des fiches ; suppression et restauration auditées |
+| **Application** | `router.py` et ses services (saisie, suppression, restauration), assistant d'import (`/paie/import/*`), export Excel, rapport PDF, parcours d'un employé ; audit `PAIE_*` ; côté Angular `portail/paie/` | Un bulletin par employé et par mois ; l'affectation du mois reste dans le bulletin ; `PAIE_WRITE` **et** `EMPLOYEE_WRITE` pour la saisie ; import atomique et corrections des fiches ; suppression et restauration auditées |
 | **Analytique** | `POST /paie/analytique` (`PaieAnalytiqueDto`), `POST /paie/effectifs`, `/paie/periodes` : source unique des vues Cartes et Analytique de tous les domaines | Ne jamais recalculer une définition ailleurs (effectif, masse, STC, entrées, plus payés, sorties) ; comparaison indisponible plutôt que zéro ; dernier mois importé par défaut ; mêmes définitions que le rapport PDF et l'assistant |
 | **IA** | `paie_indicateurs`, `paie_periodes`, `paie_repartition`, `paie_evolution`, `paie_mouvements`, `paie_qualite`, `paie_bulletins_rechercher` (`PAIE_READ`), `rapport_preparer` (`PAIE_EXPORT` + `PAIE_READ`, ne génère aucun fichier) | Lecture seule ; `definitions` de `paie_mouvements` citées ; filtres `chantierIds` / `equipeIds` (`0` = sans équipe) / `fonctionIds` ; descriptions d'outils à jour ; chaque nombre vérifié contre les outils ; le modèle ne calcule rien |
 
@@ -720,7 +702,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
   permissions de lecture indiquées dans le RBAC.
 - Tout export ou suppression respecte l'audit ; ne pas inclure de données personnelles réelles dans
   les tests ou prompts IA.
-- Garder la parité API/formulaire/import : tous les nombres métier sont arrondis en entier avec `HALF_DOWN`.
+- Garder la cohérence API/formulaire/import : tous les nombres métier sont arrondis en entier avec `HALF_DOWN`.
   Refuser une cellule numérique invalide plutôt que la remplacer par une
   absence; les numéros de ligne d'erreur sont ceux d'Excel.
 - Les mouvements et les agrégats utilisent les mêmes filtres de nom, CIN et rattachements. Ne pas
@@ -732,5 +714,5 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 Tester règles de période, montants et bornes, unicité, imports, filtres, permissions et cohérence des
 exports. Valider les KPI avec les fixtures de référence documentées, sans dupliquer leur formule.
-Exécuter les scénarios du README, notamment `PaieRequestValidationTest`, `LecteurFichierPaieTest`,
-`PaieRechercheJokersTest` sur PostgreSQL et les specs des vues et assistants concernés.
+Exécuter les scénarios du README, notamment `test_paie_contrat.py`, `test_paie_import_montants.py`,
+`test_paie_options.py` sur PostgreSQL et les specs des vues et assistants concernés.

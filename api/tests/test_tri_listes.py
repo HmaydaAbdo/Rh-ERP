@@ -1,4 +1,4 @@
-"""Tri des listes paginées : noms publics de Spring Data (camelCase, chemins imbriqués) envoyés par l'interface Angular.
+"""Tri des listes paginées : noms publics de tri (camelCase, chemins imbriqués) envoyés par l'interface Angular.
 
 PostgreSQL réel. Chaque test crée ses données (marque unique) et compare l'ordre réel des lignes à un ordre calculé en
 Python : PostgreSQL place les valeurs nulles en dernier en croissant, en premier en décroissant ; à égalité, l'id.
@@ -398,7 +398,7 @@ def test_contrat_toutes_les_colonnes_triables_d_angular_passent(
 def test_sans_paie_read_les_tris_de_paie_des_employes_sont_retires(
     plateforme: Plateforme, connecter: Any, jeu: Jeu
 ) -> None:
-    """Spring (`EmployeeController.sansTriDePaie`) retire `salaire` et `typeSalaire` du tri, sans erreur."""
+    """Sans `PAIE_READ`, le tri retire `salaire` et `typeSalaire` du tri, sans erreur."""
     lecteur = _lecteur(plateforme, {"EMPLOYEE_READ"})
     paie = _lecteur(plateforme, {"EMPLOYEE_READ", "PAIE_READ"})
     ordre_par_id = [0, 1, 2]
@@ -418,7 +418,7 @@ def test_sans_paie_read_les_tris_de_paie_des_employes_sont_retires(
 
 
 def test_sans_paie_read_la_recherche_masque_salaire_et_type(plateforme: Plateforme, connecter: Any, jeu: Jeu) -> None:
-    """Spring (`pourLeLecteur`) : sans `PAIE_READ`, la page ne porte ni salaire ni type de salaire."""
+    """Sans `PAIE_READ`, la page ne porte ni salaire ni type de salaire."""
     lecteur = _lecteur(plateforme, {"EMPLOYEE_READ"})
     paie = _lecteur(plateforme, {"EMPLOYEE_READ", "PAIE_READ"})
 
