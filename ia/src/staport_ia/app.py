@@ -19,6 +19,7 @@ from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
 from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
+from staport_ia.fichiers import routeur_fichiers
 from staport_ia.memoire import ouvrir_memoire
 from staport_ia.modeles import Tache, modele
 from staport_ia.routage import Routeur
@@ -61,6 +62,7 @@ def cycle_ia(
             app.state.http = client
             await semer_competences(memoire.store)  # les fiches de compétences vivent dans le Store (KAN-259)
             app.state.memoire = memoire.checkpointer
+            app.state.store = memoire.store
             # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL en service).
             app.state.fabrique = fabrique or fabrique_reelle(config, memoire.store)
             app.state.routage = routage or Routeur().adomaines
@@ -81,6 +83,10 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
             memoire=lambda: app.state.memoire,
             routage=lambda: app.state.routage,
         )
+    )
+
+    routeur.include_router(
+        routeur_fichiers(acces=lambda: app.state.acces, actif=lambda: config.enabled, store=lambda: app.state.store)
     )
 
     @routeur.get("/health/ia")

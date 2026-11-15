@@ -54,6 +54,7 @@ from staport_ia.competences import (
     semer_competences_memoire,
 )
 from staport_ia.contexte import ContexteErp
+from staport_ia.fichiers import QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
 from staport_ia.surfaces import SurfacesResultats
 
@@ -315,6 +316,7 @@ def creer_agent(
         # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).
         ToolErrorMiddleware(on_error=_erreur_outil),
         ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
+        QuotaEspace(utilisateur),  # taille et nombre de fichiers : refus à l'exécution de l'écriture (KAN-267)
     ]
     if repli:
         # Second filet (KAN-35) : si le modèle principal échoue après le routage LiteLLM, les modèles de repli sont
