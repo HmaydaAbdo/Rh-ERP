@@ -37,7 +37,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
   pose une question si l'ambiguïté peut changer le résultat. Le jeu de référence mesure l'exactitude.
 - **Outils** — `outils.py` : le MCP intégré à LangChain (`langchain.mcp`, FastMCP) charge les outils de l'API avec le
   jeton agent de l'utilisateur ; l'échange de jeton est le seul code à nous.
-- **Évaluation** — `evaluation.py` (`openevals`, `agentevals`) sur le vrai agent ; `tests/test_passerelle_simulee.py`
+- **Évaluation** — `evaluation.py` (critères métier, `openevals`, `agentevals`) rejoué par pytest (`tests/test_banc_evaluation.py`) sur le vrai agent ; `tests/test_passerelle_simulee.py`
   rejoue l'agent sur une passerelle simulée par CopilotKit `aimock`, sans réseau ni quota.
 
 ## Évaluation (jeu de référence)
@@ -47,7 +47,7 @@ abstentions, refus). La vérité n'est jamais écrite à la main : l'évaluateur
 avec l'identité de l'utilisateur, puis compare la réponse de l'agent.
 
 Le lanceur est `api/tests/test_ia_lanceurs.py` (KAN-234), qui démarre l'API de test avec des données synthétiques, le service IA (`uvicorn --factory staport_ia.app:creer_app`)
-puis `python -m staport_ia.evaluation`. Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
+puis `pytest tests/test_banc_evaluation.py` (un cas = un test ; `IA_EVALUATION_CAS` et `IA_EVALUATION_REPETITIONS` restent les réglages du lanceur). Il exige une passerelle LiteLLM prête (`IA_LITELLM_BASE_URL`, `IA_LITELLM_API_KEY`) et
 s'active avec `IA_EVALUATION=1`.
 
 ## Développer

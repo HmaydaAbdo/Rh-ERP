@@ -1,7 +1,8 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Évaluation de l'agent sur le jeu de référence (site/docs/ia, § 4 et T12) : ``python -m staport_ia.evaluation``.
+"""Évaluation de l'agent sur le jeu de référence (site/docs/ia, § 4 et T12), rejoué par
+pytest : ``tests/test_banc_evaluation.py`` (KAN-76).
 
 Pour chaque cas, la vérité est lue en appelant directement l'outil MCP attendu avec l'identité de l'utilisateur ;
 le vrai agent (``create_deep_agent`` sur la passerelle LiteLLM) répond ensuite à la question. Un cas réussit si l'agent
@@ -17,19 +18,15 @@ question), ``EVAL_DONNEES`` (JSON des marqueurs),
 sans réseau, est dans ``tests/test_passerelle_simulee.py`` (CopilotKit ``aimock``).
 """
 
-import argparse
-import asyncio
-import io
 import json
 import math
 import os
 import re
 import statistics
-import sys
 import time
 import traceback
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
@@ -538,12 +535,9 @@ def synthese(resultats: list[ResultatCas]) -> dict[str, Any]:
     }
 
 
-async def principal(
-    filtre: set[str] | None = None, repetitions: int = 1, concurrence: int = 2, avec_juge: bool = True
-) -> dict[str, Any]:
+def contexte_depuis_env(client: httpx.AsyncClient, avec_juge: bool = True) -> Contexte:
+    """Contexte d'un cas lu dans les variables ``EVAL_*`` et ``IA_LITELLM_*`` (banc d'évaluation sous pytest)."""
     api = os.environ["EVAL_API_URL"].rstrip("/")
-    jetons = {"complet": os.environ["EVAL_JETON_COMPLET"], "restreint": os.environ["EVAL_JETON_RESTREINT"]}
-    donnees = cast(dict[str, Any], json.loads(os.environ["EVAL_DONNEES"]))
     config = Settings(
         enabled=True,
         litellm_base_url=os.environ["IA_LITELLM_BASE_URL"],  # pyright: ignore[reportArgumentType]
@@ -552,57 +546,8 @@ async def principal(
         llm_timeout_seconds=180,
         erp_api_url=api,  # pyright: ignore[reportArgumentType]
     )
-    jeu = json.loads(JEU.read_text(encoding="utf-8"))
-    resultats: list[ResultatCas] = []
-    limite = asyncio.Semaphore(max(1, concurrence))
-    async with httpx.AsyncClient(timeout=30) as client:
-        ctx = Contexte(
-            config, client, api, jetons, donnees, modele(config, Tache.MEDIUM, interne=True) if avec_juge else None
-        )
-
-        async def un(cas: dict[str, Any], numero: int) -> ResultatCas:
-            async with limite:
-                debut_cas = time.monotonic()
-                try:
-                    resultat = await evaluer_cas(cas, ctx, numero)
-                except Exception as panne:  # un cas en panne est un échec mesuré, pas un arrêt
-                    resultat = ResultatCas(
-                        cas["id"],
-                        str(cas.get("type", "reponse")),
-                        False,
-                        f"panne : {cause(panne)}",
-                        round(time.monotonic() - debut_cas, 2),
-                        repetition=numero,
-                    )
-                print(
-                    f"[{'OK' if resultat.succes else 'KO'}] {resultat.id:30s} #{numero} "
-                    f"{resultat.latence_secondes:6.1f}s  {resultat.raison}",
-                    flush=True,
-                )
-                return resultat
-
-        cas_retenus = [c for c in jeu["cas"] if not filtre or c["id"] in filtre]
-        resultats = list(await asyncio.gather(*(un(c, n) for c in cas_retenus for n in range(1, repetitions + 1))))
-    return {"jeu": jeu["version"], "synthese": synthese(resultats), "resultats": [asdict(r) for r in resultats]}
-
-
-def main() -> None:
-    if isinstance(sys.stdout, io.TextIOWrapper):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # pyright: ignore[reportUnknownMemberType]
-    parser = argparse.ArgumentParser(description="Évalue l'agent Staport Intelligence sur le jeu de référence")
-    parser.add_argument("--rapport", type=Path, default=Path("evaluation-ia.json"))
-    parser.add_argument("--cas", help="identifiants de cas séparés par des virgules (défaut : tout le jeu)")
-    parser.add_argument("--repetitions", type=int, default=1, help="exécutions de chaque cas (stabilité, pass^k)")
-    parser.add_argument("--concurrence", type=int, default=2, help="exécutions simultanées (quotas gratuits)")
-    parser.add_argument("--sans-juge", action="store_true", help="sans juge LLM (critères déterministes seuls)")
-    arguments = parser.parse_args()
-    rapport: Path = arguments.rapport
-    filtre = set(arguments.cas.split(",")) if arguments.cas else None
-    bilan = asyncio.run(principal(filtre, arguments.repetitions, arguments.concurrence, not arguments.sans_juge))
-    rapport.parent.mkdir(parents=True, exist_ok=True)
-    rapport.write_text(json.dumps(bilan, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(bilan["synthese"], ensure_ascii=False))
-
-
-if __name__ == "__main__":
-    main()
+    jetons = {"complet": os.environ["EVAL_JETON_COMPLET"], "restreint": os.environ["EVAL_JETON_RESTREINT"]}
+    donnees = cast(dict[str, Any], json.loads(os.environ["EVAL_DONNEES"]))
+    return Contexte(
+        config, client, api, jetons, donnees, modele(config, Tache.MEDIUM, interne=True) if avec_juge else None
+    )
