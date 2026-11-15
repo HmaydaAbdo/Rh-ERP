@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-staport-intelligence-ia = { path = "../ia" }
+staport-intelligence-ia = { path = "../ia", editable = true }
 
 [dependency-groups]
 dev = [
