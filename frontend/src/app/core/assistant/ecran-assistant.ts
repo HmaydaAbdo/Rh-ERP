@@ -4,7 +4,7 @@
  * connaît ; les deux listes évoluent ensemble.
  */
 
-export const LIBELLES_DOMAINES: Readonly<Record<string, string>> = {
+const DOMAINES: Readonly<Record<string, string>> = {
   paie: 'Paie',
   employees: 'Employés',
   chantiers: 'Chantiers',
@@ -14,11 +14,11 @@ export const LIBELLES_DOMAINES: Readonly<Record<string, string>> = {
 };
 
 /** Les filtres d'écran utiles à l'agent : période, identifiants et statuts. Les saisies libres (nom, CIN, code…) ne partent pas. */
-export const FILTRES_ECRAN = new Set(['periode', 'chantierIds', 'equipeIds', 'fonctionIds', 'statut', 'actif', 'page']);
+const FILTRES = new Set(['periode', 'chantierIds', 'equipeIds', 'fonctionIds', 'statut', 'actif', 'page']);
 
 function domaineDe(url: string): string | null {
   const premier = url.split('?')[0].split('/').filter(Boolean)[0] ?? '';
-  return LIBELLES_DOMAINES[premier] ?? null;
+  return DOMAINES[premier] ?? null;
 }
 
 /** Contexte envoyé à l'agent avec chaque question : l'écran, son domaine et ses filtres lisibles. */
@@ -26,7 +26,7 @@ export function contexteEcran(url: string): { ecran: string; domaine: string | n
   const [chemin, requete = ''] = url.split('?');
   const filtres: Record<string, string> = {};
   new URLSearchParams(requete).forEach((valeur, cle) => {
-    if (FILTRES_ECRAN.has(cle) && valeur.length <= 100) {
+    if (FILTRES.has(cle) && valeur.length <= 100) {
       filtres[cle] = valeur;
     }
   });
