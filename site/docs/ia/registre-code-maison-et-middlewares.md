@@ -143,6 +143,17 @@ liste exacte des outils exposés.
 | Question du serveur en cours d'appel | interruption LangGraph native (`elicitation`), reprise par `Command(resume=…)` | non |
 | Compatibilité avec nos versions | oui (`mcp` 2.3.0, `fastmcp` 4.1.6) | **non : exige `mcp<2.0.0`, nous avons `mcp` 2.3.0** |
 
+Ce que chacun apporte, en clair :
+- `langchain-mcp-adapters` : le premier pont publié entre MCP et LangChain. Il fournit `MultiServerMCPClient` (plusieurs
+  serveurs dans un seul client), `load_mcp_tools` (outils depuis une session), des en-têtes à passer à la main
+  (`headers`, transports HTTP et SSE seulement) et l'option `handle_tool_errors` pour les erreurs d'exécution MCP.
+  Une session est ouverte par appel d'outil. Il s'appuie sur le SDK `mcp` 1.x.
+- `langchain.mcp` : le même rôle, intégré à LangChain et construit sur FastMCP. Il ajoute ce que nous utilisons ou
+  utiliserons : authentification déclarée (`auth=jeton`, OAuth 2.1, `httpx.Auth`), `ClientGroup` (une connexion et une
+  authentification par serveur, outils préfixés), contenu structuré dans `ToolMessage.artifact` (déjà lu par le rendu
+  des tableaux), outils réentrants, et surtout les questions du serveur en cours d'appel (élicitation) converties en
+  interruption LangGraph, qui s'additionne à l'accord de l'utilisateur avant écriture (KAN-260).
+
 Décision : **garder `langchain.mcp`**. `langchain-mcp-adapters` ne s'installe pas avec `mcp` 2.x et n'apporte aucune
 capacité qui nous manque. Le risque de la bêta (API susceptible de changer) est couvert par les tests MCP et la
 veille de versions. Pistes ouvertes, chacune dans son ticket : passer l'authentification par `Client(url, auth=jeton)`
@@ -157,4 +168,14 @@ humaine (KAN-260, KAN-264).
 envoyées au client comme messages utilisateur) est ouverte ; un contributeur a proposé le correctif, non fusionné.
 Le contournement par `FunctionMiddleware` (`copilot-runtime/src/serveur.mjs`) est donc **maintenu** ; à retirer à la
 sortie d'une version qui contient le correctif, à vérifier à chaque montée de version.
+
+### Fiches de compétences dans le Store, sans accès disque (KAN-259, décision du propriétaire du 2026-11-15)
+
+Option 2 retenue : le modèle n'a **aucun accès au disque**. Les fiches `SKILL.md` du paquet sont semées dans le Store
+(espace de noms `("competences",)`, commun à tous) au démarrage du service (`semer_competences`, `app.py`) ; le
+`CompositeBackend` les sert par un `StoreBackend`, et l'espace de chaque utilisateur (`/espace/`) par un autre,
+propre à son identité. Le `FilesystemBackend` n'est plus utilisé par le service. L'écriture reste bornée par le profil
+d'harnais et les permissions (accord sous `/espace/`, refus ailleurs, donc aussi sur les fiches). Les fiches ne
+changent qu'avec une nouvelle version du service : le semis au démarrage les remplace. Test : lecture des fiches depuis
+PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
 

@@ -12,9 +12,11 @@ from langchain_core.language_models.fake_chat_models import FakeMessagesListChat
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.store.memory import InMemoryStore
 from pydantic import Field
 
 from staport_ia.agent import PROFIL_HARNAIS
+from staport_ia.competences import semer_competences_memoire
 
 # Le profil d'harnais de l'ERP (agent.py) s'applique au fournisseur du faux modèle comme à celui de ChatLiteLLM.
 register_harness_profile("modelescripte", PROFIL_HARNAIS)
@@ -59,6 +61,13 @@ class ModeleScripte(FakeMessagesListChatModel):
                 chunk_position="last",
             )
         )
+
+
+def store_avec_competences() -> InMemoryStore:
+    """Un Store en mémoire où les fiches de compétences sont déjà semées, comme le service le fait au démarrage."""
+    store = InMemoryStore()
+    semer_competences_memoire(store)
+    return store
 
 
 def modele(*reponses: BaseMessage) -> ModeleScripte:
