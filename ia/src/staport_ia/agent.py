@@ -29,6 +29,7 @@ from deepagents.middleware import FilesystemMiddleware, FilesystemPermission, Sk
 from langchain.agents.middleware import (
     AgentMiddleware,
     ModelCallLimitMiddleware,
+    ModelFallbackMiddleware,
     SummarizationMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
@@ -278,6 +279,7 @@ def creer_agent(
     store: BaseStore | None = None,
     appels_modele: int = 8,
     appels_outils: int = 8,
+    repli: Sequence[BaseChatModel] = (),
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
@@ -296,6 +298,10 @@ def creer_agent(
         ToolErrorMiddleware(on_error=_erreur_outil),
         ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
     ]
+    if repli:
+        # Second filet (KAN-35) : si le modèle principal échoue après le routage LiteLLM, les modèles de repli sont
+        # essayés dans l'ordre, par le middleware officiel. Sans repli configuré, aucun changement.
+        intergiciels.append(ModelFallbackMiddleware(*repli))
     if resumeur is not None:
         # Conversation durable : au-delà de SEUIL_RESUME_JETONS, le début est résumé ; les 12 derniers messages restent.
         intergiciels.insert(
