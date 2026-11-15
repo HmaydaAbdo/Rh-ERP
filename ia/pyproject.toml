@@ -9,6 +9,7 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "httpx",
+    "authlib",
     "openai",
     "mcp",
     "langgraph>=1.2.22",

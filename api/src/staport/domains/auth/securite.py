@@ -4,7 +4,9 @@
   remplacées à la première connexion réussie (`verifier_et_mettre_a_jour`). Le hachage, coûteux par conception, tourne
   hors de la boucle d'événements.
 - Jetons opaques (rafraîchissement, réinitialisation) : 256 bits aléatoires, seule leur empreinte SHA-256 est stockée.
-- JWT : RS256 uniquement ; la clé privée ne quitte pas le serveur, la clé publique peut être publiée.
+- JWT : RS256 uniquement ; la clé privée ne quitte pas le serveur, la clé publique peut être publiée. Encodage et
+  vérification par `joserfc` (la bibliothèque JOSE d'Authlib, KAN-74) ; le jeton agent est émis par le serveur OAuth2
+  d'`echange_jetons.py`.
 """
 
 import asyncio
@@ -14,12 +16,14 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from functools import cached_property
+from typing import Any, cast
 
-import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
-from jwt.algorithms import RSAAlgorithm
+from joserfc import jws, jwt
+from joserfc.errors import BadSignatureError, JoseError
+from joserfc.jwk import Key, KeySet, RSAKey
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.hashers.bcrypt import BcryptHasher
@@ -120,10 +124,14 @@ def charger_cle_publique(base64_x509: str, variable: str) -> RSAPublicKey:
     return cle
 
 
-def _jwk(cle: RSAPublicKey, identifiant: str) -> dict[str, Any]:
-    jwk: dict[str, Any] = RSAAlgorithm.to_jwk(cle, as_dict=True)  # pyright: ignore[reportAssignmentType,reportCallIssue]
-    jwk.update({"kid": identifiant, "use": "sig", "alg": "RS256"})
-    return jwk
+def _jwk_prive(cle: RSAPrivateKey, identifiant: str) -> RSAKey:
+    pem = cle.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+    return RSAKey.import_key(pem, {"kid": identifiant, "use": "sig", "alg": "RS256"})
+
+
+def _jwk_public(cle: RSAPublicKey, identifiant: str) -> RSAKey:
+    pem = cle.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    return RSAKey.import_key(pem, {"kid": identifiant, "use": "sig", "alg": "RS256"})
 
 
 @dataclass(frozen=True)
@@ -164,12 +172,21 @@ class JeuDeCles:
             return self.precedente
         return None
 
+    @cached_property
+    def cle_signature(self) -> RSAKey:
+        return _jwk_prive(self.privee, self.identifiant)
+
+    @cached_property
+    def ensemble(self) -> KeySet:
+        """Clés de vérification (courante puis précédente) ; la clé du jeton est choisie par son `kid`."""
+        cles: list[Key] = [_jwk_public(self.privee.public_key(), self.identifiant)]
+        if self.precedente is not None and self.identifiant_precedent is not None:
+            cles.append(_jwk_public(self.precedente, self.identifiant_precedent))
+        return KeySet(cles)
+
     def jwks(self) -> dict[str, Any]:
         """Clés publiques (courante puis précédente), sans partie privée."""
-        cles = [_jwk(self.privee.public_key(), self.identifiant)]
-        if self.precedente is not None and self.identifiant_precedent is not None:
-            cles.append(_jwk(self.precedente, self.identifiant_precedent))
-        return {"keys": cles}
+        return cast(dict[str, Any], self.ensemble.as_dict(private=False))
 
 
 # --- Jetons JWT -----------------------------------------------------------------------------------
@@ -201,13 +218,13 @@ class EmetteurJetons:
             "sub": username,
             "iss": EMETTEUR,
             "aud": EMETTEUR,
-            "iat": maintenant,
-            "exp": maintenant + duree,
+            "iat": int(maintenant.timestamp()),
+            "exp": int((maintenant + duree).timestamp()),
             "uid": utilisateur_id,
             "permissions": sorted(permissions),
             "roles": sorted(roles),
         }
-        return jwt.encode(claims, self._cles.privee, algorithm="RS256", headers={"kid": self._cles.identifiant})
+        return _encoder(self._cles, claims)
 
     def verifier_acces(self, jeton: str) -> JetonAcces:
         claims = _decoder(jeton, self._cles, audience=EMETTEUR)
@@ -222,43 +239,41 @@ class EmetteurJetons:
         )
 
 
+def _encoder(cles: JeuDeCles, claims: dict[str, Any]) -> str:
+    return jwt.encode({"alg": "RS256", "kid": cles.identifiant}, claims, cles.cle_signature, algorithms=["RS256"])
+
+
 def _decoder(jeton: str, cles: JeuDeCles, audience: str) -> dict[str, Any]:
     try:
-        cle = cles.cle_publique(jwt.get_unverified_header(jeton).get("kid"))
-        if cle is None:
+        # Un `kid` désigne la clé ; les jetons d'accès RFC 9068 d'Authlib n'en portent pas, toutes les clés sont alors
+        # essayées (deux au plus, pendant une rotation). Un `kid` inconnu est refusé.
+        kid = jws.extract_compact(jeton.encode()).protected.get("kid")
+        candidates = [cle for cle in cles.ensemble.keys if kid is None or cle.kid == kid]
+        if not candidates:
             raise JetonInvalide("clé inconnue")
-        claims: dict[str, Any] = jwt.decode(
-            jeton,
-            cle,
-            algorithms=["RS256"],
-            audience=audience,
-            issuer=EMETTEUR,
+        decode = None
+        for cle in candidates:
+            try:
+                decode = jwt.decode(jeton, cle, algorithms=["RS256"])
+                break
+            except BadSignatureError:
+                continue
+        if decode is None:
+            raise JetonInvalide("signature invalide")
+        jwt.JWTClaimsRegistry(
             leeway=TOLERANCE_HORLOGE,
-            options={"require": ["exp", "iat", "sub", "aud", "iss"]},
-        )
-    except jwt.PyJWTError as cause:
+            iss={"essential": True, "value": EMETTEUR},
+            aud={"essential": True, "value": audience},
+            exp={"essential": True},
+            iat={"essential": True},
+            sub={"essential": True},
+        ).validate(decode.claims)
+    except (JoseError, ValueError) as cause:
         raise JetonInvalide(str(cause)) from cause
+    claims: dict[str, Any] = decode.claims
     if not isinstance(claims.get("sub"), str) or not claims["sub"].strip():
         raise JetonInvalide("sujet absent")
     return claims
-
-
-def emettre_jeton_agent(cles: JeuDeCles, utilisateur_id: int, username: str) -> tuple[str, str]:
-    """Jeton délégué de l'assistant IA : identité seule, 5 minutes. Retourne `(jeton, jti)`."""
-    maintenant = datetime.now(UTC)
-    jti = str(uuid.uuid4())
-    claims: dict[str, Any] = {
-        "iss": EMETTEUR,
-        "sub": username,
-        "aud": [AUDIENCE_IA, AUDIENCE_MCP],
-        "iat": maintenant,
-        "nbf": maintenant,
-        "exp": maintenant + DUREE_JETON_AGENT,
-        "jti": jti,
-        "uid": utilisateur_id,
-        "scope": SCOPE_LECTURE,
-    }
-    return jwt.encode(claims, cles.privee, algorithm="RS256", headers={"kid": cles.identifiant}), jti
 
 
 def verifier_jeton_agent(cles: JeuDeCles, jeton: str) -> tuple[int, str, str]:
@@ -281,15 +296,15 @@ def emettre_reference_export(
         "iss": EMETTEUR,
         "sub": username,
         "aud": AUDIENCE_EXPORT,
-        "iat": maintenant,
-        "nbf": maintenant,
-        "exp": maintenant + DUREE_REFERENCE_EXPORT,
+        "iat": int(maintenant.timestamp()),
+        "nbf": int(maintenant.timestamp()),
+        "exp": int((maintenant + DUREE_REFERENCE_EXPORT).timestamp()),
         "jti": str(uuid.uuid4()),
         "uid": utilisateur_id,
         "periode": periode,
         "chantierIds": chantier_ids,
     }
-    return jwt.encode(claims, cles.privee, algorithm="RS256", headers={"kid": cles.identifiant})
+    return _encoder(cles, claims)
 
 
 def verifier_reference_export(cles: JeuDeCles, reference: str) -> tuple[int, int, list[int]]:

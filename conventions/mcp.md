@@ -86,7 +86,7 @@ Un serveur MCP publie des **capacités**, pas des agents :
 | Primitive MCP | Usage |
 |---|---|
 | Outils (`tools`) | Opérations métier des domaines, lecture et écriture séparées. Un agent de domaine peut aussi être publié comme un outil de haut niveau (une sous-tâche en entrée, un résultat typé en sortie), sous les mêmes règles qu'un outil |
-| Ressources (`resources`) | Contenus en lecture seule et adressables : documentation, référentiels publiés, documents d'un corpus autorisé |
+| Ressources (`resources`) | Contenus en lecture seule et adressables : documentation, référentiels publiés, documents d'un corpus autorisé. Exemple en production : `erp://contexte` (date du jour, dernier mois de paie selon les droits de l'appelant), lue par le service IA au début de chaque exécution et non appelée par le modèle (KAN-72) |
 | Prompts (`prompts`) | Modèles de demande réutilisables proposés aux clients, versionnés avec l'application |
 
 La délégation d'une tâche à un agent d'une autre application peut justifier A2A (voir

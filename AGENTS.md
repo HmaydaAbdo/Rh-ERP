@@ -200,6 +200,8 @@ dans l'ordre ci-dessous.
 21. `conventions/integrations.md` (choix des protocoles et intégrations selon le besoin)
 22. `conventions/ingenierie-agentique.md` (abstraction à sa place, bon framework, bon outillage, transfert technologique,
     livraison agentique par page, documentation à jour en fin d'épopée ; **à lire à l'ouverture de toute tâche**)
+23. `conventions/metaswarm.md` (greffon d'orchestration installé pour tout le compte : ce qu'il change au comportement
+    des sessions et ce qu'il est interdit d'en faire ici ; **à lire à l'ouverture de toute session**)
 
 Ensuite, la documentation propre au projet (ce que le projet fait, par opposition aux conventions qui disent
 comment écrire le code) : le site de documentation `site/` (Docusaurus, pages dans `site/docs/`) est l'unique

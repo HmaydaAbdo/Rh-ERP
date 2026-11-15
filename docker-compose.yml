@@ -311,8 +311,8 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?LITELLM_SALT_KEY est obligatoire}
       DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}@litellm-db:5432/litellm
-      # Une clé vide désactive ses modèles au démarrage (litellm/filtrer_config.py) : LiteLLM ne bascule
-      # pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même tag.
+      # Une clé vide écarte ses modèles du routage (sondes natives de LiteLLM, litellm/litellm_config.yaml) : LiteLLM ne
+      # bascule pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même groupe.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
@@ -423,6 +423,8 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
+      CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
       ERP_API_URL: http://api:8080
       # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.

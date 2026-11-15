@@ -4,6 +4,8 @@ import { CopilotChat, CopilotKit, injectAgentStore, injectChatConfiguration, pro
 import { MessageComponent } from '../../shared/ui/message/message.component';
 import { AccordInterruptionComponent } from './accord-interruption.component';
 import { FilAssistant } from './fil-assistant.service';
+import { ListeConversationsComponent } from './liste-conversations.component';
+import { MemoireAssistantComponent } from './memoire-assistant.component';
 
 
 /**
@@ -18,8 +20,8 @@ import { FilAssistant } from './fil-assistant.service';
  */
 @Component({
   selector: 'app-assistant-chat',
-  host: { class: 'flex h-full min-h-0 flex-col' },
-  imports: [CopilotChat, MessageComponent, AccordInterruptionComponent],
+  host: { class: 'relative flex h-full min-h-0 flex-col' },
+  imports: [CopilotChat, MessageComponent, AccordInterruptionComponent, ListeConversationsComponent, MemoireAssistantComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideCopilotChatConfiguration(),
@@ -49,6 +51,12 @@ import { FilAssistant } from './fil-assistant.service';
       <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
     }
     <copilot-chat />
+    @if (fil.listeOuverte()) {
+      <app-liste-conversations />
+    }
+    @if (fil.memoireOuverte()) {
+      <app-memoire-assistant />
+    }
     <app-accord-interruption />
   `
 })
@@ -82,6 +90,7 @@ export class AssistantChatComponent {
         },
         onRunFinishedEvent: () => {
           termine = true;
+          void this.fil.rafraichir();
         },
         onRunErrorEvent: () => {
           termine = true;

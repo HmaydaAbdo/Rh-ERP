@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
-from conftest import Plateforme
+from conftest import Plateforme, formulaire_echange
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -35,9 +35,9 @@ def spans() -> Iterator[InMemorySpanExporter]:
 
 def _jeton_agent(p: Plateforme, connecter: Callable[[str, str], dict[str, Any]], nom: str, mdp: str) -> str:
     acces = connecter(nom, mdp)["accessToken"]
-    reponse = p.client.post("/auth/jetons/agent", headers={"Authorization": f"Bearer {acces}"})
+    reponse = p.client.post("/oauth/token", data=formulaire_echange(acces))
     assert reponse.status_code == 200, reponse.text
-    return reponse.json()["jeton"]
+    return reponse.json()["access_token"]
 
 
 def _nom(p: Plateforme, identifiant: int) -> str:

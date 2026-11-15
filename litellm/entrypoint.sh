@@ -10,7 +10,5 @@ esac
 : "${LITELLM_SALT_KEY:?LITELLM_SALT_KEY est obligatoire}"
 : "${DATABASE_URL:?DATABASE_URL est obligatoire}"
 
-# Configuration effective : sans les déploiements dont la clé est vide (litellm/filtrer_config.py).
-python3 /usr/local/bin/staport-intelligence-filtrer-config /app/config.yaml /tmp/config.yaml
-
+# Les modèles sans clé sont écartés par les sondes natives de LiteLLM (litellm_config.yaml, general_settings).
 exec docker/prod_entrypoint.sh "$@"

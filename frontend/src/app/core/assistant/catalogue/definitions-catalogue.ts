@@ -52,7 +52,7 @@ export const PROPRIETES_TIMELINE = z.object({
 });
 
 export const DESCRIPTIONS = {
-  DataTable: 'Tableau de données : tri, recherche, export CSV et plein écran.',
+  DataTable: 'Tableau de données : tri, recherche et plein écran.',
   KpiGrid: "Grille d'indicateurs clés.",
   Chart: 'Graphique en barres, courbe ou anneau.',
   Timeline: 'Frise chronologique : événements datés, du plus ancien au plus récent.'

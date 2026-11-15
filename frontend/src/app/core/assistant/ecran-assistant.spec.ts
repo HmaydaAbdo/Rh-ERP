@@ -11,6 +11,12 @@ describe('ecran-assistant', () => {
     });
   });
 
+  it('n’envoie ni saisie libre ni donnée personnelle (nom, CIN, code)', () => {
+    const contexte = contexteEcran('/employees?nom=Ali&cin=AB123456&code=C1&statut=ACTIF&page=2');
+
+    expect(contexte.filtres).toEqual({ statut: 'ACTIF', page: '2' });
+  });
+
   it('laisse le domaine vide pour un écran inconnu', () => {
     expect(contexteEcran('/profil')).toEqual({ ecran: '/profil', domaine: null, filtres: {} });
   });

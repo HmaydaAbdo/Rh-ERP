@@ -485,7 +485,7 @@ EVENEMENTS_SECURITE = {
     ("POST", "/auth/logout"),
     ("POST", "/auth/forgot-password"),
     ("POST", "/auth/reset-password"),
-    ("POST", "/auth/jetons/agent"),
+    ("POST", "/oauth/token"),
     ("POST", "/interne/ia/ecritures-fichier"),
     ("POST", "/users/{identifiant}/reset-password"),
 }

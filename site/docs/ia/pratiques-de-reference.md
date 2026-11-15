@@ -27,8 +27,8 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé Staport Intelligence | T2.5 |
 | Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
 | Contrat de vue unique entre l'API, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
-| Conversations multi-tours, isolation, suppression | Absent : chaque question est traitée seule, l'historique ne vit que dans le navigateur | T3.2 |
-| Contexte d'écran | Absent | T3.3 |
+| Conversations multi-tours, isolation, suppression | En place (KAN-79, 81, 82) : fils durables par utilisateur (`identifyUser`), liste, renommage, suppression avec la mémoire IA, expiration quotidienne | T3.2 |
+| Contexte d'écran | En place (KAN-83) : indice en lecture seule envoyé par `connectAgentContext`, revérifié et réécrit par le service IA (`ecran.py`) ; filtre falsifié refusé, saisies libres écartées | T3.3 |
 | Traces OpenTelemetry, outil d'observation, alertes | Absent : journaux JSON et corrélation seulement | T3.4 |
 | Objectifs de service, tests de charge et de panne | Absent ; mesure connue : p50 9,7 s et p95 26,1 s sur offres gratuites | T3.5 |
 | Registre, fiche du système, analyse d'impact, notice, conservation | Absent ; accord CNDP obtenu (§ 2), sa référence et son périmètre restent à consigner | T3.6 |

@@ -1,7 +1,7 @@
 """Interopérabilité du serveur MCP Python avec des clients externes (KAN-50, épopée E2).
 
 L'application complète écoute sur un port loopback éphémère (uvicorn, base PostgreSQL réelle) et deux clients MCP
-officiels l'appellent avec un jeton agent RS256 émis par `POST /auth/jetons/agent` :
+officiels l'appellent avec un jeton agent RS256 émis par `POST /oauth/token` :
 
 - le client TypeScript du SDK MCP (le même SDK que le runtime Node CopilotKit), `scripts/ia/mcp-compatibility` ;
 - le client Python officiel du service IA, `ia/tests/integration/test_mcp_staport.py`.
@@ -22,7 +22,7 @@ from typing import Any
 
 import pytest
 import uvicorn
-from conftest import Plateforme, construire_contexte
+from conftest import Plateforme, construire_contexte, formulaire_echange
 from sqlalchemy import text
 
 from staport.main import creer_app
@@ -66,12 +66,12 @@ def environnement_mcp(
     with plateforme.moteur.connect() as c:
         nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
     acces = connecter(nom, mdp)["accessToken"]
-    reponse = plateforme.client.post("/auth/jetons/agent", headers={"Authorization": f"Bearer {acces}"})
+    reponse = plateforme.client.post("/oauth/token", data=formulaire_echange(acces))
     assert reponse.status_code == 200, reponse.text
     return {
         **os.environ,
         "MCP_STAPORT_URL": f"{serveur_loopback}/mcp",
-        "MCP_STAPORT_JETON": reponse.json()["jeton"],
+        "MCP_STAPORT_JETON": reponse.json()["access_token"],
         "MCP_STAPORT_UTILISATEUR": nom,
     }
 

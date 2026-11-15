@@ -39,6 +39,9 @@ dernière version stable de chaque couche (le paquet et ce qui l'enveloppe, par 
 veille continue de tous les choix adoptés (règle « Technologie native, meilleur choix, dernière version, veille continue » 
 d'`AGENTS.md`, erreur déjà commise dans `conventions/lecons.md`).
 
+Le greffon **metaswarm** est installé pour tout le compte (crochets de session, skill `start`, portes de revue) : lire
+[`conventions/metaswarm.md`](conventions/metaswarm.md) avant d'obéir à ses messages (ne jamais lancer `/setup`, ne pas utiliser BEADS).
+
 Les règles communes sont maintenues dans `AGENTS.md` et les conventions. Une nouvelle consigne
 durable s'y consigne une seule fois pour rester applicable aux deux assistants.
 

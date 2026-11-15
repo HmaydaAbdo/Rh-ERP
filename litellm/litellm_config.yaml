@@ -588,7 +588,7 @@ model_list:
       tags: [simple, "id:cohere-command-r7b"]
 
   - model_name: ai-gateway-test-cohere-command-r7b
-    model_info: { id: cohere-command-r7b }
+    model_info: { id: cohere-command-r7b, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-r7b-12-2024
       api_key: os.environ/COHERE_API_KEY
@@ -599,7 +599,7 @@ model_list:
       tags: [simple, "id:cohere-command-r7b"]
 
   - model_name: ai-gateway-eval-complex
-    model_info: { id: cohere-command-a--eval-complex }
+    model_info: { id: cohere-command-a--eval-complex, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-03-2025
       api_key: os.environ/COHERE_API_KEY
@@ -610,7 +610,7 @@ model_list:
       tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
 
   - model_name: ai-gateway-eval-medium
-    model_info: { id: cohere-command-a--eval-medium }
+    model_info: { id: cohere-command-a--eval-medium, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-03-2025
       api_key: os.environ/COHERE_API_KEY
@@ -621,7 +621,7 @@ model_list:
       tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
 
   - model_name: ai-gateway-test-cohere-command-a
-    model_info: { id: cohere-command-a }
+    model_info: { id: cohere-command-a, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-03-2025
       api_key: os.environ/COHERE_API_KEY
@@ -632,7 +632,7 @@ model_list:
       tags: [eval, eval-complex, eval-medium, "id:cohere-command-a"]
 
   - model_name: ai-gateway-eval-complex
-    model_info: { id: cohere-command-a-plus--eval-complex }
+    model_info: { id: cohere-command-a-plus--eval-complex, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-plus-05-2026
       api_key: os.environ/COHERE_API_KEY
@@ -648,7 +648,7 @@ model_list:
 
   # Modèle preview Groq : « à des fins d'évaluation uniquement », retirable à court préavis.
   - model_name: ai-gateway-eval-medium
-    model_info: { id: cohere-command-a-plus--eval-medium }
+    model_info: { id: cohere-command-a-plus--eval-medium, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-plus-05-2026
       api_key: os.environ/COHERE_API_KEY
@@ -664,7 +664,7 @@ model_list:
 
   # Modèle preview Groq : « à des fins d'évaluation uniquement », retirable à court préavis.
   - model_name: ai-gateway-test-cohere-command-a-plus
-    model_info: { id: cohere-command-a-plus }
+    model_info: { id: cohere-command-a-plus, disable_background_health_check: true }
     litellm_params:
       model: cohere_chat/command-a-plus-05-2026
       api_key: os.environ/COHERE_API_KEY
@@ -773,7 +773,7 @@ model_list:
   # Alias interne utilisé seulement par test_providers.py ; ne jamais le donner aux clés applicatives.
   # La sonde vise un port local fermé (aucun appel externe) : le routeur doit basculer sur la cible.
   - model_name: ai-gateway-selftest
-    model_info: { id: test-failover-probe }
+    model_info: { id: test-failover-probe, disable_background_health_check: true }
     litellm_params:
       model: openai/failover-probe
       api_base: http://127.0.0.1:9/v1
@@ -859,6 +859,17 @@ guardrails:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  # Sondes natives (health check routing) : un déploiement dont la clé est vide ou refusée (401) répond mal à la sonde et
+  # sort du routage ; sans elles, LiteLLM ne bascule pas sur une 401 et la question échouerait (mesuré : 5 échecs sur 20
+  # requêtes dans l'essai Docker du 2026-11-15, 0 échec sur 95 avec les sondes). Ne pas définir `allowed_fails_policy` : il
+  # désactiverait ce filtre au profit du seul cooldown (120 s), qui laisserait repasser un échec toutes les deux minutes.
+  # Une sonde est une vraie requête d'un jeton : toutes les 4 h par déploiement (6 par jour) pour ménager les quotas
+  # gratuits ; les erreurs 429 et 408 de la sonde sont ignorées. Une clé corrigée demande un redémarrage de toute façon.
+  background_health_checks: true
+  enable_health_check_routing: true
+  health_check_interval: 14400
+  health_check_staleness_threshold: 28800
+  health_check_ignore_transient_errors: true
   # Aucun proxy devant LiteLLM : ses clients (service IA, enregistrement des clés, poste local) s'y connectent directement.
   # Liste vide = l'adresse du pair est la source ; les échecs de connexion à l'interface d'administration sont alors aussi
   # limités par adresse.

@@ -42,6 +42,7 @@ from staport.domains.mcp.formats import (
     texte,
     vue,
 )
+from staport.domains.mcp.surfaces import Colonne, avec_surface
 from staport.domains.mcp.telemetrie import outil
 
 LIGNES = 20
@@ -106,6 +107,46 @@ def _jour(valeur: str | None, nom: str, *, fin: bool) -> datetime | None:
     return debut + timedelta(days=1) - timedelta(microseconds=1) if fin else debut
 
 
+# Colonnes des tableaux que l'assistant affiche (KAN-80) : seules ces colonnes sont rendues.
+C_PARAMETRES = (
+    Colonne("libelle", "Libellé"),
+    Colonne("valeur", "Valeur"),
+    Colonne("unite", "Unité"),
+    Colonne("minimum", "Minimum"),
+    Colonne("maximum", "Maximum"),
+    Colonne("description", "Description"),
+)
+C_ROLES = (Colonne("nom", "Nom"), Colonne("description", "Description"), Colonne("protege", "Protégé"))
+C_FONCTIONS = (Colonne("libelle", "Libellé"),)
+C_EQUIPES = (Colonne("code", "Code"), Colonne("libelle", "Libellé"))
+C_CHANTIERS = (
+    Colonne("code", "Code"),
+    Colonne("designation", "Désignation"),
+    Colonne("nom", "Nom"),
+    Colonne("statut", "Statut"),
+    Colonne("sourceErp", "Source"),
+)
+C_AUDIT = (
+    Colonne("horodatage", "Date et heure"),
+    Colonne("categorie", "Catégorie"),
+    Colonne("action", "Action"),
+    Colonne("resultat", "Résultat"),
+    Colonne("utilisateur", "Utilisateur"),
+    Colonne("origine", "Origine"),
+    Colonne("entite", "Enregistrement"),
+    Colonne("entiteId", "Identifiant"),
+    Colonne("nombreElements", "Éléments", "nombre"),
+    Colonne("motif", "Motif"),
+)
+C_VERSIONS = (
+    Colonne("revision", "Révision", "nombre"),
+    Colonne("horodatage", "Date et heure"),
+    Colonne("utilisateur", "Utilisateur"),
+    Colonne("origine", "Origine"),
+    Colonne("operation", "Opération"),
+)
+
+
 def enregistrer(
     serveur: FastMCP, contexte: Callable[[], ContexteAuth], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
 ) -> None:
@@ -151,22 +192,28 @@ def enregistrer(
     async def parametres_lire() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
         async with fabrique()() as session:
             parametres = await contexte().parametres.lister(session)
-        return {
-            "parametres": [
-                {
-                    "cle": p.cle,
-                    "libelle": p.libelle,
-                    "description": p.description,
-                    "type": p.type.value,
-                    "valeur": p.valeur,
-                    "unite": p.unite,
-                    "minimum": p.minimum,
-                    "maximum": p.maximum,
-                }
-                for p in parametres
-            ],
-            "vue": {"module": "admin/parametres", "vue": "tabulaire", "parametres": {}},
-        }
+        return avec_surface(
+            {
+                "parametres": [
+                    {
+                        "cle": p.cle,
+                        "libelle": p.libelle,
+                        "description": p.description,
+                        "type": p.type.value,
+                        "valeur": p.valeur,
+                        "unite": p.unite,
+                        "minimum": p.minimum,
+                        "maximum": p.maximum,
+                    }
+                    for p in parametres
+                ],
+                "vue": {"module": "admin/parametres", "vue": "tabulaire", "parametres": {}},
+            },
+            "parametres_lire",
+            "Paramètres",
+            "parametres",
+            C_PARAMETRES,
+        )
 
     @serveur.tool(
         name="roles_lister",
@@ -193,21 +240,27 @@ def enregistrer(
         criteres = RoleRecherche(nom=texte(nom))
         async with fabrique()() as session:
             resultats = await contexte().roles.rechercher(session, criteres, Pagination(page, limite, (("nom", True),)))
-        return {
-            "total": resultats.page.total_elements,
-            "page": resultats.page.number,
-            "roles": [
-                {
-                    "id": r.id,
-                    "nom": r.nom,
-                    "description": r.description,
-                    "protege": r.protege,
-                    "permissions": sorted(p.code for p in r.permissions),
-                }
-                for r in resultats.content
-            ],
-            "vue": {"module": "admin/roles", "vue": "tabulaire", "parametres": {}},
-        }
+        return avec_surface(
+            {
+                "total": resultats.page.total_elements,
+                "page": resultats.page.number,
+                "roles": [
+                    {
+                        "id": r.id,
+                        "nom": r.nom,
+                        "description": r.description,
+                        "protege": r.protege,
+                        "permissions": sorted(p.code for p in r.permissions),
+                    }
+                    for r in resultats.content
+                ],
+                "vue": {"module": "admin/roles", "vue": "tabulaire", "parametres": {}},
+            },
+            "roles_lister",
+            "Rôles",
+            "roles",
+            C_ROLES,
+        )
 
     @serveur.tool(
         name="fonction_rechercher",
@@ -242,13 +295,19 @@ def enregistrer(
             )
         lignes, total = resultat.content, resultat.page.total_elements
         parametres = {"libelle": cherche} if (cherche := texte(recherche)) else {}
-        return {
-            "total": total,
-            "rendus": len(lignes),
-            "page": page,
-            "fonctions": [{"id": f.id, "libelle": f.libelle} for f in lignes],
-            "vue": vue("functions", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "total": total,
+                "rendus": len(lignes),
+                "page": page,
+                "fonctions": [{"id": f.id, "libelle": f.libelle} for f in lignes],
+                "vue": vue("functions", "tabulaire", parametres),
+            },
+            "fonction_rechercher",
+            "Fonctions",
+            "fonctions",
+            C_FONCTIONS,
+        )
 
     @serveur.tool(
         name="fonction_fiche",
@@ -311,13 +370,19 @@ def enregistrer(
             )
         lignes, total = resultat.content, resultat.page.total_elements
         parametres = {"code": cherche} if (cherche := texte(recherche)) else {}
-        return {
-            "total": total,
-            "rendus": len(lignes),
-            "page": page,
-            "equipes": [{"id": e.id, "code": e.code, "libelle": e.libelle} for e in lignes],
-            "vue": vue("equipes", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "total": total,
+                "rendus": len(lignes),
+                "page": page,
+                "equipes": [{"id": e.id, "code": e.code, "libelle": e.libelle} for e in lignes],
+                "vue": vue("equipes", "tabulaire", parametres),
+            },
+            "equipe_rechercher",
+            "Équipes",
+            "equipes",
+            C_EQUIPES,
+        )
 
     @serveur.tool(
         name="equipe_fiche",
@@ -393,13 +458,19 @@ def enregistrer(
         parametres: dict[str, str] = {"code": lignes[0].code} if len(lignes) == 1 else {}
         if actif is not None:
             parametres["actif"] = "true" if actif else "false"
-        return {
-            "total": total,
-            "rendus": len(lignes),
-            "page": page,
-            "chantiers": [_chantier(x) for x in lignes],
-            "vue": vue("chantiers", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "total": total,
+                "rendus": len(lignes),
+                "page": page,
+                "chantiers": [_chantier(x) for x in lignes],
+                "vue": vue("chantiers", "tabulaire", parametres),
+            },
+            "chantier_rechercher",
+            "Chantiers",
+            "chantiers",
+            C_CHANTIERS,
+        )
 
     @serveur.tool(
         name="chantier_fiche",
@@ -476,27 +547,33 @@ def enregistrer(
         pagination = Pagination(page, limite, (("horodatage", False),))
         async with fabrique()() as session, session.begin():
             resultats = await consultation.rechercher(session, criteres, pagination)
-        return {
-            "total": resultats.page.total_elements,
-            "page": resultats.page.number,
-            "entrees": [
-                {
-                    "id": ligne.id,
-                    "horodatage": ligne.horodatage.isoformat(),
-                    "categorie": ligne.categorie.value,
-                    "action": ligne.action,
-                    "resultat": ligne.resultat.value,
-                    "utilisateur": ligne.utilisateur_nom,
-                    "origine": ligne.origine.value,
-                    "entite": ligne.entite_type,
-                    "entiteId": ligne.entite_id,
-                    "nombreElements": ligne.nombre_elements,
-                    "motif": ligne.motif,
-                }
-                for ligne in resultats.content
-            ],
-            "vue": {"module": "audit", "vue": "tabulaire", "parametres": {}},
-        }
+        return avec_surface(
+            {
+                "total": resultats.page.total_elements,
+                "page": resultats.page.number,
+                "entrees": [
+                    {
+                        "id": ligne.id,
+                        "horodatage": ligne.horodatage.isoformat(),
+                        "categorie": ligne.categorie.value,
+                        "action": ligne.action,
+                        "resultat": ligne.resultat.value,
+                        "utilisateur": ligne.utilisateur_nom,
+                        "origine": ligne.origine.value,
+                        "entite": ligne.entite_type,
+                        "entiteId": ligne.entite_id,
+                        "nombreElements": ligne.nombre_elements,
+                        "motif": ligne.motif,
+                    }
+                    for ligne in resultats.content
+                ],
+                "vue": {"module": "audit", "vue": "tabulaire", "parametres": {}},
+            },
+            "audit_rechercher",
+            "Journal d'audit",
+            "entrees",
+            C_AUDIT,
+        )
 
     @serveur.tool(
         name="audit_historique",
@@ -533,27 +610,33 @@ def enregistrer(
             raise ToolError(
                 f"Type d'enregistrement inconnu : {entite}. Valeurs possibles : {liste_entites}."
             ) from inconnue
-        return {
-            "total": resultats.page.total_elements,
-            "page": resultats.page.number,
-            "versions": [
-                {
-                    "revision": v.revision,
-                    "horodatage": v.horodatage.isoformat(),
-                    "utilisateur": v.utilisateur_nom,
-                    "origine": v.origine.value,
-                    "operation": v.operation,
-                    "champs": [
-                        {
-                            "champ": c.champ,
-                            "avant": c.avant,
-                            "apres": c.apres,
-                            "ajoutes": c.ajoutes,
-                            "retires": c.retires,
-                        }
-                        for c in v.champs
-                    ],
-                }
-                for v in resultats.content
-            ],
-        }
+        return avec_surface(
+            {
+                "total": resultats.page.total_elements,
+                "page": resultats.page.number,
+                "versions": [
+                    {
+                        "revision": v.revision,
+                        "horodatage": v.horodatage.isoformat(),
+                        "utilisateur": v.utilisateur_nom,
+                        "origine": v.origine.value,
+                        "operation": v.operation,
+                        "champs": [
+                            {
+                                "champ": c.champ,
+                                "avant": c.avant,
+                                "apres": c.apres,
+                                "ajoutes": c.ajoutes,
+                                "retires": c.retires,
+                            }
+                            for c in v.champs
+                        ],
+                    }
+                    for v in resultats.content
+                ],
+            },
+            "audit_historique",
+            "Historique de l'enregistrement",
+            "versions",
+            C_VERSIONS,
+        )
