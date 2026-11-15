@@ -13,6 +13,7 @@ Ne restent ici que deux protections qu'aucun framework ne fournit :
 
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
+from contextvars import ContextVar
 from typing import Any, Protocol, cast
 
 import httpx
@@ -65,6 +66,14 @@ class AccesErp(Protocol):
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
+
+    async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
+
+
+#: Le signalement des écritures de fichier de l'agent (KAN-268) : posé par le run en cours (jamais partagé entre
+#: utilisateurs, une ``ContextVar`` suit la tâche), lu par ``QuotaEspace`` après chaque écriture réussie.
+SignalerEcriture = Callable[[str, int, str], Awaitable[None]]
+SIGNALEUR_ECRITURE: ContextVar[SignalerEcriture | None] = ContextVar("signaleur_ecriture", default=None)
 
 
 def texte_question(entree: RunAgentInput) -> str:
@@ -159,6 +168,14 @@ class AccesHttp:
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
 
+    async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
+        reponse = await self._client.post(
+            f"{self._api}/interne/ia/ecritures-fichier",
+            json={"chemin": chemin, "taille": taille, "outil": outil},
+            headers={"Authorization": f"Bearer {jeton_agent}"},
+        )
+        reponse.raise_for_status()
+
 
 def routeur_agui(
     fabrique: Callable[[], FabriqueAgent],
@@ -195,16 +212,26 @@ def routeur_agui(
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
+        async def signaler(chemin: str, taille: int, outil: str) -> None:
+            await erp.signaler_ecriture(jeton, chemin, taille, outil)
+
         async def flux() -> AsyncIterator[str]:
-            async for evenement in evenements(
-                entree_serveur,
-                fabrique(),
-                outils,
-                memoire() if memoire and not suggestion_sans_etat else None,
-                entree.thread_id,
-                sujet(jeton),
-            ):
-                yield encodeur.encode(evenement)
+            reperage = SIGNALEUR_ECRITURE.set(signaler)
+            try:
+                async for evenement in evenements(
+                    entree_serveur,
+                    fabrique(),
+                    outils,
+                    memoire() if memoire and not suggestion_sans_etat else None,
+                    entree.thread_id,
+                    sujet(jeton),
+                ):
+                    yield encodeur.encode(evenement)
+            finally:
+                try:
+                    SIGNALEUR_ECRITURE.reset(reperage)
+                except ValueError:  # générateur fermé dans un autre contexte : le run est terminé de toute façon
+                    pass
 
         return StreamingResponse(
             flux(),

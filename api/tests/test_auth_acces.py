@@ -282,6 +282,7 @@ PUBLIQUES = {
     ("GET", "/auth/password-policy"),
     ("GET", "/.well-known/jwks.json"),
     ("GET", "/.well-known/oauth-protected-resource"),
+    ("POST", "/interne/ia/ecritures-fichier"),  # jeton agent, hors nginx (KAN-268)
 }
 AUTHENTIFIEES = {("POST", "/auth/logout"), ("GET", "/auth/me")}
 EXIGENCES: dict[tuple[str, str], set[str]] = {
@@ -404,7 +405,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 106
+    assert len(declarees) == 107
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 
@@ -485,6 +486,35 @@ def test_le_jeton_agent_porte_l_identite_seule_pendant_cinq_minutes(
     assert verifier_jeton_agent(cles, corps["jeton"]) == (identifiant, nom, "mcp:lecture")
     emis = plateforme.journal.de(nom, Action.JETON_AGENT_EMIS)[0]
     assert emis.details["jti"] == claims["jti"] and corps["jeton"] not in str(emis)
+
+
+def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_seulement(
+    plateforme: Plateforme, creer_utilisateur: Fabrique, connecter: Callable[[str, str], dict[str, Any]]
+) -> None:
+    """KAN-268 : chemin, taille et outil sont au journal, jamais le contenu ; un jeton REST, un navigateur (`Origin`),
+    un chemin hors de l'espace ou un outil inconnu sont refusés et n'écrivent rien."""
+    identifiant, mdp = creer_utilisateur("ecrivain", roles=("SYSTEM_ADMIN",))
+    with plateforme.moteur.connect() as c:
+        nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
+    acces = connecter(nom, mdp)["accessToken"]
+    agent = plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces)).json()["jeton"]
+    route = "/interne/ia/ecritures-fichier"
+    ecriture = {"chemin": "/espace/rapport.md", "taille": 42, "outil": "write_file", "contenu": "secret"}
+
+    assert plateforme.client.post(route, headers=_bearer(agent), json=ecriture).status_code == 204
+    ecrit = plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)
+    assert len(ecrit) == 1 and ecrit[0].details == {"chemin": "/espace/rapport.md", "taille": 42, "outil": "write_file"}
+    assert "secret" not in str(ecrit[0])
+
+    refus = [
+        plateforme.client.post(route, headers=_bearer(acces), json=ecriture),  # jeton REST : autre audience
+        plateforme.client.post(route, json=ecriture),  # sans jeton
+        plateforme.client.post(route, headers={**_bearer(agent), "Origin": "http://localhost:5002"}, json=ecriture),
+    ]
+    assert [r.status_code for r in refus] == [403, 403, 403]
+    invalides = [{**ecriture, "chemin": "/etc/passwd"}, {**ecriture, "outil": "execute"}, {**ecriture, "taille": -1}]
+    assert [plateforme.client.post(route, headers=_bearer(agent), json=e).status_code for e in invalides] == [400] * 3
+    assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 1
 
 
 def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive(
