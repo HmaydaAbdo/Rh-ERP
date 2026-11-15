@@ -3281,7 +3281,7 @@ requires-dist = [
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15.1" },
     { name = "python-json-logger", specifier = ">=4.2.0" },
     { name = "sqlalchemy", specifier = ">=2.1.6" },
-    { name = "staport-intelligence-ia", directory = "../ia" },
+    { name = "staport-intelligence-ia", editable = "../ia" },
     { name = "uvicorn" },
     { name = "weasyprint", specifier = "==70.0" },
 ]
@@ -3302,7 +3302,7 @@ dev = [
 [[package]]
 name = "staport-intelligence-ia"
 version = "0.1.0"
-source = { directory = "../ia" }
+source = { editable = "../ia" }
 dependencies = [
     { name = "ag-ui-langgraph" },
     { name = "ag-ui-protocol" },
