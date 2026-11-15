@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from doubles import memoire_processus
 from fastapi.testclient import TestClient
 from langgraph.store.memory import InMemoryStore
 from pydantic import ValidationError
@@ -102,7 +103,7 @@ def test_un_repli_vide_ne_branche_aucun_modele_de_repli(monkeypatch: pytest.Monk
 
 
 def test_sante_ne_depend_de_rien() -> None:
-    with TestClient(creer_app(_settings())) as client:
+    with TestClient(creer_app(_settings(), memoire=memoire_processus)) as client:
         reponse = client.get("/health")
     assert reponse.status_code == 200
     assert reponse.json() == {"status": "UP", "ia": "ACTIVE", "passerelle": "NON_VERIFIEE"}
@@ -117,7 +118,7 @@ def test_pret_quand_ia_desactivee() -> None:
 
 def test_pas_pret_sans_passerelle() -> None:
     # Port local fermé : aucune requête ne sort du poste.
-    with TestClient(creer_app(_settings(base_url="http://127.0.0.1:9/v1"))) as client:
+    with TestClient(creer_app(_settings(base_url="http://127.0.0.1:9/v1"), memoire=memoire_processus)) as client:
         reponse = client.get("/health/ready")
     assert reponse.status_code == 503
     assert reponse.json() == {"status": "DOWN", "ia": "ACTIVE", "passerelle": "INDISPONIBLE"}
@@ -127,8 +128,19 @@ def test_pret_quand_la_passerelle_repond() -> None:
     def repondre(requete: httpx.Request) -> httpx.Response:
         return httpx.Response(200 if requete.url.path == "/health/readiness" else 404)
 
-    app = creer_app(_settings())
+    app = creer_app(_settings(), memoire=memoire_processus)
     with TestClient(app) as client:
         app.state.http = httpx.AsyncClient(transport=httpx.MockTransport(repondre))
         reponse = client.get("/health/ready")
     assert reponse.json() == {"status": "UP", "ia": "ACTIVE", "passerelle": "PRETE"}
+
+
+def test_le_service_active_sans_base_refuse_de_demarrer() -> None:
+    """KAN-39 : pas de repli sur la mémoire du processus ; la panne de configuration se voit au démarrage."""
+    with pytest.raises(RuntimeError, match="IA_DATABASE_URL est obligatoire"), TestClient(creer_app(_settings())):
+        pass
+
+
+def test_le_service_desactive_ne_demande_pas_de_base() -> None:
+    with TestClient(creer_app(_settings(enabled=False))) as client:
+        assert client.get("/health/ia").json()["ia"] == "DESACTIVEE"

@@ -152,6 +152,8 @@ services:
   api:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
+    # Arrêt en douceur (KAN-39) : le run en cours termine son étape et enregistre son point de reprise.
+    stop_grace_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -355,6 +357,8 @@ services:
   ia:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-ia:${IA_IMAGE_TAG:-latest}
     restart: unless-stopped
+    # Arrêt en douceur (KAN-39) : le run en cours termine son étape et enregistre son point de reprise.
+    stop_grace_period: 60s
     depends_on:
       litellm-cles:
         condition: service_completed_successfully
