@@ -86,6 +86,23 @@ Le choix du framework se fait **par le besoin**, jamais par habitude ni par popu
   mesurée) vaut pour l'agent aussi : un appel de modèle optimisé suffit parfois. Ici, l'agent est retenu pour les
   questions ouvertes à plusieurs outils ; une règle déterministe reste préférable pour une validation, un calcul ou un droit.
 
+## Quelle couche pour l'agent : Deep Agents, décision du propriétaire (KAN-39)
+
+La doc officielle (« Frameworks, runtimes, and harnesses ») distingue le moteur (LangGraph), le cadre (`create_agent`) et
+le harnais (Deep Agents). Pour Staport Intelligence :
+
+* **Garder Deep Agents.** C'est la bonne couche : un assistant de questions-réponses avec fichiers, compétences,
+  sous-agents et accord humain est le cas d'usage que la doc lui assigne. Écrire le graphe à la main dans LangGraph
+  obligerait à réimplémenter planification, fichiers, résumé du contexte et compétences, soit plus de code maison, à
+  l'inverse de l'objectif de 0 %.
+* **Délais, reprises et pannes : middlewares officiels.** Deep Agents ne laisse pas passer `retry_policy`,
+  `TimeoutPolicy` ni `set_node_defaults` (réglages par nœud d'un `StateGraph` écrit à la main). On utilise les
+  équivalents officiels de `create_agent` : `ToolRetryMiddleware`, `ModelFallbackMiddleware`, `ModelCallLimitMiddleware`,
+  `ToolCallLimitMiddleware` (en place, `ia/src/staport_ia/agent.py`). Ce n'est pas du code maison.
+* **Sortir du graphe Deep Agents seulement pour un besoin précis** : un flux déterministe en plusieurs étapes (par exemple
+  un import de paie guidé), pas des questions libres. Ce n'est pas le cas aujourd'hui ; si cela le devient, la décision
+  passe par le propriétaire (option : un graphe LangGraph à côté, l'agent restant Deep Agents pour le reste).
+
 # 3. Le bon outillage
 
 L'outillage fait gagner du temps ou de la sûreté **avant** la CI, qui n'est lancée que sur demande du propriétaire.

@@ -39,4 +39,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
 # L'adresse IP du client (audit) vient de `X-Forwarded-For`, posé par nginx et honoré des seuls proxys internes (réseaux
 # privés de Docker et boucle locale) : réglage `--forwarded-allow-ips` d'uvicorn.
 ENTRYPOINT ["opentelemetry-instrument", "uvicorn", "staport.main:application", "--factory", "--host", "0.0.0.0", "--port", "8080", \
-  "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]
+  "--timeout-graceful-shutdown", "45", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]
