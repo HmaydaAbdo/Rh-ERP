@@ -1,10 +1,13 @@
 // Sécurité du runtime (KAN-79) : authentification de chaque requête et fils réservés à leur propriétaire.
 // L'API et le service IA sont simulés ; le gestionnaire Express officiel et la table de propriété sont les vrais.
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { creerApp } from '../src/app.mjs';
-import { ouvrirProprietaires } from '../src/proprietaires.mjs';
 
 const UTILISATEURS = {
   'jeton-1': { id: 1, permissionsEffectives: ['IA_UTILISER'] },
@@ -12,10 +15,12 @@ const UTILISATEURS = {
   'jeton-sans-droit': { id: 3, permissionsEffectives: ['EMPLOYEE_READ'] }
 };
 
+const SECRET = 'reponse-privee-du-proprietaire';
 let api;
 let agent;
 let serveur;
 let base;
+let dossier;
 let fermer;
 
 before(async () => {
@@ -24,12 +29,31 @@ before(async () => {
     reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ?? {}));
   });
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
-  // Service IA simulé : il refuse tout, seuls comptent les refus qui le précèdent et l'accès accordé jusqu'à lui.
-  agent = createServer((_requete, reponse) => reponse.writeHead(500).end());
+  // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
+  agent = createServer((requete, reponse) => {
+    let corps = '';
+    requete.on('data', (morceau) => (corps += morceau));
+    requete.on('end', () => {
+      const { threadId, runId } = JSON.parse(corps);
+      const evenements = [
+        { type: 'RUN_STARTED', threadId, runId },
+        { type: 'TEXT_MESSAGE_START', messageId: `m-${runId}`, role: 'assistant' },
+        { type: 'TEXT_MESSAGE_CONTENT', messageId: `m-${runId}`, delta: SECRET },
+        { type: 'TEXT_MESSAGE_END', messageId: `m-${runId}` },
+        { type: 'RUN_FINISHED', threadId, runId }
+      ];
+      reponse.writeHead(200, { 'content-type': 'text/event-stream' });
+      reponse.end(evenements.map((evenement) => `data: ${JSON.stringify(evenement)}
+
+`).join(''));
+    });
+  });
   await new Promise((ok) => agent.listen(0, '127.0.0.1', ok));
+  dossier = mkdtempSync(join(tmpdir(), 'runtime-'));
   const creation = creerApp({
     urlAgent: `http://127.0.0.1:${agent.address().port}/agui`,
     urlApi: `http://127.0.0.1:${api.address().port}`,
+    cheminBase: join(dossier, 'threads.db'),
     journal: { error: () => {} }
   });
   fermer = creation.fermer;
@@ -46,9 +70,10 @@ after(() => {
   agent.closeAllConnections();
   agent.close();
   fermer();
+  rmSync(dossier, { recursive: true, force: true, maxRetries: 3 });
 });
 
-// Le corps n'est jamais lu : un flux d'événements ouvert est abandonné dès que l'état HTTP est connu.
+// Les flux d'événements de l'agent simulé se terminent d'eux-mêmes : le corps est lu en entier (au plus 4 Ko).
 const appeler = async (chemin, { jeton, corps, entetes = {} } = {}) => {
   const reponse = await fetch(`${base}${chemin}`, {
     method: corps ? 'POST' : 'GET',
@@ -56,13 +81,11 @@ const appeler = async (chemin, { jeton, corps, entetes = {} } = {}) => {
     body: corps ? JSON.stringify(corps) : undefined,
     signal: AbortSignal.timeout(10_000)
   });
-  const { status } = reponse;
-  await reponse.body?.cancel();
-  return { status };
+  return { status: reponse.status, texte: (await reponse.text()).slice(0, 4096) };
 };
 
-const corpsRun = (threadId) => ({ threadId, runId: 'r1', messages: [], state: {}, tools: [], context: [], forwardedProps: {} });
-// Une réponse « servie » est tout sauf un refus d'accès : l'agent simulé répond en erreur.
+const corpsRun = (threadId) => ({ threadId, runId: randomUUID(), messages: [], state: {}, tools: [], context: [], forwardedProps: {} });
+// Une réponse « servie » est tout sauf un refus d'accès.
 const refus = [401, 403, 404];
 
 describe('authentification', () => {
@@ -86,7 +109,7 @@ describe('authentification', () => {
   });
 });
 
-describe('propriété des fils', () => {
+describe('propriété des fils (runner SQLite et identifyUser officiels)', () => {
   test('le propriétaire lance puis reprend son fil', async () => {
     const run = await appeler('/agent/default/run', { jeton: 'jeton-1', corps: corpsRun('u1-reunion') });
     assert.ok(!refus.includes(run.status), `run : ${run.status}`);
@@ -94,13 +117,16 @@ describe('propriété des fils', () => {
     assert.ok(!refus.includes(connexion.status), `connect : ${connexion.status}`);
   });
 
-  test("un autre utilisateur ne lance, ne reprend ni n'arrête le fil du propriétaire : 403", async () => {
+  test("un autre utilisateur ne lance ni n'arrête le fil du propriétaire (404) et ne l'arrête ni ne le rejoue", async () => {
     await appeler('/agent/default/run', { jeton: 'jeton-1', corps: corpsRun('u1-prive') });
-    for (const chemin of ['/agent/default/run', '/agent/default/connect']) {
-      const reponse = await appeler(chemin, { jeton: 'jeton-2', corps: corpsRun('u1-prive') });
-      assert.equal(reponse.status, 403, chemin);
-    }
-    assert.equal((await appeler('/agent/default/stop/u1-prive', { jeton: 'jeton-2', corps: {} })).status, 403);
+    assert.equal((await appeler('/agent/default/run', { jeton: 'jeton-2', corps: corpsRun('u1-prive') })).status, 404);
+    const arret = await appeler('/agent/default/stop/u1-prive', { jeton: 'jeton-2', corps: {} });
+    assert.equal(JSON.parse(arret.texte).stopped, false); // aucun effet sur le fil d'un autre
+    // `connect` rejoue l'historique du fil : le propriétaire le reçoit, un autre utilisateur un flux vide comme pour un fil inconnu.
+    const propriete = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun('u1-prive') });
+    assert.ok(propriete.texte.includes(SECRET));
+    const reprise = await appeler('/agent/default/connect', { jeton: 'jeton-2', corps: corpsRun('u1-prive') });
+    assert.equal(reprise.texte, '');
   });
 
   test("un en-tête d'identité forgé par le client est écrasé", async () => {
@@ -109,21 +135,6 @@ describe('propriété des fils', () => {
       corps: corpsRun('u1-prive'),
       entetes: { 'x-staport-utilisateur-verifie': '1' }
     });
-    assert.equal(reponse.status, 403);
-  });
-
-  test('reprendre un fil inconnu, ou sans identifiant, est refusé : 403', async () => {
-    assert.equal((await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun('u1-jamais-cree') })).status, 403);
-    assert.equal((await appeler('/agent/default/run', { jeton: 'jeton-1', corps: { ...corpsRun('x'), threadId: undefined } })).status, 403);
-  });
-
-  test("la table réserve le fil au premier utilisateur qui le porte", () => {
-    const table = ouvrirProprietaires();
-    assert.equal(table.reserver('fil', 1), true);
-    assert.equal(table.reserver('fil', 2), false);
-    assert.equal(table.possede('fil', 1), true);
-    assert.equal(table.possede('fil', 2), false);
-    assert.equal(table.possede('inconnu', 1), false);
-    table.fermer();
+    assert.equal(reponse.status, 404);
   });
 });
