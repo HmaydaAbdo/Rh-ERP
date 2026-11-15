@@ -243,7 +243,7 @@ test.describe('Staport Intelligence', () => {
     await expect(assistant.getByText('Masse salariale 2026-08 : 4 800 MAD')).toBeVisible();
     await expect(assistant.locator('.app-kpi strong')).toHaveText('4 800 MAD');
     await expect(assistant.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
-    await expect(assistant.getByRole('cell', { name: 'C168' })).toBeVisible();
+    await expect(assistant.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
     await expect(assistant.getByRole('heading', { name: 'Masse par chantier' })).toBeVisible();
     // Pas de consultation d'outil en brut (nom technique) dans la discussion.
     await expect(assistant.getByText('paie_indicateurs')).toHaveCount(0);
