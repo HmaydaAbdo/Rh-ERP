@@ -11,8 +11,8 @@
 #   SQLAlchemy 2.1 reste exclu par l'instrumentation SQLAlchemy 0.66b2 ; Psycopg 3 est instrumenté à la place.
 #   Sources : https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.66b2/instrumentation/opentelemetry-instrumentation-psycopg/pyproject.toml
 #   et https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.66b2/instrumentation/opentelemetry-instrumentation-sqlalchemy/src/opentelemetry/instrumentation/sqlalchemy/package.py
-# - openai : 3.46.0 avec litellm 1.109.0.dev2 (préversion adoptée par le propriétaire le 2026-11-01 ; aucune version stable
-#   de litellm ne lève encore la borne openai<3). Sortie de LiteLLM : épopée E17 (KAN-30).
+# - openai : voir ligne `py openai` ; litellm 1.109.1 (stable, 2026-11-15) lève la borne openai<3 : la préversion
+#   1.109.0.dev2 adoptée le 2026-11-01 est remplacée. Sortie de LiteLLM : épopée E17 (KAN-30).
 # - @a2ui/web_core 0.14.0 : le rendu de @copilotkit/angular 0.6.0 est écrit pour 0.10.4 ; la compatibilité est assurée par
 #   notre catalogue ERP (testé). Défaut zod 4 signalé : https://github.com/a2ui-project/a2ui/issues/3812
 # - @a2ui/angular 0.13.0 et @a2ui/web_core 0.14.0 : la montée à 0.14.0 / 0.15.0 (2026-11-02) casse 4 fichiers de test, car
@@ -36,8 +36,8 @@ py ag-ui-langgraph 0.0.47
 py ag-ui-protocol 1.0.0
 py copilotkit 0.1.97
 py mcp 2.3.0
-py litellm 1.109.0.dev2
-py openai 3.46.0
+py litellm 1.109.1
+py openai 3.51.0
 npm frontend @copilotkit/angular 0.6.0
 npm frontend @a2ui/angular 0.13.0
 npm frontend @a2ui/web_core 0.14.0
