@@ -53,6 +53,20 @@ async def test_un_message_simple_est_repondu_en_un_appel(aimock: Any) -> None:
     assert appels == [] and len(aimock.get_journal()) == 1
 
 
+async def test_le_contexte_de_l_erp_est_ajoute_a_l_instruction_du_modele(aimock: Any) -> None:
+    """KAN-72 : le contexte d'exécution (``context_schema``) est lu par ``dynamic_prompt``, sans appel d'outil."""
+    _scenario(aimock, "Bonjour", {"content": "Bonjour !"})
+    agent = creer_agent(modele(_config(aimock), Tache.COMPLEX), [outil("paie_indicateurs", INDICATEURS, [])])
+
+    await agent.ainvoke(
+        {"messages": [HumanMessage(content="Bonjour")], "pinned_skills": []},
+        context={"contexte_erp": "Date du jour : 2026-11-15."},
+    )
+
+    systeme = aimock.get_journal()[0]["body"]["messages"][0]["content"]
+    assert "Contexte du moment" in str(systeme) and "Date du jour : 2026-11-15." in str(systeme)
+
+
 async def test_une_question_de_donnees_appelle_l_outil_puis_repond(aimock: Any) -> None:
     question = "Masse salariale de 2026-09 ?"
     _scenario(

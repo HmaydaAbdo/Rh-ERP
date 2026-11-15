@@ -49,6 +49,9 @@ class AccesSimule:
         self.jetons_agent.append(jeton_agent)
         return self._outils
 
+    async def contexte(self, jeton_agent: str) -> str:
+        return "Date du jour : 2026-11-15."
+
 
 async def _routage_paie(_question: str, _outils: Sequence[BaseTool]) -> list[str]:
     """Le routeur réel charge un modèle d'embeddings : les tests de l'API le remplacent par un choix fixe."""
