@@ -156,7 +156,7 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 ## Ajouter une permission ou un endpoint
 
 1. **Révision Alembic** qui insère la permission (code, description) et l'attribue aux rôles concernés
-   (voir `V9__seed_equipe_permissions.sql` dans `api/src/staport/migrations/flyway_v44` pour un exemple).
+   (voir `V9__seed_equipe_permissions.sql` dans `api/src/staport/migrations/base_v44` pour un exemple).
 2. `dependencies=[Depends(exiger("…"))]` sur chaque route du routeur.
 3. Ligne dans `PERMISSIONS_ATTENDUES` de `test_auth_acces.py` (le test échoue sinon).
 4. Côté frontend : `permissionGuard` sur les routes, `canXxx()` sur les boutons, entrée dans `NAV_ITEMS` si

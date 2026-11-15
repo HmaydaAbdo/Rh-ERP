@@ -1,4 +1,4 @@
-"""Heures supplémentaires et forfaits mensuels (Flyway V39, V43, V44)."""
+"""Heures supplémentaires et forfaits mensuels (scripts V39, V43, V44)."""
 
 from decimal import Decimal
 

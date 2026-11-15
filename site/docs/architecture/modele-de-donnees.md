@@ -4,10 +4,10 @@ sidebar_position: 3
 ---
 
 :::note Page reprise de l'ancien dossier docs
-Mis à jour à la clôture d'E2 (KAN-245) : le schéma est créé par Alembic (FastAPI, SQLAlchemy). Les révisions `V*` du tableau des migrations sont l'historique Flyway, figé dans la révision de base ; le comportement fait foi dans le code, le suivi dans Jira.
+Mis à jour à la clôture d'E2 (KAN-245) : le schéma est créé par Alembic (FastAPI, SQLAlchemy). Les révisions `V*` du tableau des migrations sont les scripts SQL de base, rejoués par la révision de base ; le comportement fait foi dans le code, le suivi dans Jira.
 :::
 
-> Schéma PostgreSQL complet, tel que créé par les migrations Alembic (`api/src/staport/migrations/versions` : `0001_base_v44` reprend l'historique Flyway V1 à V44, dont les scripts figés restent dans `api/src/staport/migrations/flyway_v44`).
+> Schéma PostgreSQL complet, tel que créé par les migrations Alembic (`api/src/staport/migrations/versions` : `0001_base_v44` rejoue les scripts V1 à V44 de `api/src/staport/migrations/base_v44`).
 > Le détail colonne par colonne de chaque domaine métier est dans son README (`docs/<domaine>/README.md`) ;
 > ce document donne la vue d'ensemble, les contraintes d'intégrité et l'historique des migrations.
 
@@ -196,7 +196,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V39` | Table `heures_supp`, contraintes d'unicité/intégrité et instantanés audités `heures_supp_aud`. |
 | `V40` | Permissions `HEURES_SUP_READ` et `HEURES_SUP_IMPORT`, attribuées et auditées pour `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
 | `V41` | Permissions auditées `HEURES_SUP_DELETE` et `HEURES_SUP_PURGE` pour la suppression unitaire et la purge mensuelle, attribuées à `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
-| `afterMigrate.sql` (Flyway) → `migrations/droits.py` | Rappel Flyway, remplacé par `recalculer_droits` appelé après **chaque** montée de version Alembic : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
+| `migrations/droits.py` | `recalculer_droits` appelé après **chaque** montée de version Alembic : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
 

@@ -302,7 +302,7 @@ fait échouer la CI si une colonne manque à une table `_aud`.
 | Import dans une transaction (comme l'import de paie) | ≈ 1,0 s | ≈ 1,1 à 1,5 s |
 | Suppression en groupe, entité par entité | 0,07 à 0,15 s | 0,16 à 0,26 s |
 
-L'écriture regroupée (`hibernate.jdbc.batch_size=50`, `order_inserts`, `order_updates`) rend le coût de l'audit négligeable :
+L'écriture regroupée (insertions et mises à jour groupées par lots de 50) rend le coût de l'audit négligeable :
 aucune écriture asynchrone (qui affaiblirait l'atomicité) n'est nécessaire. Volume : quelques dizaines de milliers de lignes
 d'audit par an.
 

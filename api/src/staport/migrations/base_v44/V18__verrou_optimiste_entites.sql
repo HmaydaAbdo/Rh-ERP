@@ -1,5 +1,5 @@
 -- Numéro de version pour détecter les modifications concurrentes sur les entités persistées.
--- Les versions Envers sont exclues par org.hibernate.envers.do_not_audit_optimistic_locking_field.
+-- La colonne de version n'est pas copiée dans l'historique.
 ALTER TABLE fonction ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE chantier ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE equipe ADD COLUMN version BIGINT NOT NULL DEFAULT 0;

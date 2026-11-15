@@ -5,7 +5,7 @@ dans le `lifespan` de l'application. Après chaque montée de version, les droit
 recalculés (étape finale de chaque montée de version).
 
 `target_metadata` sert au contrôle de dérive (`alembic check`, test `test_migrations`) : les modèles de chaque domaine
-migré sont comparés à la base construite par les migrations. Les tables encore gérées par Flyway seulement
+migré sont comparés à la base construite par les migrations. Les tables sans modèle
 (domaines non migrés) et les index d'expression de V27 sont ignorés par `include_object`.
 """
 

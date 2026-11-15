@@ -298,7 +298,7 @@ accessibilité des en-têtes associés.
 
 * Tableau paginé côté serveur (`[lazy]="true"`) : `TableColumn.sortField` porte le chemin de propriété
   de l'entité (ex. `chantier.code` pour une relation) transmis tel quel au paramètre `sort` du
-  backend (`Pageable`) — chaque champ ajouté doit être testé contre le backend (un chemin invalide
+  backend (paramètres de pagination) — chaque champ ajouté doit être testé contre le backend (un chemin invalide
   provoque une erreur 500). Une relation facultative (clé étrangère nullable) ne doit pas faire
   disparaître les lignes sans valeur du résultat trié.
 * Tableau non paginé côté serveur (liste complète en mémoire, ex. rôles, utilisateurs) : tri,

@@ -20,7 +20,7 @@ d'écriture sur l'audit.
 | `GET /logs/{id}/details` | `AUDIT_READ` |
 | `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` |
 
-La pagination est bornée (200 par page, `spring.data.web.pageable.max-page-size`).
+La pagination est bornée (200 par page).
 
 ## Frontend
 
