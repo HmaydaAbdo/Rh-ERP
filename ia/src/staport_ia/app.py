@@ -38,12 +38,20 @@ def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
     principal = modele(config, Tache.COMPLEX)
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
+    # Second filet (KAN-265) : un groupe LiteLLM d'une autre famille que le principal, sans flux interne.
+    repli = [modele(config, Tache(config.llm_repli))] if config.llm_repli else []
 
     def fabriquer(
         outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str
     ) -> CompiledStateGraph[Any, Any, Any, Any]:
         return creer_agent(
-            principal, outils, resumeur=resumeur, checkpointer=checkpointer, utilisateur=utilisateur, store=espaces
+            principal,
+            outils,
+            resumeur=resumeur,
+            checkpointer=checkpointer,
+            utilisateur=utilisateur,
+            store=espaces,
+            repli=repli,
         )
 
     return fabriquer

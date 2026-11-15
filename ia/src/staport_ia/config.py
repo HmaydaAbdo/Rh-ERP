@@ -5,6 +5,7 @@ si une variable obligatoire manque (conventions/configuration.md).
 """
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
     litellm_api_key: SecretStr = Field(min_length=8)
     # Alias unique exposé par la passerelle ; la tâche est choisie par tag, pas par nom de modèle.
     litellm_model: str = Field(default="ai-gateway", min_length=1)
+    # Groupe LiteLLM du modèle de repli (KAN-265) : si le modèle principal échoue après le basculement de la passerelle,
+    # `ModelFallbackMiddleware` essaie ce groupe, d'une autre famille de modèles que `complex`. Vide : aucun repli.
+    llm_repli: Literal["", "simple", "medium", "code"] = "medium"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
     # Base PostgreSQL des conversations (service ia-db) ; absente, les conversations restent en mémoire du processus.
     database_url: SecretStr | None = None
