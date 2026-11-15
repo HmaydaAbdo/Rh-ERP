@@ -1,21 +1,19 @@
 # LangGraph, LangChain et leurs intégrations ne publient pas de stubs complets : seules ces deux règles sont levées,
 # et seulement pour ce fichier.
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false
-"""Surfaces déterministes des résultats d'outils (site/docs/ia, T16 : interface composée).
+"""Surfaces A2UI des résultats d'outils (site/docs/ia, T16 et KAN-80).
 
-Un tableau de 50 lignes recopié par le modèle coûte des milliers de jetons, des dizaines de secondes et un risque
-d'erreur de recopie. Ici, c'est le code qui présente : quand un outil MCP de l'ERP rend une liste d'au moins
-``SEUIL_LIGNES`` objets, son résultat porte aussi des opérations A2UI (motif officiel de CopilotKit,
-``copilotkit.a2ui.render``) : un ``DataTable`` des lignes, précédé d'un ``Chart`` pour une série mensuelle. Le runtime
-CopilotKit détecte ces opérations dans le résultat d'outil et affiche la surface ; le modèle, lui, ne voit que le
-résultat d'origine et se contente de commenter. Tout passe par les deux crochets officiels des middlewares de
-LangChain : ``wrap_tool_call`` (le résultat d'un outil devient résultat + surface) et ``wrap_model_call`` (le modèle ne
-voit que le résultat d'origine).
+Motif officiel « schéma fixe » de CopilotKit : c'est l'outil MCP de l'ERP qui décrit sa surface (colonnes d'un
+tableau, courbe), à côté du code qui construit ses lignes, et qui la rend avec son résultat sous la clé
+``a2ui_operations`` (``api/src/staport/domains/mcp/surfaces.py``). Un tableau de 50 lignes recopié par le modèle coûte
+des milliers de jetons et un risque d'erreur de recopie : ici le service ne compose rien, il transmet.
+
+Deux crochets officiels des middlewares de LangChain : ``wrap_tool_call`` met le résultat sous l'enveloppe que le
+runtime CopilotKit détecte pour afficher la surface, et ``wrap_model_call`` ne montre au modèle que le résultat
+d'origine, sans les opérations, qu'il se contente de commenter.
 """
 
 import json
-import re
-import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
@@ -25,97 +23,12 @@ from langchain.agents.middleware.types import ToolCallRequest
 from langchain_core.messages import AnyMessage, ToolMessage
 from langgraph.types import Command
 
-#: Identifiant du catalogue de l'ERP (catalogue de base A2UI + composants ERP), le même que côté Angular.
-CATALOGUE_ERP = "staport-intelligence://a2ui/catalogue-erp"
-SEUIL_LIGNES = 4
 #: Outil d'interface composée de CopilotKit : sa surface est composée par le modèle, jamais présentée deux fois.
 OUTIL_A2UI = "generate_a2ui"
 
-#: Titres des outils (champ ``title`` MCP, que l'adaptateur LangChain ne conserve pas).
-TITRES: dict[str, str] = {
-    "employes_rechercher": "Employés trouvés",
-    "employes_regrouper": "Effectif par regroupement",
-    "employes_sorties": "Départs du mois",
-    "employe_parcours": "Parcours de l'employé",
-    "paie_indicateurs": "Principaux chantiers",
-    "paie_periodes": "Mois de paie importés",
-    "paie_regrouper": "Montant de la paie par regroupement",
-    "paie_evolution": "Évolution de la paie",
-    "paie_comparer": "Comparaison de la paie de deux mois",
-    "paie_mouvements": "Mouvements d'effectif",
-    "audit_rechercher": "Journal d'audit",
-    "audit_historique": "Historique de l'enregistrement",
-    "roles_lister": "Rôles",
-    "parametres_lire": "Paramètres",
-}
-
-#: Libellés des clés connues ; les autres sont dérivées de la clé (``masseSalariale`` → « Masse salariale »).
-LIBELLES: dict[str, str] = {
-    "cin": "CIN",
-    "nomPrenom": "Nom et prénom",
-    "libelle": "Libellé",
-    "enPoste": "En poste",
-    "masse": "Montant de la paie",
-    "stc": "Sortants",
-    "stcMontant": "STC (DH)",
-    "periode": "Période",
-    "entrees": "Entrées",
-    "effectifMoisPrecedent": "Effectif du mois précédent",
-    "plusPayes": "Plus payés",
-    "masseReference": "Masse du mois de comparaison",
-    "variationMasse": "Variation de la masse",
-    "variationPourcentage": "Variation (%)",
-    "effectifReference": "Effectif du mois de comparaison",
-    "variationEffectif": "Variation de l'effectif",
-    "coutMoyen": "Coût moyen",
-    "coutMoyenReference": "Coût moyen du mois de comparaison",
-    "statut": "Statut",
-    "fonctionPrincipale.libelle": "Fonction principale",
-    "fonctionPrincipale.effectif": "Effectif de la fonction principale",
-    "dateEmbauche": "Date d'embauche",
-}
-
-_MONTANT = re.compile(r"masse|montant|salaire|net|brut|cout|coût", re.IGNORECASE)
-_MASQUEES = {"id", "vue"}
-
-
-def operations_pour(nom_outil: str, donnees: Any) -> list[dict[str, Any]] | None:
-    """Les opérations A2UI d'un résultat d'outil, ou ``None`` s'il n'a pas de liste assez longue à présenter."""
-    if not isinstance(donnees, dict):
-        return None
-    cle, lignes = _liste_principale(cast(dict[str, Any], donnees))
-    if not lignes:
-        return None
-    lignes = [_aplatir(ligne) for ligne in lignes]
-    colonnes = _colonnes(lignes)
-    if not colonnes:
-        return None
-    surface = f"resultat-{nom_outil.replace('_', '-')}-{uuid.uuid4().hex[:8]}"
-    periode = donnees.get("periode")
-    tableau: dict[str, Any] = {
-        "id": "tableau",
-        "component": "DataTable",
-        "title": TITRES.get(nom_outil, _libelle(cle)),
-        "columns": colonnes,
-        "rows": {"path": "/lignes"},
-    }
-    if isinstance(periode, str):
-        tableau["caption"] = f"Période {periode}"
-    composants: list[dict[str, Any]] = [tableau]
-    graphique = _graphique(lignes, colonnes)
-    if graphique is not None:
-        composants = [{"id": "root", "component": "Column", "children": ["graphique", "tableau"]}, graphique, tableau]
-    else:
-        tableau["id"] = "root"
-    return [
-        a2ui.create_surface(surface, catalog_id=CATALOGUE_ERP),
-        a2ui.update_components(surface, composants),
-        a2ui.update_data_model(surface, {"lignes": lignes}),
-    ]
-
 
 class SurfacesResultats(AgentMiddleware[Any, Any]):
-    """Surface déterministe des listes rendues par les outils ; le modèle ne voit que le résultat d'origine."""
+    """Transmet la surface que l'outil a décrite ; le modèle ne voit que le résultat d'origine."""
 
     async def awrap_tool_call(
         self,
@@ -127,10 +40,13 @@ class SurfacesResultats(AgentMiddleware[Any, Any]):
             return resultat
         artefact = resultat.artifact
         donnees = cast(dict[str, Any], artefact).get("structured_content") if isinstance(artefact, dict) else None
-        operations = operations_pour(str(request.tool_call["name"]), donnees)
-        if not operations:
+        if not isinstance(donnees, dict) or not isinstance(donnees.get(a2ui.A2UI_OPERATIONS_KEY), list):
             return resultat
-        enveloppe = {a2ui.A2UI_OPERATIONS_KEY: operations, "resultat": _texte(resultat.content)}
+        operations = cast(list[dict[str, Any]], donnees[a2ui.A2UI_OPERATIONS_KEY])
+        d_origine = {
+            cle: valeur for cle, valeur in cast(dict[str, Any], donnees).items() if cle != a2ui.A2UI_OPERATIONS_KEY
+        }
+        enveloppe = {a2ui.A2UI_OPERATIONS_KEY: operations, "resultat": json.dumps(d_origine, ensure_ascii=False)}
         return resultat.model_copy(update={"content": json.dumps(enveloppe, ensure_ascii=False)})
 
     async def awrap_model_call(
@@ -160,94 +76,3 @@ def _sans_surface(message: AnyMessage) -> AnyMessage:
     if resultat is message.content:
         return message
     return message.model_copy(update={"content": resultat})
-
-
-def _liste_principale(donnees: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
-    """La plus longue liste d'objets du résultat, si elle atteint le seuil."""
-    meilleure: tuple[str, list[dict[str, Any]]] = ("", [])
-    for cle, valeur in donnees.items():
-        elements = cast(list[Any], valeur) if isinstance(valeur, list) else []
-        if len(elements) >= max(SEUIL_LIGNES, len(meilleure[1]) + 1) and all(isinstance(v, dict) for v in elements):
-            meilleure = (cle, cast(list[dict[str, Any]], elements))
-    return meilleure
-
-
-def _aplatir(ligne: dict[str, Any]) -> dict[str, Any]:
-    """Une ligne à un niveau : un objet imbriqué (``chantier``) donne ses valeurs simples (``chantier.libelle``)."""
-    plate: dict[str, Any] = {}
-    for cle, valeur in ligne.items():
-        if isinstance(valeur, dict):
-            for sous_cle, sous_valeur in cast(dict[str, Any], valeur).items():
-                if _simple(sous_valeur) and sous_cle not in _MASQUEES:
-                    plate[f"{cle}.{sous_cle}"] = sous_valeur
-        elif _simple(valeur):
-            plate[cle] = valeur
-    return plate
-
-
-def _colonnes(lignes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    cles: list[str] = []
-    for ligne in lignes:
-        cles.extend(cle for cle in ligne if cle not in cles and cle.split(".")[-1] not in _MASQUEES)
-    colonnes: list[dict[str, Any]] = []
-    for cle in cles:
-        valeurs = [ligne.get(cle) for ligne in lignes if ligne.get(cle) is not None]
-        if not valeurs:
-            continue
-        nombres = all(isinstance(v, int | float) and not isinstance(v, bool) for v in valeurs)
-        if cle.split(".")[-1] == "periode":
-            format_ = "periode"
-        elif nombres and _MONTANT.search(cle):
-            format_ = "montant"
-        elif nombres:
-            format_ = "nombre"
-        else:
-            format_ = "texte"
-        colonne: dict[str, Any] = {"key": cle, "label": _libelle(cle), "format": format_}
-        if nombres and len(lignes) >= SEUIL_LIGNES and all(cast(float, v) >= 0 for v in valeurs):
-            colonne["bar"] = True
-        colonnes.append(colonne)
-    return colonnes
-
-
-def _graphique(lignes: list[dict[str, Any]], colonnes: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Une série mensuelle (colonne ``periode`` et au moins trois mois) se lit d'abord en courbe."""
-    if len(lignes) < 3 or not any(c["key"] == "periode" for c in colonnes):
-        return None
-    series: list[dict[str, Any]] = [
-        {"name": c["label"], "values": [ligne.get(c["key"]) or 0 for ligne in lignes], "format": c["format"]}
-        for c in colonnes
-        if c["format"] in ("nombre", "montant")
-    ]
-    if not series:
-        return None
-    # Les outils rendent le mois le plus récent d'abord ; la courbe se lit de gauche à droite dans le temps.
-    labels = [str(ligne.get("periode")) for ligne in lignes]
-    if labels != sorted(labels):
-        labels.reverse()
-        for serie in series:
-            cast(list[Any], serie["values"]).reverse()
-    return {"id": "graphique", "component": "Chart", "type": "line", "labels": labels, "series": series}
-
-
-def _libelle(cle: str) -> str:
-    morceaux = [LIBELLES.get(partie) or _humain(partie) for partie in cle.split(".")]
-    return " — ".join(morceaux)
-
-
-def _humain(cle: str) -> str:
-    mots = re.sub(r"(?<!^)(?=[A-Z])", " ", cle).lower()
-    return mots[:1].upper() + mots[1:]
-
-
-def _simple(valeur: Any) -> bool:
-    return valeur is None or isinstance(valeur, str | int | float | bool)
-
-
-def _texte(contenu: Any) -> str:
-    if isinstance(contenu, str):
-        return contenu
-    if isinstance(contenu, list):
-        blocs = cast(list[Any], contenu)
-        return "".join(str(cast(dict[str, Any], b).get("text", "")) if isinstance(b, dict) else str(b) for b in blocs)
-    return json.dumps(contenu, ensure_ascii=False)

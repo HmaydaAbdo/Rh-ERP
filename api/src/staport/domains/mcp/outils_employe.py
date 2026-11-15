@@ -48,6 +48,7 @@ from staport.domains.mcp.formats import (
     voit_la_paie,
     vue,
 )
+from staport.domains.mcp.surfaces import Colonne, avec_surface
 from staport.domains.mcp.telemetrie import outil
 from staport.domains.paie.periode import afficher_periode
 
@@ -116,6 +117,49 @@ def _fiche(employe: EmployeeReponse, voit_paie: bool) -> dict[str, Any]:
 
 def _tranches(tranches: list[TrancheReponse]) -> list[dict[str, Any]]:
     return [{"min": t.min, "max": t.max, "effectif": t.effectif} for t in tranches]
+
+
+# Colonnes des tableaux que l'assistant affiche (KAN-80) : seules ces colonnes sont rendues.
+C_GROUPES_EMPLOYES = (
+    Colonne("code", "Code"),
+    Colonne("libelle", "Libellé"),
+    Colonne("effectif", "Effectif", "nombre", barre=True),
+    Colonne("enPoste", "En poste", "nombre"),
+)
+C_TRANCHES_EMPLOYES = (
+    Colonne("min", "De", "nombre"),
+    Colonne("max", "À", "nombre"),
+    Colonne("effectif", "Effectif", "nombre", barre=True),
+)
+C_SORTIES = (Colonne("nomPrenom", "Nom et prénom"), Colonne("motif", "Motif"))
+C_PARCOURS = (
+    Colonne("periode", "Période", "periode"),
+    Colonne("fonction", "Fonction"),
+    Colonne("chantier", "Chantier"),
+    Colonne("equipe", "Équipe"),
+    Colonne("joursTravailles", "Jours travaillés", "nombre"),
+    Colonne("salaireMensuel", "Salaire mensuel", "montant"),
+    Colonne("salaireTotal", "Salaire total", "montant"),
+    Colonne("observation", "Observation"),
+)
+C_ACCUEIL = (Colonne("code", "Code"), Colonne("libelle", "Libellé"), Colonne("description", "Description"))
+
+
+def colonnes_employes(voit_paie: bool) -> tuple[Colonne, ...]:
+    """Le salaire n'est une colonne que pour qui voit la paie : l'outil ne rend pas ce champ aux autres."""
+    colonnes = (
+        Colonne("nomPrenom", "Nom et prénom"),
+        Colonne("cin", "CIN"),
+        Colonne("statut", "Statut"),
+        Colonne("fonction.libelle", "Fonction"),
+        Colonne("chantier.code", "Chantier"),
+        Colonne("equipe.code", "Équipe"),
+        Colonne("dateEmbauche", "Date d'embauche"),
+        Colonne("dateNaissance", "Date de naissance"),
+    )
+    if not voit_paie:
+        return colonnes
+    return (*colonnes, Colonne("salaire", "Salaire", "montant"), Colonne("typeSalaire", "Type de salaire"))
 
 
 def enregistrer(
@@ -213,14 +257,20 @@ def enregistrer(
             parametres["nom"] = nom_recherche
         if cin_recherche:
             parametres["cin"] = cin_recherche
-        return {
-            "total": resultats.page.total_elements,
-            "rendus": len(fiches),
-            "page": resultats.page.number,
-            "employes": fiches,
-            "salaireVisible": voit_paie,
-            "vue": vue("employees", "tabulaire", _avec_statut(parametres, statut_api)),
-        }
+        return avec_surface(
+            {
+                "total": resultats.page.total_elements,
+                "rendus": len(fiches),
+                "page": resultats.page.number,
+                "employes": fiches,
+                "salaireVisible": voit_paie,
+                "vue": vue("employees", "tabulaire", _avec_statut(parametres, statut_api)),
+            },
+            "employes_rechercher",
+            "Employés trouvés",
+            "employes",
+            colonnes_employes(voit_paie),
+        )
 
     @serveur.tool(
         name="employe_fiche",
@@ -278,17 +328,25 @@ def enregistrer(
         async with fabrique()() as session:
             resultat = await contexte().employees.analytique(session, criteres)
         parametres = _avec_statut(parametres_url(chantiers, equipes, fonctions), statut_api)
-        return {
-            "effectif": resultat.effectif,
-            "enPoste": resultat.actifs,
-            "sortis": resultat.inactifs,
-            "ageMoyen": None if resultat.age_moyen is None else float(resultat.age_moyen),
-            "ancienneteMoyenne": None if resultat.anciennete_moyenne is None else float(resultat.anciennete_moyenne),
-            "embauchesDouzeMois": resultat.embauches_douze_mois,
-            "parAge": _tranches(resultat.par_age),
-            "parAnciennete": _tranches(resultat.par_anciennete),
-            "vue": vue("employees", "analytique", parametres),
-        }
+        return avec_surface(
+            {
+                "effectif": resultat.effectif,
+                "enPoste": resultat.actifs,
+                "sortis": resultat.inactifs,
+                "ageMoyen": None if resultat.age_moyen is None else float(resultat.age_moyen),
+                "ancienneteMoyenne": None
+                if resultat.anciennete_moyenne is None
+                else float(resultat.anciennete_moyenne),
+                "embauchesDouzeMois": resultat.embauches_douze_mois,
+                "parAge": _tranches(resultat.par_age),
+                "parAnciennete": _tranches(resultat.par_anciennete),
+                "vue": vue("employees", "analytique", parametres),
+            },
+            "employes_compter",
+            "Effectif par tranche d'âge",
+            "parAge",
+            C_TRANCHES_EMPLOYES,
+        )
 
     @serveur.tool(
         name="employes_regrouper",
@@ -329,15 +387,21 @@ def enregistrer(
                 session, criteres, DimensionEmployes(dimension.value), critere, croissant
             )
         parametres = _avec_statut(parametres_url(chantiers, equipes, fonctions), statut_api)
-        return {
-            "dimension": dimension.value,
-            "nombreGroupes": len(groupes),
-            "groupes": [
-                {"id": g.id, "code": g.code, "libelle": g.libelle, "effectif": g.effectif, "enPoste": g.actifs}
-                for g in groupes
-            ],
-            "vue": vue("employees", "cartes", parametres),
-        }
+        return avec_surface(
+            {
+                "dimension": dimension.value,
+                "nombreGroupes": len(groupes),
+                "groupes": [
+                    {"id": g.id, "code": g.code, "libelle": g.libelle, "effectif": g.effectif, "enPoste": g.actifs}
+                    for g in groupes
+                ],
+                "vue": vue("employees", "cartes", parametres),
+            },
+            "employes_regrouper",
+            "Effectif par regroupement",
+            "groupes",
+            C_GROUPES_EMPLOYES,
+        )
 
     @serveur.tool(
         name="employes_sorties",
@@ -363,16 +427,23 @@ def enregistrer(
             proposee = vue("employees", "analytique", {"periode": afficher_periode(courant)})
         else:
             proposee = vue("employees", "tabulaire", _avec_statut({}, EmployeeStatut.INACTIF))
-        return {
-            "periode": afficher_periode(courant),
-            "nombre": resultat.nombre,
-            "parMotif": resultat.par_motif,
-            "employes": [
-                {"id": s.employe_id, "nomPrenom": s.nom_prenom, "motif": s.motif}
-                for s in sorted(resultat.sorties, key=lambda s: s.employe_id)
-            ],
-            "vue": proposee,
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "nombre": resultat.nombre,
+                "parMotif": resultat.par_motif,
+                "employes": [
+                    {"id": s.employe_id, "nomPrenom": s.nom_prenom, "motif": s.motif}
+                    for s in sorted(resultat.sorties, key=lambda s: s.employe_id)
+                ],
+                "vue": proposee,
+            },
+            "employes_sorties",
+            "Départs du mois",
+            "employes",
+            C_SORTIES,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="employe_parcours",
@@ -396,40 +467,47 @@ def enregistrer(
         async with fabrique()() as session:
             resultat = await contexte().paies.parcours(session, id)
         indicateurs = resultat.indicateurs
-        return {
-            "indicateurs": {
-                "moisPayes": indicateurs.mois_payes,
-                "totalPercu": float(indicateurs.total_percu),
-                "joursTravailles": float(indicateurs.jours_travailles),
-                "premierMois": _mois_ou_nul(indicateurs.premier_mois),
-                "dernierMois": _mois_ou_nul(indicateurs.dernier_mois),
+        return avec_surface(
+            {
+                "indicateurs": {
+                    "moisPayes": indicateurs.mois_payes,
+                    "totalPercu": float(indicateurs.total_percu),
+                    "joursTravailles": float(indicateurs.jours_travailles),
+                    "premierMois": _mois_ou_nul(indicateurs.premier_mois),
+                    "dernierMois": _mois_ou_nul(indicateurs.dernier_mois),
+                },
+                "mois": [
+                    {
+                        "bulletinId": m.bulletin_id,
+                        "periode": afficher_periode(m.periode),
+                        "fonction": m.fonction,
+                        "chantier": m.chantier,
+                        "equipe": m.equipe,
+                        "joursTravailles": float(m.nombre_jours_travailles),
+                        "salaireMensuel": float(m.salaire_mensuel),
+                        "salaireTotal": float(m.salaire_total),
+                        "observation": m.observation,
+                    }
+                    for m in resultat.mois
+                ],
+                "evenements": [
+                    {
+                        "periode": afficher_periode(e.periode),
+                        "type": e.type,
+                        "avant": e.avant,
+                        "apres": e.apres,
+                        "motif": e.motif,
+                    }
+                    for e in resultat.evenements
+                ],
+                "vue": vue("employees", "fiche", {"id": str(id)}),
             },
-            "mois": [
-                {
-                    "bulletinId": m.bulletin_id,
-                    "periode": afficher_periode(m.periode),
-                    "fonction": m.fonction,
-                    "chantier": m.chantier,
-                    "equipe": m.equipe,
-                    "joursTravailles": float(m.nombre_jours_travailles),
-                    "salaireMensuel": float(m.salaire_mensuel),
-                    "salaireTotal": float(m.salaire_total),
-                    "observation": m.observation,
-                }
-                for m in resultat.mois
-            ],
-            "evenements": [
-                {
-                    "periode": afficher_periode(e.periode),
-                    "type": e.type,
-                    "avant": e.avant,
-                    "apres": e.apres,
-                    "motif": e.motif,
-                }
-                for e in resultat.evenements
-            ],
-            "vue": vue("employees", "fiche", {"id": str(id)}),
-        }
+            "employe_parcours",
+            "Parcours de l'employé",
+            "mois",
+            C_PARCOURS,
+            courbe=True,
+        )
 
     @serveur.tool(
         name="accueil_lire",
@@ -451,10 +529,16 @@ def enregistrer(
         assert jeton is not None and jeton.subject is not None  # noqa: S101
         async with fabrique()() as session:
             reponse = await contexte().accueil.lire(session, int(jeton.subject))
-        return {
-            "personnalise": reponse.personnalise,
-            "indicateurs": reponse.indicateurs,
-            "disponibles": [
-                {"code": d.code, "libelle": d.libelle, "description": d.description} for d in reponse.disponibles
-            ],
-        }
+        return avec_surface(
+            {
+                "personnalise": reponse.personnalise,
+                "indicateurs": reponse.indicateurs,
+                "disponibles": [
+                    {"code": d.code, "libelle": d.libelle, "description": d.description} for d in reponse.disponibles
+                ],
+            },
+            "accueil_lire",
+            "Vues disponibles",
+            "disponibles",
+            C_ACCUEIL,
+        )

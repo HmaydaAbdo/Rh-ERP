@@ -41,6 +41,7 @@ from staport.domains.mcp.formats import (
     texte,
     vue,
 )
+from staport.domains.mcp.surfaces import Colonne, avec_surface
 from staport.domains.mcp.telemetrie import outil
 from staport.domains.paie.periode import afficher_periode
 from staport.domains.paie.schemas import (
@@ -138,6 +139,85 @@ def _criteres(
     )
 
 
+# Colonnes des tableaux que l'assistant affiche (KAN-80) : seules ces colonnes sont rendues.
+_CODE_LIBELLE = (Colonne("code", "Code"), Colonne("libelle", "Libellé"))
+C_CHANTIERS_PAIE = (
+    *_CODE_LIBELLE,
+    Colonne("masse", "Montant de la paie", "montant", barre=True),
+    Colonne("effectif", "Effectif", "nombre"),
+)
+C_PERIODES = (
+    Colonne("periode", "Période", "periode"),
+    Colonne("bulletins", "Bulletins", "nombre"),
+    Colonne("chantiers", "Chantiers", "nombre"),
+    Colonne("masse", "Montant de la paie", "montant"),
+    Colonne("stc", "Sortants", "nombre"),
+    Colonne("stcMontant", "STC (DH)", "montant"),
+)
+C_REPARTITION = (
+    *_CODE_LIBELLE,
+    Colonne("masse", "Montant de la paie", "montant", barre=True),
+    Colonne("effectif", "Effectif", "nombre"),
+    Colonne("stc", "Sortants", "nombre"),
+    Colonne("stcMontant", "STC (DH)", "montant"),
+)
+C_EVOLUTION = (
+    Colonne("periode", "Période", "periode"),
+    Colonne("masse", "Montant de la paie", "montant"),
+    Colonne("effectif", "Effectif", "nombre"),
+    Colonne("stc", "Sortants", "nombre"),
+    Colonne("stcMontant", "STC (DH)", "montant"),
+)
+C_COMPARAISON = (
+    *_CODE_LIBELLE,
+    Colonne("statut", "Statut"),
+    Colonne("masse", "Montant de la paie", "montant", barre=True),
+    Colonne("masseReference", "Masse du mois de comparaison", "montant"),
+    Colonne("variationMasse", "Variation de la masse", "montant"),
+    Colonne("variationPourcentage", "Variation (%)", "nombre"),
+    Colonne("effectif", "Effectif", "nombre"),
+    Colonne("effectifReference", "Effectif du mois de comparaison", "nombre"),
+    Colonne("variationEffectif", "Variation de l'effectif", "nombre"),
+    Colonne("coutMoyen", "Coût moyen", "montant"),
+    Colonne("coutMoyenReference", "Coût moyen du mois de comparaison", "montant"),
+    Colonne("fonctionPrincipale.libelle", "Fonction principale"),
+    Colonne("fonctionPrincipale.effectif", "Effectif de la fonction principale", "nombre"),
+)
+C_MOUVEMENTS = (
+    Colonne("periode", "Période", "periode"),
+    Colonne("effectif", "Effectif", "nombre"),
+    Colonne("effectifMoisPrecedent", "Effectif du mois précédent", "nombre"),
+    Colonne("variation", "Variation", "nombre"),
+    Colonne("entrees", "Entrées", "nombre"),
+    Colonne("plusPayes", "Plus payés", "nombre"),
+    Colonne("sorties", "Sorties", "nombre"),
+    Colonne("mutations", "Mutations", "nombre"),
+)
+C_QUALITE = (
+    Colonne("min", "De", "montant"),
+    Colonne("max", "À", "montant"),
+    Colonne("effectif", "Effectif", "nombre", barre=True),
+)
+C_BULLETINS = (
+    Colonne("periode", "Période", "periode"),
+    Colonne("employe.nomPrenom", "Nom et prénom"),
+    Colonne("employe.cin", "CIN"),
+    Colonne("fonction", "Fonction"),
+    Colonne("chantier", "Chantier"),
+    Colonne("equipe", "Équipe"),
+    Colonne("joursTravailles", "Jours travaillés", "nombre"),
+    Colonne("salaireMensuel", "Salaire mensuel", "montant"),
+    Colonne("salaireTotal", "Salaire total", "montant"),
+    Colonne("observation", "Observation"),
+)
+C_RAPPORT = (
+    *_CODE_LIBELLE,
+    Colonne("effectif", "Effectif", "nombre"),
+    Colonne("masse", "Montant de la paie", "montant", barre=True),
+)
+C_EXPORT = _CODE_LIBELLE
+
+
 def enregistrer(
     serveur: FastMCP, contexte: Callable[[], ContexteAuth], fabrique: Callable[[], async_sessionmaker[AsyncSession]]
 ) -> None:
@@ -182,16 +262,29 @@ def enregistrer(
             resultat = await contexte().paies.analytique(
                 session, _criteres(courant, chantiers, equipes, fonctions), contexte().parametres
             )
-        return {
-            "periode": afficher_periode(courant),
-            "indicateurs": _kpi(resultat.kpis),
-            "moisPrecedent": None if resultat.mois_precedent is None else _kpi(resultat.mois_precedent),
-            "chantiers": [
-                {"id": c.id, "code": c.code, "libelle": c.libelle, "masse": _nombre(c.masse), "effectif": c.effectif}
-                for c in resultat.par_chantier
-            ],
-            "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, courant)),
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "indicateurs": _kpi(resultat.kpis),
+                "moisPrecedent": None if resultat.mois_precedent is None else _kpi(resultat.mois_precedent),
+                "chantiers": [
+                    {
+                        "id": c.id,
+                        "code": c.code,
+                        "libelle": c.libelle,
+                        "masse": _nombre(c.masse),
+                        "effectif": c.effectif,
+                    }
+                    for c in resultat.par_chantier
+                ],
+                "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, courant)),
+            },
+            "paie_indicateurs",
+            "Principaux chantiers",
+            "chantiers",
+            C_CHANTIERS_PAIE,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="paie_periodes",
@@ -214,21 +307,28 @@ def enregistrer(
         chantiers, equipes, fonctions = ids(chantierIds), ids(equipeIds), ids(fonctionIds)
         async with fabrique()() as session:
             toutes = await contexte().paies.periodes_recherche(session, _criteres(None, chantiers, equipes, fonctions))
-        return {
-            "nombreMois": len(toutes),
-            "periodes": [
-                {
-                    "periode": afficher_periode(p.periode),
-                    "bulletins": p.nombre_bulletins,
-                    "chantiers": p.nombre_chantiers,
-                    "masse": _nombre(p.masse),
-                    "stc": p.stc,
-                    "stcMontant": _nombre(p.stc_montant),
-                }
-                for p in toutes
-            ],
-            "vue": vue("paie", "cartes", parametres_url(chantiers, equipes, fonctions)),
-        }
+        return avec_surface(
+            {
+                "nombreMois": len(toutes),
+                "periodes": [
+                    {
+                        "periode": afficher_periode(p.periode),
+                        "bulletins": p.nombre_bulletins,
+                        "chantiers": p.nombre_chantiers,
+                        "masse": _nombre(p.masse),
+                        "stc": p.stc,
+                        "stcMontant": _nombre(p.stc_montant),
+                    }
+                    for p in toutes
+                ],
+                "vue": vue("paie", "cartes", parametres_url(chantiers, equipes, fonctions)),
+            },
+            "paie_periodes",
+            "Mois de paie importés",
+            "periodes",
+            C_PERIODES,
+            courbe=True,
+        )
 
     @serveur.tool(
         name="paie_repartition",
@@ -270,24 +370,31 @@ def enregistrer(
                 tri,
                 None if sens is None else sens is SensTri.ASC,
             )
-        return {
-            "periode": afficher_periode(repartition.periode),
-            "dimension": dimension.value,
-            "nombreGroupes": repartition.nombre_groupes,
-            "groupes": [
-                {
-                    "id": g.id,
-                    "code": g.code,
-                    "libelle": g.libelle,
-                    "masse": _nombre(g.masse),
-                    "effectif": g.effectif,
-                    "stc": g.stc,
-                    "stcMontant": _nombre(g.stc_montant),
-                }
-                for g in repartition.groupes
-            ],
-            "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, courant)),
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(repartition.periode),
+                "dimension": dimension.value,
+                "nombreGroupes": repartition.nombre_groupes,
+                "groupes": [
+                    {
+                        "id": g.id,
+                        "code": g.code,
+                        "libelle": g.libelle,
+                        "masse": _nombre(g.masse),
+                        "effectif": g.effectif,
+                        "stc": g.stc,
+                        "stcMontant": _nombre(g.stc_montant),
+                    }
+                    for g in repartition.groupes
+                ],
+                "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, courant)),
+            },
+            "paie_repartition",
+            "Montant de la paie par regroupement",
+            "groupes",
+            C_REPARTITION,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="paie_evolution",
@@ -320,19 +427,26 @@ def enregistrer(
             evolution = await contexte().paies.evolution_jusqua(
                 session, _criteres(derniere, chantiers, equipes, fonctions), contexte().parametres
             )
-        return {
-            "mois": [
-                {
-                    "periode": afficher_periode(e.periode),
-                    "masse": _nombre(e.masse),
-                    "effectif": e.effectif,
-                    "stc": e.stc,
-                    "stcMontant": _nombre(e.stc_montant),
-                }
-                for e in evolution
-            ],
-            "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, derniere)),
-        }
+        return avec_surface(
+            {
+                "mois": [
+                    {
+                        "periode": afficher_periode(e.periode),
+                        "masse": _nombre(e.masse),
+                        "effectif": e.effectif,
+                        "stc": e.stc,
+                        "stcMontant": _nombre(e.stc_montant),
+                    }
+                    for e in evolution
+                ],
+                "vue": vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, derniere)),
+            },
+            "paie_evolution",
+            "Évolution de la paie",
+            "mois",
+            C_EVOLUTION,
+            courbe=True,
+        )
 
     @serveur.tool(
         name="paie_comparer",
@@ -396,7 +510,7 @@ def enregistrer(
             )
         donnees = resultat.model_dump(mode="json", by_alias=True)
         donnees["vue"] = vue("paie", "analytique", parametres_url(chantiers, equipes, fonctions, recent))
-        return donnees
+        return avec_surface(donnees, "paie_comparer", "Comparaison de la paie de deux mois", "groupes", C_COMPARAISON)
 
     @serveur.tool(
         name="paie_mouvements",
@@ -428,23 +542,30 @@ def enregistrer(
         async with fabrique()() as session:
             tous = await contexte().paies.effectifs(session, _criteres(None, chantiers, equipes, fonctions))
         retenus = [m for m in tous if demande is None or m.periode == demande]
-        return {
-            "mois": [
-                {
-                    "periode": afficher_periode(m.periode),
-                    "effectif": m.effectif,
-                    "effectifMoisPrecedent": m.effectif_mois_precedent,
-                    "variation": m.variation,
-                    "entrees": m.entrees,
-                    "plusPayes": m.plus_payes,
-                    "sorties": m.sorties,
-                    "mutations": m.mutations,
-                }
-                for m in retenus
-            ],
-            "definitions": DEFINITIONS_MOUVEMENTS,
-            "vue": vue("employees", "analytique", parametres_url(chantiers, equipes, fonctions, demande)),
-        }
+        return avec_surface(
+            {
+                "mois": [
+                    {
+                        "periode": afficher_periode(m.periode),
+                        "effectif": m.effectif,
+                        "effectifMoisPrecedent": m.effectif_mois_precedent,
+                        "variation": m.variation,
+                        "entrees": m.entrees,
+                        "plusPayes": m.plus_payes,
+                        "sorties": m.sorties,
+                        "mutations": m.mutations,
+                    }
+                    for m in retenus
+                ],
+                "definitions": DEFINITIONS_MOUVEMENTS,
+                "vue": vue("employees", "analytique", parametres_url(chantiers, equipes, fonctions, demande)),
+            },
+            "paie_mouvements",
+            "Mouvements d'effectif",
+            "mois",
+            C_MOUVEMENTS,
+            courbe=True,
+        )
 
     @serveur.tool(
         name="paie_qualite",
@@ -473,15 +594,22 @@ def enregistrer(
             )
         parametres = parametres_url(chantiers, equipes, fonctions, courant)
         parametres["equipeIds"] = "0"
-        return {
-            "periode": afficher_periode(courant),
-            "sansEquipe": resultat.qualite.sans_equipe,
-            "sansObservation": resultat.qualite.sans_observation,
-            "tranches": [
-                {"min": _nombre(t.min), "max": _nombre(t.max), "effectif": t.effectif} for t in resultat.tranches
-            ],
-            "vue": vue("paie", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "sansEquipe": resultat.qualite.sans_equipe,
+                "sansObservation": resultat.qualite.sans_observation,
+                "tranches": [
+                    {"min": _nombre(t.min), "max": _nombre(t.max), "effectif": t.effectif} for t in resultat.tranches
+                ],
+                "vue": vue("paie", "tabulaire", parametres),
+            },
+            "paie_qualite",
+            "Répartition par tranche de salaire",
+            "tranches",
+            C_QUALITE,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="paie_bulletins_rechercher",
@@ -534,13 +662,20 @@ def enregistrer(
             parametres["nom"] = nom_recherche
         if cin_recherche:
             parametres["cin"] = cin_recherche
-        return {
-            "periode": afficher_periode(courant),
-            "total": resultats.page.total_elements,
-            "page": resultats.page.number,
-            "bulletins": [_bulletin(b) for b in resultats.content],
-            "vue": vue("paie", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "total": resultats.page.total_elements,
+                "page": resultats.page.number,
+                "bulletins": [_bulletin(b) for b in resultats.content],
+                "vue": vue("paie", "tabulaire", parametres),
+            },
+            "paie_bulletins_rechercher",
+            "Bulletins de paie",
+            "bulletins",
+            C_BULLETINS,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="rapport_preparer",
@@ -572,21 +707,28 @@ def enregistrer(
             concernes = await contexte().paies.chantiers_periode(session, _criteres(courant, chantiers, None, None))
         parametres = parametres_url(chantiers, None, None, courant)
         parametres["action"] = "export"
-        return {
-            "periode": afficher_periode(courant),
-            "nombreChantiers": len(concernes),
-            "chantiers": [
-                {
-                    "id": c.id,
-                    "code": c.code,
-                    "libelle": c.libelle,
-                    "effectif": c.effectif,
-                    "masse": _nombre(c.masse),
-                }
-                for c in concernes
-            ],
-            "vue": vue("paie", "tabulaire", parametres),
-        }
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "nombreChantiers": len(concernes),
+                "chantiers": [
+                    {
+                        "id": c.id,
+                        "code": c.code,
+                        "libelle": c.libelle,
+                        "effectif": c.effectif,
+                        "masse": _nombre(c.masse),
+                    }
+                    for c in concernes
+                ],
+                "vue": vue("paie", "tabulaire", parametres),
+            },
+            "rapport_preparer",
+            "Chantiers du rapport",
+            "chantiers",
+            C_RAPPORT,
+            legende_periode=True,
+        )
 
     @serveur.tool(
         name="paie_export_preparer",
@@ -622,16 +764,22 @@ def enregistrer(
         reference, expire = contexte().agent.emettre_reference_export(
             int(jeton.subject or 0), jeton.client_id, courant, [c.id for c in concernes]
         )
-        return {
-            "periode": afficher_periode(courant),
-            "nombreChantiers": len(concernes),
-            "chantiers": [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in concernes],
-            "telechargement": {
-                "reference": reference,
-                "expireDansSecondes": expire,
-                "nomFichier": f"Paie_Export_{afficher_periode(courant)}.xlsx",
+        return avec_surface(
+            {
+                "periode": afficher_periode(courant),
+                "nombreChantiers": len(concernes),
+                "chantiers": [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in concernes],
+                "telechargement": {
+                    "reference": reference,
+                    "expireDansSecondes": expire,
+                    "nomFichier": f"Paie_Export_{afficher_periode(courant)}.xlsx",
+                },
             },
-        }
+            "paie_export_preparer",
+            "Chantiers de l'export",
+            "chantiers",
+            C_EXPORT,
+        )
 
     # --- Heures supplémentaires ------------------------------------------------------------------------
 

@@ -259,6 +259,12 @@ def test_sans_la_paie_le_salaire_est_omis_et_le_tri_par_salaire_refuse(
     resultat = _donnees(_appel(plateforme, jeton, "employes_rechercher", fonctionIds=donnees.fonctions))
     assert resultat["salaireVisible"] is False and resultat["total"] == 4
     assert all("salaire" not in e and "typeSalaire" not in e for e in resultat["employes"])
+    # Le tableau de l'assistant (KAN-80) suit : 4 lignes, aucune colonne de salaire, aucune donnée hors liste blanche.
+    tableau = resultat["a2ui_operations"][1]["updateComponents"]["components"][0]
+    assert tableau["component"] == "DataTable" and tableau["title"] == "Employés trouvés"
+    assert not {"salaire", "typeSalaire"} & {c["key"] for c in tableau["columns"]}
+    lignes = resultat["a2ui_operations"][2]["updateDataModel"]["value"]["lignes"]
+    assert len(lignes) == 4 and all(set(ligne) == {c["key"] for c in tableau["columns"]} for ligne in lignes)
     refus = _appel(plateforme, jeton, "employes_rechercher", fonctionIds=donnees.fonctions, tri="SALAIRE")
     assert refus["isError"] is True and "salaire" in refus["content"][0]["text"]
     fiche = _donnees(_appel(plateforme, jeton, "employe_fiche", id=donnees.employes["A"]))
