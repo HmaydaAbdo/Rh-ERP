@@ -1,4 +1,4 @@
-"""Mesures du rapport de paie : mêmes données historiques et définitions que Spring."""
+"""Mesures du rapport de paie : données historiques et définitions du rapport."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass

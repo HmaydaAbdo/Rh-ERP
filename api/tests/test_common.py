@@ -1,6 +1,6 @@
 # Le client de test de Starlette n'expose pas de types complets : cette règle n'est levée que pour ce fichier.
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
-"""Parité du domaine `common` avec Spring (KAN-47) : format d'erreur, messages, identifiant de requête, recherche."""
+"""Domaine `common` (KAN-47) : format d'erreur, messages, identifiant de requête, recherche."""
 
 import uuid
 
@@ -51,7 +51,7 @@ def client() -> TestClient:
     return TestClient(_app(), raise_server_exceptions=False)
 
 
-def _forme_spring(corps: dict[str, object], statut: int, erreur: str, message: str, chemin: str) -> None:
+def _forme_erreur(corps: dict[str, object], statut: int, erreur: str, message: str, chemin: str) -> None:
     assert set(corps) == {"timestamp", "status", "error", "message", "path"}
     assert corps["status"] == statut
     assert corps["error"] == erreur
@@ -60,10 +60,10 @@ def _forme_spring(corps: dict[str, object], statut: int, erreur: str, message: s
     assert isinstance(corps["timestamp"], str)
 
 
-def test_conflit_de_version_donne_409_avec_le_message_spring(client: TestClient) -> None:
+def test_conflit_de_version_donne_409_avec_le_message_du_contrat(client: TestClient) -> None:
     r = client.get("/conflit")
     assert r.status_code == 409
-    _forme_spring(
+    _forme_erreur(
         r.json(),
         409,
         "Conflict",
@@ -75,22 +75,22 @@ def test_conflit_de_version_donne_409_avec_le_message_spring(client: TestClient)
 def test_acces_refuse_donne_403(client: TestClient) -> None:
     r = client.get("/refus")
     assert r.status_code == 403
-    _forme_spring(r.json(), 403, "Forbidden", "Permission insuffisante pour effectuer cette action.", "/refus")
+    _forme_erreur(r.json(), 403, "Forbidden", "Permission insuffisante pour effectuer cette action.", "/refus")
 
 
 def test_route_inconnue_donne_404_et_methode_inconnue_405(client: TestClient) -> None:
     r = client.get("/nulle-part")
     assert r.status_code == 404
-    _forme_spring(r.json(), 404, "Not Found", "Route introuvable.", "/nulle-part")
+    _forme_erreur(r.json(), 404, "Not Found", "Route introuvable.", "/nulle-part")
     r = client.delete("/saisie")
     assert r.status_code == 405
-    _forme_spring(r.json(), 405, "Method Not Allowed", "Méthode non autorisée pour cette route.", "/saisie")
+    _forme_erreur(r.json(), 405, "Method Not Allowed", "Méthode non autorisée pour cette route.", "/saisie")
 
 
 def test_erreur_imprevue_ne_fuite_aucun_detail(client: TestClient) -> None:
     r = client.get("/panne")
     assert r.status_code == 500
-    _forme_spring(r.json(), 500, "Internal Server Error", "Une erreur inattendue est survenue.", "/panne")
+    _forme_erreur(r.json(), 500, "Internal Server Error", "Une erreur inattendue est survenue.", "/panne")
     assert "interne" not in r.text
 
 
@@ -102,14 +102,14 @@ def test_validation_donne_400_avec_champ_et_message(client: TestClient) -> None:
     assert corps["message"] == "nom : Doit contenir au moins 1 caractère(s)."
 
 
-def test_type_json_impossible_a_lire_donne_le_message_du_corps_illisible_comme_spring(client: TestClient) -> None:
-    """Banc différentiel (KAN-226) : Jackson refuse le corps entier, sans détail de champ."""
+def test_type_json_impossible_a_lire_donne_le_message_du_corps_illisible(client: TestClient) -> None:
+    """KAN-226 : le corps entier est refusé, sans détail de champ."""
     r = client.post("/saisie", json={"nom": "", "age": "x"})
     assert r.status_code == 400
     assert r.json()["message"] == "Corps de la requête illisible."
 
 
-def test_corps_illisible_donne_400_message_spring(client: TestClient) -> None:
+def test_corps_illisible_donne_400_message_du_contrat(client: TestClient) -> None:
     r = client.post("/saisie", content=b"{pas du json", headers={"content-type": "application/json"})
     assert r.status_code == 400
     assert r.json()["message"] == "Corps de la requête illisible."
@@ -174,8 +174,8 @@ def test_nombre_metier_est_un_entier_en_python_et_devient_un_nombre_json() -> No
     assert montant.model_dump(mode="json", by_alias=True) == {"total": 600}
 
 
-def test_en_tetes_de_securite_comme_spring_security(client: TestClient) -> None:
-    """Écart trouvé par le banc différentiel (KAN-226) : Spring posait ces en-têtes sur chaque réponse."""
+def test_en_tetes_de_securite(client: TestClient) -> None:
+    """KAN-226 : ces en-têtes doivent figurer sur chaque réponse."""
     reponse = client.get("/refus")
     assert reponse.headers["X-Content-Type-Options"] == "nosniff"
     assert reponse.headers["X-Frame-Options"] == "DENY"

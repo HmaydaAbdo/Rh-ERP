@@ -1,6 +1,6 @@
-"""Paramètres administrables (parité avec `ParametreService` de Spring) et lecteurs typés des autres domaines.
+"""Paramètres administrables et lecteurs typés des autres domaines.
 
-Contrairement à Spring, aucune valeur n'est gardée en mémoire : chaque lecture interroge la base. L'application peut
+Aucune valeur n'est gardée en mémoire : chaque lecture interroge la base. L'application peut
 tourner en plusieurs processus, et une modification faite par un administrateur doit s'appliquer partout aussitôt, sans
 invalidation distante. Le coût est une lecture indexée sur `cle` par appel.
 """

@@ -1,4 +1,4 @@
-"""Contexte et port d'audit (parité avec `ResolveurContexteAudit`, `BatchAuditContext` et `@AuditableAction`).
+"""Contexte et port d'audit.
 
 Les domaines métier ne connaissent que ce module : ils déclarent l'opération à journaliser avec `Auditeur.auditer` et
 publient les événements de sécurité ; le domaine `audit` (KAN-214) fournit l'implémentation qui écrit le journal et

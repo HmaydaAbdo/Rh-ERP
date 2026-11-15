@@ -54,8 +54,7 @@ numérotation ; ce tableau convertit les anciens numéros encore cités dans des
    configurable, mesuré, puis relevé ou justifié.
 5. Garde-fous qui ne bougent pas, pour **chaque** fonction adoptée :
    - **gratuit** : aucun abonnement ni service payant ;
-   - **le backend métier reste l'autorité** des données, droits, filtres et calculs (Spring aujourd'hui, FastAPI domaine
-     par domaine selon la migration E2) ; les droits sont revérifiés à chaque appel ;
+   - **le backend métier reste l'autorité** des données, droits, filtres et calculs (l'API FastAPI) ; les droits sont revérifiés à chaque appel ;
    - **données RH** : minimisation, audit, loi 09-08 ; le masquage des champs sensibles est une règle métier appliquée
      côté backend (E7) ;
    - **auto-hébergé** : les services hébergés par l'éditeur (CopilotKit Intelligence, LangSmith) sont exclus.
@@ -121,9 +120,9 @@ lues. Chaque épopée porte une tâche « E*n*.R » pour cette relecture.
 | E0 | angular.dev (signaux, formulaires, accessibilité, CDK, Aria) ; AG Grid Community ; `ng2-charts` et Chart.js ; WCAG 2.2 ; références d'Impeccable |
 | E5, E6 | LangChain : agents, middlewares (vue d'ensemble et préconstruits), sortie structurée, runtime, tests ; LangGraph : persistance, durabilité, streaming ; Deep Agents : vue d'ensemble, personnalisation ; journaux de `langchain`, `langgraph`, `deepagents` |
 | E2 | FastAPI, Pydantic, SQLAlchemy, SDK MCP Python |
-| E7, E9 | Spring Security et Spring AI (serveur MCP) ; LangChain : runtime et contexte |
+| E7, E9 | FastAPI (sécurité) et FastMCP (serveur MCP) ; LangChain : runtime et contexte |
 | E8 | LangChain : garde-fous, middleware PII, politique de traces ; LangGraph : persistance (chiffrement) ; Phoenix / OpenInference |
-| E10 | CopilotKit : runtime, authentification, déploiement, `injectThreads` ; LangGraph : stores ; `ag-ui-langgraph` ; Spring Authorization Server |
+| E10 | CopilotKit : runtime, authentification, déploiement, `injectThreads` ; LangGraph : stores ; `ag-ui-langgraph` ; jeton agent RS256 de l'API |
 | E11 | LangGraph : persistance, mémoire, stores ; LangChain : mémoire à long terme, join/rejoin ; Deep Agents : mémoire ; CopilotKit : fils |
 | E12 | Toute la documentation CopilotKit Angular (guides, référence, exemples, production, dépannage) ; spécification AG-UI et A2UI |
 | E13 | LangChain : human-in-the-loop ; LangGraph : interruptions ; CopilotKit : interactions humaines |

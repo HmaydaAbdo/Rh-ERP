@@ -67,7 +67,7 @@ export class UserFormComponent {
   protected readonly form = form(
     this.modele,
     (chemin) => {
-      // Le username n'est pas modifiable après création (UserUpdateRequestDto ne le porte pas).
+      // Le username n'est pas modifiable après création (la requête de modification ne le porte pas).
       disabled(chemin.username, () => this.isEditMode());
       required(chemin.username, { message: "Le nom d'utilisateur est obligatoire." });
       validate(chemin.username, ({ value }) => {

@@ -258,9 +258,9 @@ excluant la borne d’un an auparavant et incluant aujourd’hui; une embauche f
 
 | Règle ou parcours | Preuve de contrôle | Accord métier |
 |---|---|---|
-| CIN, références, version et suppression protégée | `EmployeeServiceTest`, `EmployeeSuppressionTest`, `EmployeeControllerTest` | À recueillir |
-| Import atomique, date de naissance et numéros Excel | `EmployeeImportServiceTest` | À recueillir |
-| Agrégats et bornes des embauches sur douze mois | `EmployeeAnalytiqueServiceTest` sur PostgreSQL | À recueillir |
+| CIN, références, version et suppression protégée | `test_employee.py` | À recueillir |
+| Import atomique, date de naissance et numéros Excel | `test_employee.py` | À recueillir |
+| Agrégats et bornes des embauches sur douze mois | `test_employee.py` sur PostgreSQL | À recueillir |
 | Formulaire, fiche, filtres, erreur et réessai | Specs du domaine Employé et parcours navigateur | À recueillir |
 | Historique distinct de l’état courant | Contrats Employé/Paie et scénarios de parcours | À recueillir |
 
@@ -397,9 +397,9 @@ d'export ni d'indicateur Analytique propres aux comptes et rôles.
 
 | Sujet | Preuve technique | Accord métier |
 |---|---|---|
-| Droits par action et alternatives de lecture des rôles | `EndpointSecurityTest`, `JwtSecurityChainTest` | À recueillir |
-| Types, tailles, normalisation et références invalides | `AuthRequestValidationTest` | À recueillir |
-| Rotation, révocation, verrouillage et récupération | `AuthServiceTest`, `VerrouillageConnexionIntegrationTest` | À recueillir |
+| Droits par action et alternatives de lecture des rôles | `test_auth_acces.py` | À recueillir |
+| Types, tailles, normalisation et références invalides | `test_auth_acces.py` | À recueillir |
+| Rotation, révocation, verrouillage et récupération | `test_auth_session.py` | À recueillir |
 | Formulaires, erreurs/réessais et sauvegarde partielle | Specs Utilisateurs/Rôles et revue navigateur | À recueillir |
 
 Les preuves techniques ne remplacent pas la validation du besoin d'accès par les responsables. Les accords,
@@ -420,7 +420,7 @@ sont l'authentification, l'analytique Paie et la synchronisation des chantiers. 
 |---|---|
 | Consultation | Catalogue, libellé, description, unité, valeur courante et bornes de saisie. |
 | Modification | Sauvegarde indépendante de chaque ligne avec sa version ; les saisies des autres paramètres sont conservées. |
-| Validation | Entier décimal dans les bornes inclusives, valeur non blanche et au plus 255 caractères ; expression cron validée par Spring. |
+| Validation | Entier décimal dans les bornes inclusives, valeur non blanche et au plus 255 caractères ; expression cron validée par le serveur. |
 | Chargement et erreur | Chargement annoncé ; résultat vide distinct d'une lecture échouée ; réessai disponible. |
 
 Il n'existe aucune création, suppression ni clé libre dans l'écran. Une clé obligatoire absente de la base
@@ -436,10 +436,10 @@ Ce domaine ne possède ni import, export, Cartes ni Analytique propres.
 
 | Sujet | Preuve technique | Accord métier |
 |---|---|---|
-| Types, bornes et normalisation | `CleParametreTest`, specs de saisie Paramètres | À recueillir |
-| Valeur modifiée, lecture et trace d'audit | `ParametreServiceTest` | À recueillir |
+| Types, bornes et normalisation | `test_parametre.py`, specs de saisie Paramètres | À recueillir |
+| Valeur modifiée, lecture et trace d'audit | `test_parametre.py` | À recueillir |
 | Lecture seule, chargement, erreur et réessai | Specs des paramètres et revue navigateur | À recueillir |
-| Accès lecture/écriture distincts | `EndpointSecurityTest` | À recueillir |
+| Accès lecture/écriture distincts | `test_auth_acces.py` | À recueillir |
 
 Les valeurs de fonctionnement et leurs limites restent celles du catalogue documenté. Les accords, réserves,
 rejets et signatures suivent le modèle de la section 8.
@@ -512,7 +512,7 @@ Le domaine conserve un import mensuel d'heures supplémentaires par chantier. Il
 
 ### 17.3 Parcours, vues et accès
 
-Le wizard suit Mois/Chantier → Fichier/Forfaits → Contrôle/Import. La correction des fiches suit le mécanisme de l'import Paie. Le domaine expose Tabulaire, Cartes et Analytique ; les deux dernières étendent les vues partagées avec les agrégats filtrés par chantier, équipe et fonction. Les capacités MCP en lecture décrivent les sources et unités ; Spring reste l'autorité des calculs et du RBAC.
+Le wizard suit Mois/Chantier → Fichier/Forfaits → Contrôle/Import. La correction des fiches suit le mécanisme de l'import Paie. Le domaine expose Tabulaire, Cartes et Analytique ; les deux dernières étendent les vues partagées avec les agrégats filtrés par chantier, équipe et fonction. Les capacités MCP en lecture décrivent les sources et unités ; l'API reste l'autorité des calculs et du RBAC.
 
 ### 17.4 Preuves et réserves
 

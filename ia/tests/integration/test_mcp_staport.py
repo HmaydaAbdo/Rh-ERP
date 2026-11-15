@@ -1,6 +1,6 @@
 """Preuve T4 (site/docs/ia) : le client MCP Python officiel appelle la vraie route /mcp avec un jeton agent.
 
-Lancé par `McpClientPythonIntegrationTest` (application complète, base de test) avec MCP_STAPORT_URL,
+Lancé par `api/tests/test_mcp_clients_externes.py` (application complète, base de test) avec MCP_STAPORT_URL,
 MCP_STAPORT_JETON et MCP_STAPORT_UTILISATEUR ; ignoré sinon. Seul un serveur loopback est admis.
 """
 
@@ -53,7 +53,7 @@ async def test_le_jeton_agent_ouvre_le_catalogue_et_l_identite_vient_du_serveur(
         outils = [outil.name for outil in (await session.list_tools()).tools]
         resultat = await session.call_tool("systeme_identite", {})
     # Catalogue complet : identité + 30 outils de lecture (site/docs/ia, catalogue MCP).
-    assert len(outils) == 31
+    assert len(outils) == 32
     attendus = {
         "systeme_identite",
         "paie_indicateurs",

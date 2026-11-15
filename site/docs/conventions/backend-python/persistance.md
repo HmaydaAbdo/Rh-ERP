@@ -15,7 +15,7 @@ PostgreSQL reste le moteur de référence. Le schéma reste la source de vérit�
   `selectinload` (ou équivalent) dans la requête. Aucun accès à une relation non chargée n'est permis dans un routeur ou un schéma de réponse.
 * Cascades limitées aux relations de composition ; collections jamais `None` ; côté propriétaire et côté inverse explicites.
 * Montants et mesures exactes : `Decimal` en mémoire, `NUMERIC` en base, jamais `float`. L'arrondi est toujours explicite (`quantize` avec un mode d'arrondi
-  nommé, par exemple `ROUND_HALF_DOWN` pour les montants entiers des heures supplémentaires) et chaque règle est couverte par un test de parité avec le calcul Java.
+  nommé, par exemple `ROUND_HALF_DOWN` pour les montants entiers des heures supplémentaires) et chaque règle est couverte par un test.
 * Instants en UTC avec fuseau (`TIMESTAMPTZ`), conversion à l'affichage uniquement.
 
 ## Verrouillage optimiste
@@ -50,7 +50,7 @@ de l'`UPDATE` et lève `StaleDataError` quand aucune ligne ne correspond. Règle
 
 ## Migrations (Alembic)
 
-Flyway n'est plus exécuté (KAN-237) : ses 44 scripts (V1 à V44) restent figés dans `api/src/staport/migrations/flyway_v44` et sont rejoués par la révision `0001_base_v44` ; Alembic gère tout le schéma (ADR 0016, § 3).
+Les 44 scripts SQL de base (V1 à V44) sont dans `api/src/staport/migrations/base_v44` et rejoués par la révision `0001_base_v44` ; Alembic gère tout le schéma (ADR 0016).
 
 La révision `0003_montants_entiers` (KAN-239) passe tous les montants à `NUMERIC(10,0)` (salaire de l'employé, bulletin de paie, salaire de référence des heures supplémentaires, tables d'audit comprises) : PostgreSQL arrondit les lignes existantes à l'entier le plus proche, les centimes sont perdus et le retour arrière ne les restitue pas ; faire une sauvegarde avant de la jouer en production.
 
@@ -67,11 +67,11 @@ La révision `0003_montants_entiers` (KAN-239) passe tous les montants à `NUMER
 Mise en place documentée par Alembic :
 
 * modèle `async` (`alembic init -t async`) pour le script `env.py`, avec `NullPool` pour la commande de migration ;
-* base existante issue de Flyway : le garde de déploiement (`staport.migrations.deploiement`) vérifie que `flyway_schema_history` contient exactement V1 à V44, réussis, avec les sommes de contrôle des scripts fournis (algorithme de Flyway, `historique_flyway.py`), puis `alembic stamp` écrit la révision de base sans exécuter de migration ; les bases neuves sont construites à partir d'elle ;
-* **exécution** : étape de déploiement dédiée avant le démarrage de l'application, jamais dans son `lifespan` ; la table `flyway_schema_history` est conservée en lecture seule.
+* le garde de déploiement (`staport.migrations.deploiement`) construit une base neuve, monte une base déjà migrée et refuse une base non vide sans historique Alembic ;
+* **exécution** : étape de déploiement dédiée avant le démarrage de l'application, jamais dans son `lifespan`.
 
 Noms de contraintes : le `MetaData` de base déclare une `naming_convention` (clés `ix`, `uq`, `ck`, `fk`, `pk`), appliquée à tout objet sans nom explicite et visible dans les
-migrations générées par l'autogénération. Les préfixes existants en V1 à V44 sont `pk_`, `fk_`, `uk_`, `ck_` et `idx_` (relevé dans les migrations Flyway) ; la convention les reprend
+migrations générées par l'autogénération. Les préfixes existants en V1 à V44 sont `pk_`, `fk_`, `uk_`, `ck_` et `idx_` (relevé dans les scripts de base) ; la convention les reprend
 (`"uq"` → gabarit en `uk_...`). Certains noms existants sont abrégés à la main (`fk_chantier_aud_rev`) et ne se déduisent pas d'un gabarit : **les noms des objets existants sont déclarés
 explicitement dans les modèles** (`name=...`), la convention ne nomme que les objets nouveaux sans nom explicite. Le contrôle de dérive compare les noms : une différence est corrigée
 par une migration, jamais en modifiant la convention. Pour une contrainte `CHECK`, le jeton `%(constraint_name)s` exige un nom explicite sur la contrainte.

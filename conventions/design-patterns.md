@@ -26,14 +26,14 @@ Lorsqu'une opération transverse est déclenchée par un point d'entrée génér
 module concerné, utiliser une stratégie par module et les réunir dans un registre plutôt qu'un
 `switch` central.
 
-```java
-public interface XxxHandler {
-    ModuleSource source();
-    Result handle(Long id, Request request);
-}
+```python
+class XxxHandler(Protocol):
+    source: ModuleSource
+
+    def handle(self, id: int, request: Request) -> Result: ...
 ```
 
-* Chaque module concerné fournit son handler dans son propre package.
+* Chaque module concerné fournit son handler dans son propre module.
 * Le service générique collecte les handlers au démarrage et route vers celui associé à la source.
 * Le service générique ne connaît ni les entités ni les repositories des autres modules.
 * L'ajout d'une source se fait par un nouveau handler, sans modifier le répartiteur générique.
@@ -69,7 +69,7 @@ Les étapes communes restent dans la classe abstraite.
 
 À utiliser lorsqu'un traitement doit déclencher plusieurs actions indépendantes.
 
-Privilégier les événements Spring plutôt que les appels directs lorsque les traitements sont indépendants.
+Privilégier un événement publié par le service concerné et consommé par des écouteurs plutôt que les appels directs lorsque les traitements sont indépendants.
 
 Exemple retenu : les **événements de sécurité** (connexion, refus, jeton réutilisé…) sont publiés par le service qui
 les connaît et écrits par un écouteur unique dans le journal d'audit (`conventions/audit.md`) — le service

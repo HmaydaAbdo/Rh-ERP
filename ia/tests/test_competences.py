@@ -11,10 +11,9 @@ from typing import Any
 import pytest
 from deepagents.backends import FilesystemBackend
 from deepagents.middleware import FilesystemMiddleware
-from doubles import INDICATEURS, appel, modele, outil
+from doubles import INDICATEURS, appel, modele, outil, store_avec_competences
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
-from langgraph.store.memory import InMemoryStore
 
 from staport_ia import agent as module_agent
 from staport_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
@@ -27,8 +26,9 @@ EVALUATION = Path(__file__).resolve().parents[1] / "evaluation"
 SEUIL_COUVERTURE = 0.95
 #: Outils du harnais que le modèle doit garder : la lecture des SKILL.md et le plan.
 OUTILS_HARNAIS = {"read_file", "write_todos"}
-#: Outils du harnais Deep Agents qui ne doivent jamais être liés au modèle de l'ERP.
-OUTILS_INTERDITS = {"write_file", "edit_file", "delete", "ls", "glob", "grep", "execute", "task"}
+#: Outils du harnais Deep Agents qui ne doivent jamais être liés au modèle de l'ERP. ``write_file`` et ``edit_file``
+#: sont permis depuis KAN-267, mais seulement sous /espace/ et avec l'accord de l'utilisateur (test_agent.py).
+OUTILS_INTERDITS = {"delete", "ls", "glob", "grep", "execute", "task"}
 
 
 def _catalogue() -> list[dict[str, str]]:
@@ -194,7 +194,7 @@ def test_le_routage_n_a_aucun_plafond_de_domaines_et_ignore_une_question_vide() 
 
 def test_l_espace_de_fichiers_est_propre_a_l_identite() -> None:
     """Le même chemin chez deux utilisateurs désigne deux fichiers distincts ; les compétences restent communes."""
-    store = InMemoryStore()
+    store = store_avec_competences()
     alice = backend_par_identite("alice", store)
     bob = backend_par_identite("bob", store)
     chemin = f"{ESPACE}note.md"
@@ -224,13 +224,14 @@ def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.
     creer_agent(modele(AIMessage(content="Bonjour.")), outils)
 
     lies = {o.name for o in captures[0]["tools"]}
-    assert lies <= OUTILS_PERMANENTS
-    assert lies == {"systeme_identite", "generate_a2ui"}
+    assert lies <= OUTILS_PERMANENTS | {"poser_question"}  # la question est un outil de l'agent, pas un outil ERP
+    assert lies == {"systeme_identite", "generate_a2ui", "poser_question"}
     assert captures[0]["permissions"] == PERMISSIONS_FICHIERS
 
 
 async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() -> None:
-    """Avec ``write_file`` lié par erreur, les permissions refusent et le fichier reste intact."""
+    """Avec ``write_file`` lié par erreur, le fichier reste intact : le profil d'harnais masque l'outil
+    (« not available ») et, en second rempart, les permissions refuseraient l'écriture."""
     with tempfile.TemporaryDirectory() as dossier:
         racine = Path(dossier)
         (racine / "paie").mkdir()
@@ -258,6 +259,6 @@ async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() ->
 
         retours = [m.text.lower() for m in etat["messages"] if isinstance(m, ToolMessage)]
         assert len(retours) == 2
-        assert all("permission" in r or "denied" in r for r in retours), retours
+        assert all("not available" in r or "permission" in r or "denied" in r for r in retours), retours
         assert cible.read_text(encoding="utf-8") == "original"
         assert not (racine / "nouveau.md").exists()

@@ -1,7 +1,7 @@
-"""Décisions de contrat HTTP prises à la place des défauts de l'ancien backend (banc différentiel supprimé, KAN-238).
+"""Décisions de contrat HTTP (KAN-238).
 
 * les droits sont vérifiés avant la validation du corps : un compte sans droit reçoit 403, jamais 400 ;
-* un téléversement au-delà de 20 Mo reçoit 413 avec un message (l'ancien backend coupait la connexion) ;
+* un téléversement au-delà de 20 Mo reçoit 413 avec un message ;
 * un champ obligatoire absent à la modification d'un compte reçoit un message propre.
 """
 

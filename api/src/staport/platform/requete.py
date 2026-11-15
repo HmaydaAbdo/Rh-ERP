@@ -1,4 +1,4 @@
-"""Contexte de la requête courante (parité avec `MdcRequestFilter` de Spring et la résolution du contexte d'audit).
+"""Contexte de la requête courante et résolution du contexte d'audit.
 
 L'identifiant est **toujours généré ici**, jamais repris d'un en-tête du client (un client ne doit pas pouvoir le
 choisir) ; il relie journaux techniques et journal d'audit et est renvoyé dans `X-Request-Id`. Le contexte est un objet
@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from fastapi import FastAPI, Request, Response
 
 EN_TETE_REQUEST_ID = "X-Request-Id"
-# En-têtes de sécurité que Spring Security posait sur toute réponse (parité KAN-226) ; une route qui fixe elle-même
-# Cache-Control (JWKS, jeton de connexion) garde sa valeur, comme avec Spring.
+# En-têtes de sécurité posés sur toute réponse (KAN-226) ; une route qui fixe elle-même
+# Cache-Control (JWKS, jeton de connexion) garde sa valeur.
 EN_TETES_SECURITE = {
     "X-Content-Type-Options": "nosniff",
     "X-XSS-Protection": "0",

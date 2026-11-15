@@ -1,6 +1,6 @@
-"""Parité du domaine auth avec Spring (KAN-213) : connexion, verrouillage, rotation des sessions, mot de passe oublié.
+"""Domaine auth (KAN-213) : connexion, verrouillage, rotation des sessions, mot de passe oublié.
 
-Reprend `AuthServiceTest` et `VerrouillageConnexionIntegrationTest` sur un PostgreSQL réel, par l'API HTTP.
+Sur un PostgreSQL réel, par l'API HTTP.
 """
 
 # Le client de test de Starlette n'expose pas de types complets : cette règle n'est levée que pour ce fichier.
@@ -169,7 +169,7 @@ def test_login_echoue_pour_un_compte_inconnu_sans_conserver_l_identifiant(platef
     ]
 
 
-def test_login_remplace_l_empreinte_bcrypt_de_spring_par_argon2(
+def test_login_remplace_une_ancienne_empreinte_bcrypt_par_argon2(
     plateforme: Plateforme, creer_utilisateur: Fabrique
 ) -> None:
     identifiant, mdp = creer_utilisateur("bcrypt", bcrypt=True)

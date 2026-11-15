@@ -33,7 +33,7 @@ import { Parametre, ParametreService } from '../services/parametre.service';
           @if (parametre().type === 'ENTIER' && parametre().minimum !== null && parametre().maximum !== null) {
             <small class="app-setting__hint">Valeur comprise entre {{ parametre().minimum }} et {{ parametre().maximum }}.</small>
           } @else if (parametre().type === 'CRON') {
-            <small class="app-setting__hint">Expression Spring à six champs, secondes comprises.</small>
+            <small class="app-setting__hint">Expression cron à six champs, secondes comprises.</small>
           }
         </div>
         @if (editable()) {

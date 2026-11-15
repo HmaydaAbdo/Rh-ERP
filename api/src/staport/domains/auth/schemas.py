@@ -1,4 +1,4 @@
-"""DTO du domaine auth : mêmes champs, contraintes et noms JSON que les `record` Java (contrat du frontend)."""
+"""DTO du domaine auth : champs, contraintes et noms JSON du contrat du frontend."""
 
 from typing import Annotated, Any
 
@@ -12,7 +12,7 @@ def _strip(valeur: Any) -> Any:
 
 
 Rogne = Annotated[str, BeforeValidator(_strip)]
-"""Les constructeurs compacts Java retirent les espaces extérieurs avant la validation."""
+"""Les espaces extérieurs sont retirés avant la validation."""
 
 Identifiants = set[PositiveInt]
 
@@ -129,6 +129,15 @@ class ConnexionReponse(ModeleApi):
 
 class PolitiqueMotDePasse(ModeleApi):
     longueur_minimale: int
+
+
+class EcritureFichierAgentRequete(ModeleApi):
+    """Une écriture de fichier faite par l'assistant IA dans l'espace de l'utilisateur, après son accord (KAN-268).
+    Le contenu n'est jamais transmis : seulement le chemin, la taille et l'outil."""
+
+    chemin: Annotated[str, Field(pattern=r"^/espace/[^\x00-\x1f]{1,300}$")]
+    taille: Annotated[int, Field(ge=0, le=1_000_000)]
+    outil: Annotated[str, Field(pattern=r"^(write_file|edit_file)$")]
 
 
 class JetonAgentReponse(ModeleApi):

@@ -1,4 +1,4 @@
-"""Heures supplémentaires et forfaits, de bout en bout sur PostgreSQL réel (parité `HeuresSuppService`)."""
+"""Heures supplémentaires et forfaits, de bout en bout sur PostgreSQL réel."""
 
 import uuid
 from collections.abc import Callable, Iterator
@@ -193,7 +193,7 @@ def test_un_taux_exactement_a_la_moitie_descend_et_un_forfait_seul_n_a_pas_de_ta
     assert (forfait["montantDh"], forfait["netAPayerDh"]) == (0.0, 500.0)
 
 
-def test_creation_refuse_les_saisies_incoherentes_avec_les_messages_de_spring(
+def test_creation_refuse_les_saisies_incoherentes_avec_les_messages_du_contrat(
     plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
 ) -> None:
     premiere = _creer(plateforme, entetes, jeu, 0, heuresSupplementaires="1")

@@ -1,4 +1,4 @@
-"""Tables du domaine audit (Flyway V11, V19) : révisions, journal unique et chaîne d'intégrité.
+"""Tables du domaine audit (scripts V11, V19) : révisions, journal unique et chaîne d'intégrité.
 
 Les colonnes `hash_precedent` et `hash_entree` sont calculées par le déclencheur `trg_audit_journal_chaine` (V19) : le
 code n'y écrit jamais. Les tables `*_aud` appartiennent aux domaines dont elles historisent les entités.

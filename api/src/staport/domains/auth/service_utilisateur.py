@@ -1,4 +1,4 @@
-"""Comptes utilisateurs (parité avec `UserService` de Spring)."""
+"""Comptes utilisateurs."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

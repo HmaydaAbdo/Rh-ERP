@@ -13,7 +13,7 @@ export interface PageReponse<T> {
   page: { size: number; number: number; totalElements: number; totalPages: number };
 }
 
-/** Une page de résultats Spring (`Page<T>`), comme l'API la renvoie. */
+/** Une page de résultats (`Page<T>`), comme l'API la renvoie. */
 export function page<T>(content: T[], size = 10, number = 0): PageReponse<T> {
   return { content, page: { size, number, totalElements: content.length, totalPages: Math.max(1, Math.ceil(content.length / size)) } };
 }

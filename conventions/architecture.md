@@ -89,121 +89,109 @@ transverse requiert un plan de migration et de retour arrière avant son déploi
 
 ## Architecture d'un module
 
-Les règles de couches ci-dessous définissent le profil backend Java/Spring. Elles précisent le
-socle modulaire sans imposer ces choix à une application qui utilise un autre framework ; les
-principes de frontières et de propriété des données restent communs.
+Les règles de couches ci-dessous s'appliquent au backend Python (FastAPI, SQLAlchemy 2.x, Pydantic) ; leur mise en œuvre
+détaillée est dans [`site/docs/conventions/backend-python/architecture.md`](../site/docs/conventions/backend-python/architecture.md).
+Elles précisent le socle modulaire sans imposer ces choix à une application qui utilise un autre framework ; les principes de
+frontières et de propriété des données restent communs.
 
 Chaque domaine métier suit la même structure :
 
 ```text
-module/
-├── controller/
-├── dtos/
-│   ├── request/
-│   └── response/
-├── entities/
-├── exceptions/
-├── mappers/
-├── repositories/
-├── services/
-├── specifications/
-└── metrics/
+domains/<domaine>/
+├── models.py          modèles de persistance
+├── repository.py      requêtes
+├── schemas.py         requêtes et réponses (Pydantic)
+├── service.py         logique métier et façade publique
+├── router.py          routes HTTP
+├── exceptions.py      erreurs métier et leurs gestionnaires
+├── criteria.py        critères des listes filtrables (si le domaine en a)
+├── audit.py           déclaration de l'historique (si le domaine est audité)
+└── metriques.py       mesures Prometheus (si le domaine en a)
 ```
 
 ## Couches
 
-### Entity
+### Modèle de persistance
 
-* Modèle de persistance uniquement.
-* Jamais exposée par l'API.
+* Persistance uniquement.
+* Jamais exposé par l'API.
 * Aucune logique métier.
 
 ### Repository
 
-* `JpaRepository` obligatoire.
-* `JpaSpecificationExecutor` pour les listes filtrables.
-* `@EntityGraph` pour les relations sérialisées.
+* Requêtes `select()` explicites ; critères de liste dans `criteria.py`.
+* Relations sérialisées chargées explicitement (`selectinload`), jamais paresseusement hors d'un `await`.
 * Jamais de logique métier.
-* Ne jamais utiliser `spring.jpa.open-in-view`.
 
 ### Service
 
 * Toute la logique métier.
-* `@Transactional` sur les écritures.
-* `@Transactional(readOnly = true)` sur les lectures.
-* Les recherches d'entités sont centralisées dans des méthodes privées.
+* Frontière transactionnelle explicite sur les écritures (`session.begin()`) ; les lectures n'ouvrent pas de transaction d'écriture.
+* Les recherches d'entités sont centralisées dans des fonctions privées.
 
-### Controller
+### Routeur
 
-* Thin Controller.
-* DTO uniquement.
-* Délègue toute la logique au Service.
-* Jamais de Repository.
+* Routes fines.
+* Schémas Pydantic uniquement.
+* Délègue toute la logique au service.
+* Jamais de repository.
 
-### DTO
+### Schémas
 
-* Java Records uniquement.
-* Request / Response séparés.
-* Validation Jakarta complète.
+* Modèles Pydantic `BaseModel`.
+* Requête et réponse séparées.
+* Contraintes de validation complètes, déclarées dans le modèle.
 
-### Mapper
+### Conversion
 
-* `@Mapper(componentModel = "spring")`.
+* Fonctions explicites ou `model_validate(..., from_attributes=True)`.
 * Conversion uniquement.
-* Jamais de logique métier.
-* Jamais de Repository.
+* Jamais de logique métier ni de repository.
 
-### Specification
+### Critères
 
-* Toute liste filtrable utilise une Specification.
-* Convention :
+* Toute liste filtrable passe par un objet de critères et une fonction qui renvoie les conditions `where` :
 
-```java
-XSpecification.searchByCriteria(XSearchCriteria)
+```python
+conditions_recherche(criteres: XCriteres) -> list[ColumnElement[bool]]
 ```
 
 ### Exceptions
 
-* Un `@RestControllerAdvice(assignableTypes = XController.class)` par module.
-* `GlobalExceptionHandler` gère uniquement les erreurs imprévues — un `@ExceptionHandler`
-  générique (`Exception.class`) placé dans la même classe qu'un handler plus spécifique
-  (ex. `AccessDeniedException`) ne prend le relais qu'après lui : Spring résout la méthode la plus
-  spécifique au sein d'un même `@ControllerAdvice`, donc l'ordre de déclaration importe peu, mais
-  l'absence d'un handler spécifique fait retomber silencieusement une exception attendue (ex. accès
-  refusé) sur la réponse générique — vérifier ce cas à chaque nouvelle exception transverse.
+* Une hiérarchie d'erreurs par domaine, avec ses gestionnaires déclarés sur l'application.
+* Le gestionnaire générique (`Exception`) gère uniquement les erreurs imprévues : l'absence d'un gestionnaire
+  spécifique ferait retomber silencieusement une exception attendue (ex. accès refusé) sur la réponse générique —
+  vérifier ce cas à chaque nouvelle exception transverse.
 
 ---
 
-# Organisation des packages (DDD)
+# Organisation des modules (DDD)
 
-* Un package racine par domaine métier.
-* Sous-packages techniques internes uniquement (`controller`, `service`, `repository`, etc.).
-* Jamais plusieurs domaines dans un package technique partagé.
+* Un module racine par domaine métier.
+* Fichiers techniques internes uniquement (`router.py`, `service.py`, `repository.py`, etc.).
+* Jamais plusieurs domaines dans un module technique partagé.
 * L'infrastructure transverse (authentification, sécurité, configuration technique...) reste dans
-  ses propres packages, séparée des domaines métier.
+  `platform/`, séparée des domaines métier.
 
 ---
 
 # Encapsulation des domaines
 
-* Un Repository appartient exclusivement à son domaine.
-* Communication inter-domaines via le Service uniquement.
-* Ne jamais injecter un Repository d'un autre domaine.
-* Chaque Service constitue la façade publique de son domaine — seule son interface publique
-  (`IXxxService`) est injectable depuis un autre domaine.
-* Pour obtenir une référence JPA gérée d'une entité d'un autre domaine (ex. poser une relation
-  `@ManyToOne`), valider l'existence via la façade du domaine propriétaire
-  (`autreService.existsById(id)`), puis résoudre une référence paresseuse localement
-  (`entityManager.getReference(Entity.class, id)`) — jamais via le Repository de l'autre domaine.
+* Un repository appartient exclusivement à son domaine.
+* Communication inter-domaines via la façade publique du domaine (son `service.py` ou son `api.py`) uniquement.
+* Ne jamais importer le repository d'un autre domaine.
+* Pour obtenir une référence d'une entité d'un autre domaine (ex. poser une relation), valider
+  l'existence via la façade du domaine propriétaire, puis utiliser l'identifiant localement
+  — jamais via le repository de l'autre domaine.
 
 Exemple :
 
 ```text
-ModuleAService
-      ↓ (interface IModuleBService uniquement)
-ModuleBService
+service du module A
+      ↓ (façade publique du module B uniquement)
+service du module B
       ↓
-ModuleBRepository
+repository du module B
 ```
 
 ---
@@ -227,9 +215,8 @@ par l'enregistrement.
 
 # Injection des dépendances
 
-* Constructor Injection uniquement.
-* Toutes les dépendances sont `private final`.
-* Ne jamais utiliser `@Autowired` sur les champs.
+* Les dépendances arrivent par paramètres (`Depends` de FastAPI pour les routes, arguments du constructeur ou de la fonction pour les services).
+* Pas d'état global modifiable ni de singleton importé à la volée : une dépendance se remplace dans les tests par `app.dependency_overrides`.
 
 ---
 

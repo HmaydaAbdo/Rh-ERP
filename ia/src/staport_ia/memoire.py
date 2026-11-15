@@ -5,8 +5,10 @@
 
 Le checkpointer officiel de LangGraph pour PostgreSQL (``AsyncPostgresSaver``) garde l'état de chaque conversation
 dans une base dédiée à l'IA (service ``ia-db``, aucune donnée du reste de l'ERP) : une question posée après un
-redémarrage, ou le lendemain, retrouve son fil. Sans ``IA_DATABASE_URL`` (tests, développement), la mémoire reste celle
-du processus (``InMemorySaver``).
+redémarrage, ou le lendemain, retrouve son fil. Le ``Store`` officiel (``AsyncPostgresStore``) garde dans la même base
+les fichiers de l'espace de chaque utilisateur (``/espace/``), avec l'expiration native (``TTLConfig``) : ils survivent
+à un redémarrage et sont partagés entre instances. Sans ``IA_DATABASE_URL`` (tests, développement), la mémoire reste
+celle du processus (``InMemorySaver`` et ``InMemoryStore``).
 
 Deux règles à nous, parce qu'aucun framework ne les fournit :
 - l'identifiant de conversation envoyé par le navigateur n'est jamais pris tel quel : il est préfixé par l'identité de
@@ -21,11 +23,14 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, NamedTuple
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.store.base import BaseStore, TTLConfig
+from langgraph.store.memory import InMemoryStore
+from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg import AsyncConnection
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -37,8 +42,15 @@ JOURS_PAR_DEFAUT = 30
 PERIODE_PURGE_SECONDES = 24 * 3600
 
 
+class Memoire(NamedTuple):
+    """Ce que le service garde entre deux requêtes : les conversations et les fichiers des utilisateurs."""
+
+    checkpointer: BaseCheckpointSaver[Any]
+    store: BaseStore
+
+
 def sujet(jeton_agent: str) -> str:
-    """L'identité portée par le jeton agent (champ ``sub``), émis à l'instant par Spring pour l'utilisateur connecté.
+    """L'identité portée par le jeton agent (champ ``sub``), émis à l'instant par l'API pour l'utilisateur connecté.
 
     Un jeton illisible (doubles de test) donne une empreinte : l'espace reste propre à ce jeton, jamais partagé.
     """
@@ -85,10 +97,10 @@ async def _purge_reguliere(
 
 
 @asynccontextmanager
-async def ouvrir_memoire(url: str | None, jours: int = JOURS_PAR_DEFAUT) -> AsyncGenerator[BaseCheckpointSaver[Any]]:
-    """La mémoire des conversations pour la vie du service : PostgreSQL si ``url``, sinon celle du processus."""
+async def ouvrir_memoire(url: str | None, jours: int = JOURS_PAR_DEFAUT) -> AsyncGenerator[Memoire]:
+    """La mémoire pour la vie du service : PostgreSQL si ``url``, sinon celle du processus."""
     if not url:
-        yield InMemorySaver()
+        yield Memoire(InMemorySaver(), InMemoryStore())
         return
     async with AsyncConnectionPool[AsyncConnection[DictRow]](
         url,
@@ -97,10 +109,15 @@ async def ouvrir_memoire(url: str | None, jours: int = JOURS_PAR_DEFAUT) -> Asyn
         open=False,
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
     ) as pool:
-        memoire = AsyncPostgresSaver(pool)
-        await memoire.setup()  # crée les tables officielles au premier démarrage
-        purge = asyncio.create_task(_purge_reguliere(pool, memoire, jours))
+        checkpointer = AsyncPostgresSaver(pool)
+        await checkpointer.setup()  # crée les tables officielles au premier démarrage
+        # Expiration native du Store : un fichier d'espace inactif depuis ``jours`` jours est supprimé par le balayeur.
+        store = AsyncPostgresStore(pool, ttl=TTLConfig(default_ttl=jours * 24 * 60, refresh_on_read=True))
+        await store.setup()
+        await store.start_ttl_sweeper()
+        purge = asyncio.create_task(_purge_reguliere(pool, checkpointer, jours))
         try:
-            yield memoire
+            yield Memoire(checkpointer, store)
         finally:
             purge.cancel()
+            await store.stop_ttl_sweeper()

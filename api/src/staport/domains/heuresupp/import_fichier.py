@@ -1,4 +1,4 @@
-"""Lecture du classeur Heures supplémentaires (parité de `LecteurFichierHeuresSupp`) : aucune règle métier ici."""
+"""Lecture du classeur Heures supplémentaires : aucune règle métier ici."""
 
 import re
 import unicodedata

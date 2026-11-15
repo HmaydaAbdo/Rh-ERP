@@ -10,9 +10,8 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
 
 ## Authentification et jetons
 
-* Contrat externe inchangé à la bascule : mêmes routes `/auth/*`, mêmes cookies et jetons de rafraîchissement (ADR 0016, § 4).
-* **RS256 pour tous les jetons** : clé privée sur le serveur seulement, clé publique publiable, rotation par identifiant de clé (`kid`) ; le passage de HS256 à RS256
-  est une déconnexion unique, planifiée avec la bascule du domaine `auth` (accord du propriétaire du 2026-11-03).
+* Contrat externe : routes `/auth/*`, cookies et jetons de rafraîchissement (ADR 0016, § 4).
+* **RS256 pour tous les jetons** : clé privée sur le serveur seulement, clé publique publiable, rotation par identifiant de clé (`kid`).
 * Bibliothèque : **PyJWT** (celle de la documentation FastAPI). Vérifier toujours avec une liste d'algorithmes explicite (`algorithms=["RS256"]`), exiger les
   claims nécessaires (`options={"require": ["exp", "iss", "sub", ...]}`), et contrôler émetteur et destinataire. Les clés de signature viennent de la configuration ou
   d'un JWKS (`PyJWKClient`, qui met en cache et se rafraîchit quand le `kid` est inconnu).
@@ -32,7 +31,7 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
 * `Security(...)` et `SecurityScopes` de FastAPI documentent des *scopes* OAuth2 dans OpenAPI ; ils servent de modèle pour exposer les permissions dans le contrat, sans
   remplacer le contrôle côté serveur. La décision (permission + périmètre par fiche de poste) reste dans `platform/identite`.
 * Le périmètre de la ressource est toujours vérifié en plus de la permission d'action.
-* **Test de couverture des routes** (remplace `EndpointSecurityTest`) : parcourt les routes de l'application et échoue pour toute route sans permission déclarée
+* **Test de couverture des routes** (remplace `test_auth_acces.py`) : parcourt les routes de l'application et échoue pour toute route sans permission déclarée
   qui n'est pas explicitement publique (liste blanche courte et commentée). Le test parcourt `app.routes` (les routes d'`APIRouter` incluses y figurent, avec les `dependencies`
   du routeur et de la route, paramètres documentés de `APIRouter`, `include_router` et des décorateurs de route) et vérifie la présence de la dépendance de permission ; il se prouve
   lui-même par une route de test volontairement non protégée qui doit le faire échouer.

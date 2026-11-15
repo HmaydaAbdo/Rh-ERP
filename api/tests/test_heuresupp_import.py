@@ -1,4 +1,4 @@
-"""Assistant d'import des heures supplémentaires sur PostgreSQL réel (parité `HeuresSuppImportService`)."""
+"""Assistant d'import des heures supplémentaires sur PostgreSQL réel."""
 
 # ruff: noqa: F811  (les fixtures `jeu` et `entetes` importées de test_heuresupp sont reprises par nom)
 
@@ -251,7 +251,7 @@ def test_les_forfaits_du_dernier_mois_du_chantier_sont_proposes(
     assert autre_chantier.json() == []  # le chantier choisi seulement
 
 
-def test_les_fichiers_invalides_sont_refuses_avec_les_messages_de_spring(
+def test_les_fichiers_invalides_sont_refuses_avec_les_messages_du_contrat(
     plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
 ) -> None:
     cin = _cins(plateforme, jeu)[0]

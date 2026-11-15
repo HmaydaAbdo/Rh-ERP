@@ -1,7 +1,7 @@
 // Contrôle documentation ↔ code de l'IA. Échoue (code 1) si un fait consigné dans scripts/ia/verrous.txt ou dans la
 // documentation ne correspond plus au code :
 //   - les verrous (versions verrouillées dans ia/uv.lock et les package-lock.json, seuils de agent.py, nombre d'outils MCP
-//     déclarés par @McpTool) ;
+//     déclarés par @serveur.tool) ;
 //   - toute mention « N outils MCP » de la documentation IA ;
 //   - l'attente du test d'intégration MCP du backend.
 // Mettre à jour scripts/ia/verrous.txt en même temps que le code : c'est ce qui rend les documents fiables après une reprise.

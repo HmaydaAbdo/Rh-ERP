@@ -1,4 +1,4 @@
-"""Historique du domaine accueil (Flyway V42) : table `accueil_preference_aud` et champs de `PreferenceAccueil`."""
+"""Historique du domaine accueil (script V42) : table `accueil_preference_aud` et ses champs."""
 
 from sqlalchemy import BigInteger, Column, ForeignKey, Index, SmallInteger, String, Table
 
@@ -24,7 +24,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=PreferenceAccueil,
             nom="PreferenceAccueil",
-            nom_hibernate="staport.rh.accueil.entities.PreferenceAccueil",
+            nom_stocke="staport.rh.accueil.entities.PreferenceAccueil",
             table_aud=accueil_preference_aud,
             champs=(
                 ChampAudite("utilisateurId", "utilisateur_id", "utilisateur_id"),

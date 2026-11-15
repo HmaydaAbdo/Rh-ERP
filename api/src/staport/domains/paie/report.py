@@ -60,7 +60,7 @@ class PointRepartition:
 
 
 class ServiceRapportPaie:
-    """Premier pipeline PDF natif Python, avec CSS et polices du rapport Spring embarqués."""
+    """Premier pipeline PDF natif Python, avec CSS et polices du rapport embarqués."""
 
     LARGEUR_NIVEAU_ENTETE = 436
 
@@ -442,7 +442,7 @@ class ServiceRapportPaie:
                     continue
                 if (libelle is not None or reste) and hauteurs:
                     # Équipe (séparée ou réunie) ou autres employés : la liste des employés rejoint la dernière page
-                    # d'analyse si 3 lignes (ou toutes) y tiennent (`ajouterPagesEmployesEquipe` de Spring).
+                    # d'analyse si 3 lignes (ou toutes) y tiennent .
                     pages.extend(
                         _pages_employes_equipe(
                             pages,
@@ -456,7 +456,7 @@ class ServiceRapportPaie:
                     )
                     continue
                 # 495 pt utiles, moins la marge de sécurité et les blocs présents sur la page.
-                # Mêmes hauteurs de base que RapportPageModelBuilder et rapport.css.
+                # Mêmes hauteurs de base que rapport.css.
                 titre_chantier_hauteur = 24 if index_section == 0 and libelle is not None else 0
                 budget_initial = 495 - 8 - titre_chantier_hauteur - 18 - 40
                 budget_suite = 495 - 8 - 8
@@ -576,7 +576,7 @@ def _pages_employes_equipe(
 
 
 def _romain(valeur: int) -> str:
-    """Numérote les chapitres comme le rapport Spring (I à MMMCMXCIX)."""
+    """Numérote les chapitres en chiffres romains (I à MMMCMXCIX)."""
     symboles = (
         (1000, "M"),
         (900, "CM"),
@@ -1032,7 +1032,7 @@ def _masse(valeur: Decimal) -> str:
     return f"{arrondie:,.0f}".replace(",", "\u00a0")
 
 
-_MOINS = chr(0x2212)  # signe moins typographique, comme Spring
+_MOINS = chr(0x2212)  # signe moins typographique
 
 
 def _ecart_compte(actuel: int, precedent: int | None, singulier: str, pluriel: str) -> str:

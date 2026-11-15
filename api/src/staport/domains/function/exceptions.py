@@ -27,4 +27,4 @@ class FonctionUtilisee(ErreurMetier):
 
 
 class ErreurImportFonction(ErreurMetier):
-    """Fichier illisible (HTTP 400, comme `FunctionImportException`) ; une ligne invalide n'en est pas une."""
+    """Fichier illisible (HTTP 400) ; une ligne invalide n'en est pas une."""

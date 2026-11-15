@@ -1,4 +1,4 @@
-"""Parité de la consultation du journal avec Spring (KAN-214) : `AuditConsultationTest` sur un PostgreSQL réel.
+"""Consultation du journal (KAN-214), sur un PostgreSQL réel.
 
 Les 4 routes `/logs/...`, leur détail champ par champ, l'historique d'un enregistrement, les filtres et les tris.
 """

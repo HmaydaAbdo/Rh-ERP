@@ -38,7 +38,7 @@ def paie(acces: JetonAcces) -> bool:
 def page_employes(
     brute: Annotated[Pagination, Depends(pagination("nomPrenom", TRIS_PUBLICS))], acces: Authentifie
 ) -> Pagination:
-    """Sans `PAIE_READ`, les tris sur les champs de paie sont retirés (Spring) : ils feraient deviner les salaires."""
+    """Sans `PAIE_READ`, les tris sur les champs de paie sont retirés : ils feraient deviner les salaires."""
     if paie(acces):
         return brute
     return replace(brute, tri=tuple(t for t in brute.tri if t[0] not in CHAMPS_DE_PAIE))

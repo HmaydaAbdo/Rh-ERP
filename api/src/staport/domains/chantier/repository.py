@@ -9,7 +9,7 @@ from staport.domains.common.recherche import ECHAPPEMENT, motif_contient
 from .models import Chantier
 from .schemas import ChantierRecherche
 
-# Nom de tri public (celui du JSON, comme Spring Data) -> colonne.
+# Nom de tri public (celui du JSON) -> colonne.
 _TRIS = {
     "id": Chantier.id,
     "version": Chantier.version,

@@ -12,37 +12,25 @@ sidebar_position: 1
 
 | | |
 |---|---|
-| Backend de référence (migration en cours) | `api/src/staport/domains/function/` |
-| Ancien backend | `backend/src/main/java/staport/rh/function/` (conservé jusqu'à la bascule finale) |
+| Backend | `api/src/staport/domains/function/` |
 | Frontend | `frontend/src/app/portail/function/` |
 | Table | `fonction` |
 | Endpoints | `/functions`, `/functions/search`, `/functions/import` |
 
 Le module suit l'architecture de référence du projet (`conventions/architecture.md`) :
-`entities → repositories → specifications → dtos → mappers → services → controller`, avec un
-sous-module `imports/` dédié à l'import Excel.
+`models → repository → schemas → service → router`, avec un module `import_fichier.py` dédié à l'import Excel.
 
 ```text
 function/
-├── controller/FunctionController.java
-├── dtos/
-│   ├── request/ (Create, Update, SearchCriteria)
-│   └── response/FunctionResponseDto.java
-├── entities/Function.java
-├── exceptions/ (NotFound, AlreadyExists, ExceptionHandler)
-├── mappers/FunctionMapper.java
-├── repositories/FunctionRepository.java
-├── services/ (FunctionService + IFunctionService)
-├── specifications/FunctionSpecification.java
-└── imports/
-    ├── FunctionImportService.java     ← lecture du fichier, création atomique, génération du modèle
-    ├── FunctionImportController.java  ← POST /functions/import, GET /functions/import/modele
-    ├── FunctionImportResultDto.java
-    └── FunctionImportException.java   ← fichier illisible (pas une ligne invalide)
+├── router.py          ← routes /functions, /functions/search, /functions/import
+├── schemas.py         ← requêtes et réponses Pydantic
+├── models.py          ← modèle SQLAlchemy `fonction`
+├── exceptions.py      ← introuvable, déjà existante, gestionnaires d'erreurs
+├── repository.py      ← requêtes `select()` explicites, filtre et tri
+├── service.py         ← règles métier et façade publique du domaine
+├── import_fichier.py  ← lecture du fichier, création atomique, génération du modèle
+└── audit.py           ← déclaration de l'historique `fonction_aud`
 ```
-
-Le package est nommé `imports` (et non `import`, mot réservé Java) — seule entorse à la convention
-de nommage habituelle.
 
 ---
 
@@ -59,32 +47,27 @@ décrite ici de bout en bout pour pouvoir être relue et commentée séparément
 
 ### Couche application
 
-**FastAPI** (`api/src/staport/domains/function/`)
+**Backend** (`api/src/staport/domains/function/`)
 
-- **État de migration (KAN-222).** Les routes CRUD et la recherche sont servies par FastAPI, avec permissions
-  `FUNCTION_READ`, `FUNCTION_WRITE` et `FUNCTION_DELETE`, version optimiste et audit Envers-compatible. Le chemin Spring
-  reste présent jusqu'à la bascule finale et n'est pas exposé par le Compose de production.
+- **Routes.** Les routes CRUD et la recherche sont servies par FastAPI, avec permissions
+  `FUNCTION_READ`, `FUNCTION_WRITE` et `FUNCTION_DELETE`, version optimiste et audit.
 - **Contrat.** `POST /functions`, `PUT /functions/{id}`, `GET /functions/{id}`, `POST /functions/search` et
   `DELETE /functions/{id}` conservent les DTO camelCase, la pagination `Page` et les erreurs françaises.
-
-**Ancien backend** (`backend/src/main/java/staport/rh/function/`)
-
-- **Contrôleurs.** `FunctionController` (`/functions`) et `FunctionImportController` (`/functions/import`). Chaque
-  route porte `@PreAuthorize` sur sa permission (`FUNCTION_READ`, `FUNCTION_WRITE`, `FUNCTION_DELETE`,
-  `FUNCTION_IMPORT`).
-- **Service.** `FunctionService`, exposé aux autres domaines par la façade `IFunctionService` (Employé et Paie y
+- **Routeur.** `router.py` (`/functions` et `/functions/import`). Chaque route déclare sa permission
+  (`FUNCTION_READ`, `FUNCTION_WRITE`, `FUNCTION_DELETE`, `FUNCTION_IMPORT`).
+- **Service.** `service.py`, exposé aux autres domaines comme façade publique (Employé et Paie y
   passent pour valider ou créer une fonction ; aucun ne lit son repository). Le libellé est nettoyé de ses espaces
   extérieurs, son unicité est contrôlée sans casse (en excluant la fonction courante à la modification) et la version
   optimiste est vérifiée à la modification.
-- **Recherche.** `FunctionSpecification` : le filtre `libelle` est un « contient » sans casse avec échappement des
-  caractères spéciaux ; tri et pagination viennent du `Pageable`.
+- **Recherche.** `repository.py` : le filtre `libelle` est un « contient » sans casse avec échappement des
+  caractères spéciaux ; tri et pagination viennent de la pagination serveur commune.
 - **Suppression.** Elle est refusée (`409`) tant qu'un employé (`employe.fonction_id`) ou un bulletin
   (`paie.fonction_id`) référence la fonction ; la clé étrangère est la protection finale. Il n'existe ni fusion, ni
   archivage, ni statut : une fonction existe ou n'existe pas.
-- **Audit.** L'entité est `@Audited` (Envers) ; les écritures portent `@AuditableAction` (`FONCTION_CREATION`,
-  `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`) et l'import est audité par `PerimetreImportFunction`. Les lectures
+- **Audit.** L'entité est historisée (`fonction_aud`) ; les écritures sont des actions auditées (`FONCTION_CREATION`,
+  `FONCTION_MODIFICATION`, `FONCTION_SUPPRESSION`) et l'import est audité (périmètre d'import). Les lectures
   de l'assistant ont leurs propres entrées (`MCP_FONCTION_*`).
-- **Import.** `FunctionImportService` : un `.xlsx` à **une colonne** (libellé, en-tête en ligne 1 ignorée), validé en
+- **Import.** `import_fichier.py` : un `.xlsx` à **une colonne** (libellé, en-tête en ligne 1 ignorée), validé en
   entier avant écriture. Rejets : « Libellé trop long (max 100 caractères) » et « Fonction déjà existante » (en base
   ou en doublon dans le fichier) ; un fichier illisible donne `400`. La réponse a la même forme qu'il soit accepté
   (`200`) ou rejeté (`400`).
@@ -148,7 +131,7 @@ MCP ne duplique ces agrégats.
 
 ### Couche IA
 
-L'assistant RH n'accède à Fonction que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il
+L'assistant RH n'accède à Fonction que par des **outils MCP de lecture** exposés par l'API ; il
 n'écrit rien, n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté peut voir.
 
 | Outil | Ce qu'il fait | Permission | Audit |
@@ -189,7 +172,7 @@ Une fonction n’a pas de statut « En cours / Clôturé ». Elle existe dans le
 |---|---|---|---|
 | `FunctionCreateRequestDto` | `libelle` | chaîne, obligatoire, non vide, 100 caractères maximum; les espaces extérieurs sont retirés avant l’enregistrement | Créer une fonction |
 | `FunctionUpdateRequestDto` | `version`, `libelle` | `version` : entier long obligatoire; `libelle` : mêmes règles que la création | Renommer une fonction sans écraser une modification concurrente |
-| `FunctionSearchCriteria` | `libelle` | chaîne facultative, 100 caractères maximum; recherche partielle sans tenir compte de la casse | Filtrer le référentiel |
+| `FonctionRecherche` | `libelle` | chaîne facultative, 100 caractères maximum; recherche partielle sans tenir compte de la casse | Filtrer le référentiel |
 | `FunctionResponseDto` | `id`, `version`, `libelle` | `id` et `version` : entiers longs; `libelle` : chaîne | Réponse des consultations et écritures |
 | `FunctionImportResultDto` | `totalLignes`, `crees`, `ignores`, `lignesIgnorees` | compteurs entiers; chaque détail expose `numeroLigne` (entier), `libelle` et `raison` (chaînes) | Résultat complet d’un import accepté ou rejeté |
 
@@ -218,7 +201,7 @@ Une fonction n’a pas de statut « En cours / Clôturé ». Elle existe dans le
 | `POST` | `/functions` | Créer une fonction | 201, 400, 409 |
 | `PUT` | `/functions/{id}` | Modifier une fonction | 200, 400, 404, 409 |
 | `GET` | `/functions/{id}` | Consulter une fonction | 200, 404 |
-| `POST` | `/functions/search` | Rechercher (paginé, triable) — body `FunctionSearchCriteria` (`libelle`) | 200 |
+| `POST` | `/functions/search` | Rechercher (paginé, triable) — body `FonctionRecherche` (`libelle`) | 200 |
 | `DELETE` | `/functions/{id}` | Supprimer (refusé si référencée par un employé ou un bulletin de paie) | 204, 404, 409 |
 | `POST` | `/functions/import` | Importer depuis un fichier Excel (`multipart/form-data`, champ `file`) | 200, 400 |
 | `GET` | `/functions/import/modele` | Télécharger le modèle Excel vierge attendu par l'import | 200 |
@@ -237,7 +220,7 @@ détail endpoint ↔ permission et `conventions/security.md` pour la conception 
 
 `GET /functions/import/modele` (entrée « Télécharger le modèle Excel » du menu du bouton fractionné « Importer » dans l'UI)
 renvoie un fichier `.xlsx` vierge contenant uniquement l'en-tête attendu ("Fonction" en cellule A1),
-généré par `FunctionImportService.genererModele()`. Objectif : que l'utilisateur parte toujours d'un
+généré par `import_fichier.py`. Objectif : que l'utilisateur parte toujours d'un
 fichier au bon format plutôt que de deviner ou de réutiliser un ancien export dont la structure a pu
 changer. Volontairement **sans ligne d'exemple** : une valeur d'exemple ressemblant à une vraie
 fonction (ex. `OPERATEUR`) risquerait d'être importée par erreur si l'utilisateur oublie de la
@@ -260,7 +243,7 @@ créé :
 | Ligne vide | Ignorée silencieusement, ne compte pas dans `totalLignes` |
 | Libellé > 100 caractères | Ligne listée dans `lignesIgnorees`, `raison = "Libellé trop long (max 100 caractères)"` |
 | Libellé déjà existant (en base ou en doublon dans le fichier) | Ligne listée dans `lignesIgnorees`, `raison = "Fonction déjà existante"` |
-| Fichier illisible (mauvais format, corrompu) | Rejet complet, `400 Bad Request` (`FunctionImportException`) |
+| Fichier illisible (mauvais format, corrompu) | Rejet complet, `400 Bad Request` (`ErreurImportFonction`) |
 | Au moins une ligne invalide parmi les autres | `400 Bad Request`, **aucune** fonction créée, `crees = 0`, détail complet dans `lignesIgnorees` |
 | Toutes les lignes valides | `200 OK`, toutes les fonctions créées |
 
@@ -372,7 +355,7 @@ Les quasi-doublons de libellés restent suivis dans « Qualité des données » 
 
 ### Périmètre
 
-Référentiel des fonctions occupées. Le domaine expose sa façade `IFunctionService` aux autres
+Référentiel des fonctions occupées. Le domaine expose sa façade (`service.py`) aux autres
 domaines ; ceux-ci ne consultent pas son repository directement. L'import Excel a son sous-module
 `imports/`.
 La collection utilise la coque, le Tabulaire, les Cartes et l'Analytique partagés; la configuration Fonction garde sa hiérarchie
@@ -386,14 +369,14 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 | Couche | Ce qu'elle contient | À vérifier quand on la modifie |
 |---|---|---|
-| **Application** | `FunctionController`, `FunctionImportController`, `FunctionService` / `IFunctionService`, `FunctionSpecification`, import atomique à une colonne, audit (`FONCTION_*`, `PerimetreImportFunction`), migrations `V23`, `V27`, `V31` ; côté Angular `portail/function/` | Unicité du libellé sans casse (service **et** base) ; suppression refusée si un employé ou un bulletin la référence ; création implicite par l'import Paie avec les mêmes règles ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture |
+| **Application** | `router.py`, `service.py`, `repository.py`, `import_fichier.py`, import atomique à une colonne, audit (`FONCTION_*`), migrations `V23`, `V27`, `V31` ; côté Angular `portail/function/` | Unicité du libellé sans casse (service **et** base) ; suppression refusée si un employé ou un bulletin la référence ; création implicite par l'import Paie avec les mêmes règles ; version optimiste ; une permission par route ; entrée d'audit pour chaque écriture |
 | **Analytique** | `function-module.ts` (dimension `FONCTION`, parcours Fonction → Chantier → Équipe, source `PAIE`, tri masse puis effectif), `POST /paie/analytique` (`parFonction`, `evolution`, `qualite`) | Fonction lue sur le **bulletin** du mois, pas sur la fiche Employé ; dernier mois de paie fixe ; mois sans bulletin = zéros et message ; comparaison indisponible plutôt que zéro ; sans `PAIE_READ` aucun appel |
 | **IA** | Outils MCP `fonction_rechercher`, `fonction_fiche`, `paie_repartition` (`FONCTION`), filtres `fonctionIds` des outils Paie et Employé ; suggestions et contexte de l'écran `/functions` | Lecture seule ; permission `FUNCTION_READ` / `PAIE_READ` par outil ; description d'outil à jour ; chaque nombre vérifié contre les outils ; salaire réservé à `PAIE_READ` ; pas de périmètre par fiche de poste avant J2 |
 
 
 ### Garde-fous
 
-- Le README métier et les migrations Flyway sont les sources des règles et du schéma : ne pas
+- Le README métier et les migrations Alembic sont les sources des règles et du schéma : ne pas
   déduire de comportement depuis cette skill.
 - Garder uniques les libellés selon les règles documentées et respecter les blocages de suppression.
 - L'import est régi par `docs/imports.md` et le RBAC détaillé ; ne pas transformer un import d'ajout
@@ -412,7 +395,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 ### Vérification
 
 Exécuter les tests unitaires et d'intégration concernés, y compris les cas de doublon, référence
-existante, import atomique et accès refusé. Vérifier migration Flyway sur base vide si le schéma change.
+existante, import atomique et accès refusé. Vérifier la migration Alembic sur base vide si le schéma change.
 Vérifier aussi le parcours des trois vues et l'export PDF de la liste complète filtrée; synchroniser le README et le PV global
 avec le code réellement livré.
 

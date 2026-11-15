@@ -6,7 +6,7 @@ sidebar_position: 6
 # Audit des données et des actions
 
 Les exigences de `conventions/audit.md` ne changent pas : qui, quoi, quand, avant/après, sur toute donnée métier, sans secret ni donnée inutile dans la trace, historique non
-modifiable par le compte d'exécution. Seul le mécanisme d'Hibernate Envers est remplacé (ADR 0016, § 3). Les tables `*_aud` et leur historique existant sont **conservés**.
+modifiable par le compte d'exécution. Le mécanisme est un écouteur de session SQLAlchemy ; les tables `*_aud` et leur historique existant sont **conservés**.
 
 ## Mécanisme
 

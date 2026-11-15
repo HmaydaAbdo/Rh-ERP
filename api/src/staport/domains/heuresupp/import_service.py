@@ -1,4 +1,4 @@
-"""Assistant d'import mensuel par chantier (parité de `HeuresSuppImportService`).
+"""Assistant d'import mensuel par chantier.
 
 Analyse sans écriture, corrections explicites des fiches, import atomique par mois et chantier, remplacement explicite.
 """

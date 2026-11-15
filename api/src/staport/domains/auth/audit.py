@@ -1,7 +1,7 @@
-"""Historique du domaine auth (Flyway V11) : tables `*_aud` et champs de `Permission`, `Role`, `Utilisateur`.
+"""Historique du domaine auth (script V11) : tables `*_aud` et champs de `Permission`, `Role`, `Utilisateur`.
 
 Un champ absent d'ici n'est jamais historisé : ni le hash du mot de passe, ni l'état de verrouillage (journalisés par
-événement de sécurité), ni la version. Les noms de champs sont ceux de l'API Spring pour garder un historique continu.
+événement de sécurité), ni la version. Les noms de champs sont stables pour garder un historique continu.
 """
 
 from typing import Any, cast
@@ -81,7 +81,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Permission,
             nom="Permission",
-            nom_hibernate="staport.rh.auth.entities.Permission",
+            nom_stocke="staport.rh.auth.entities.Permission",
             table_aud=permission_aud,
             champs=(
                 ChampAudite("code", "code", "code"),
@@ -93,7 +93,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Role,
             nom="Role",
-            nom_hibernate="staport.rh.auth.entities.Role",
+            nom_stocke="staport.rh.auth.entities.Role",
             table_aud=role_aud,
             champs=(ChampAudite("nom", "nom", "nom"), ChampAudite("description", "description", "description")),
             collections=(
@@ -113,7 +113,7 @@ def enregistrer() -> None:
         EntiteAuditee(
             classe=Utilisateur,
             nom="Utilisateur",
-            nom_hibernate="staport.rh.auth.entities.Utilisateur",
+            nom_stocke="staport.rh.auth.entities.Utilisateur",
             table_aud=utilisateur_aud,
             champs=(
                 ChampAudite("username", "username", "username"),

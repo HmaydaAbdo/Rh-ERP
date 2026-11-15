@@ -1,8 +1,7 @@
-"""Parité du domaine audit avec Spring (KAN-214) : révisions, journal, événements de sécurité, défaillance, intégrité.
+"""Domaine audit (KAN-214) : révisions, journal, événements de sécurité, défaillance, intégrité.
 
-Reprend `AuditRevisionTest`, `AuditOperationTest` (comptes et rôles), `AuditSecurityEventsTest`, `AuditDefaillanceTest`
-et `AuditIntegriteTest` sur un PostgreSQL réel. Ne sont pas repris, par décision du propriétaire : l'audit des
-lectures et des sorties de données (`AuditAccesTest`, `LECTURE_METIER`). Les tests de paie, d'import et de
+Sur un PostgreSQL réel. Par décision du propriétaire, l'audit des lectures et des sorties de données n'existe pas
+(`LECTURE_METIER`). Les tests de paie, d'import et de
 synchronisation arrivent avec leurs domaines (KAN-49).
 """
 
@@ -431,7 +430,7 @@ def test_une_seule_instance_verifie_la_chaine_a_la_fois(plateforme: Plateforme) 
     assert plateforme.client.portal.call(scenario) is None  # pyright: ignore[reportOptionalMemberAccess]
 
 
-# --- Aucune écriture sans trace (équivalent d'`AuditArchitectureTest`) ----------------------------------------
+# --- Aucune écriture sans trace  ----------------------------------------
 
 AUDITEES = {
     ("POST", "/roles"): "ROLE_CREATION",
@@ -487,6 +486,7 @@ EVENEMENTS_SECURITE = {
     ("POST", "/auth/forgot-password"),
     ("POST", "/auth/reset-password"),
     ("POST", "/auth/jetons/agent"),
+    ("POST", "/interne/ia/ecritures-fichier"),
     ("POST", "/users/{identifiant}/reset-password"),
 }
 """Routes d'écriture tracées par un événement de sécurité (session ou secret, jamais historisés)."""

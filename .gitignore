@@ -1,8 +1,8 @@
 # =========================================================================
 # Staport Intelligence — .gitignore racine
-# Couvre le dépôt entier (backend, frontend, Docker, fichiers locaux).
-# backend/.gitignore et frontend/.gitignore restent en place (spécifiques
-# à chaque sous-projet) ; ce fichier couvre ce qu'ils ne voient pas :
+# Couvre le dépôt entier (api, frontend, Docker, fichiers locaux).
+# frontend/.gitignore reste en place (spécifique
+# au sous-projet) ; ce fichier couvre ce qu'ils ne voient pas :
 # racine du dépôt, IDE ouverts sur le repo entier, secrets, données réelles.
 # =========================================================================
 
@@ -13,9 +13,6 @@
 .env.*
 !.env.example
 !*.env.example
-backend/.env
-backend/.env.*
-!backend/.env.example
 frontend/.env
 frontend/.env.*
 !frontend/.env.example

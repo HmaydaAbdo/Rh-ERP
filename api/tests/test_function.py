@@ -1,4 +1,4 @@
-"""Parité du référentiel function avec Spring : CRUD, recherche, version et audit."""
+"""Référentiel function : CRUD, recherche, version et audit."""
 
 from typing import Any
 
@@ -45,8 +45,8 @@ def test_crud_fonction_et_recherche_sont_proteges_et_audites(plateforme: Platefo
     assert entites == {"staport.rh.function.entities.Function"}
 
 
-def test_la_version_demarre_a_zero_et_s_incremente_comme_hibernate(plateforme: Plateforme, connecter: Any) -> None:
-    """Écart trouvé par le banc différentiel (KAN-226) : SQLAlchemy démarrait à 1, Spring à 0."""
+def test_la_version_demarre_a_zero_et_s_incremente(plateforme: Plateforme, connecter: Any) -> None:
+    """KAN-226 : SQLAlchemy démarrait à 1, le contrat veut 0."""
     entete = _entete(connecter(*ADMIN))
     creee = plateforme.client.post("/functions", headers=entete, json={"libelle": "Version zéro"}).json()
     assert creee["version"] == 0

@@ -1,4 +1,4 @@
-"""Synchronisation planifiée des chantiers (parité avec `ChantierSyncScheduler`).
+"""Synchronisation planifiée des chantiers.
 
 La planification est le paramètre « Planification de la synchronisation des chantiers » (jamais la configuration
 d'environnement, `conventions/configuration.md`). Elle est relue à chaque calcul de la prochaine exécution : un

@@ -1,4 +1,4 @@
--- Audit : instantanés Envers de chaque version d'une ligne (tables <table>_aud, révisions audit_revision) et
+-- Audit : instantanés de chaque version d'une ligne (tables <table>_aud, révisions audit_revision) et
 -- journal unique des opérations, des événements de sécurité et des exports (audit_journal).
 -- Voir conventions/audit.md et docs/audit/README.md.
 --
@@ -10,11 +10,11 @@
 --     valeur dans les anciennes versions.
 --   * Une colonne d'une table d'audit n'est jamais supprimée ni renommée : elle documente ce qu'était la donnée.
 --   * utilisateur_aud n'a pas de colonne mot_de_passe_hash : on n'audite jamais un secret.
---   * Écritures par insertion seulement (stratégie Envers par défaut) ; le compte applicatif n'a que SELECT et
---     INSERT sur ces tables (voir afterMigrate.sql).
+--   * Écritures par insertion seulement ; le compte applicatif n'a que SELECT et
+--     INSERT sur ces tables (droits recalculés par migrations/droits.py).
 
 -- =========================================================================
--- audit_revision — une ligne par transaction qui modifie des données auditées (entité de révision d'Envers).
+-- audit_revision — une ligne par transaction qui modifie des données auditées (révision).
 -- utilisateur_id n'est pas une clé étrangère : l'historique survit au compte ; utilisateur_nom est figé.
 -- =========================================================================
 CREATE TABLE audit_revision (

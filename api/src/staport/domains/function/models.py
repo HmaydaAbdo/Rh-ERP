@@ -1,4 +1,4 @@
-"""Modèle SQLAlchemy du référentiel `fonction` (parité du domaine Spring)."""
+"""Modèle SQLAlchemy du référentiel `fonction`."""
 
 from sqlalchemy import BigInteger, Identity, String
 from sqlalchemy.orm import Mapped, mapped_column

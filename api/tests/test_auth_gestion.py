@@ -1,7 +1,6 @@
-"""Parité du domaine auth avec Spring (KAN-213) : comptes, rôles, permissions, recherche, validation, courriel.
+"""Domaine auth (KAN-213) : comptes, rôles, permissions, recherche, validation, courriel.
 
-Reprend `RoleAdministrationProtegeeTest`, `AuthRequestValidationTest`, `AuthRechercheTest`, `EmailServiceTest` et
-le comportement des services `UserService` / `RoleService`, sur un PostgreSQL réel par l'API HTTP.
+Sur un PostgreSQL réel, par l'API HTTP.
 """
 
 # Le client de test de Starlette n'expose pas de types complets : cette règle n'est levée que pour ce fichier.

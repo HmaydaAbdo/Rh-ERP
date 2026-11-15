@@ -1,5 +1,5 @@
 # Verrous de versions et seuils de l'IA Staport Intelligence, vérifiés en CI par scripts/ia/check-docs-code.mjs contre
-# ia/uv.lock, les package-lock.json, ia/src/staport_ia/agent.py et les @McpTool du backend.
+# ia/uv.lock, les package-lock.json, ia/src/staport_ia/agent.py et les @serveur.tool de l'API.
 # Mettre ce fichier à jour dans le même commit que le code : le contrôle échoue sinon. Les lignes « # » sont des
 # limites connues (cause, état) ; la tâche qui lève une limite est suivie dans Jira (projet KAN).
 #
@@ -11,8 +11,8 @@
 #   SQLAlchemy 2.1 reste exclu par l'instrumentation SQLAlchemy 0.66b2 ; Psycopg 3 est instrumenté à la place.
 #   Sources : https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.66b2/instrumentation/opentelemetry-instrumentation-psycopg/pyproject.toml
 #   et https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.66b2/instrumentation/opentelemetry-instrumentation-sqlalchemy/src/opentelemetry/instrumentation/sqlalchemy/package.py
-# - openai : 3.46.0 avec litellm 1.109.0.dev2 (préversion adoptée par le propriétaire le 2026-11-01 ; aucune version stable
-#   de litellm ne lève encore la borne openai<3). Sortie de LiteLLM : épopée E17 (KAN-30).
+# - openai : voir ligne `py openai` ; litellm 1.109.1 (stable, 2026-11-15) lève la borne openai<3 : la préversion
+#   1.109.0.dev2 adoptée le 2026-11-01 est remplacée. Sortie de LiteLLM : épopée E17 (KAN-30).
 # - @a2ui/web_core 0.14.0 : le rendu de @copilotkit/angular 0.6.0 est écrit pour 0.10.4 ; la compatibilité est assurée par
 #   notre catalogue ERP (testé). Défaut zod 4 signalé : https://github.com/a2ui-project/a2ui/issues/3812
 # - @a2ui/angular 0.13.0 et @a2ui/web_core 0.14.0 : la montée à 0.14.0 / 0.15.0 (2026-11-02) casse 4 fichiers de test, car
@@ -27,17 +27,17 @@
 #   à réévaluer dès qu'une version d'`@copilotkit/angular` exporte `generative-ui` (Chart et DataTable feraient doublon).
 # - agentevals 0.0.9 : bibliothèque dormante (dernière publication 2025-07-24), conservée, à surveiller.
 # - deepagents : présent dans ia/ ; CopilotKit « next » (2.0.0-rc.7) : préversion suivie, non adoptée.
-py langchain 1.4.9
-py langchain-core 1.7.6
-py langgraph 1.2.20
-py langgraph-checkpoint-postgres 3.2.0
+py langchain 1.5.0
+py langchain-core 1.8.0
+py langgraph 1.2.22
+py langgraph-checkpoint-postgres 3.2.1
 py langchain-litellm 0.11.2
 py ag-ui-langgraph 0.0.47
 py ag-ui-protocol 1.0.0
-py copilotkit 0.1.96
+py copilotkit 0.1.97
 py mcp 2.3.0
-py litellm 1.109.0.dev2
-py openai 3.46.0
+py litellm 1.109.1
+py openai 3.51.0
 npm frontend @copilotkit/angular 0.6.0
 npm frontend @a2ui/angular 0.13.0
 npm frontend @a2ui/web_core 0.14.0
@@ -48,4 +48,4 @@ seuil resume_jetons 40000
 seuil resume_messages 12
 seuil appels_modele 8
 seuil appels_outils 8
-seuil outils_mcp 31
+seuil outils_mcp 32

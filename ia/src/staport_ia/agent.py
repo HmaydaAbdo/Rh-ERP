@@ -24,11 +24,12 @@ import httpx
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
-from deepagents.backends import CompositeBackend, FilesystemBackend, StoreBackend
-from deepagents.middleware import FilesystemMiddleware, FilesystemPermission, SkillsMiddleware
+from deepagents.backends import CompositeBackend, StoreBackend
+from deepagents.middleware import FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
     ModelCallLimitMiddleware,
+    ModelFallbackMiddleware,
     SummarizationMiddleware,
     TodoListMiddleware,
     ToolCallLimitMiddleware,
@@ -45,23 +46,41 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
-from staport_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
+from staport_ia.competences import (
+    ESPACE_COMPETENCES,
+    OUTILS_PERMANENTS,
+    charger,
+    resolveur,
+    semer_competences_memoire,
+)
 from staport_ia.contexte import ContexteErp
+from staport_ia.fichiers import QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
+from staport_ia.question import poser_question
 from staport_ia.surfaces import SurfacesResultats
 
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
 #: des appels de modèle, donc de la latence et des quotas ; les sous-agents par domaine viendront avec leur jeu de
 #: référence.
-PROFIL_HARNAIS = HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False))
+#: Le modèle ne voit du système de fichiers que la lecture (``SKILL.md``) et l'écriture dans son espace : les autres
+#: outils du harnais sont masqués par le profil officiel (``excluded_tools``, KAN-258). ``write_file`` et ``edit_file``
+#: sont visibles depuis KAN-267, mais les permissions ci-dessous ne laissent écrire que sous ``/espace/``, avec accord.
+OUTILS_FICHIERS_MASQUES = frozenset({"ls", "delete", "glob", "grep", "execute"})
+PROFIL_HARNAIS = HarnessProfile(
+    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+    excluded_tools=OUTILS_FICHIERS_MASQUES,
+)
 #: Le fournisseur des modèles de l'ERP (``ChatLiteLLM``) ; les tests enregistrent celui de leur faux modèle.
 register_harness_profile("litellm", PROFIL_HARNAIS)
 
-#: Permissions documentées du système de fichiers de Deep Agents : aujourd'hui rien ne s'écrit, les compétences sont en
-#: lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
-#: d'écriture était lié par erreur. L'épopée d'écriture (site/docs/ia) l'ouvrira domaine par domaine, uniquement sous
-#: ``/espace/``, qui est propre à l'identité de l'utilisateur (``backend_par_identite``).
-PERMISSIONS_FICHIERS = [FilesystemPermission(operations=["write"], paths=["/**"], mode="deny")]
+#: Permissions documentées du système de fichiers de Deep Agents, évaluées dans l'ordre (la première qui correspond
+#: l'emporte) : une écriture dans l'espace de l'utilisateur (``/espace/``, propre à son identité,
+#: ``backend_par_identite``) attend l'accord de l'utilisateur (interruption LangGraph, ``HumanInTheLoopMiddleware``,
+#: KAN-260) ; toute autre écriture, dont celle des compétences, est refusée. La lecture reste libre.
+PERMISSIONS_FICHIERS = [
+    FilesystemPermission(operations=["write"], paths=["/espace/**"], mode="interrupt"),
+    FilesystemPermission(operations=["write"], paths=["/**"], mode="deny"),
+]
 
 ESPACE = "/espace/"
 
@@ -69,11 +88,11 @@ ESPACE = "/espace/"
 def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend:
     """Les compétences (lecture seule) et, sous ``/espace/``, l'espace de fichiers propre à cet utilisateur.
 
-    L'identité est celle du jeton agent validé par Spring (``memoire.sujet``), jamais une valeur du navigateur ou du
+    L'identité est celle du jeton agent validé par l'API (``memoire.sujet``), jamais une valeur du navigateur ou du
     modèle : le même chemin chez deux utilisateurs désigne deux fichiers distincts (``StoreBackend`` avec fabrique
     d'espace de noms, documenté par Deep Agents)."""
     return CompositeBackend(
-        default=FilesystemBackend(root_dir=dossier_competences(), virtual_mode=True),
+        default=StoreBackend(store=store, namespace=lambda _rt: ESPACE_COMPETENCES),
         routes={ESPACE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "espace"))},
     )
 
@@ -122,7 +141,7 @@ Règles impératives :
    valeurs des outils.
 9. Les montants sont en dirhams (MAD).
 10. Si la demande est ambiguë et que le choix change le résultat (période, périmètre, critère de classement, sens
-    d'un mot), et que l'outil `poser_question` est disponible, pose une question à l'utilisateur avec 2 à 5 options
+    d'un mot), pose une question avec l'outil `poser_question` à l'utilisateur avec 2 à 5 options
     plutôt que de deviner, puis poursuis avec sa réponse. Une seule question à la fois ; jamais pour une valeur que
     les outils donnent, ni pour une salutation.
 11. Utilise les filtres, critères de tri et la pagination documentés par l'outil. Pour un classement, demande les
@@ -278,11 +297,14 @@ def creer_agent(
     store: BaseStore | None = None,
     appels_modele: int = 8,
     appels_outils: int = 8,
+    repli: Sequence[BaseChatModel] = (),
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
     conversation devenue longue (``SummarizationMiddleware``)."""
-    store = store or InMemoryStore()
+    if store is None:
+        store = InMemoryStore()
+        semer_competences_memoire(store)  # le service sème les fiches au démarrage (app.py)
     backend = backend_par_identite(utilisateur, store)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
@@ -295,7 +317,12 @@ def creer_agent(
         # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).
         ToolErrorMiddleware(on_error=_erreur_outil),
         ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
+        QuotaEspace(utilisateur),  # taille et nombre de fichiers : refus à l'exécution de l'écriture (KAN-267)
     ]
+    if repli:
+        # Second filet (KAN-35) : si le modèle principal échoue après le routage LiteLLM, les modèles de repli sont
+        # essayés dans l'ordre, par le middleware officiel. Sans repli configuré, aucun changement.
+        intergiciels.append(ModelFallbackMiddleware(*repli))
     if resumeur is not None:
         # Conversation durable : au-delà de SEUIL_RESUME_JETONS, le début est résumé ; les 12 derniers messages restent.
         intergiciels.insert(
@@ -304,11 +331,9 @@ def creer_agent(
         )
     # Un outil métier n'est exposé que par une compétence : un appel non épinglé échoue sans s'exécuter (testé).
     intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
-    # Le harnais n'expose que la lecture des SKILL.md : pas d'écriture, de recherche ni de commande.
-    intergiciels.append(FilesystemMiddleware(backend=backend, tools=["read_file"], permissions=PERMISSIONS_FICHIERS))
     return create_deep_agent(
         model=modele,
-        tools=[outil for outil in outils if outil.name in OUTILS_PERMANENTS],
+        tools=[*(outil for outil in outils if outil.name in OUTILS_PERMANENTS), poser_question],
         system_prompt=SYSTEME,
         middleware=[*intergiciels, _capacites_dynamiques(outils), garde_sortie(o.name for o in outils)],
         backend=backend,

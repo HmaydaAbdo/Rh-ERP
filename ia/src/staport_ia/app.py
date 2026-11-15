@@ -12,12 +12,14 @@ from fastapi import APIRouter, FastAPI, Response, status
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.store.memory import InMemoryStore
+from langgraph.store.base import BaseStore
 from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
+from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
+from staport_ia.fichiers import routeur_fichiers
 from staport_ia.memoire import ouvrir_memoire
 from staport_ia.modeles import Tache, modele
 from staport_ia.routage import Routeur
@@ -29,22 +31,27 @@ class Sante(BaseModel):
     passerelle: Literal["PRETE", "INDISPONIBLE", "NON_VERIFIEE"]
 
 
-def fabrique_reelle(config: Settings) -> FabriqueAgent:
+def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
     """L'agent servi : ``complex`` pour répondre ; les outils sont choisis hors modèle (``routage.py``)."""
     # Laisser le fournisseur appliquer son comportement natif : `reasoning_effort` est incompatible avec certains
     # modèles Gemma 4 derrière LiteLLM et provoque une erreur 400 pendant le basculement.
     principal = modele(config, Tache.COMPLEX)
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
-
-    # Espace de fichiers par identité : en mémoire du processus tant que rien n'écrit (épopée d'écriture : PostgreSQL).
-    espaces = InMemoryStore()
+    # Second filet (KAN-265) : un groupe LiteLLM d'une autre famille que le principal, sans flux interne.
+    repli = [modele(config, Tache(config.llm_repli))] if config.llm_repli else []
 
     def fabriquer(
         outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str
     ) -> CompiledStateGraph[Any, Any, Any, Any]:
         return creer_agent(
-            principal, outils, resumeur=resumeur, checkpointer=checkpointer, utilisateur=utilisateur, store=espaces
+            principal,
+            outils,
+            resumeur=resumeur,
+            checkpointer=checkpointer,
+            utilisateur=utilisateur,
+            store=espaces,
+            repli=repli,
         )
 
     return fabriquer
@@ -61,8 +68,11 @@ def cycle_ia(
         url = config.database_url.get_secret_value() if config.database_url else None
         async with httpx.AsyncClient(timeout=30.0) as client, ouvrir_memoire(url, config.conversation_jours) as memoire:
             app.state.http = client
-            app.state.memoire = memoire
-            app.state.fabrique = fabrique or fabrique_reelle(config)
+            await semer_competences(memoire.store)  # les fiches de compétences vivent dans le Store (KAN-259)
+            app.state.memoire = memoire.checkpointer
+            app.state.store = memoire.store
+            # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL en service).
+            app.state.fabrique = fabrique or fabrique_reelle(config, memoire.store)
             app.state.routage = routage or Routeur().adomaines
             app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
             yield
@@ -81,6 +91,10 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
             memoire=lambda: app.state.memoire,
             routage=lambda: app.state.routage,
         )
+    )
+
+    routeur.include_router(
+        routeur_fichiers(acces=lambda: app.state.acces, actif=lambda: config.enabled, store=lambda: app.state.store)
     )
 
     @routeur.get("/health/ia")

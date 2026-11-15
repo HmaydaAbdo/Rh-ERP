@@ -21,7 +21,7 @@ peut voir la carte sans pouvoir consulter ni modifier le référentiel, et inver
 |---|---|---|
 | `GET /chantiers/carte` | `CARTE_READ` | Identité, nature et position des seuls chantiers autorisés à l'affichage ; sans paie |
 
-La gestion des champs reste sous `CHANTIER_WRITE`. Voir le [contrat du domaine](index.md#api) et `EndpointSecurityTest`.
+La gestion des champs reste sous `CHANTIER_WRITE`. Voir le [contrat du domaine](index.md#api) et `test_auth_acces.py`.
 
 ## Frontend
 

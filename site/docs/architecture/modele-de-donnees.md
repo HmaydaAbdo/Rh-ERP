@@ -4,10 +4,10 @@ sidebar_position: 3
 ---
 
 :::note Page reprise de l'ancien dossier docs
-Mis à jour à la clôture d'E2 (KAN-245) : le schéma est créé par Alembic (FastAPI, SQLAlchemy). Les révisions `V*` du tableau des migrations sont l'historique Flyway, figé dans la révision de base ; le comportement fait foi dans le code, le suivi dans Jira.
+Mis à jour à la clôture d'E2 (KAN-245) : le schéma est créé par Alembic (FastAPI, SQLAlchemy). Les révisions `V*` du tableau des migrations sont les scripts SQL de base, rejoués par la révision de base ; le comportement fait foi dans le code, le suivi dans Jira.
 :::
 
-> Schéma PostgreSQL complet, tel que créé par les migrations Alembic (`api/src/staport/migrations/versions` : `0001_base_v44` reprend l'historique Flyway V1 à V44, dont les scripts figés restent dans `api/src/staport/migrations/flyway_v44`).
+> Schéma PostgreSQL complet, tel que créé par les migrations Alembic (`api/src/staport/migrations/versions` : `0001_base_v44` rejoue les scripts V1 à V44 de `api/src/staport/migrations/base_v44`).
 > Le détail colonne par colonne de chaque domaine métier est dans son README (`docs/<domaine>/README.md`) ;
 > ce document donne la vue d'ensemble, les contraintes d'intégrité et l'historique des migrations.
 
@@ -84,7 +84,7 @@ Détail : [auth/README.md](../domaines/auth/index.md).
 
 ## Tables d'audit
 
-Écrites par les écouteurs de session SQLAlchemy (`api/src/staport/domains/audit/ecouteur.py`, qui remplace Hibernate Envers) et par le service d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
+Écrites par les écouteurs de session SQLAlchemy (`api/src/staport/domains/audit/ecouteur.py`) et par le service d'audit, jamais à la main (sauf par une migration qui suit le gabarit de
 `conventions/database.md` (`conventions/database.md`)). Description fonctionnelle : [audit/README.md](../domaines/audit/index.md).
 
 | Table | Rôle |
@@ -172,7 +172,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V15` | Permission `PAIE_PURGE` (suppression en groupe), attribuée à `SYSTEM_ADMIN` et aux rôles qui ont `PAIE_DELETE` ; écrit sa révision d'audit (premier usage du gabarit de migration auditée) |
 | `V16` | Paramètres de fonctionnement administrables et permissions `PARAMETRE_READ/WRITE` attribuées à `SYSTEM_ADMIN` |
 | `V17` | Permission `PAIE_RESTORE`, attribuée à `SYSTEM_ADMIN` seul à l'installation et administrable ensuite depuis l'écran Rôles |
-| `V18` | Verrou optimiste `@Version` sur les entités persistées modifiables |
+| `V18` | Verrou optimiste (colonne de version) sur les entités persistées modifiables |
 | `V19` | Chaînage SHA-256 du journal d'audit |
 | `V20` | Activation conditionnelle de pgAudit pour la base Staport Intelligence en production |
 | `V21` | Compteur de tentatives et blocage temporaire après cinq échecs de connexion |
@@ -196,7 +196,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 | `V39` | Table `heures_supp`, contraintes d'unicité/intégrité et instantanés audités `heures_supp_aud`. |
 | `V40` | Permissions `HEURES_SUP_READ` et `HEURES_SUP_IMPORT`, attribuées et auditées pour `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
 | `V41` | Permissions auditées `HEURES_SUP_DELETE` et `HEURES_SUP_PURGE` pour la suppression unitaire et la purge mensuelle, attribuées à `SYSTEM_ADMIN` et `PAIE_MANAGER`. |
-| `afterMigrate.sql` (Flyway) → `migrations/droits.py` | Rappel Flyway, remplacé par `recalculer_droits` appelé après **chaque** montée de version Alembic : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
+| `migrations/droits.py` | `recalculer_droits` appelé après **chaque** montée de version Alembic : crée le compte applicatif s'il n'existe pas et recalcule ses droits (`SELECT, INSERT` seulement sur les tables d'audit). Sans effet quand le compte applicatif est le propriétaire |
 
 ### Règles d'écriture d'une migration
 
@@ -207,7 +207,7 @@ d'une désignation « écrasée à chaque synchronisation », ce qui n'est plus 
 - **Depuis `V14`, une migration qui modifie des données d'une table auditée écrit aussi sa révision, ses lignes d'audit et son
   entrée de journal** (gabarit de `conventions/database.md`, exemple dans [audit/README.md](../domaines/audit/index.md)). Une
   entité auditée ou une colonne ajoutée à une entité auditée s'accompagne de sa table / colonne `_aud` dans la même migration.
-- Les tests (`PaieApplicationTests` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
+- Les tests (`test_paie_contrat.py` et les tests d'intégration de l'audit) démarrent l'application sur une base vide :
   toute la chaîne de migrations est rejouée et validée contre les entités à chaque exécution.
 
 Voir aussi `conventions/database.md`.

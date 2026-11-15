@@ -13,10 +13,11 @@ Ne restent ici que deux protections qu'aucun framework ne fournit :
 
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
+from contextvars import ContextVar
 from typing import Any, Protocol, cast
 
 import httpx
-from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, ToolMessage, UserMessage
+from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, UserMessage
 from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
@@ -66,9 +67,17 @@ class AccesErp(Protocol):
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
 
+    async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
+
+
+#: Le signalement des écritures de fichier de l'agent (KAN-268) : posé par le run en cours (jamais partagé entre
+#: utilisateurs, une ``ContextVar`` suit la tâche), lu par ``QuotaEspace`` après chaque écriture réussie.
+SignalerEcriture = Callable[[str, int, str], Awaitable[None]]
+SIGNALEUR_ECRITURE: ContextVar[SignalerEcriture | None] = ContextVar("signaleur_ecriture", default=None)
+
 
 def texte_question(entree: RunAgentInput) -> str:
-    """Le texte de la dernière question de l'utilisateur (la réponse à ``poser_question`` n'est pas une question)."""
+    """Le texte de la dernière question de l'utilisateur (une reprise d'interruption n'apporte pas de question)."""
     for message in reversed(entree.messages):
         if isinstance(message, UserMessage):
             if isinstance(message.content, str):
@@ -77,11 +86,24 @@ def texte_question(entree: RunAgentInput) -> str:
     return ""
 
 
+def est_reprise(entree: RunAgentInput) -> bool:
+    """Un run qui répond à une interruption de l'agent (accord avant écriture) : ``RunAgentInput.resume`` du protocole
+    AG-UI, ou la commande de reprise historique de ``forwardedProps``."""
+    proprietes = cast(dict[str, Any], entree.forwarded_props) if isinstance(entree.forwarded_props, dict) else {}
+    commande = proprietes.get("command")
+    return bool(entree.resume) or (
+        isinstance(commande, dict) and cast(dict[str, Any], commande).get("resume") is not None
+    )
+
+
 def verifier_question(entree: RunAgentInput) -> None:
-    """422 si le dernier message n'est ni une question de l'utilisateur ni sa réponse à l'agent (résultat de l'outil
-    ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long."""
+    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide ou trop long. La réponse à
+    une question de l'agent (``poser_question``) et l'accord avant écriture sont des reprises d'interruption : elles
+    n'apportent pas de nouvelle question et sont vérifiées par le fil propre à l'utilisateur, jamais par leur texte."""
+    if est_reprise(entree):
+        return
     dernier = entree.messages[-1] if entree.messages else None
-    if not isinstance(dernier, UserMessage | ToolMessage):
+    if not isinstance(dernier, UserMessage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Le dernier message doit venir de l'utilisateur.")
     if isinstance(dernier.content, str):
         texte = dernier.content
@@ -146,6 +168,14 @@ class AccesHttp:
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
 
+    async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
+        reponse = await self._client.post(
+            f"{self._api}/interne/ia/ecritures-fichier",
+            json={"chemin": chemin, "taille": taille, "outil": outil},
+            headers={"Authorization": f"Bearer {jeton_agent}"},
+        )
+        reponse.raise_for_status()
+
 
 def routeur_agui(
     fabrique: Callable[[], FabriqueAgent],
@@ -173,21 +203,35 @@ def routeur_agui(
         # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
         fil = espace_conversation(sujet(jeton), entree.thread_id)
         # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
-        epinglees = await routage()(texte_question(entree), outils) if routage else []
-        entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
+        # Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte rien.
+        if est_reprise(entree):
+            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+        else:
+            epinglees = await routage()(texte_question(entree), outils) if routage else []
+            entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
+        async def signaler(chemin: str, taille: int, outil: str) -> None:
+            await erp.signaler_ecriture(jeton, chemin, taille, outil)
+
         async def flux() -> AsyncIterator[str]:
-            async for evenement in evenements(
-                entree_serveur,
-                fabrique(),
-                outils,
-                memoire() if memoire and not suggestion_sans_etat else None,
-                entree.thread_id,
-                sujet(jeton),
-            ):
-                yield encodeur.encode(evenement)
+            reperage = SIGNALEUR_ECRITURE.set(signaler)
+            try:
+                async for evenement in evenements(
+                    entree_serveur,
+                    fabrique(),
+                    outils,
+                    memoire() if memoire and not suggestion_sans_etat else None,
+                    entree.thread_id,
+                    sujet(jeton),
+                ):
+                    yield encodeur.encode(evenement)
+            finally:
+                try:
+                    SIGNALEUR_ECRITURE.reset(reperage)
+                except ValueError:  # générateur fermé dans un autre contexte : le run est terminé de toute façon
+                    pass
 
         return StreamingResponse(
             flux(),

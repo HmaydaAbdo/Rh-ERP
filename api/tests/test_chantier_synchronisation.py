@@ -1,6 +1,6 @@
 """Synchronisation des chantiers avec l'ERP (déclenchement manuel et planifié) et mesures Prometheus.
 
-Couvre ce que garantissait l'ancien backend : ajout par code sans tenir compte de la casse, aucune modification d'un
+Couvre : ajout par code sans tenir compte de la casse, aucune modification d'un
 chantier existant, lignes sans code ignorées, bilan audité (`CHANTIER_SYNCHRONISATION`), ERP indisponible refusé en
 `503` et mesuré, planification lue dans le paramètre, exécutions du compte « Système » d'origine `TACHE_PLANIFIEE`.
 """

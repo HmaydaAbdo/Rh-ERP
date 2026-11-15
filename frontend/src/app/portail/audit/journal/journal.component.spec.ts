@@ -216,7 +216,7 @@ describe('JournalComponent', () => {
         expect(composant['erreurChangements']()).toBe(false);
     });
 
-    it('n’interroge pas les différences Envers d’un événement de sécurité', () => {
+    it('n’interroge pas les différences d’historique d’un événement de sécurité', () => {
         service.getById.mockReturnValue(of({ ...ENTREE, categorie: 'SECURITE', typeOperation: null }));
 
         composant['onOuvrir'](LIGNE);

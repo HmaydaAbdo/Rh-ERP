@@ -26,17 +26,13 @@ sections suivantes.
 
 ### Couche application
 
-**Migration FastAPI (KAN-225 en cours).** Le modèle et le premier contrat REST sont portés dans
-`api/src/staport/domains/employee/`. Le salaire reste masqué sans `PAIE_READ`; l'import, l'analytique et la parité
-complète sont encore en cours.
-
-- **Backend** (`backend/src/main/java/staport/rh/employee/`) : `EmployeeController` (`/employees`), import Excel d'ajout
-  (`/employees/import`), `EmployeeService` / `IEmployeeService` (façade lue par Paie, Chantier, Équipe et l'assistant),
-  `ProjectionPaieEmployee` (masque salaire et type sans `PAIE_READ`, **partagée** par l'API REST et les outils MCP).
-- **Écritures auditées** (`@AuditableAction`) : `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`,
-  `EMPLOYE_SORTIE` ; l'entité `Employee` et `EmployeeSortie` sont `@Audited` (Envers) avec verrou optimiste.
+- **Backend** (`api/src/staport/domains/employee/`) : `router.py` (`/employees`), import Excel d'ajout
+  (`/employees/import`), `service.py` (façade lue par Paie, Chantier, Équipe et l'assistant), règle de masquage du salaire
+  et du type sans `PAIE_READ`, **partagée** par l'API REST et les outils MCP.
+- **Écritures auditées** : `EMPLOYE_CREATION`, `EMPLOYE_MODIFICATION`, `EMPLOYE_SUPPRESSION`,
+  `EMPLOYE_SORTIE` ; les entités employé et sortie sont historisées, avec verrou optimiste.
 - **Références.** Fonction, chantier et équipe sont résolus par les façades des domaines propriétaires
-  (`IFunctionService`, `IChantierService`, `IEquipeService`) ; une référence inconnue est refusée. Une fiche sortie n'a ni
+  (`service.py` de `function`, `chantier` et `equipe`) ; une référence inconnue est refusée. Une fiche sortie n'a ni
   chantier ni équipe courants (contrainte de base, `V33`).
 - **Suppression.** Refusée (`409`) pour un employé lié à un bulletin ou à un compte ; la sortie (`INACTIF`) conserve
   l'historique.
@@ -67,7 +63,7 @@ Employé a **deux** sources de chiffres, à ne pas confondre :
 
 ### Couche IA
 
-L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Spring AI), en plus de la permission
+L'assistant RH n'accède aux employés que par des **outils MCP de lecture**, en plus de la permission
 `IA_UTILISER` ; il n'écrit rien et n'exécute aucun SQL. Le salaire et le type de salaire sont omis sans `PAIE_READ`
 (même projection que l'API REST).
 
@@ -109,7 +105,7 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture** (Sp
   positif ou nul, arrondi automatiquement à l'entier de dirham. La saisie et la lecture exigent `PAIE_READ` en plus du
   droit de l’opération Employé. Sans ce droit, les réponses masquent les deux champs, une écriture
   conserve le salaire existant et le tri sur ces champs est retiré.
-  Cette règle appartient à `ProjectionPaieEmployee`, réutilisée par l’API REST et les outils MCP de
+  Cette règle appartient au service Employé, réutilisée par l’API REST et les outils MCP de
   l’assistant IA; les autres domaines lisent la fiche complète par `IEmployeeService`.
 - Une modification exige la version lue. Une version périmée renvoie `409`, sans écraser la fiche.
 - Un employé lié à un bulletin ou à un compte utilisateur ne peut pas être supprimé (`409`). Le
@@ -158,38 +154,38 @@ qui revient puis repart. Les bulletins et départs sont les sources du parcours 
 ## Contrats exposés
 
 Les dates HTTP sont des chaînes ISO `aaaa-MM-jj`. Les identifiants et versions sont des entiers
-Java `Long`, représentés comme nombres JSON. Les montants sont des `BigDecimal`, en nombres JSON.
+longs, représentés comme nombres JSON. Les montants sont des décimaux exacts (`Decimal`), en nombres JSON.
 
 ### Création et modification
 
 `EmployeeCreateRequestDto` et `EmployeeUpdateRequestDto` partagent les champs ci-dessous :
 
-| Champ | Type Java / JSON | Contraintes et description |
+| Champ | Type / JSON | Contraintes et description |
 |---|---|---|
-| `nomPrenom` | `String` / chaîne | Obligatoire, non blanc, 150 caractères au plus |
-| `cin` | `String` / chaîne | Obligatoire, non blanc, 30 caractères au plus; clé métier normalisée |
-| `dateNaissance` | `LocalDate` / date ISO | Obligatoire, strictement passée |
-| `dateEmbauche` | `LocalDate` / date ISO | Obligatoire |
-| `fonctionId` | `Long` / entier | Obligatoire; référence existante |
-| `chantierId` | `Long` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
-| `equipeId` | `Long` / entier ou `null` | Facultatif; `null` si sorti |
-| `salaire` | `BigDecimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à l'entier; avec son type |
+| `nomPrenom` | `texte` / chaîne | Obligatoire, non blanc, 150 caractères au plus |
+| `cin` | `texte` / chaîne | Obligatoire, non blanc, 30 caractères au plus; clé métier normalisée |
+| `dateNaissance` | `date` / date ISO | Obligatoire, strictement passée |
+| `dateEmbauche` | `date` / date ISO | Obligatoire |
+| `fonctionId` | `entier` / entier | Obligatoire; référence existante |
+| `chantierId` | `entier` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
+| `equipeId` | `entier` / entier ou `null` | Facultatif; `null` si sorti |
+| `salaire` | `décimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à l'entier; avec son type |
 | `typeSalaire` | `TypeSalaire` / chaîne ou `null` | `MENSUEL` ou `JOURNALIER`; avec le salaire |
 
-La modification ajoute `version` (`Long`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :
+La modification ajoute `version` (`entier`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :
 `ACTIF` ou `INACTIF`). La création n’accepte pas de statut : l’employé est en poste.
 
 ### Recherche
 
-`EmployeeSearchCriteria` est partagé par la recherche, les regroupements et l’analytique :
+`EmployeeRecherche` est partagé par la recherche, les regroupements et l’analytique :
 
 | Champ | Type | Contraintes et description |
 |---|---|---|
-| `nomPrenom` | `String` ou `null` | 150 caractères au plus; contient, sans distinction de casse |
-| `cin` | `String` ou `null` | 30 caractères au plus; contient, sans distinction de casse |
-| `fonctionIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants strictement positifs, jamais `null` |
-| `chantierIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans chantier, jamais `null` dans la liste |
-| `equipeIds` | `List<Long>` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans équipe, jamais `null` dans la liste |
+| `nomPrenom` | `texte` ou `null` | 150 caractères au plus; contient, sans distinction de casse |
+| `cin` | `texte` ou `null` | 30 caractères au plus; contient, sans distinction de casse |
+| `fonctionIds` | `liste d'entiers` ou `null` | 500 éléments au plus; identifiants strictement positifs, jamais `null` |
+| `chantierIds` | `liste d'entiers` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans chantier, jamais `null` dans la liste |
+| `equipeIds` | `liste d'entiers` ou `null` | 500 éléments au plus; identifiants positifs, `0` = sans équipe, jamais `null` dans la liste |
 | `statut` | `EmployeeStatut` ou `null` | `ACTIF`, `INACTIF`; absent = tous |
 
 Une liste absente ou vide ne filtre pas cette dimension. Les dimensions se combinent par « et »;
@@ -201,16 +197,16 @@ La recherche renvoie une page (`content`, `page.number`, `page.size`, `page.tota
 
 | DTO | Champs, types et signification |
 |---|---|
-| `EmployeeResponseDto` | `id`, `version` (`Long`); `nomPrenom`, `cin` (`String`); `dateNaissance`, `dateEmbauche` (`LocalDate`); `fonction` (`FunctionSummaryDto`); `chantier` (`ChantierSummaryDto` ou `null`); `equipe` (`EquipeSummaryDto` ou `null`); `salaire` (`BigDecimal` ou `null`); `typeSalaire` (`TypeSalaire` ou `null`); `statut` (`EmployeeStatut`). Salaire et type sont `null` sans `PAIE_READ` ou s’ils ne sont pas renseignés. |
-| `FunctionSummaryDto` | `id` (`Long`), `libelle` (`String`) de la fonction |
-| `ChantierSummaryDto` | `id` (`Long`), `code` (`String`), `designation` (`String` ou `null`) du chantier |
-| `EquipeSummaryDto` | `id` (`Long`), `code`, `libelle` (`String`) de l’équipe |
-| `EmployeeRegroupementDto` | `id` (`long`, `0` sans chantier/équipe), `code` et `libelle` (`String`, code `null` pour le groupe sans rattachement), `effectif` et `actifs` (`long`). Groupes triés par effectif décroissant, puis code. Aucun salaire. |
-| `EmployeeAnalytiqueDto` | `effectif`, `actifs`, `inactifs`, `embauchesDouzeMois` (`long`); `ageMoyen`, `ancienneteMoyenne` (`BigDecimal` ou `null` sans employé); `parAge`, `parAnciennete` (`List<TrancheDto>`). Aucun salaire. |
-| `TrancheDto` | `min` (`int` inclus), `max` (`Integer` exclu, `null` pour « et plus »), `effectif` (`long`); bornes en années pleines |
-| `EmployeeImportResultDto` | `totalLignes`, `crees`, `ignores` (`int`), `lignesIgnorees` (`List<LigneIgnoreeDto>`); en rejet atomique, `crees = 0` |
-| `LigneIgnoreeDto` | `numeroLigne` (`int`, numéro réel Excel à partir de 1), `cin`, `nomPrenom` (`String` ou `null`), `raison` (`String`) |
-| `EmployeeSortieDto` | Contrat de façade : `employeId` (`long`), `periode` (`YearMonth`, `aaaa-MM`), `motif` (`String`); consommé par le parcours Paie |
+| `EmployeeResponseDto` | `id`, `version` (`entier`); `nomPrenom`, `cin` (`texte`); `dateNaissance`, `dateEmbauche` (`date`); `fonction` (`FunctionSummaryDto`); `chantier` (`ChantierSummaryDto` ou `null`); `equipe` (`EquipeSummaryDto` ou `null`); `salaire` (`décimal` ou `null`); `typeSalaire` (`TypeSalaire` ou `null`); `statut` (`EmployeeStatut`). Salaire et type sont `null` sans `PAIE_READ` ou s’ils ne sont pas renseignés. |
+| `FunctionSummaryDto` | `id` (`entier`), `libelle` (`texte`) de la fonction |
+| `ChantierSummaryDto` | `id` (`entier`), `code` (`texte`), `designation` (`texte` ou `null`) du chantier |
+| `EquipeSummaryDto` | `id` (`entier`), `code`, `libelle` (`texte`) de l’équipe |
+| `EmployeeRegroupementDto` | `id` (`entier`, `0` sans chantier/équipe), `code` et `libelle` (`texte`, code `null` pour le groupe sans rattachement), `effectif` et `actifs` (`entier`). Groupes triés par effectif décroissant, puis code. Aucun salaire. |
+| `EmployeeAnalytiqueDto` | `effectif`, `actifs`, `inactifs`, `embauchesDouzeMois` (`entier`); `ageMoyen`, `ancienneteMoyenne` (`décimal` ou `null` sans employé); `parAge`, `parAnciennete` (`liste de TrancheDto`). Aucun salaire. |
+| `TrancheDto` | `min` (`int` inclus), `max` (`entier` exclu, `null` pour « et plus »), `effectif` (`entier`); bornes en années pleines |
+| `EmployeeImportResultDto` | `totalLignes`, `crees`, `ignores` (`int`), `lignesIgnorees` (`liste de LigneIgnoreeDto`); en rejet atomique, `crees = 0` |
+| `LigneIgnoreeDto` | `numeroLigne` (`int`, numéro réel Excel à partir de 1), `cin`, `nomPrenom` (`texte` ou `null`), `raison` (`texte`) |
+| `EmployeeSortieDto` | Contrat de façade : `employeId` (`entier`), `periode` (`mois`, `aaaa-MM`), `motif` (`texte`); consommé par le parcours Paie |
 
 Âge et ancienneté moyens sont la moyenne des durées en jours divisée par 365,2425, arrondie à l'entier avec `HALF_DOWN`.
 L’ancienneté ne devient jamais négative. Les embauches des douze derniers mois satisfont
@@ -309,12 +305,12 @@ partagées de présentation et d’export sont dans Vues de périmètre ([fronte
 
 | Scénario | Tests |
 |---|---|
-| Création/modification, CIN normalisé, références, version | `EmployeeServiceTest`, `EmployeeControllerTest` |
-| Salaire masqué, tri de paie retiré, salaire conservé sans droit | `EmployeeControllerTest`, specs formulaire/liste/détail |
-| Critères invalides refusés; `0` conserve le sens sans chantier/équipe | `EmployeeControllerTest`, `EmployeeAnalytiqueServiceTest` |
-| Suppression d’une fiche utilisée refusée | `EmployeeSuppressionTest` sur PostgreSQL |
-| Import valide, doublon, atomicité, naissance passée, numéros réels | `EmployeeImportServiceTest`, specs actions |
-| Effectifs, groupes sans rattachement, tranches et bornes douze mois | `EmployeeAnalytiqueServiceTest` sur PostgreSQL |
+| Création/modification, CIN normalisé, références, version | `test_employee.py` |
+| Salaire masqué, tri de paie retiré, salaire conservé sans droit | `test_employee.py`, specs formulaire/liste/détail |
+| Critères invalides refusés; `0` conserve le sens sans chantier/équipe | `test_employee.py` |
+| Suppression d’une fiche utilisée refusée | `test_employee.py` sur PostgreSQL |
+| Import valide, doublon, atomicité, naissance passée, numéros réels | `test_employee.py`, specs actions |
+| Effectifs, groupes sans rattachement, tranches et bornes douze mois | `test_employee.py` sur PostgreSQL |
 | Formulaire, fiche, chargement/erreur/réessai et permissions | Specs `employee-form`, `employee-detail`, `employee-list` |
 | URL et recherches tardives, passage entre trois vues | Specs filtres/coque/liste/module et E2E Employé |
 
@@ -344,7 +340,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 | Couche | Ce qu'elle contient | À vérifier quand on la modifie |
 |---|---|---|
-| **Application** | `EmployeeController`, import d'ajout, `EmployeeService` / `IEmployeeService`, `ProjectionPaieEmployee` (salaire masqué sans `PAIE_READ`, partagée REST et MCP), audit `EMPLOYE_*`, migrations `V22`, `V27`, `V29` à `V33` ; côté Angular `portail/employee/` | CIN normalisé et unique (service **et** base) ; une fiche sortie n'a ni chantier ni équipe ; références résolues par les façades ; version optimiste ; salaire conservé à l'écriture sans droit ; entrée d'audit pour chaque écriture |
+| **Application** | `router.py`, import d'ajout, `service.py`, projection du salaire (salaire masqué sans `PAIE_READ`, partagée REST et MCP), audit `EMPLOYE_*`, migrations `V22`, `V27`, `V29` à `V33` ; côté Angular `portail/employee/` | CIN normalisé et unique (service **et** base) ; une fiche sortie n'a ni chantier ni équipe ; références résolues par les façades ; version optimiste ; salaire conservé à l'écriture sans droit ; entrée d'audit pour chaque écriture |
 | **Analytique** | `POST /employees/analytique` et `/employees/regroupements` (fiches courantes, sans salaire), croisés avec `POST /paie/analytique` (bulletins) | Ne pas confondre état courant des fiches et historique des bulletins ; mêmes définitions âge, ancienneté, tranches ; groupes `0` = sans rattachement ; douze plus grands groupes dans les graphiques seulement |
 | **IA** | `employes_rechercher`, `employe_fiche`, `employes_compter`, `employes_regrouper`, `employes_sorties` (`EMPLOYEE_READ`), `employe_parcours` (`PAIE_READ`) | Lecture seule ; salaire omis sans `PAIE_READ` ; vocabulaire `EN_POSTE` / `SORTI` ; descriptions d'outils à jour ; chaque nombre vérifié contre les outils ; pas de périmètre par fiche de poste avant J2 |
 
