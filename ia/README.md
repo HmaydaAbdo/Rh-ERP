@@ -26,7 +26,7 @@ Décisions, plan et état : [site/docs/ia](../site/docs/ia/vue-d-ensemble.md). R
 - **Agent (T10, T33)** — `agent.py` : `create_deep_agent` (Deep Agents sur LangGraph, décision du 2026-11-03). Le modèle choisit seul sa forme de
   réponse : directe pour un message simple, avec outils pour une question de données, avec un plan (`write_todos`,
   `TodoListMiddleware`) pour une demande à plusieurs étapes. Middlewares officiels : `CopilotKitMiddleware` (outils du
-  navigateur), `TodoListMiddleware`, `ModelCallLimitMiddleware` et `ToolCallLimitMiddleware` (8 par run),
+  navigateur), `TodoListMiddleware` (aucun plafond d'appels par run : décision du propriétaire, KAN-40),
   `SkillsMiddleware` (outils de compétence) et `FilesystemMiddleware` limité à `read_file` (lecture des `SKILL.md`).
 - **Outils par compétence (T32)** — `competences/<domaine>/SKILL.md` (7 outils au plus chacune) et `competences.py` : un outil
   métier n'est exposé que par sa compétence ; l'appel d'un outil non épinglé échoue sans s'exécuter. `routage.py` choisit,

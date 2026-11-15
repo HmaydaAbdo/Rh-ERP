@@ -57,11 +57,11 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | Élément officiel | État | Tâche |
 |---|---|---|
 | `TodoListMiddleware` | ✅ en place | — |
-| `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ✅ en place | — |
+| `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ❌ retirés (KAN-40) : décision du propriétaire, aucun plafond appliqué par nous | — |
 | `SummarizationMiddleware` | ✅ en place (40 000 jetons, résumé interne) | — |
 | `LLMToolSelectorMiddleware` | ✅ adopté et testé ; **retiré du chemin systématique le 2026-11-03** (il ajoute un appel de modèle) : le routage de base est l'épinglage de compétences hors modèle (T32) ; réactivable en second étage après évaluation chiffrée | T32 |
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
-| `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
+| `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ✅ en place (KAN-34) : au-delà de 30 000 jetons, les 6 derniers résultats d'outils sont gardés et les plus anciens remplacés par un marqueur ; `poser_question` jamais effacé ; testé. Le gain en jetons se mesure sur le jeu de référence avec le vrai modèle (à lancer par le propriétaire) | — |
 | `ToolErrorMiddleware`, `ToolRetryMiddleware` | ✅ en place, matrice des erreurs ci-dessous et testée | — |
 | `ModelRetryMiddleware` | ⛔ non repris (décision du 2026-11-01) : la reprise des modèles reste dans le routage LiteLLM, qui bascule sans rejouer (`num_retries: 0`), et le client n'en ajoute pas (`max_retries=0`) ; le budget de reprises est borné et testé (`ia/tests/test_agent.py`, KAN-33) | — |
 | `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
@@ -73,6 +73,19 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | Crochets `before_agent`, `after_agent`, `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, `dynamic_prompt` | utilisés par les middlewares ci-dessus ; `dynamic_prompt` remplace `contexte.py` | T24 |
 | LangGraph : checkpointer PostgreSQL | ✅ en place | — |
 | LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ✅ `AsyncPostgresStore` pour les fichiers d'espace par utilisateur (`/espace/`), expiration native `TTLConfig`, testé sur PostgreSQL réel (KAN-73) ; reste la purge et le préfixe de fil des conversations, écrits par nous | T25, J4 |
+
+### Décisions de clôture de l'épopée E6 (2026-11-15)
+
+- **KAN-36, non applicable** : les reprises, délais et gestionnaires d'erreur **par nœud** (`retry_policy`, `TimeoutPolicy`,
+  `error_handler`) n'existent que pour un graphe construit à la main ; Deep Agents construit le graphe, et les reprises
+  passent par les middlewares officiels (`ToolRetryMiddleware`, `ToolErrorMiddleware`, routage LiteLLM). Convention
+  gardée : sortir de Deep Agents seulement pour un besoin précis qu'aucun middleware ne couvre.
+- **KAN-38, non applicable** : le sélecteur d'outils est un routage par embeddings sans appel de modèle, les surfaces sont
+  déterministes, le juge utilise `openevals` et les sous-agents ont été écartés (KAN-261). Aucun code maison à remplacer.
+- **KAN-41, veille** : `ag-ui-langgraph` 0.0.47 reste sur `astream_events` v2 et n'expose ni `control` ni `durability` ;
+  notre sous-classe `AgentAGUI` les ajoute par `get_stream_kwargs`. Signalement publié :
+  [ag-ui-protocol/ag-ui#3403](https://github.com/ag-ui-protocol/ag-ui/issues/3403). À retirer quand l'éditeur les prend en charge.
+- **KAN-42** : procédure d'analyse d'incident par retour dans le temps, testée : [analyse d'un incident](../exploitation/incident-agent.md).
 
 ### Matrice des erreurs d'outil (KAN-32)
 
@@ -248,7 +261,7 @@ Source : doc LangGraph « Fault tolerance » (retries, timeouts, error handling,
   `TimeoutPolicy` et `error_handler` se règlent sur les nœuds ou par `set_node_defaults` d'un `StateGraph` que nous
   construisons ; le graphe de l'agent est construit par Deep Agents et `create_agent`, qui ne les exposent pas. Les mêmes
   protections existent au niveau du modèle et des outils, avec les composants officiels : `ModelFallbackMiddleware`
-  (KAN-35), plafonds d'appels (KAN-33), erreurs d'outil rendues au modèle sans détail (KAN-32), délai du modèle porté par
+  (KAN-35), reprises bornées par appel d'outil (KAN-33), erreurs d'outil rendues au modèle sans détail (KAN-32), délai du modèle porté par
   LiteLLM.
 - **Preuve** (PostgreSQL réel, `ia/tests/test_memoire.py`) : un run arrêté pendant l'étape des outils, un « redémarrage »
   (nouvelle connexion, nouvel agent), une reprise avec le même fil jusqu'à la réponse, sans rejouer l'étape terminée.
