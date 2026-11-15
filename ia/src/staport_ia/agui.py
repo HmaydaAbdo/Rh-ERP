@@ -30,7 +30,7 @@ from langgraph.runtime import RunControl
 from langgraph.types import Durability
 
 from staport_ia.memoire import espace_conversation, sujet
-from staport_ia.outils import jeton_agent, outils_erp
+from staport_ia.outils import contexte_erp, jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
 
@@ -71,12 +71,16 @@ class AgentAGUI(LangGraphAGUIAgent):
     sous-classe n'ajoute que ces deux arguments au point d'extension ``get_stream_kwargs``. Écart au 0 % de code maison
     à retirer quand l'intégration les prendra en charge (registre des abstractions, KAN-39)."""
 
-    def __init__(self, *args: Any, controle: RunControl, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, controle: RunControl, contexte_erp: str = "", **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._controle = controle
+        self._contexte_erp = contexte_erp
 
     def get_stream_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {**super().get_stream_kwargs(*args, **kwargs), "control": self._controle, "durability": DURABILITE}
+        base = super().get_stream_kwargs(*args, **kwargs)
+        # Contexte d'exécution immuable (``context_schema`` de l'agent) : le service le fournit, jamais le navigateur.
+        contexte = {**base.get("context", {}), "contexte_erp": self._contexte_erp}
+        return {**base, "context": contexte, "control": self._controle, "durability": DURABILITE}
 
 
 class _SansDetail(logging.Filter):
@@ -101,6 +105,8 @@ class AccesErp(Protocol):
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
+
+    async def contexte(self, jeton_agent: str) -> str: ...
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
 
@@ -157,6 +163,7 @@ async def evenements(
     memoire: BaseCheckpointSaver[Any] | None = None,
     thread_id: str | None = None,
     utilisateur: str = "anonyme",
+    contexte_erp: str = "",
 ) -> AsyncGenerator[BaseEvent]:
     """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail.
 
@@ -168,6 +175,7 @@ async def evenements(
     try:
         officiel = AgentAGUI(
             controle=controle,
+            contexte_erp=contexte_erp,
             name="staport-intelligence",
             graph=fabrique(
                 outils, memoire or InMemorySaver(), utilisateur
@@ -215,6 +223,9 @@ class AccesHttp:
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
 
+    async def contexte(self, jeton_agent: str) -> str:
+        return await contexte_erp(f"{self._api}/mcp", jeton_agent)
+
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
         reponse = await self._client.post(
             f"{self._api}/interne/ia/ecritures-fichier",
@@ -244,6 +255,7 @@ def routeur_agui(
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)
+        texte_contexte = await _contexte(erp, jeton)
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
         # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
         # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
@@ -272,6 +284,7 @@ def routeur_agui(
                     memoire() if memoire and not suggestion_sans_etat else None,
                     entree.thread_id,
                     sujet(jeton),
+                    texte_contexte,
                 ):
                     yield encodeur.encode(evenement)
             finally:
@@ -311,3 +324,12 @@ async def _outils(erp: AccesErp, jeton: str) -> Sequence[BaseTool]:
     except Exception as panne:  # API injoignable ou catalogue refusé : indisponibilité, sans détail
         journal.warning("Catalogue MCP indisponible : %s", type(panne).__name__)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
+
+
+async def _contexte(erp: AccesErp, jeton: str) -> str:
+    """Le contexte du moment (ressource MCP) ; une panne laisse l'instruction du modèle plus courte."""
+    try:
+        return await erp.contexte(jeton)
+    except Exception as panne:  # jamais un échec de la question
+        journal.warning("Contexte MCP indisponible : %s", type(panne).__name__)
+        return ""

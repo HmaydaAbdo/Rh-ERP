@@ -33,3 +33,19 @@ async def outils_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.
     transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
     # Mode de transport MCP commun du client FastMCP.
     return await MCPAdapter(Client(transport, timeout=delai_secondes, mode="legacy")).list_tools()
+
+
+#: Ressource MCP du contexte du moment (date, dernier mois de paie), calculée par l'API selon les droits de l'appelant.
+URI_CONTEXTE = "erp://contexte"
+
+
+async def contexte_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.0) -> str:
+    """Le texte de la ressource de contexte de l'API ERP, ou une chaîne vide si elle est indisponible : une panne
+    laisse l'instruction du modèle plus courte, jamais la question sans réponse."""
+    transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
+    try:
+        async with Client(transport, timeout=delai_secondes, mode="legacy") as client:
+            contenus = await client.read_resource(URI_CONTEXTE)
+    except Exception:  # API indisponible ou ressource refusée : pas de contexte, la question continue
+        return ""
+    return "\n".join(getattr(c, "text", "") for c in contenus).strip()

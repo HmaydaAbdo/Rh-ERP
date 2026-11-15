@@ -847,3 +847,44 @@ def test_les_prerequis_d_import_verifient_le_mois_et_le_chantier(
     assert sans_paie["pret"] is False and sans_paie["bulletinsDisponibles"] == 0 and sans_paie["message"]
     for arguments in ({"periode": MOIS}, {"chantierId": 1}, {"periode": MOIS, "chantierId": 0}):
         assert _appel(plateforme, admin[0], "heures_supp_import_prerequis", **arguments)["isError"] is True
+
+
+# --- Ressource de contexte (KAN-72) ----------------------------------------------------------------
+
+
+def _contexte(plateforme: Plateforme, jeton: str) -> str:
+    reponse = _rpc(plateforme, jeton, "resources/read", {"uri": "erp://contexte"})
+    assert reponse.status_code == 200, reponse.text
+    contenus = reponse.json()["result"]["contents"]
+    assert len(contenus) == 1 and contenus[0]["mimeType"] == "text/plain"
+    return contenus[0]["text"]
+
+
+def test_la_ressource_de_contexte_donne_la_date_et_le_dernier_mois_de_paie(
+    plateforme: Plateforme, admin: tuple[str, str, int], donnees: Donnees
+) -> None:
+    ressources = _rpc(plateforme, admin[0], "resources/list").json()["result"]["resources"]
+    assert [r["uri"] for r in ressources] == ["erp://contexte"]
+
+    texte = _contexte(plateforme, admin[0])
+
+    assert f"Date du jour : {date.today().isoformat()}." in texte
+    assert "Dernier mois de paie importé : " in texte
+    assert "PAIE_READ" not in texte  # ni droit ni donnée RH dans le texte
+
+
+def test_sans_le_droit_de_paie_la_ressource_ne_donne_que_la_date(
+    plateforme: Plateforme,
+    creer_utilisateur: Fabrique,
+    connecter: Callable[[str, str], dict[str, Any]],
+    donnees: Donnees,
+) -> None:
+    jeton = _sans(plateforme, creer_utilisateur, connecter, "PAIE_READ")
+
+    texte = _contexte(plateforme, jeton)
+
+    assert texte == f"Date du jour : {date.today().isoformat()}."
+
+
+def test_la_ressource_de_contexte_exige_un_jeton_agent(plateforme: Plateforme) -> None:
+    assert _rpc(plateforme, None, "resources/read", {"uri": "erp://contexte"}).status_code == 401

@@ -54,7 +54,7 @@ from staport_ia.criteres import (
 from staport_ia.juge import Verdict
 from staport_ia.juge import juger as juger_llm
 from staport_ia.modeles import Tache, modele
-from staport_ia.outils import jeton_agent, outils_erp
+from staport_ia.outils import contexte_erp, jeton_agent, outils_erp
 from staport_ia.routage import Routeur
 
 JEU = Path(__file__).resolve().parents[2] / "evaluation" / "jeu_reference.json"
@@ -262,7 +262,11 @@ class Contexte:
 
 
 async def repondre(
-    config: Settings, outils: list[BaseTool], questions: list[str] | str, outils_attendus: list[str] | None
+    config: Settings,
+    outils: list[BaseTool],
+    questions: list[str] | str,
+    outils_attendus: list[str] | None,
+    contexte: str = "",
 ) -> Reponse:
     """Les tours de la conversation sont joués sur le même fil ; la réponse est celle du dernier."""
     tours = [questions] if isinstance(questions, str) else questions
@@ -277,7 +281,11 @@ async def repondre(
     etat: dict[str, Any] = {}
     for question in tours:
         epinglees = await _ROUTEUR.adomaines(question, outils)
-        etat = await agent.ainvoke({"messages": [HumanMessage(content=question)], "pinned_skills": epinglees}, options)
+        etat = await agent.ainvoke(
+            {"messages": [HumanMessage(content=question)], "pinned_skills": epinglees},
+            options,
+            context={"contexte_erp": contexte},
+        )
     messages: list[BaseMessage] = list(etat["messages"])
     texte = messages[-1].text if messages else ""
     appeles = [a["name"] for m in messages if isinstance(m, AIMessage) for a in m.tool_calls]
@@ -338,7 +346,8 @@ async def evaluer_cas(cas: dict[str, Any], ctx: Contexte, repetition: int = 1) -
             interdits += [(a["type"], extraire(resultat, a["chemin"])) for a in lecture["attendus"]]
     debut = time.monotonic()
     outils_attendus = cas.get("outils_acceptes") or [lecture["outil"] for lecture in _verites(cas)] or None
-    reponse = await repondre(ctx.config, outils, questions, outils_attendus)
+    contexte = await contexte_erp(f"{ctx.api}/mcp", jeton)
+    reponse = await repondre(ctx.config, outils, questions, outils_attendus, contexte)
     latence = time.monotonic() - debut
     verdict, cause_juge = (None, "juge non configuré")
     if ctx.juge is not None and type_cas in _ATTENDU:

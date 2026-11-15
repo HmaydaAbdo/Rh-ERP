@@ -147,7 +147,7 @@ async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) ->
     construit: list[tuple[object, object, object]] = []
 
     class AgentFactice:
-        async def ainvoke(self, entree: object, options: object) -> dict[str, list[AIMessage]]:
+        async def ainvoke(self, entree: object, options: object, **_: object) -> dict[str, list[AIMessage]]:
             return {"messages": [AIMessage(content="Réponse de test.")]}
 
     def fabrique_factice(settings: Settings, espaces: object) -> Any:

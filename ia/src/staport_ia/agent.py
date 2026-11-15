@@ -18,7 +18,7 @@ Aucun contrôle après coup : le vérificateur de chiffres a été supprimé.
 import json
 from collections.abc import Sequence
 from importlib import resources
-from typing import Any, cast
+from typing import Any, NotRequired, TypedDict, cast
 
 import httpx
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
@@ -53,7 +53,6 @@ from staport_ia.competences import (
     resolveur,
     semer_competences_memoire,
 )
-from staport_ia.contexte import ContexteErp
 from staport_ia.fichiers import QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
 from staport_ia.question import poser_question
@@ -187,6 +186,12 @@ RESULTATS_GARDES = 6
 MARQUEUR_EFFACE = "[ancien résultat effacé pour alléger la conversation : relancez l'outil si cette donnée est utile]"
 
 
+class ContexteRun(TypedDict):
+    """Contexte d'exécution d'un run, fourni par le service (jamais par le modèle ni le navigateur)."""
+
+    contexte_erp: NotRequired[str]
+
+
 def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
     """Middleware officiel LangChain : décrit les capacités de cet utilisateur, un domaine par ligne.
 
@@ -201,6 +206,10 @@ def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
     @dynamic_prompt
     def prompt_capacites(request: Any) -> str:
         base = request.system_message.text if request.system_message else SYSTEME
+        # Contexte d'exécution immuable (``context_schema``), lu par le service dans la ressource MCP de l'ERP (KAN-72).
+        contexte = (request.runtime.context or {}).get("contexte_erp") if request.runtime else None
+        if contexte:
+            base = f"{base}\n\nContexte du moment (fourni par l'ERP) :\n{contexte}"
         if not catalogue:
             return f"{base}\n\nCapacités métier actuellement accessibles : aucune capacité MCP n'est disponible."
         return (
@@ -314,7 +323,6 @@ def creer_agent(
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
         SurfacesResultats(),
-        ContexteErp(outils),
         TodoListMiddleware(),
         # Tolérance aux pannes d'outil (middlewares officiels) : reprise des coupures transitoires seulement
         # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).
@@ -356,5 +364,6 @@ def creer_agent(
         permissions=PERMISSIONS_FICHIERS,
         checkpointer=checkpointer,
         store=store,
+        context_schema=ContexteRun,
         name="staport-intelligence",
     )
