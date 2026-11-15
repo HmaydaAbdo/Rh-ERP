@@ -3,8 +3,10 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 """Application HTTP du service IA : santé et point d'entrée AG-UI ``POST /agui`` (site/docs/ia, T11)."""
 
-from collections.abc import AsyncGenerator, Callable, Sequence
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+import signal
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, contextmanager
+from types import FrameType
 from typing import Any, Literal
 
 import httpx
@@ -16,11 +18,11 @@ from langgraph.store.base import BaseStore
 from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
-from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
+from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, demander_arret, routeur_agui
 from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
 from staport_ia.fichiers import routeur_fichiers
-from staport_ia.memoire import ouvrir_memoire
+from staport_ia.memoire import Memoire, ouvrir_memoire
 from staport_ia.modeles import Tache, modele
 from staport_ia.routage import Routeur
 
@@ -57,27 +59,72 @@ def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
     return fabriquer
 
 
+#: Ouvre la mémoire d'un test rapide (injection) ; absente en service.
+FabriqueMemoire = Callable[[], AbstractAsyncContextManager[Memoire]]
+
+
 def cycle_ia(
     config: Settings,
     fabrique: FabriqueAgent | None = None,
     acces: AccesErp | None = None,
     routage: Routage | None = None,
+    memoire: FabriqueMemoire | None = None,
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
+    """``memoire`` n'est fournie que par les tests rapides ; le service ouvre toujours PostgreSQL (KAN-39)."""
+
     @asynccontextmanager
     async def cycle(app: FastAPI) -> AsyncGenerator[None]:
-        url = config.database_url.get_secret_value() if config.database_url else None
-        async with httpx.AsyncClient(timeout=30.0) as client, ouvrir_memoire(url, config.conversation_jours) as memoire:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             app.state.http = client
-            await semer_competences(memoire.store)  # les fiches de compétences vivent dans le Store (KAN-259)
-            app.state.memoire = memoire.checkpointer
-            app.state.store = memoire.store
-            # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL en service).
-            app.state.fabrique = fabrique or fabrique_reelle(config, memoire.store)
-            app.state.routage = routage or Routeur().adomaines
-            app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
-            yield
+            if not config.enabled:  # service désactivé : aucune base à ouvrir, les routes répondent 503
+                yield
+                return
+            with _arret_en_douceur():
+                async with _ouvrir(config, memoire) as ouverte:
+                    await semer_competences(ouverte.store)  # les fiches de compétences vivent dans le Store (KAN-259)
+                    app.state.memoire = ouverte.checkpointer
+                    app.state.store = ouverte.store
+                    # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL).
+                    app.state.fabrique = fabrique or fabrique_reelle(config, ouverte.store)
+                    app.state.routage = routage or Routeur().adomaines
+                    app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
+                    yield
 
     return cycle
+
+
+@contextmanager
+def _arret_en_douceur() -> Generator[None]:
+    """À SIGTERM (``docker compose up -d`` après un ``pull``), les runs en cours terminent leur étape, enregistrent un
+    point de reprise et s'arrêtent (doc LangGraph, « SIGTERM hook pattern »). Le gestionnaire d'uvicorn est chaîné, pas
+    remplacé : l'arrêt du serveur suit son cours."""
+    try:
+        precedent = signal.getsignal(signal.SIGTERM)
+
+        def gestionnaire(numero: int, cadre: FrameType | None) -> None:
+            demander_arret("sigterm")
+            if callable(precedent):
+                precedent(numero, cadre)
+
+        signal.signal(signal.SIGTERM, gestionnaire)
+    except ValueError:  # hors du fil principal (tests) : pas de signal à brancher
+        yield
+        return
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, precedent)
+
+
+def _ouvrir(config: Settings, injectee: FabriqueMemoire | None) -> AbstractAsyncContextManager[Memoire]:
+    if injectee is not None:
+        return injectee()
+    if config.database_url is None:
+        raise RuntimeError(
+            "IA_DATABASE_URL est obligatoire quand l'assistant IA est activé : sans base, les conversations et "
+            "les fichiers des utilisateurs seraient perdus à chaque redémarrage."
+        )
+    return ouvrir_memoire(config.database_url.get_secret_value(), config.conversation_jours)
 
 
 def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
@@ -123,6 +170,7 @@ def creer_app(
     fabrique: FabriqueAgent | None = None,
     acces: AccesErp | None = None,
     routage: Routage | None = None,
+    memoire: FabriqueMemoire | None = None,
 ) -> FastAPI:
     """Application IA autonome conservée pour les tests et la transition vers le conteneur unique."""
     config = settings or get_settings()
@@ -132,7 +180,7 @@ def creer_app(
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
-        lifespan=cycle_ia(config, fabrique, acces, routage),
+        lifespan=cycle_ia(config, fabrique, acces, routage, memoire),
     )
     app.include_router(routeur_ia(app, config))
 

@@ -26,6 +26,8 @@ from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import RunControl
+from langgraph.types import Durability
 
 from staport_ia.memoire import espace_conversation, sujet
 from staport_ia.outils import jeton_agent, outils_erp
@@ -33,6 +35,7 @@ from staport_ia.outils import jeton_agent, outils_erp
 journal = logging.getLogger(__name__)
 
 TAILLE_QUESTION = 2_000
+MESSAGE_REDEMARRAGE = "Le service redémarre : votre conversation est conservée, renvoyez votre message dans un instant."
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
@@ -42,6 +45,38 @@ FabriqueAgent = Callable[
 
 # Routage hors modèle : les compétences de domaine à épingler pour la question (``routage.py``, sans appel de modèle).
 Routage = Callable[[str, Sequence[BaseTool]], Awaitable[list[str]]]
+
+
+#: Durabilité des points de reprise (doc LangGraph, « Durability modes ») : ``sync`` écrit chaque point avant l'étape
+#: suivante, donc un run repris après un arrêt ou une panne repart de la dernière étape terminée (KAN-39).
+DURABILITE: Durability = "sync"
+
+#: Les runs en cours dans ce processus : à l'arrêt du service, chacun termine son étape puis s'arrête proprement.
+ARRETS_EN_COURS: set[RunControl] = set()
+
+
+def demander_arret(motif: str = "sigterm") -> int:
+    """Demande l'arrêt coopératif de tous les runs en cours (doc LangGraph, « Graceful shutdown ») : chaque run
+    termine son étape, enregistre un point de reprise et lève ``GraphDrained``. Rend le nombre de runs concernés."""
+    en_cours = list(ARRETS_EN_COURS)
+    for controle in en_cours:
+        controle.request_drain(motif)
+    return len(en_cours)
+
+
+class AgentAGUI(LangGraphAGUIAgent):
+    """``LangGraphAGUIAgent`` officiel, qui transmet à LangGraph la durabilité et le ``RunControl`` du run.
+
+    L'intégration ne les expose pas (elle appelle ``astream_events`` sans ``control`` ni ``durability``) : cette
+    sous-classe n'ajoute que ces deux arguments au point d'extension ``get_stream_kwargs``. Écart au 0 % de code maison
+    à retirer quand l'intégration les prendra en charge (registre des abstractions, KAN-39)."""
+
+    def __init__(self, *args: Any, controle: RunControl, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._controle = controle
+
+    def get_stream_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {**super().get_stream_kwargs(*args, **kwargs), "control": self._controle, "durability": DURABILITE}
 
 
 class _SansDetail(logging.Filter):
@@ -128,8 +163,11 @@ async def evenements(
     ``entree`` porte le fil propre à l'utilisateur ; les événements rendent au navigateur l'identifiant qu'il a
     envoyé (``thread_id``)."""
     demarre = False
+    controle = RunControl()
+    ARRETS_EN_COURS.add(controle)
     try:
-        officiel = LangGraphAGUIAgent(
+        officiel = AgentAGUI(
+            controle=controle,
             name="staport-intelligence",
             graph=fabrique(
                 outils, memoire or InMemorySaver(), utilisateur
@@ -149,10 +187,19 @@ async def evenements(
                 evenement = evenement.model_copy(update={"thread_id": thread_id})
             yield evenement.model_copy(update={"raw_event": None}) if evenement.raw_event is not None else evenement
     except Exception as panne:  # le détail reste côté serveur, sans contenu RH
-        journal.warning("Run %s en échec : %s", entree.run_id, type(panne).__name__)
+        arret = controle.drain_requested
+        if arret:
+            journal.info("Run %s arrêté proprement (%s), reprise possible", entree.run_id, controle.drain_reason)
+        else:
+            journal.warning("Run %s en échec : %s", entree.run_id, type(panne).__name__)
         if not demarre:
             yield RunStartedEvent(thread_id=entree.thread_id, run_id=entree.run_id)
-        yield RunErrorEvent(message=ERREUR_PUBLIQUE, code="AGENT_INDISPONIBLE")
+        yield RunErrorEvent(
+            message=MESSAGE_REDEMARRAGE if arret else ERREUR_PUBLIQUE,
+            code="SERVICE_REDEMARRE" if arret else "AGENT_INDISPONIBLE",
+        )
+    finally:
+        ARRETS_EN_COURS.discard(controle)
 
 
 class AccesHttp:
