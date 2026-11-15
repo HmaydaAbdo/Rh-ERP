@@ -1,8 +1,9 @@
-# Contrôles locaux avant la CI (KAN-209). Outil : pre-commit (https://pre-commit.com), installé par le groupe `dev` de `ia/`.
-# Les mêmes commandes tournent en CI ; ici elles évitent une exécution perdue pour une ligne trop longue ou un type faux.
-#   installation : uv run --project ia pre-commit install --hook-type pre-commit --hook-type pre-push
-#   tout lancer  : uv run --project ia pre-commit run --all-files --hook-stage pre-push
-default_install_hook_types: [pre-commit, pre-push]
+# Contrôles locaux à chaque commit (KAN-209), rapides : ruff et faits documentation/code. Outil : pre-commit
+# (https://pre-commit.com), installé par le groupe `dev` de `ia/`. Aucun contrôle au push (décision du propriétaire,
+# 2026-11-15) : pyright, pytest et eslint tournent en CI, et l'Auto-fix de l'application corrige les échecs de la PR.
+#   installation : uv run --project ia pre-commit install --hook-type pre-commit
+#   tout lancer  : uv run --project ia pre-commit run --all-files
+default_install_hook_types: [pre-commit]
 repos:
   - repo: local
     hooks:
@@ -30,31 +31,3 @@ repos:
         entry: node scripts/check-docs-domaines.mjs .
         files: ^(site/docs/domaines/|conventions/|scripts/check-docs-domaines\.mjs|api/src/staport/domains/)
         pass_filenames: false
-      - id: ia-pyright
-        name: ia · pyright
-        language: system
-        entry: uv run --project ia sh -c "cd ia && pyright"
-        files: ^ia/.*\.py$
-        pass_filenames: false
-        stages: [pre-push]
-      - id: api-pyright-pytest
-        name: api · pyright et pytest
-        language: system
-        entry: uv run --project api sh -c "cd api && pyright && pytest -q"
-        files: ^api/
-        pass_filenames: false
-        stages: [pre-push]
-      - id: ia-pytest
-        name: ia · pytest
-        language: system
-        entry: uv run --project ia sh -c "cd ia && pytest -q"
-        files: ^ia/
-        pass_filenames: false
-        stages: [pre-push]
-      - id: frontend-lint
-        name: frontend · eslint
-        language: system
-        entry: npm --prefix frontend run lint
-        files: ^frontend/src/
-        pass_filenames: false
-        stages: [pre-push]
