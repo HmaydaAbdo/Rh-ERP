@@ -85,7 +85,14 @@ async def test_les_outils_exposes_au_modele_sont_exactement_ceux_du_harnais_rete
 
     await _repondre(faux, "Bonjour")
 
-    assert set(faux.outils_lies[-1]) == {"write_todos", "read_file", "write_file", "edit_file", "paie_indicateurs"}
+    assert set(faux.outils_lies[-1]) == {
+        "write_todos",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "poser_question",
+        "paie_indicateurs",
+    }
     interdits = {"delete", "ls", "glob", "grep", "execute", "task"}
     assert interdits.isdisjoint(faux.outils_lies[-1])
 

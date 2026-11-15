@@ -174,22 +174,45 @@ def test_une_question_absente_vide_ou_trop_longue_est_refusee(question: str | No
     assert _poster(_masse(), AccesSimule([]), _corps(question)).status_code == 422
 
 
-def test_la_reponse_de_l_utilisateur_a_une_question_de_l_agent_reprend_le_run() -> None:
-    """Après ``poser_question`` (outil du navigateur), le run reprend avec le résultat de l'outil en dernier message."""
+def test_un_message_d_outil_n_est_plus_une_question_valide() -> None:
+    """KAN-264 : la réponse à l'agent passe par la reprise d'interruption ; un résultat d'outil envoyé par le navigateur
+    n'est pas accepté comme dernier message."""
     corps = _corps()
     corps["messages"] = [
         {"id": "m1", "role": "user", "content": QUESTION},
-        {
-            "id": "a1",
-            "role": "assistant",
-            "toolCalls": [{"id": "c1", "type": "function", "function": {"name": "poser_question", "arguments": "{}"}}],
-        },
         {"id": "t1", "role": "tool", "toolCallId": "c1", "content": "Par masse salariale"},
     ]
 
-    assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 200
-    corps["messages"][-1]["content"] = "x" * 2001
     assert _poster(modele(AIMessage(content=REPONSE)), AccesSimule([]), corps).status_code == 422
+
+
+def test_la_question_de_l_agent_s_interrompt_dans_le_flux_puis_reprend_avec_la_reponse() -> None:
+    """KAN-264 de bout en bout par /agui : ``poser_question`` interrompt, la réponse arrive par la reprise."""
+    faux = modele(
+        appel(
+            "poser_question",
+            question="Quel classement ?",
+            options=[{"label": "Masse salariale"}, {"label": "Effectif"}],
+        ),
+        AIMessage(content="Classement par masse salariale."),
+    )
+    entetes = {"Accept": "text/event-stream", "Authorization": "Bearer c"}
+    with _app_ecrivain(faux, store_avec_competences(), AccesSimule([])) as client:
+        pause = _lire(client.post("/agui", json=_corps("Classe les services"), headers=entetes).text)
+        interruptions = [e for e in pause if e["type"] == "CUSTOM" and e["name"] == "on_interrupt"]
+        assert interruptions, [e["type"] for e in pause]
+        valeur = json.loads(interruptions[0]["value"])
+        assert valeur["type"] == "question"
+        assert [o["label"] for o in valeur["options"]] == ["Masse salariale", "Effectif"]
+
+        reprise = _corps("Classe les services")
+        reprise["forwardedProps"] = {"command": {"resume": "Masse salariale"}}
+        fin = _lire(client.post("/agui", json=reprise, headers=entetes).text)
+
+    assert fin[-1]["type"] == EventType.RUN_FINISHED and EventType.RUN_ERROR not in [e["type"] for e in fin]
+    messages = next(e for e in reversed(fin) if e["type"] == "MESSAGES_SNAPSHOT")["messages"]
+    assert next(m for m in messages if m["role"] == "tool")["content"] == "Masse salariale"
+    assert "".join(e["delta"] for e in fin if e["type"] == "TEXT_MESSAGE_CONTENT") == "Classement par masse salariale."
 
 
 def test_une_panne_d_outil_est_expliquee_par_le_modele_sans_detail_interne() -> None:

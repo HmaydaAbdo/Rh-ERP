@@ -15,20 +15,40 @@ interface ActionBrute {
   args?: Record<string, unknown>;
 }
 
+/** Question posée par l'agent (`poser_question`, interruption de type `question`). */
+export interface QuestionAgent {
+  question: string;
+  options: { label: string; description?: string }[];
+  multiple?: boolean;
+}
+
+function charge(valeur: unknown): unknown {
+  if (typeof valeur !== 'string') {
+    return valeur;
+  }
+  try {
+    return JSON.parse(valeur);
+  } catch {
+    return undefined;
+  }
+}
+
+/** La question portée par l'interruption, ou `null` si la valeur est autre chose (accord d'écriture, valeur illisible). */
+export function lireQuestion(valeur: unknown): QuestionAgent | null {
+  const brut = charge(valeur) as Partial<QuestionAgent> & { type?: unknown } | null | undefined;
+  if (brut?.type !== 'question' || typeof brut.question !== 'string' || !Array.isArray(brut.options)) {
+    return null;
+  }
+  const options = brut.options.filter((o) => typeof o?.label === 'string');
+  return options.length > 0 ? { question: brut.question, options, multiple: brut.multiple === true } : null;
+}
+
 /**
  * Les demandes d'écriture portées par l'interruption du service IA (`action_requests` du `HumanInTheLoopMiddleware`).
  * La valeur arrive en texte JSON par l'événement d'interruption AG-UI ; tout ce qui n'est pas une demande est ignoré.
  */
 export function lireDemandes(valeur: unknown): DemandeEcriture[] {
-  let charge: unknown = valeur;
-  if (typeof charge === 'string') {
-    try {
-      charge = JSON.parse(charge);
-    } catch {
-      return [];
-    }
-  }
-  const actions = (charge as { action_requests?: unknown } | null)?.action_requests;
+  const actions = (charge(valeur) as { action_requests?: unknown } | null | undefined)?.action_requests;
   if (!Array.isArray(actions)) {
     return [];
   }

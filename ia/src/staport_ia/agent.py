@@ -56,6 +56,7 @@ from staport_ia.competences import (
 from staport_ia.contexte import ContexteErp
 from staport_ia.fichiers import QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
+from staport_ia.question import poser_question
 from staport_ia.surfaces import SurfacesResultats
 
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
@@ -140,7 +141,7 @@ Règles impératives :
    valeurs des outils.
 9. Les montants sont en dirhams (MAD).
 10. Si la demande est ambiguë et que le choix change le résultat (période, périmètre, critère de classement, sens
-    d'un mot), et que l'outil `poser_question` est disponible, pose une question à l'utilisateur avec 2 à 5 options
+    d'un mot), pose une question avec l'outil `poser_question` à l'utilisateur avec 2 à 5 options
     plutôt que de deviner, puis poursuis avec sa réponse. Une seule question à la fois ; jamais pour une valeur que
     les outils donnent, ni pour une salutation.
 11. Utilise les filtres, critères de tri et la pagination documentés par l'outil. Pour un classement, demande les
@@ -332,7 +333,7 @@ def creer_agent(
     intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
     return create_deep_agent(
         model=modele,
-        tools=[outil for outil in outils if outil.name in OUTILS_PERMANENTS],
+        tools=[*(outil for outil in outils if outil.name in OUTILS_PERMANENTS), poser_question],
         system_prompt=SYSTEME,
         middleware=[*intergiciels, _capacites_dynamiques(outils), garde_sortie(o.name for o in outils)],
         backend=backend,
