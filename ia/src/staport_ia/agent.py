@@ -28,11 +28,9 @@ from deepagents.backends import CompositeBackend, StoreBackend
 from deepagents.middleware import FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
-    ModelCallLimitMiddleware,
     ModelFallbackMiddleware,
     SummarizationMiddleware,
     TodoListMiddleware,
-    ToolCallLimitMiddleware,
     ToolCallRequest,
     ToolErrorMiddleware,
     ToolRetryMiddleware,
@@ -295,8 +293,6 @@ def creer_agent(
     checkpointer: BaseCheckpointSaver[Any] | None = None,
     utilisateur: str = "anonyme",
     store: BaseStore | None = None,
-    appels_modele: int = 8,
-    appels_outils: int = 8,
     repli: Sequence[BaseChatModel] = (),
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
@@ -311,8 +307,6 @@ def creer_agent(
         SurfacesResultats(),
         ContexteErp(outils),
         TodoListMiddleware(),
-        ModelCallLimitMiddleware(run_limit=appels_modele, exit_behavior="end"),
-        ToolCallLimitMiddleware(run_limit=appels_outils),
         # Tolérance aux pannes d'outil (middlewares officiels) : reprise des coupures transitoires seulement
         # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).
         ToolErrorMiddleware(on_error=_erreur_outil),

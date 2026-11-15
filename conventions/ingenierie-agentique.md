@@ -50,7 +50,7 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 |---|---|---|
 | Boucle d'agent, outils, compétences, sous-agents | Deep Agents `create_deep_agent`, `SkillsMiddleware`, `pinned_skills` | texte du prompt système (configuration) |
 | Choix des outils visibles par tour | `SkillsMiddleware` avec résolveur lié à l'identité ; repli par lecture du `SKILL.md` | `routage.py` (embeddings MiniLM, déclaré) : à remplacer si un point d'extension officiel équivalent apparaît |
-| Limites et pannes de la boucle | `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware`, `ToolRetryMiddleware`, `ToolErrorMiddleware` | aucune |
+| Limites et pannes de la boucle | `ToolRetryMiddleware`, `ToolErrorMiddleware` (aucun plafond d'appels par run, décision du 2026-10-31) | aucune |
 | Contrôle de la réponse finale | middleware `after_agent` (guardrails LangChain) | motifs de `garde_sortie.py` (règle métier de sécurité) |
 | Interface composée à partir des résultats | A2UI et `CopilotKitMiddleware` | `surfaces.py` (middleware `wrap_tool_call`, motif officiel) : à vérifier contre la version courante de CopilotKit |
 | Conversations durables | `AsyncPostgresSaver` (LangGraph) | raccordement dans `memoire.py` |
@@ -97,8 +97,8 @@ le harnais (Deep Agents). Pour Staport Intelligence :
   l'inverse de l'objectif de 0 %.
 * **Délais, reprises et pannes : middlewares officiels.** Deep Agents ne laisse pas passer `retry_policy`,
   `TimeoutPolicy` ni `set_node_defaults` (réglages par nœud d'un `StateGraph` écrit à la main). On utilise les
-  équivalents officiels de `create_agent` : `ToolRetryMiddleware`, `ModelFallbackMiddleware`, `ModelCallLimitMiddleware`,
-  `ToolCallLimitMiddleware` (en place, `ia/src/staport_ia/agent.py`). Ce n'est pas du code maison.
+  équivalents officiels de `create_agent` : `ToolRetryMiddleware`, `ModelFallbackMiddleware` (en place, `ia/src/staport_ia/agent.py`) ; aucun plafond d'appels
+  par run (décision du propriétaire du 2026-10-31, KAN-40). Ce n'est pas du code maison.
 * **Sortir du graphe Deep Agents seulement pour un besoin précis** : un flux déterministe en plusieurs étapes (par exemple
   un import de paie guidé), pas des questions libres. Ce n'est pas le cas aujourd'hui ; si cela le devient, la décision
   passe par le propriétaire (option : un graphe LangGraph à côté, l'agent restant Deep Agents pour le reste).
