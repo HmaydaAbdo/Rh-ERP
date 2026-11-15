@@ -57,7 +57,7 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | Élément officiel | État | Tâche |
 |---|---|---|
 | `TodoListMiddleware` | ✅ en place | — |
-| `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ✅ en place | — |
+| `ModelCallLimitMiddleware`, `ToolCallLimitMiddleware` | ❌ retirés (KAN-40) : décision du propriétaire, aucun plafond appliqué par nous | — |
 | `SummarizationMiddleware` | ✅ en place (40 000 jetons, résumé interne) | — |
 | `LLMToolSelectorMiddleware` | ✅ adopté et testé ; **retiré du chemin systématique le 2026-11-03** (il ajoute un appel de modèle) : le routage de base est l'épinglage de compétences hors modèle (T32) ; réactivable en second étage après évaluation chiffrée | T32 |
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
@@ -248,7 +248,7 @@ Source : doc LangGraph « Fault tolerance » (retries, timeouts, error handling,
   `TimeoutPolicy` et `error_handler` se règlent sur les nœuds ou par `set_node_defaults` d'un `StateGraph` que nous
   construisons ; le graphe de l'agent est construit par Deep Agents et `create_agent`, qui ne les exposent pas. Les mêmes
   protections existent au niveau du modèle et des outils, avec les composants officiels : `ModelFallbackMiddleware`
-  (KAN-35), plafonds d'appels (KAN-33), erreurs d'outil rendues au modèle sans détail (KAN-32), délai du modèle porté par
+  (KAN-35), reprises bornées par appel d'outil (KAN-33), erreurs d'outil rendues au modèle sans détail (KAN-32), délai du modèle porté par
   LiteLLM.
 - **Preuve** (PostgreSQL réel, `ia/tests/test_memoire.py`) : un run arrêté pendant l'étape des outils, un « redémarrage »
   (nouvelle connexion, nouvel agent), une reprise avec le même fil jusqu'à la réponse, sans rejouer l'étape terminée.

@@ -237,14 +237,17 @@ def test_une_panne_d_outil_est_expliquee_par_le_modele_sans_detail_interne() -> 
     assert "AB123456" not in reponse.text
 
 
-def test_un_appel_sans_question_preparee_reste_borne() -> None:
-    """Le plafond officiel d'appels de modèle termine un run qui boucle sur les outils."""
-    boucle = modele(*[appel("paie_indicateurs", identifiant=f"a{i}") for i in range(20)])
+def test_un_run_n_est_pas_tronque_par_un_plafond_d_appels() -> None:
+    """KAN-40, décision du propriétaire : aucun plafond appliqué par nous. Douze appels d'outils d'affilée (au-delà de
+    l'ancien plafond de 8) aboutissent à la réponse ; seule la limite de récursion de LangGraph borne un run."""
+    suite = [appel("paie_indicateurs", identifiant=f"a{i}") for i in range(12)]
+    boucle = modele(*suite, AIMessage(content=REPONSE))
 
     recus = _lire(_poster(boucle, AccesSimule([outil("paie_indicateurs", INDICATEURS)]), _corps()).text)
 
-    assert recus[-1]["type"] == EventType.RUN_FINISHED
-    assert sum(e["type"] == "TOOL_CALL_START" for e in recus) <= 8
+    assert recus[-1]["type"] == EventType.RUN_FINISHED and EventType.RUN_ERROR not in [e["type"] for e in recus]
+    assert sum(e["type"] == "TOOL_CALL_START" for e in recus) == 12
+    assert "".join(e["delta"] for e in recus if e["type"] == "TEXT_MESSAGE_CONTENT") == REPONSE
 
 
 def _app_ecrivain(faux: ModeleScripte, store: InMemoryStore, acces: AccesSimule) -> TestClient:

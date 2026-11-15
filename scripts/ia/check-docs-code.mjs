@@ -41,8 +41,6 @@ const agent = lire('ia/src/staport_ia/agent.py');
 const seuils = {
   resume_jetons: Number(agent.match(/^SEUIL_RESUME_JETONS = ([\d_]+)/m)?.[1].replaceAll('_', '')),
   resume_messages: Number(agent.match(/keep=\("messages", (\d+)\)/)?.[1]),
-  appels_modele: Number(agent.match(/appels_modele: int = (\d+)/)?.[1]),
-  appels_outils: Number(agent.match(/appels_outils: int = (\d+)/)?.[1]),
   outils_mcp: outilsMcp,
 };
 
