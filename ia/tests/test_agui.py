@@ -18,7 +18,7 @@ from staport_ia.agui import FabriqueAgent, demander_arret
 from staport_ia.app import creer_app
 from staport_ia.config import Settings
 from staport_ia.fichiers import FICHIERS_MAX, TAILLE_MAX_FICHIER
-from staport_ia.memoire import sujet
+from staport_ia.memoire import espace_conversation, sujet
 from staport_ia.outils import EchangeRefuse
 
 QUESTION = "Masse salariale de 2026-09 ?"
@@ -367,3 +367,34 @@ def test_un_arret_du_service_termine_l_etape_puis_la_conversation_reprend() -> N
     assert erreur["code"] == "SERVICE_REDEMARRE" and "AB123456" not in json.dumps(arret)
     assert reprise[-1]["type"] == EventType.RUN_FINISHED and EventType.RUN_ERROR not in [e["type"] for e in reprise]
     assert "".join(e["delta"] for e in reprise if e["type"] == "TEXT_MESSAGE_CONTENT") == REPONSE
+
+
+def _fil_existe(app: Any, thread_id: str, jeton_agent: str = "jeton-agent") -> bool:
+    config = {"configurable": {"thread_id": espace_conversation(sujet(jeton_agent), thread_id)}}
+    return app.state.memoire.get_tuple(config) is not None
+
+
+def test_la_suppression_efface_la_memoire_de_la_conversation_de_l_utilisateur() -> None:
+    acces = AccesSimule([outil("paie_indicateurs", INDICATEURS)])
+    app = creer_app(
+        _settings(), fabrique=_fabrique(_masse()), acces=acces, routage=_routage_paie, memoire=memoire_processus
+    )
+    with TestClient(app) as client:
+        entetes = {"Accept": "text/event-stream", "Authorization": "Bearer c"}
+        assert client.post("/agui", json=_corps(), headers=entetes).status_code == 200
+        assert _fil_existe(app, "t1")
+
+        # Une autre conversation du même utilisateur n'est pas touchée.
+        assert client.delete("/conversations/autre", headers={"Authorization": "Bearer c"}).status_code == 204
+        assert _fil_existe(app, "t1")
+
+        assert client.delete("/conversations/t1", headers={"Authorization": "Bearer c"}).status_code == 204
+        assert not _fil_existe(app, "t1")
+
+
+def test_la_suppression_exige_une_connexion_valide() -> None:
+    acces = AccesSimule([], refus="invalid_grant")
+    app = creer_app(_settings(), fabrique=_fabrique(_masse()), acces=acces, memoire=memoire_processus)
+    with TestClient(app) as client:
+        assert client.delete("/conversations/t1").status_code == 401
+        assert client.delete("/conversations/t1", headers={"Authorization": "Bearer expire"}).status_code == 401

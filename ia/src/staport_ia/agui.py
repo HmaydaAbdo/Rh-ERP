@@ -21,7 +21,7 @@ from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunSt
 from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -299,6 +299,21 @@ def routeur_agui(
             # Pas de mise en tampon par un proxy (nginx) : chaque événement part à son émission.
             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
+
+    @routeur.delete("/conversations/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def supprimer(thread_id: str, requete: Request) -> Response:  # pyright: ignore[reportUnusedFunction]
+        """Efface la mémoire de la conversation de l'utilisateur connecté (KAN-81) : jamais celle d'un autre, puisque
+        le fil est préfixé par l'identité portée par son jeton ; appelée par le runtime avant de retirer la ligne."""
+        if not actif():
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA désactivé.")
+        autorisation = requete.headers.get("authorization", "")
+        if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
+        jeton = await _jeton(acces(), autorisation[7:].strip())
+        saver = memoire() if memoire else None
+        if saver is not None:
+            await saver.adelete_thread(espace_conversation(sujet(jeton), thread_id))
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return routeur
 
