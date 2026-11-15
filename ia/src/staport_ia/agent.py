@@ -54,10 +54,10 @@ from staport_ia.surfaces import SurfacesResultats
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
 #: des appels de modèle, donc de la latence et des quotas ; les sous-agents par domaine viendront avec leur jeu de
 #: référence.
-#: Le modèle ne voit du système de fichiers que ``read_file`` (lecture des ``SKILL.md``) : les autres outils du harnais
-#: sont masqués par le profil officiel (``excluded_tools``, KAN-258), sans middleware à nous. L'ouverture de
-#: l'écriture sous ``/espace/`` (KAN-267) retirera ``write_file`` et ``edit_file`` de cette liste.
-OUTILS_FICHIERS_MASQUES = frozenset({"ls", "write_file", "edit_file", "delete", "glob", "grep", "execute"})
+#: Le modèle ne voit du système de fichiers que la lecture (``SKILL.md``) et l'écriture dans son espace : les autres
+#: outils du harnais sont masqués par le profil officiel (``excluded_tools``, KAN-258). ``write_file`` et ``edit_file``
+#: sont visibles depuis KAN-267, mais les permissions ci-dessous ne laissent écrire que sous ``/espace/``, avec accord.
+OUTILS_FICHIERS_MASQUES = frozenset({"ls", "delete", "glob", "grep", "execute"})
 PROFIL_HARNAIS = HarnessProfile(
     general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
     excluded_tools=OUTILS_FICHIERS_MASQUES,
@@ -65,11 +65,14 @@ PROFIL_HARNAIS = HarnessProfile(
 #: Le fournisseur des modèles de l'ERP (``ChatLiteLLM``) ; les tests enregistrent celui de leur faux modèle.
 register_harness_profile("litellm", PROFIL_HARNAIS)
 
-#: Permissions documentées du système de fichiers de Deep Agents : aujourd'hui rien ne s'écrit, les compétences sont en
-#: lecture seule. Le modèle ne dispose déjà que de ``read_file`` ; ce refus d'écriture tient même si un outil
-#: d'écriture était lié par erreur. L'épopée d'écriture (site/docs/ia) l'ouvrira domaine par domaine, uniquement sous
-#: ``/espace/``, qui est propre à l'identité de l'utilisateur (``backend_par_identite``).
-PERMISSIONS_FICHIERS = [FilesystemPermission(operations=["write"], paths=["/**"], mode="deny")]
+#: Permissions documentées du système de fichiers de Deep Agents, évaluées dans l'ordre (la première qui correspond
+#: l'emporte) : une écriture dans l'espace de l'utilisateur (``/espace/``, propre à son identité,
+#: ``backend_par_identite``) attend l'accord de l'utilisateur (interruption LangGraph, ``HumanInTheLoopMiddleware``,
+#: KAN-260) ; toute autre écriture, dont celle des compétences, est refusée. La lecture reste libre.
+PERMISSIONS_FICHIERS = [
+    FilesystemPermission(operations=["write"], paths=["/espace/**"], mode="interrupt"),
+    FilesystemPermission(operations=["write"], paths=["/**"], mode="deny"),
+]
 
 ESPACE = "/espace/"
 

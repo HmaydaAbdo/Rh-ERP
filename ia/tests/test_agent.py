@@ -11,6 +11,9 @@ import pytest
 from doubles import INDICATEURS, ModeleScripte, appel, modele, outil
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGenerationChunk
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
+from langgraph.types import Command
 
 from staport_ia.agent import SYSTEME, _parametres_a2ui, creer_agent  # pyright: ignore[reportPrivateUsage]
 from staport_ia.surfaces import OUTIL_A2UI
@@ -75,14 +78,15 @@ async def test_le_plan_et_les_outils_metier_sont_proposes_au_modele() -> None:
 
 
 async def test_les_outils_exposes_au_modele_sont_exactement_ceux_du_harnais_retenu_et_de_la_competence() -> None:
-    """KAN-31 (a) : liste mesurée des outils liés au modèle. Le harnais n'ajoute que le plan (``write_todos``) et la
-    lecture des compétences (``read_file``) ; ni écriture, ni recherche, ni commande, ni sous-agent (``task``)."""
+    """KAN-31 (a) : liste mesurée des outils liés au modèle. Le harnais n'ajoute que le plan (``write_todos``), la
+    lecture des compétences (``read_file``) et l'écriture dans l'espace (``write_file``, ``edit_file``, avec accord) ;
+    ni suppression, ni recherche, ni commande, ni sous-agent (``task``)."""
     faux = modele(AIMessage(content="Bonjour."))
 
     await _repondre(faux, "Bonjour")
 
-    assert set(faux.outils_lies[-1]) == {"write_todos", "read_file", "paie_indicateurs"}
-    interdits = {"write_file", "edit_file", "ls", "glob", "grep", "execute", "task"}
+    assert set(faux.outils_lies[-1]) == {"write_todos", "read_file", "write_file", "edit_file", "paie_indicateurs"}
+    interdits = {"delete", "ls", "glob", "grep", "execute", "task"}
     assert interdits.isdisjoint(faux.outils_lies[-1])
 
 
@@ -260,3 +264,64 @@ def test_le_guide_du_sous_agent_donne_les_valeurs_admises_des_proprietes_imbriqu
 def test_le_guide_du_sous_agent_propose_la_frise_chronologique() -> None:
     guide: str = _parametres_a2ui()["guidelines"]["composition_guide"]
     assert "- Timeline" in guide
+
+
+def _agent_ecrivain(utilisateur: str, store: InMemoryStore, chemin: str) -> Any:
+    """Un agent dont le modèle écrit ``chemin`` ; le checkpointer permet la pause puis la reprise."""
+    faux = modele(
+        appel("write_file", file_path=chemin, content="Masse de septembre : 1 250 000,50 MAD."),
+        AIMessage(content="Fichier traité."),
+    )
+    return creer_agent(
+        faux,  # pyright: ignore[reportArgumentType]
+        [outil("paie_indicateurs", INDICATEURS)],  # pyright: ignore[reportArgumentType]
+        checkpointer=InMemorySaver(),
+        utilisateur=utilisateur,
+        store=store,
+    )
+
+
+_DEMANDE: Any = {"messages": [HumanMessage(content="Écris le rapport.")], "pinned_skills": ["paie"]}
+_FIL: Any = {"configurable": {"thread_id": "t1"}}
+
+
+async def test_une_ecriture_dans_l_espace_attend_l_accord_puis_s_effectue_apres_approbation() -> None:
+    """KAN-260 / KAN-267 : l'écriture sous /espace/ est interrompue ; rien n'est écrit avant l'accord."""
+    store = InMemoryStore()
+    chemin = "/espace/rapport.md"
+    agent = _agent_ecrivain("rh", store, chemin)
+
+    en_pause = await agent.ainvoke(_DEMANDE, _FIL)
+
+    assert en_pause["__interrupt__"]
+    assert await store.aget(("rh", "espace"), "/rapport.md") is None  # rien d'écrit avant l'accord
+
+    fini = await agent.ainvoke(Command(resume={"decisions": [{"type": "approve"}]}), _FIL)
+
+    assert fini["messages"][-1].content == "Fichier traité."
+    # Le routage retire le préfixe /espace/ : la clé du Store est le chemin dans l'espace de l'utilisateur.
+    ecrit = await store.aget(("rh", "espace"), "/rapport.md")
+    assert ecrit is not None and "1 250 000,50" in str(ecrit.value)
+    assert await store.aget(("comptable", "espace"), "/rapport.md") is None  # privé à l'identité
+
+
+async def test_un_refus_de_l_utilisateur_n_ecrit_rien() -> None:
+    store = InMemoryStore()
+    agent = _agent_ecrivain("rh", store, "/espace/rapport.md")
+    await agent.ainvoke(_DEMANDE, _FIL)
+
+    resultat = await agent.ainvoke(Command(resume={"decisions": [{"type": "reject", "message": "Non."}]}), _FIL)
+
+    assert resultat["messages"][-1].content == "Fichier traité."
+    assert await store.aget(("rh", "espace"), "/rapport.md") is None
+
+
+async def test_une_ecriture_hors_de_l_espace_est_refusee_sans_demander_l_accord() -> None:
+    store = InMemoryStore()
+    agent = _agent_ecrivain("rh", store, "/paie/SKILL.md")
+
+    etat = await agent.ainvoke(_DEMANDE, _FIL)
+
+    assert "__interrupt__" not in etat  # refus direct : aucune question posée
+    retour = next(m for m in etat["messages"] if m.type == "tool")
+    assert retour.status == "error" and "permission" in retour.content.lower()

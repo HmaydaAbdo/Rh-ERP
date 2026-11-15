@@ -27,8 +27,9 @@ EVALUATION = Path(__file__).resolve().parents[1] / "evaluation"
 SEUIL_COUVERTURE = 0.95
 #: Outils du harnais que le modèle doit garder : la lecture des SKILL.md et le plan.
 OUTILS_HARNAIS = {"read_file", "write_todos"}
-#: Outils du harnais Deep Agents qui ne doivent jamais être liés au modèle de l'ERP.
-OUTILS_INTERDITS = {"write_file", "edit_file", "delete", "ls", "glob", "grep", "execute", "task"}
+#: Outils du harnais Deep Agents qui ne doivent jamais être liés au modèle de l'ERP. ``write_file`` et ``edit_file``
+#: sont permis depuis KAN-267, mais seulement sous /espace/ et avec l'accord de l'utilisateur (test_agent.py).
+OUTILS_INTERDITS = {"delete", "ls", "glob", "grep", "execute", "task"}
 
 
 def _catalogue() -> list[dict[str, str]]:
