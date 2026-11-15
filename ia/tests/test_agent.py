@@ -71,6 +71,18 @@ async def test_le_plan_et_les_outils_metier_sont_proposes_au_modele() -> None:
     assert {"write_todos", "paie_indicateurs"} <= set(faux.outils_lies[-1])
 
 
+async def test_les_outils_exposes_au_modele_sont_exactement_ceux_du_harnais_retenu_et_de_la_competence() -> None:
+    """KAN-31 (a) : liste mesurée des outils liés au modèle. Le harnais n'ajoute que le plan (``write_todos``) et la
+    lecture des compétences (``read_file``) ; ni écriture, ni recherche, ni commande, ni sous-agent (``task``)."""
+    faux = modele(AIMessage(content="Bonjour."))
+
+    await _repondre(faux, "Bonjour")
+
+    assert set(faux.outils_lies[-1]) == {"write_todos", "read_file", "paie_indicateurs"}
+    interdits = {"write_file", "edit_file", "ls", "glob", "grep", "execute", "task"}
+    assert interdits.isdisjoint(faux.outils_lies[-1])
+
+
 async def test_la_surface_a2ui_composee_par_le_modele_ne_change_pas_la_reponse() -> None:
     faux = modele(appel("paie_indicateurs"), appel(OUTIL_A2UI), AIMessage(content="Voici la masse de 2026-09."))
 
@@ -137,6 +149,46 @@ async def test_un_refus_n_est_pas_rejoue_et_le_modele_voit_une_erreur_sans_le_me
     assert "PermissionError" in retour.content
     assert "secret-interne" not in retour.content
     assert resultat["messages"][-1].content == "Je n'ai pas pu consulter la paie."
+
+
+def _statut(code: int) -> httpx.HTTPStatusError:
+    requete = httpx.Request("GET", "http://erp/api/paie")
+    return httpx.HTTPStatusError("secret-interne", request=requete, response=httpx.Response(code, request=requete))
+
+
+#: Matrice des erreurs d'outil (site/docs/ia/registre-code-maison-et-middlewares.md) : erreur levée par l'outil,
+#: nombre d'exécutions attendu (1 + reprises) et nom du type d'erreur que voit le modèle.
+MATRICE_ERREURS: list[tuple[str, Exception, int, str]] = [
+    ("erreur métier (400)", ValueError("secret-interne"), 1, "ValueError"),
+    ("refus (403)", _statut(403), 1, "HTTPStatusError"),
+    ("panne serveur (500)", _statut(500), 1, "HTTPStatusError"),
+    ("délai dépassé", TimeoutError("secret-interne"), 3, "TimeoutError"),
+    ("réseau coupé", httpx.ConnectError("secret-interne"), 3, "ConnectError"),
+]
+
+
+async def test_la_matrice_des_erreurs_d_outil_est_appliquee_et_le_run_continue() -> None:
+    """KAN-32 : seule une coupure transitoire est rejouée (deux reprises) ; dans tous les cas le modèle voit le type de
+    l'erreur sans son message, et le run se poursuit jusqu'à la réponse du modèle."""
+    for cas, erreur, executions, type_vu in MATRICE_ERREURS:
+        essais: list[int] = []
+
+        def indicateurs(erreur: Exception = erreur, essais: list[int] = essais, **_: Any) -> dict[str, Any]:
+            essais.append(1)
+            raise erreur
+
+        faux = modele(appel("paie_indicateurs", periode="2026-09"), AIMessage(content="Information indisponible."))
+        agent = creer_agent(faux, [outil("paie_indicateurs", indicateurs)])  # pyright: ignore[reportArgumentType]
+        resultat = await agent.ainvoke(
+            {"messages": [HumanMessage(content="Masse de septembre ?")], "pinned_skills": ["paie"]}
+        )
+
+        retour = next(m for m in resultat["messages"] if m.type == "tool")
+        assert len(essais) == executions, cas
+        assert retour.status == "error", cas
+        assert type_vu in retour.content, cas
+        assert "secret-interne" not in retour.content, cas
+        assert resultat["messages"][-1].content == "Information indisponible.", cas
 
 
 def test_le_guide_du_sous_agent_donne_les_valeurs_admises_des_proprietes_imbriquees() -> None:
