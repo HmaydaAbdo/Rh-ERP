@@ -15,6 +15,10 @@ d'arrêt ; les routes de fils, mémoires, inspecteur et transcription restent fe
 et la permission `IA_UTILISER` ; un fil n'est lancé, repris ni arrêté que par son propriétaire (un autre utilisateur reçoit 404 et ne rejoue rien). Les suggestions portent des identifiants temporaires : l'authentification est obligatoire,
 mais le contrôle de propriété des fils persistants ne s'applique pas à cette route sans état.
 
+## Conversations (KAN-81)
+
+`/copilotkit/conversations` (GET liste, PATCH `{ "title" }` renommer, DELETE supprimer) est servi par `src/conversations.mjs`, avec la même authentification que le reste du runtime. Chaque run réussi crée ou date la ligne de la conversation dans la table `assistant_conversations` (titre : début de la première question) ; la table ne sert qu'à l'affichage, l'accès aux fils reste celui du runner officiel. La suppression appelle d'abord `DELETE /conversations/{id}` du service IA (mémoire LangGraph) : en cas d'échec, 502 et rien n'est supprimé.
+
 ## Exploitation
 
 - Service Compose `copilot-runtime`, démarré par `docker compose up -d` après le service `ia` ; réseaux

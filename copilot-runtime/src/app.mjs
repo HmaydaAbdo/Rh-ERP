@@ -13,6 +13,7 @@ import { CopilotRuntime } from '@copilotkit/runtime/v2';
 import { SqliteAgentRunner } from '@copilotkit/sqlite-runner';
 import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
+import { creerConversations } from './conversations.mjs';
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, transcription, débogage) répondent 404. */
 const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop']);
@@ -57,8 +58,13 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
     ...(runner ? { runner } : {})
   });
 
+  const conversations = runner ? creerConversations(runner.db, { urlAgent, authentifier: (autorisation) => authentifier(autorisation, urlApi), journal }) : undefined;
   const app = express();
   app.get('/health', (_requete, reponse) => reponse.type('text/plain').send('ok'));
+  // Liste, renommage et suppression des conversations (KAN-81) : routes propres à nous, avant le gestionnaire officiel.
+  if (conversations) {
+    app.use('/copilotkit/conversations', conversations.routeur);
+  }
   app.use(
     createCopilotExpressHandler({
       runtime,
@@ -68,7 +74,8 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
       activateChannels: false,
       hooks: {
         onRequest: async ({ request }) => {
-          const utilisateur = await authentifier(request, urlApi);
+          const utilisateur = await authentifier(request.headers.get('authorization') ?? '', urlApi);
+          await conversations?.noterRun(request, utilisateur);
           const entetes = new Headers(request.headers);
           entetes.set(ENTETE_UTILISATEUR, String(utilisateur));
           return new Request(request, { headers: entetes });
@@ -88,8 +95,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
 }
 
 /** L'identifiant de l'utilisateur, tel que l'API le lit dans son jeton ; 401 ou 403 sinon, sans détail. */
-async function authentifier(request, urlApi) {
-  const autorisation = request.headers.get('authorization') ?? '';
+async function authentifier(autorisation, urlApi) {
   if (!autorisation.startsWith('Bearer ')) {
     throw new Response(null, { status: 401 });
   }

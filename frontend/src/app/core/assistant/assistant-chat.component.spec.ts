@@ -12,6 +12,7 @@ describe('AssistantChatComponent', () => {
   let abonne: Abonne | undefined;
   let utilise: boolean;
   const marquerUtilise = vi.fn();
+  const rafraichir = vi.fn();
   const connectAgent = vi.fn();
 
   beforeEach(async () => {
@@ -30,7 +31,7 @@ describe('AssistantChatComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AssistantChatComponent],
       providers: [
-        { provide: FilAssistant, useValue: { fil: signal('u1-test'), estUtilise: () => utilise, marquerUtilise } },
+        { provide: FilAssistant, useValue: { fil: signal('u1-test'), listeOuverte: signal(false), estUtilise: () => utilise, marquerUtilise, rafraichir } },
         { provide: CopilotKit, useValue: { core: { connectAgent } } },
         { provide: CopilotkitAgentFactory, useValue: { createAgentStoreSignal: () => signal(magasin) } }
       ],

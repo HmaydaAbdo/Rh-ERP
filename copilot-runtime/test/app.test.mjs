@@ -22,6 +22,8 @@ let serveur;
 let base;
 let dossier;
 let fermer;
+const suppressionsIa = [];
+let panneIa = false;
 
 before(async () => {
   api = createServer((requete, reponse) => {
@@ -31,6 +33,10 @@ before(async () => {
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
   // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
   agent = createServer((requete, reponse) => {
+    if (requete.method === 'DELETE') {
+      suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
+      return reponse.writeHead(panneIa ? 500 : 204).end();
+    }
     let corps = '';
     requete.on('data', (morceau) => (corps += morceau));
     requete.on('end', () => {
@@ -136,5 +142,76 @@ describe('propriété des fils (runner SQLite et identifyUser officiels)', () =>
       entetes: { 'x-staport-utilisateur-verifie': '1' }
     });
     assert.equal(reponse.status, 404);
+  });
+});
+
+describe('liste des conversations (KAN-81)', () => {
+  const run = (jeton, threadId, question) =>
+    appeler('/agent/default/run', { jeton, corps: { ...corpsRun(threadId), messages: [{ id: randomUUID(), role: 'user', content: question }] } });
+  const requete = async (methode, chemin, { jeton, corps } = {}) => {
+    const reponse = await fetch(`${base}/conversations${chemin}`, {
+      method: methode,
+      headers: { ...(jeton ? { authorization: `Bearer ${jeton}` } : {}), ...(corps ? { 'content-type': 'application/json' } : {}) },
+      body: corps ? JSON.stringify(corps) : undefined,
+      signal: AbortSignal.timeout(10_000)
+    });
+    const texte = await reponse.text();
+    return { status: reponse.status, json: reponse.headers.get('content-type')?.includes('json') ? JSON.parse(texte) : undefined };
+  };
+
+  test('exige une authentification', async () => {
+    assert.equal((await requete('GET', '')).status, 401);
+    assert.equal((await requete('GET', '', { jeton: 'jeton-sans-droit' })).status, 403);
+  });
+
+  test('chaque utilisateur ne voit que ses conversations, titrées par sa première question, la plus récente en tête', async () => {
+    await run('jeton-1', 'u1-liste-a', '  Quelle est la   masse salariale de septembre 2026 pour tous les services de la société, détail par direction ?  ');
+    await new Promise((ok) => setTimeout(ok, 5));
+    await run('jeton-1', 'u1-liste-b', 'Combien de salariés ?');
+    await run('jeton-2', 'u2-liste', 'Question privée du second');
+    const liste = (await requete('GET', '', { jeton: 'jeton-1' })).json.filter((c) => c.id.startsWith('u1-liste'));
+    assert.deepEqual(liste.map((c) => c.id), ['u1-liste-b', 'u1-liste-a']);
+    assert.equal(liste[0].title, 'Combien de salariés ?');
+    assert.ok(liste[1].title.length <= 60 && liste[1].title.endsWith('…') && liste[1].title.startsWith('Quelle est la masse'));
+    const autre = (await requete('GET', '', { jeton: 'jeton-2' })).json;
+    assert.ok(autre.some((c) => c.id === 'u2-liste') && !autre.some((c) => c.id.startsWith('u1-')));
+  });
+
+  test("le fil d'un autre ne crée ni ne vole une ligne de liste", async () => {
+    await run('jeton-1', 'u1-vol', 'Mon fil');
+    await run('jeton-2', 'u1-vol', 'Tentative'); // refusé (404) par le runner
+    const chez2 = (await requete('GET', '', { jeton: 'jeton-2' })).json;
+    assert.ok(!chez2.some((c) => c.id === 'u1-vol'));
+    const chez1 = (await requete('GET', '', { jeton: 'jeton-1' })).json.find((c) => c.id === 'u1-vol');
+    assert.equal(chez1.title, 'Mon fil');
+  });
+
+  test('renomme ses conversations seulement', async () => {
+    await run('jeton-1', 'u1-nom', 'Titre initial');
+    assert.equal((await requete('PATCH', '/u1-nom', { jeton: 'jeton-2', corps: { title: 'Piraté' } })).status, 404);
+    assert.equal((await requete('PATCH', '/u1-nom', { jeton: 'jeton-1', corps: { title: '   ' } })).status, 422);
+    assert.equal((await requete('PATCH', '/u1-nom', { jeton: 'jeton-1', corps: { title: ' Paie  de septembre ' } })).status, 204);
+    const trouvee = (await requete('GET', '', { jeton: 'jeton-1' })).json.find((c) => c.id === 'u1-nom');
+    assert.equal(trouvee.title, 'Paie de septembre');
+  });
+
+  test("supprime la liste, l'historique et la mémoire IA ; refuse celle d'un autre", async () => {
+    await run('jeton-1', 'u1-suppr', 'À effacer');
+    assert.equal((await requete('DELETE', '/u1-suppr', { jeton: 'jeton-2' })).status, 404);
+    assert.equal(suppressionsIa.length, 0);
+    assert.equal((await requete('DELETE', '/u1-suppr', { jeton: 'jeton-1' })).status, 204);
+    assert.deepEqual(suppressionsIa, [{ url: '/conversations/u1-suppr', autorisation: 'Bearer jeton-1' }]);
+    assert.ok(!(await requete('GET', '', { jeton: 'jeton-1' })).json.some((c) => c.id === 'u1-suppr'));
+    const rejoue = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun('u1-suppr') });
+    assert.ok(!rejoue.texte.includes(SECRET)); // l'historique du runner est effacé
+  });
+
+  test("si la mémoire IA ne répond pas, rien n'est supprimé (502) et on peut réessayer", async () => {
+    await run('jeton-1', 'u1-panne', 'Fil gardé');
+    panneIa = true;
+    assert.equal((await requete('DELETE', '/u1-panne', { jeton: 'jeton-1' })).status, 502);
+    panneIa = false;
+    assert.ok((await requete('GET', '', { jeton: 'jeton-1' })).json.some((c) => c.id === 'u1-panne'));
+    assert.equal((await requete('DELETE', '/u1-panne', { jeton: 'jeton-1' })).status, 204);
   });
 });
