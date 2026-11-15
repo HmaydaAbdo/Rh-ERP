@@ -89,6 +89,10 @@ function flux(): string {
 /** Le runtime CopilotKit simulé : suggestions sans état et authentifiées, runs de l'agent, A2UI et autorisations. */
 async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[]; connexions: string[]; autorisationsSuggestions: string[] }> {
   const vu = { autorisations: [] as string[], fils: [] as string[], connexions: [] as string[], autorisationsSuggestions: [] as string[] };
+  // Titres français des outils (KAN-87) : lus du serveur MCP par le service IA, suivant les droits de l'utilisateur.
+  await page.route('**/ia/outils', (route) =>
+    route.fulfill({ json: [{ name: 'paie_indicateurs', title: 'Indicateurs de paie d’un mois', domain: 'Paie' }] })
+  );
   await page.route('**/ia/copilotkit/**', async (route) => {
     const url = route.request().url();
     if (url.endsWith('/info')) {
@@ -245,6 +249,9 @@ test.describe('Staport Intelligence', () => {
     await expect(assistant.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
     await expect(assistant.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
     await expect(assistant.getByRole('heading', { name: 'Masse par chantier' })).toBeVisible();
+    // La consultation s'affiche en carte au titre français (KAN-87), jamais avec le nom technique de l'outil.
+    await expect(assistant.getByText('Indicateurs de paie d’un mois')).toBeVisible();
+    await expect(assistant.getByText('Consultation terminée')).toBeAttached();
     // Pas de consultation d'outil en brut (nom technique) dans la discussion.
     await expect(assistant.getByText('paie_indicateurs')).toHaveCount(0);
     expect(runtime.autorisations).toEqual(['Bearer jeton-test']);

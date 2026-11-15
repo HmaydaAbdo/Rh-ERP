@@ -31,7 +31,7 @@ from langgraph.types import Durability
 
 from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
-from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp
+from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp, titres_erp
 
 journal = logging.getLogger(__name__)
 
@@ -108,6 +108,8 @@ class AccesErp(Protocol):
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
 
     async def contexte(self, jeton_agent: str) -> str: ...
+
+    async def titres(self, jeton_agent: str) -> Sequence[tuple[str, str]]: ...
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
 
@@ -226,6 +228,9 @@ class AccesHttp:
 
     async def contexte(self, jeton_agent: str) -> str:
         return await contexte_erp(f"{self._api}/mcp", jeton_agent)
+
+    async def titres(self, jeton_agent: str) -> Sequence[tuple[str, str]]:
+        return await titres_erp(f"{self._api}/mcp", jeton_agent)
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
         reponse = await self._client.post(

@@ -26,6 +26,7 @@ from staport_ia.memoire import Memoire, ouvrir_memoire
 from staport_ia.modeles import Tache, modele
 from staport_ia.routage import Routeur
 from staport_ia.souvenirs import routeur_souvenirs
+from staport_ia.titres import routeur_titres
 
 
 class Sante(BaseModel):
@@ -148,6 +149,8 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
     routeur.include_router(
         routeur_souvenirs(acces=lambda: app.state.acces, actif=lambda: config.enabled, store=lambda: app.state.store)
     )
+
+    routeur.include_router(routeur_titres(acces=lambda: app.state.acces, actif=lambda: config.enabled))
 
     @routeur.get("/health/ia")
     async def vivant() -> Sante:  # pyright: ignore[reportUnusedFunction]
