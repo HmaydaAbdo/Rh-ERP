@@ -179,3 +179,17 @@ d'harnais et les permissions (accord sous `/espace/`, refus ailleurs, donc aussi
 changent qu'avec une nouvelle version du service : le semis au démarrage les remplace. Test : lecture des fiches depuis
 PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
 
+### Fichiers de l'espace de l'utilisateur : écriture, téléchargement, bornes (KAN-267)
+
+- **Écriture** : `write_file` et `edit_file` sous `/espace/` seulement, avec l'accord de l'utilisateur (interruption
+  LangGraph, KAN-260) ; les fichiers sont dans le Store PostgreSQL, sous l'identité du jeton agent, et expirent par le
+  balayeur natif du Store.
+- **Reprise** : le service accepte un run de reprise (`RunAgentInput.resume` ou `forwardedProps.command.resume`) sans
+  nouvelle question ; l'état du fil (compétences épinglées) est conservé. Test de bout en bout par `/agui`.
+- **Téléchargement** : `GET /ia/fichiers` (liste) et `GET /ia/fichiers/espace/<chemin>` (nginx vers le routeur IA de
+  l'API). L'identité vient de l'échange du jeton de connexion ; le fichier d'un autre utilisateur est introuvable (404) ;
+  réponse en pièce jointe, `nosniff`, sans cache.
+- **Bornes** (écrites par nous, aucun framework ne les fournit) : 200 000 caractères par fichier et 50 fichiers par
+  utilisateur, par un middleware `wrap_tool_call` (`ia/src/staport_ia/fichiers.py`) ; le refus arrive à l'exécution,
+  après l'accord, avec son motif. Remplacer un fichier existant reste permis quand l'espace est plein.
+

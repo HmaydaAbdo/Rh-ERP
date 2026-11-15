@@ -77,9 +77,22 @@ def texte_question(entree: RunAgentInput) -> str:
     return ""
 
 
+def est_reprise(entree: RunAgentInput) -> bool:
+    """Un run qui répond à une interruption de l'agent (accord avant écriture) : ``RunAgentInput.resume`` du protocole
+    AG-UI, ou la commande de reprise historique de ``forwardedProps``."""
+    proprietes = cast(dict[str, Any], entree.forwarded_props) if isinstance(entree.forwarded_props, dict) else {}
+    commande = proprietes.get("command")
+    return bool(entree.resume) or (
+        isinstance(commande, dict) and cast(dict[str, Any], commande).get("resume") is not None
+    )
+
+
 def verifier_question(entree: RunAgentInput) -> None:
     """422 si le dernier message n'est ni une question de l'utilisateur ni sa réponse à l'agent (résultat de l'outil
-    ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long."""
+    ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long. Une reprise après interruption
+    n'apporte pas de nouvelle question : elle est vérifiée par le fil propre à l'utilisateur, jamais par son texte."""
+    if est_reprise(entree):
+        return
     dernier = entree.messages[-1] if entree.messages else None
     if not isinstance(dernier, UserMessage | ToolMessage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Le dernier message doit venir de l'utilisateur.")
@@ -173,8 +186,12 @@ def routeur_agui(
         # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
         fil = espace_conversation(sujet(jeton), entree.thread_id)
         # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
-        epinglees = await routage()(texte_question(entree), outils) if routage else []
-        entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
+        # Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte rien.
+        if est_reprise(entree):
+            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+        else:
+            epinglees = await routage()(texte_question(entree), outils) if routage else []
+            entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
