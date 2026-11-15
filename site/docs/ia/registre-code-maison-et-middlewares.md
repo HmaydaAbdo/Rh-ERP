@@ -62,7 +62,8 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `LLMToolSelectorMiddleware` | ✅ adopté et testé ; **retiré du chemin systématique le 2026-11-03** (il ajoute un appel de modèle) : le routage de base est l'épinglage de compétences hors modèle (T32) ; réactivable en second étage après évaluation chiffrée | T32 |
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
 | `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
-| `ToolErrorMiddleware`, `ToolRetryMiddleware`, `ModelRetryMiddleware` | ⬜ | M1 |
+| `ToolErrorMiddleware`, `ToolRetryMiddleware` | ✅ en place, matrice des erreurs ci-dessous et testée | — |
+| `ModelRetryMiddleware` | ⬜ | M1 |
 | `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
 | `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
 | `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
@@ -71,6 +72,22 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | Crochets `before_agent`, `after_agent`, `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, `dynamic_prompt` | utilisés par les middlewares ci-dessus ; `dynamic_prompt` remplace `contexte.py` | T24 |
 | LangGraph : checkpointer PostgreSQL | ✅ en place | — |
 | LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ⬜ | T25, J4 |
+
+### Matrice des erreurs d'outil (KAN-32)
+
+`ToolRetryMiddleware` ne rejoue que les coupures transitoires (`httpx.TransportError`, `TimeoutError`,
+`ConnectionError`) : deux reprises. Quelle que soit l'erreur, `ToolErrorMiddleware` la transforme en message d'erreur
+qui nomme le type de l'exception sans son texte (qui peut porter un détail interne) ; le run se poursuit et le modèle
+explique le manque sans inventer de valeur. Les interruptions LangGraph (question posée à l'utilisateur) remontent
+toujours : ce ne sont pas des pannes. Test : `MATRICE_ERREURS` dans `ia/tests/test_agent.py`.
+
+| Erreur de l'outil | Reprise | Ce que voit le modèle | Run |
+|---|---|---|---|
+| Erreur métier (400, `ValueError`) | non | erreur typée, sans message brut | continue |
+| Refus (401, 403) | non | erreur typée ; consigne 4 : dire que le droit manque, ne pas retenter | continue |
+| Panne serveur (500) | non | erreur typée | continue |
+| Délai dépassé, réseau coupé | 2 reprises | erreur typée si les reprises échouent | continue |
+| Interruption LangGraph | sans objet | question à l'utilisateur | en pause |
 
 ## Middlewares officiels d'AG-UI et d'A2UI : inventaire (2026-11-09)
 
