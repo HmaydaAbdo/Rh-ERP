@@ -23,7 +23,7 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Périmètre de données par fiche de poste | Absent : l'accès est réservé à `SYSTEM_ADMIN` | T2.1 à T2.3 |
 | Injection directe et indirecte (champs de données piégés), exfiltration | Non testées ; seuls les refus de droits le sont | T2.6 |
 | Texte du modèle rendu comme texte, aucun lien ni image actif | En place (interpolation Angular), sans test dédié | T2.6 |
-| Plafonds par run | Middlewares officiels : 8 appels de modèle et 8 appels d'outils par run ; aucun plafond applicatif de génération de tokens. Délai de modèle configurable (`IA_LLM_TIMEOUT_SECONDS`, 120 s par défaut). Durée et tokens totaux du run non plafonnés côté service. | T2.5 |
+| Plafonds par run | Aucun plafond appliqué par nous, ni appels de modèle, ni appels d'outils, ni tokens (décision du propriétaire, KAN-40) ; seule la limite de récursion de LangGraph (200) arrête une boucle. Délai de modèle configurable (`IA_LLM_TIMEOUT_SECONDS`, 120 s par défaut). Durée et tokens totaux du run non plafonnés côté service. | T2.5 |
 | Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé Staport Intelligence | T2.5 |
 | Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
 | Contrat de vue unique entre l'API, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |

@@ -172,8 +172,8 @@ async def evenements(
             graph=fabrique(
                 outils, memoire or InMemorySaver(), utilisateur
             ),  # mémoire durable (memoire.py) ou celle du run
-            # Garde-fou technique de LangGraph, au-dessus des plafonds de l'agent (8 appels de modèle et d'outils) :
-            # chaque middleware est un nœud du graphe, ce sont ces plafonds qui arrêtent un run.
+            # Aucun plafond appliqué par nous (décision du propriétaire, KAN-40) : seule cette limite de récursion de
+            # LangGraph, propre au framework, arrête un run qui boucle ; une durée anormale se détecte par les alertes.
             config={"recursion_limit": 200},
         )
         async for brut in officiel.run(entree):
