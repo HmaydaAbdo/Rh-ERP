@@ -14,7 +14,7 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Sécurité et expérience](securite-et-experience.md) | Périmètres, jetons, audit, interface A2UI, mascotte |
 | [Vision](vision.md) | Vision courte et vision longue |
 | [Registre](registre-code-maison-et-middlewares.md) | Décisions ouvertes, code maison à résorber, middlewares officiels |
-| [État technique et catalogue MCP](etat-technique-et-catalogue-mcp.md) | Les 31 outils MCP, leurs permissions et leurs vues |
+| [État technique et catalogue MCP](etat-technique-et-catalogue-mcp.md) | Les 32 outils MCP, leurs permissions et leurs vues |
 | [Pratiques de référence](pratiques-de-reference.md) | Écart entre les cadres retenus et l'existant |
 | [Principes et décisions](principes-et-decisions.md) | Principes, fonctions exclues, décisions du propriétaire, sources officielles |
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |

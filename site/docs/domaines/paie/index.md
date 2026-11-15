@@ -149,6 +149,7 @@ il n'écrit, n'importe, ne supprime et ne restaure rien, et n'exécute aucun SQL
 | `paie_mouvements` | Tous les mois : effectif, variation, entrées, plus payés, sorties, mutations, avec le champ `definitions` à citer | `PAIE_READ` | `MCP_PAIE_MOUVEMENTS` |
 | `paie_qualite` | Bulletins sans équipe, sans observation, tranches de salaire total | `PAIE_READ` | `MCP_PAIE_QUALITE` |
 | `paie_bulletins_rechercher` | Bulletins d'un mois par nom, CIN ou périmètre (pages de 20 avec total et pages suivantes accessibles) : jours, primes, salaire total, observation | `PAIE_READ` | `MCP_PAIE_BULLETINS_RECHERCHER` |
+| `paie_export_preparer` | Prépare le classeur Excel de paie et rend une référence de téléchargement (JWT RS256, 5 minutes, liée à l'utilisateur, aux mois et aux chantiers) ; le fichier est généré au téléchargement par `GET /paie/export/agent/{reference}`, qui exige la connexion de cet utilisateur et `PAIE_EXPORT` (404 sinon) | `PAIE_EXPORT` **et** `PAIE_READ` | aucune (préparation en lecture) |
 | `rapport_preparer` | Prépare le rapport PDF : vérifie chantiers, effectif et masse puis propose d'ouvrir l'assistant d'export réglé ; **ne génère aucun fichier** | `PAIE_EXPORT` **et** `PAIE_READ` | `MCP_RAPPORT_PREPARER` |
 
 - **Filtres communs.** Mois (`aaaa-MM`, défaut : dernier mois importé), `chantierIds`, `equipeIds` (`0` = sans équipe),

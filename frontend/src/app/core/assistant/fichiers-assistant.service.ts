@@ -9,6 +9,14 @@ import { telechargerFichier } from '../../shared/utils/telecharger-fichier';
 export class FichiersAssistant {
   private readonly http = inject(HttpClient);
 
+  /** Le classeur de paie préparé par l'assistant : la référence (5 minutes) n'est valable que pour l'utilisateur connecté. */
+  async telechargerExport(reference: string, nom: string): Promise<void> {
+    const blob = await firstValueFrom(
+      this.http.get(`paie/export/agent/${encodeURIComponent(reference)}`, { responseType: 'blob' })
+    );
+    telechargerFichier(blob, nom);
+  }
+
   /** `chemin` est celui de l'agent (`/espace/rapport.md`) ; le service IA ne rend que les fichiers de cet utilisateur. */
   async telecharger(chemin: string): Promise<void> {
     const sur = chemin.replace(/^\/+/, '');

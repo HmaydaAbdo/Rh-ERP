@@ -83,3 +83,13 @@ class PaieLiee(ErreurMetier):
     """Bulletin encore référencé par des heures supplémentaires (HTTP 409, comme `PaieLieeException`)."""
 
     statut = HTTPStatus.CONFLICT
+
+
+class ReferenceExportRefusee(ErreurMetier):
+    """Référence d'export de l'assistant expirée, illisible ou émise pour un autre utilisateur (HTTP 404 : elle n'existe
+    pas pour l'appelant, sans lui dire laquelle de ces raisons s'applique)."""
+
+    statut = HTTPStatus.NOT_FOUND
+
+    def __init__(self) -> None:
+        super().__init__("Référence d'export invalide, expirée ou réservée à un autre utilisateur.")
