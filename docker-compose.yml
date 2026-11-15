@@ -311,8 +311,8 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?LITELLM_SALT_KEY est obligatoire}
       DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}@litellm-db:5432/litellm
-      # Une clé vide désactive ses modèles au démarrage (litellm/filtrer_config.py) : LiteLLM ne bascule
-      # pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même tag.
+      # Une clé vide écarte ses modèles du routage (sondes natives de LiteLLM, litellm/litellm_config.yaml) : LiteLLM ne
+      # bascule pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même groupe.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}

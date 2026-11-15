@@ -110,3 +110,8 @@ seule fois, ici. Format : constat, cause, règle.
 J'ai écrit une table de propriété des fils en suivant la doc indexée et le ticket (« `identifyUser` est réservé à Intelligence »), alors que le runtime 1.88 que je venais d'installer fournit la propriété des fils avec `identifyUser` et le `SqliteAgentRunner`. Ma table portait en plus le même nom (`thread_owners`) que celle du runner : elle aurait cassé le premier run en production, et les tests n'ouvraient pas de base fichier pour le voir.
 **À faire :** après chaque montée de version, lire les `.d.mts` et le code de la version installée (pas seulement la doc en ligne) avant d'écrire du code de sécurité, et tester avec le même stockage que la production (base fichier, pas mémoire).
 
+## 2026-11-15 — Mesurer le comportement natif avant de supprimer un contournement (KAN-77)
+
+Le script `filtrer_config.py` contournait le fait que LiteLLM ne bascule pas sur une 401. La documentation proposait deux mécanismes natifs, dont l'un (`allowed_fails_policy`) désactive précisément le filtre de santé dont on avait besoin : seule une mesure dans Docker avec un faux fournisseur (un déploiement sans clé, un avec) a montré lequel marche (0 échec sur 95 requêtes sans `allowed_fails_policy`). Le CLI officiel, lui, ne couvre pas la mise à jour d'une clé virtuelle : on vérifie `--help` avant de promettre un remplacement.
+**À faire :** avant de retirer un contournement, reproduire le défaut puis la solution native sur un banc local (conteneur et faux fournisseur) ; ne pas déduire un remplacement du seul nom d'une commande.
+
