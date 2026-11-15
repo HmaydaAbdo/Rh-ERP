@@ -100,5 +100,32 @@ export function creerConversations(db, { urlAgent, authentifier, journal }) {
     return reponse.sendStatus(204);
   });
 
-  return { noterRun, routeur };
+  // Expiration (KAN-82) : le runner SQLite officiel n'a ni durée de vie ni purge ; une conversation sans échange depuis
+  // `jours` jours est supprimée (liste, historique, propriété), comme la mémoire du service IA l'est de son côté.
+  const dernierEchange = db.prepare('SELECT thread_id AS id, MAX(created_at) AS dernier FROM agent_runs GROUP BY thread_id');
+  const lignesAnciennes = db.prepare('SELECT thread_id AS id FROM assistant_conversations WHERE updated_at < ?');
+  const runRecent = db.prepare('SELECT 1 FROM agent_runs WHERE thread_id = ? AND created_at >= ?');
+  const ligneRecente = db.prepare('SELECT 1 FROM assistant_conversations WHERE thread_id = ? AND updated_at >= ?');
+  const expirer = db.transaction((limite) => {
+    const anciens = new Set(dernierEchange.all().filter((fil) => fil.dernier < limite).map((fil) => fil.id));
+    for (const { id } of lignesAnciennes.all(limite)) {
+      anciens.add(id);
+    }
+    let supprimes = 0;
+    for (const id of anciens) {
+      // L'échange le plus récent, côté runner ou côté liste, fait foi.
+      if (runRecent.get(id, limite) || ligneRecente.get(id, limite)) {
+        continue;
+      }
+      for (const table of ['assistant_conversations', 'agent_runs', 'run_state', 'thread_owners']) {
+        db.prepare(`DELETE FROM ${table} WHERE thread_id = ?`).run(id);
+      }
+      supprimes += 1;
+    }
+    return supprimes;
+  });
+  /** Supprime les conversations inactives depuis plus de `jours` jours ; rend leur nombre. */
+  const purger = (jours, maintenant = Date.now()) => expirer(maintenant - jours * 24 * 3600 * 1000);
+
+  return { noterRun, routeur, purger };
 }

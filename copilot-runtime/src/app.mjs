@@ -35,7 +35,7 @@ const masquerSkills = (input, next) =>
 
 /**
  * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'> }} options
- * @returns {{ app: import('express').Express, fermer: () => void }}
+ * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
 export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
@@ -91,7 +91,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
       }
     })
   );
-  return { app, fermer: () => runner?.db.close() };
+  return { app, purger: conversations?.purger, fermer: () => runner?.db.close() };
 }
 
 /** L'identifiant de l'utilisateur, tel que l'API le lit dans son jeton ; 401 ou 403 sinon, sans détail. */

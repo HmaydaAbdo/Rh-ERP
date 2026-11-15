@@ -7,6 +7,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
+import Database from 'better-sqlite3';
 import { creerApp } from '../src/app.mjs';
 
 const UTILISATEURS = {
@@ -22,6 +23,7 @@ let serveur;
 let base;
 let dossier;
 let fermer;
+let purger;
 const suppressionsIa = [];
 let panneIa = false;
 
@@ -63,6 +65,7 @@ before(async () => {
     journal: { error: () => {} }
   });
   fermer = creation.fermer;
+  purger = creation.purger;
   serveur = creation.app.listen(0, '127.0.0.1');
   await new Promise((ok) => serveur.once('listening', ok));
   base = `http://127.0.0.1:${serveur.address().port}/copilotkit`;
@@ -213,5 +216,57 @@ describe('liste des conversations (KAN-81)', () => {
     panneIa = false;
     assert.ok((await requete('GET', '', { jeton: 'jeton-1' })).json.some((c) => c.id === 'u1-panne'));
     assert.equal((await requete('DELETE', '/u1-panne', { jeton: 'jeton-1' })).status, 204);
+  });
+});
+
+describe('expiration des conversations (KAN-82)', () => {
+  const JOUR = 24 * 3600 * 1000;
+  const run = (threadId, question) =>
+    appeler('/agent/default/run', { jeton: 'jeton-1', corps: { ...corpsRun(threadId), messages: [{ id: randomUUID(), role: 'user', content: question }] } });
+  const liste = async () => {
+    const reponse = await fetch(`${base}/conversations`, { headers: { authorization: 'Bearer jeton-1' } });
+    return (await reponse.json()).map((c) => c.id);
+  };
+  const vieillir = (threadId, jours, { ligne = true } = {}) => {
+    const db = new Database(join(dossier, 'threads.db'));
+    db.prepare('UPDATE agent_runs SET created_at = created_at - ? WHERE thread_id = ?').run(jours * JOUR, threadId);
+    if (ligne) {
+      db.prepare('UPDATE assistant_conversations SET updated_at = updated_at - ? WHERE thread_id = ?').run(jours * JOUR, threadId);
+    } else {
+      db.prepare('DELETE FROM assistant_conversations WHERE thread_id = ?').run(threadId);
+    }
+    db.close();
+  };
+  const lignes = (table, threadId) => {
+    const db = new Database(join(dossier, 'threads.db'), { readonly: true });
+    const { n } = db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE thread_id = ?`).get(threadId);
+    db.close();
+    return n;
+  };
+
+  test('supprime liste, historique et propriété des conversations inactives, garde les récentes', async () => {
+    await run('u1-exp-ancien', 'Vieille question');
+    await run('u1-exp-recent', 'Question récente');
+    vieillir('u1-exp-ancien', 40);
+    vieillir('u1-exp-recent', 10);
+
+    assert.ok(purger(30) >= 1);
+
+    const ids = await liste();
+    assert.ok(!ids.includes('u1-exp-ancien') && ids.includes('u1-exp-recent'));
+    for (const table of ['agent_runs', 'run_state', 'thread_owners', 'assistant_conversations']) {
+      assert.equal(lignes(table, 'u1-exp-ancien'), 0, table);
+    }
+    assert.ok(lignes('agent_runs', 'u1-exp-recent') > 0);
+    const rejoue = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun('u1-exp-ancien') });
+    assert.ok(!rejoue.texte.includes(SECRET));
+  });
+
+  test('purge aussi un fil sans ligne de liste (créé avant la liste) et ne touche pas une conversation active', async () => {
+    await run('u1-exp-orphelin', 'Fil sans ligne');
+    vieillir('u1-exp-orphelin', 40, { ligne: false });
+    assert.equal(purger(30), 1);
+    assert.equal(lignes('agent_runs', 'u1-exp-orphelin'), 0);
+    assert.equal(purger(30), 0);
   });
 });

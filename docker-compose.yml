@@ -423,6 +423,8 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
+      CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
       ERP_API_URL: http://api:8080
       # Traces OpenTelemetry vers Phoenix (site/docs/ia, T18), jeton partagé par le réseau interne trace-net.
