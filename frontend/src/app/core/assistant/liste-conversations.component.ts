@@ -22,19 +22,19 @@ import { Conversation, FilAssistant } from './fil-assistant.service';
         <li class="flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-alt" [class.bg-surface-alt]="conversation.id === fil.fil()">
           @if (edition() === conversation.id) {
             <input class="min-w-0 flex-1 rounded-md border border-border bg-surface px-2 py-1 text-sm text-text" [(ngModel)]="titre" (keydown.enter)="valider(conversation)" (keydown.escape)="edition.set(null)" aria-label="Nouveau nom de la conversation" />
-            <button type="button" class="action" (click)="valider(conversation)" aria-label="Enregistrer le nom"><svg lucideCheck class="size-4" aria-hidden="true"></svg></button>
-            <button type="button" class="action" (click)="edition.set(null)" aria-label="Annuler"><svg lucideX class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="valider(conversation)" aria-label="Enregistrer le nom"><svg lucideCheck class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="edition.set(null)" aria-label="Annuler"><svg lucideX class="size-4" aria-hidden="true"></svg></button>
           } @else if (suppression() === conversation.id) {
             <span class="min-w-0 flex-1 text-sm text-text">Supprimer définitivement ?</span>
-            <button type="button" class="action" (click)="confirmer(conversation)" aria-label="Confirmer la suppression"><svg lucideCheck class="size-4" aria-hidden="true"></svg></button>
-            <button type="button" class="action" (click)="suppression.set(null)" aria-label="Annuler"><svg lucideX class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="confirmer(conversation)" aria-label="Confirmer la suppression"><svg lucideCheck class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="suppression.set(null)" aria-label="Annuler"><svg lucideX class="size-4" aria-hidden="true"></svg></button>
           } @else {
             <button type="button" class="ouvrir min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-start" (click)="fil.ouvrir(conversation.id)">
               <span class="block truncate text-sm text-text">{{ conversation.title }}</span>
               <span class="block text-xs text-muted">{{ conversation.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
             </button>
-            <button type="button" class="action" (click)="renommer(conversation)" aria-label="Renommer la conversation"><svg lucidePencil class="size-4" aria-hidden="true"></svg></button>
-            <button type="button" class="action" (click)="suppression.set(conversation.id)" aria-label="Supprimer la conversation"><svg lucideTrash2 class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="renommer(conversation)" aria-label="Renommer la conversation"><svg lucidePencil class="size-4" aria-hidden="true"></svg></button>
+            <button type="button" class="grid size-8 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-muted hover:bg-surface-alt hover:text-text" (click)="suppression.set(conversation.id)" aria-label="Supprimer la conversation"><svg lucideTrash2 class="size-4" aria-hidden="true"></svg></button>
           }
         </li>
       } @empty {
@@ -42,7 +42,6 @@ import { Conversation, FilAssistant } from './fil-assistant.service';
       }
     </ul>
   `,
-  styles: `.action { display: grid; width: 2rem; height: 2rem; flex: none; cursor: pointer; place-items: center; border: 0; border-radius: 0.375rem; background: transparent; color: var(--color-muted); } .action:hover { background: var(--color-surface-alt); color: var(--color-text); }`
 })
 export class ListeConversationsComponent {
   protected readonly fil = inject(FilAssistant);
