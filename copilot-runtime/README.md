@@ -19,6 +19,10 @@ mais le contrôle de propriété des fils persistants ne s'applique pas à cette
 
 `/copilotkit/conversations` (GET liste, PATCH `{ "title" }` renommer, DELETE supprimer) est servi par `src/conversations.mjs`, avec la même authentification que le reste du runtime. Chaque run réussi crée ou date la ligne de la conversation dans la table `assistant_conversations` (titre : début de la première question) ; la table ne sert qu'à l'affichage, l'accès aux fils reste celui du runner officiel. La suppression appelle d'abord `DELETE /conversations/{id}` du service IA (mémoire LangGraph) : en cas d'échec, 502 et rien n'est supprimé.
 
+## Expiration (KAN-82)
+
+Le runner SQLite officiel n'a ni durée de vie ni purge. `serveur.mjs` supprime au démarrage puis chaque jour les conversations sans échange depuis `CONVERSATION_JOURS` jours (30 par défaut, valeur de `IA_CONVERSATION_JOURS` dans Compose) : ligne de liste, historique du runner et propriété du fil, y compris les fils créés avant la liste. La mémoire du service IA expire de son côté à la même échéance (`memoire.purger`).
+
 ## Exploitation
 
 - Service Compose `copilot-runtime`, démarré par `docker compose up -d` après le service `ia` ; réseaux

@@ -11,9 +11,25 @@ function obligatoire(nom) {
   return valeur;
 }
 
-const { app } = creerApp({
+const { app, purger } = creerApp({
   urlAgent: obligatoire('IA_AGUI_URL'),
   urlApi: obligatoire('ERP_API_URL').replace(/\/$/, ''),
   cheminBase: process.env.THREADS_DB_PATH
 });
+// Expiration des conversations inactives (KAN-82), au démarrage puis chaque jour ; même durée que la mémoire du service IA.
+const joursConservation = Number(process.env.CONVERSATION_JOURS ?? 30);
+if (purger && joursConservation > 0) {
+  const lancer = () => {
+    try {
+      const supprimees = purger(joursConservation);
+      if (supprimees) {
+        console.log(`Conversations inactives supprimées : ${supprimees}`);
+      }
+    } catch (panne) {
+      console.error(`Purge des conversations en échec : ${panne instanceof Error ? panne.name : 'inconnue'}`);
+    }
+  };
+  lancer();
+  setInterval(lancer, 24 * 3600 * 1000).unref();
+}
 app.listen(port, () => console.log(`Runtime CopilotKit à l'écoute sur le port ${port}`));
