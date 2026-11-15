@@ -1,7 +1,7 @@
-"""Format d'erreur et gestionnaires d'exceptions transverses (parité avec `GlobalExceptionHandler`, ADR 0016 § 6).
+"""Format d'erreur et gestionnaires d'exceptions transverses.
 
-Le corps `{timestamp, status, error, message, path}` et les messages français sont ceux du backend Spring : le
-frontend ne doit rien remarquer. Les gestionnaires de domaine se déclarent sur l'application avant ceux-ci ; ce
+Le corps `{timestamp, status, error, message, path}` et les messages français sont le contrat du
+frontend. Les gestionnaires de domaine se déclarent sur l'application avant ceux-ci ; ce
 module ne traite que le transverse et l'imprévu.
 """
 
@@ -36,11 +36,12 @@ TYPES_CORPS_ILLISIBLE = frozenset(
     }
 )  # fmt: skip
 TYPES_PARAMETRE_ILLISIBLE = TYPES_CORPS_ILLISIBLE - {"json_invalid"}
-NOMS_PARAMETRES_SPRING = {"identifiant": "id"}  # Spring nomme le paramètre de chemin `id`, l'API Python `identifiant`
+# Le contrat public nomme le paramètre de chemin `id`, le code `identifiant`.
+NOMS_PARAMETRES_PUBLICS = {"identifiant": "id"}
 
 
 class ReponseErreur(BaseModel):
-    """Corps d'erreur de l'API, identique à `ErrorResponseDto` de Spring."""
+    """Corps d'erreur de l'API."""
 
     timestamp: datetime
     status: int
@@ -78,7 +79,7 @@ class AccesRefuse(ErreurMetier):
 
 
 class NonAuthentifie(Exception):
-    """Jeton absent ou invalide (HTTP 401 sans corps, en-tête `WWW-Authenticate: Bearer`, comme Spring Security)."""
+    """Jeton absent ou invalide (HTTP 401 sans corps, en-tête `WWW-Authenticate: Bearer`)."""
 
     def __init__(self, jeton_invalide: bool = False) -> None:
         super().__init__("non authentifié")
@@ -93,7 +94,7 @@ def reponse(requete: Request, statut: HTTPStatus, message: str) -> JSONResponse:
 
 
 def _periode_corps_illisible(requete: Request) -> bool:
-    """Heures supp et paie (hors export/rapport) : un `YearMonth` mal formé rend le corps illisible côté Spring."""
+    """Heures supp et paie (hors export/rapport) : un mois mal formé rend le corps illisible."""
     chemin = requete.url.path
     sortie = chemin in ("/paie/export", "/paie/report/pdf")
     return (chemin.startswith("/heures-supp") or (chemin.startswith("/paie") and not sortie)) and _corps_json(requete)
@@ -104,7 +105,7 @@ def _corps_json(requete: Request) -> bool:
 
 
 def _message_validation(erreur: RequestValidationError) -> str:
-    """`champ : message`, séparés par une virgule, comme `MethodArgumentNotValidException` côté Spring."""
+    """`champ : message`, séparés par une virgule."""
     parties: list[str] = []
     for detail in erreur.errors():
         champ = (
@@ -125,7 +126,7 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
     async def _non_authentifie(  # pyright: ignore[reportUnusedFunction]
         requete: Request, exc: NonAuthentifie
     ) -> Response:
-        # RFC 9728 : les clients MCP découvrent le serveur d'autorisation grâce à `resource_metadata` (comme Spring).
+        # RFC 9728 : les clients MCP découvrent le serveur d'autorisation grâce à `resource_metadata`.
         metadonnees = f'resource_metadata="{str(requete.base_url).rstrip("/")}/.well-known/oauth-protected-resource"'
         if exc.jeton_invalide:
             en_tete = (
@@ -147,8 +148,8 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
         requete: Request, exc: RequestValidationError
     ) -> JSONResponse:
         erreurs = exc.errors()
-        # Jackson refuse le corps entier (JSON invalide, corps absent, type, énumération ou date impossible à lire) :
-        # `HttpMessageNotReadableException` côté Spring, donc un message unique, sans détail de champ.
+        # Corps entier refusé (JSON invalide, corps absent, type, énumération ou date impossible à lire) :
+        # un message unique, sans détail de champ.
         if any(
             d["loc"][:1] == ("body",)
             and (d["type"] in TYPES_CORPS_ILLISIBLE or (d["loc"] == ("body",) and d["type"] == "missing"))
@@ -157,11 +158,11 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
             return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
         for d in erreurs:
             if d["loc"][-1:] == ("periode",):
-                # Heures supp : `YearMonth` d'un corps JSON mal formé → corps illisible côté Spring.
+                # Heures supp : mois d'un corps JSON mal formé → corps illisible.
                 if d["type"] != "missing" and _periode_corps_illisible(requete):
                     return reponse(requete, HTTPStatus.BAD_REQUEST, MESSAGE_CORPS)
                 if d["type"] == "missing":
-                    if _corps_json(requete):  # DTO : Spring le contrôle
+                    if _corps_json(requete):  # DTO : contrôlé par le schéma
                         return reponse(
                             requete,
                             HTTPStatus.BAD_REQUEST,
@@ -173,22 +174,22 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
                     HTTPStatus.BAD_REQUEST,
                     f"Période invalide, format attendu aaaa-MM (ex. 2026-08) : {d.get('input', '')}",
                 )
-        for d in erreurs:  # `MissingServletRequestParameterException`
+        for d in erreurs:
             if d["loc"][:1] in (("query",), ("form",)) and d["type"] == "missing" and len(d["loc"]) > 1:
                 nom = str(d["loc"][1])
                 return reponse(
                     requete,
                     HTTPStatus.BAD_REQUEST,
-                    f"Paramètre obligatoire absent : {NOMS_PARAMETRES_SPRING.get(nom, nom)}.",
+                    f"Paramètre obligatoire absent : {NOMS_PARAMETRES_PUBLICS.get(nom, nom)}.",
                 )
-        # Paramètre de chemin ou de requête illisible : `MethodArgumentTypeMismatchException` côté Spring.
+        # Paramètre de chemin ou de requête illisible.
         for d in erreurs:
             if d["loc"][:1] in (("path",), ("query",)) and d["type"] in TYPES_PARAMETRE_ILLISIBLE:
                 nom = str(d["loc"][1])
                 return reponse(
                     requete,
                     HTTPStatus.BAD_REQUEST,
-                    f"Valeur invalide pour le paramètre : {NOMS_PARAMETRES_SPRING.get(nom, nom)}.",
+                    f"Valeur invalide pour le paramètre : {NOMS_PARAMETRES_PUBLICS.get(nom, nom)}.",
                 )
         return reponse(requete, HTTPStatus.BAD_REQUEST, _message_validation(exc))
 
@@ -210,6 +211,6 @@ def enregistrer_gestionnaires(app: FastAPI) -> None:
         for (
             nom,
             valeur,
-        ) in EN_TETES_SECURITE.items():  # cette réponse sort avant le middleware : mêmes en-têtes que Spring
+        ) in EN_TETES_SECURITE.items():  # cette réponse sort avant le middleware : mêmes en-têtes de sécurité
             reponse_500.headers.setdefault(nom, valeur)
         return reponse_500

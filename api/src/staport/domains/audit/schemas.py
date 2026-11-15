@@ -1,4 +1,4 @@
-"""DTO du domaine audit : mêmes champs et noms JSON que les `record` Java (contrat du frontend)."""
+"""DTO du domaine audit : champs et noms JSON du contrat du frontend."""
 
 from datetime import datetime
 from enum import StrEnum
@@ -14,7 +14,7 @@ class CategorieAudit(StrEnum):
     OPERATION = "OPERATION"
     SECURITE = "SECURITE"
     ACCES = "ACCES"
-    """Lue dans l'historique écrit par Spring ; le code Python n'en écrit plus (aucune lecture n'est auditée)."""
+    """Reste lisible dans l'historique existant ; le code n'en écrit plus (aucune lecture n'est auditée)."""
 
 
 class ResultatAudit(StrEnum):

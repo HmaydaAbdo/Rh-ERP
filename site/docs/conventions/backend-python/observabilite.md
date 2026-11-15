@@ -25,8 +25,8 @@ ne changent pas. Seule la mise en œuvre change.
 
 ## Performance
 
-* Règle d'or conservée : mesurer avant d'optimiser. Chaque comparaison Spring/FastAPI se fait sur le même jeu de données et reporte p50 et p95, avec la commande
-  exacte pour la reproduire (ADR 0016).
+* Règle d'or conservée : mesurer avant d'optimiser. Chaque comparaison se fait sur le même jeu de données et reporte p50 et p95, avec la commande
+  exacte pour la reproduire.
 * Une boucle d'événements saturée par un appel bloquant est le défaut de performance propre à FastAPI : voir la règle `async def` / `def` dans [architecture](./architecture.md).
 * Requêtes : plan d'exécution des requêtes critiques, index justifiés, pas de N+1 (voir [persistance](./persistance.md)).
 * Tâches longues : hors de la requête (pool de threads ou tâche planifiée), idempotentes, avec reprise.

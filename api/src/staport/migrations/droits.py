@@ -1,4 +1,4 @@
-"""Droits du compte applicatif, recalculés après CHAQUE migration (équivalent de `afterMigrate.sql`, KAN-212).
+"""Droits du compte applicatif, recalculés après CHAQUE migration (KAN-212).
 
 Le propriétaire du schéma exécute les migrations ; l'application se connecte avec un compte distinct qui a :
 - SELECT, INSERT, UPDATE, DELETE sur les tables métier ;

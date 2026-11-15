@@ -1,4 +1,4 @@
-"""Modèle SQLAlchemy du choix d'accueil de chaque utilisateur (Flyway V42, parité de `PreferenceAccueil`)."""
+"""Modèle SQLAlchemy du choix d'accueil de chaque utilisateur (Flyway V42)."""
 
 from sqlalchemy import BigInteger, ForeignKey, Identity, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

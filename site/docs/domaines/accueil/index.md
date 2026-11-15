@@ -20,7 +20,7 @@ Décisions du propriétaire (2026-11-01) :
 
 ## Catalogue des indicateurs
 
-Le catalogue est fixe, dans `IndicateurAccueil` ; chaque indicateur exige la permission de lecture de son domaine.
+Le catalogue est fixe, dans `catalogue.py` ; chaque indicateur exige la permission de lecture de son domaine.
 
 | Code | Libellé | Permission | Source de la valeur |
 |---|---|---|---|
@@ -34,7 +34,7 @@ Le catalogue est fixe, dans `IndicateurAccueil` ; chaque indicateur exige la per
 | `employe.anciennete-moyenne` | Ancienneté moyenne | `EMPLOYEE_READ` | idem |
 | `employe.embauches` | Embauches sur 12 mois | `EMPLOYEE_READ` | idem |
 
-Ajouter un indicateur = une valeur dans `IndicateurAccueil`, son calcul dans `AccueilComponent` (frontend) et une ligne de ce
+Ajouter un indicateur = une valeur dans `catalogue.py`, son calcul dans `AccueilComponent` (frontend) et une ligne de ce
 tableau. Une permission retirée à un utilisateur retire aussitôt l'indicateur de son accueil, même s'il l'avait choisi.
 
 ## Modèle
@@ -46,18 +46,18 @@ tableau. Une permission retirée à un utilisateur retire aussitôt l'indicateur
 | `utilisateur_id` | `bigint` | Obligatoire, unique, clé étrangère vers `utilisateur` (`ON DELETE CASCADE`) ; un seul choix par utilisateur |
 | `indicateurs` | `varchar(500)` | Codes du catalogue, séparés par des virgules, dans l'ordre d'affichage |
 
-Pas de ligne = aucun choix : tous les indicateurs autorisés. La table est auditée par Envers (`accueil_preference_aud`).
+Pas de ligne = aucun choix : tous les indicateurs autorisés. La table est historisée (`accueil_preference_aud`).
 
 ## Contrats DTO
 
 | DTO et champ | Type | Description |
 |---|---|---|
-| `AccueilResponseDto.version` | `Long` ou `null` | Version du choix ; absente tant que rien n'est enregistré |
-| `personnalise` | `boolean` | Vrai si un choix est enregistré |
-| `indicateurs` | `List<String>` | Codes affichés, dans l'ordre, déjà filtrés par les permissions |
-| `disponibles` | `List<IndicateurDisponibleDto>` | Indicateurs que les permissions autorisent : `code`, `libelle`, `description` |
-| `AccueilUpdateRequestDto.version` | `Long` ou `null` | Version lue ; `null` pour un premier choix |
-| `AccueilUpdateRequestDto.indicateurs` | `List<String>` | Au plus 20 codes, sans doublon, tous connus et autorisés |
+| `AccueilResponseDto.version` | `entier` ou `null` | Version du choix ; absente tant que rien n'est enregistré |
+| `personnalise` | `booléen` | Vrai si un choix est enregistré |
+| `indicateurs` | `liste de textes` | Codes affichés, dans l'ordre, déjà filtrés par les permissions |
+| `disponibles` | `liste de IndicateurDisponibleDto` | Indicateurs que les permissions autorisent : `code`, `libelle`, `description` |
+| `AccueilUpdateRequestDto.version` | `entier` ou `null` | Version lue ; `null` pour un premier choix |
+| `AccueilUpdateRequestDto.indicateurs` | `liste de textes` | Au plus 20 codes, sans doublon, tous connus et autorisés |
 
 Codes d'erreur : `400` indicateur inconnu, en double ou non autorisé ; `404` utilisateur introuvable ; `409` version périmée ;
 `401`/`403` accès non autorisé.
@@ -78,7 +78,7 @@ consultation de la carte), n'en ont aucune tant que le propriétaire ne les leur
 
 ## Audit
 
-Chaque écriture passe par `@AuditableAction` : `ACCUEIL_MODIFICATION` et `ACCUEIL_REINITIALISATION`, avec l'instantané Envers du choix.
+Chaque écriture est une action auditée : `ACCUEIL_MODIFICATION` et `ACCUEIL_REINITIALISATION`, avec l'instantané `*_aud` du choix.
 
 ## Frontend
 

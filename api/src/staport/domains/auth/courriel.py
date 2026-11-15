@@ -1,7 +1,7 @@
-"""Envoi asynchrone du courriel de réinitialisation (parité avec `EmailService` et son exécuteur borné).
+"""Envoi asynchrone du courriel de réinitialisation (exécuteur borné).
 
-L'envoi ne bloque pas la réponse : la requête reste identique et immédiate que le compte existe ou non. Comme
-l'exécuteur de Spring (4 envois simultanés, file de 100), une saturation est signalée à l'appelant, qui la journalise
+L'envoi ne bloque pas la réponse : la requête reste identique et immédiate que le compte existe ou non.
+L'exécuteur est borné (4 envois simultanés, file de 100) : une saturation est signalée à l'appelant, qui la journalise
 sans changer la réponse. Aucun jeton ni adresse n'est écrit dans le journal.
 """
 

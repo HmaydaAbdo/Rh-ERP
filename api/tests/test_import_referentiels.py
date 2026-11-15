@@ -1,6 +1,6 @@
 """Imports Excel des fonctions et des équipes, de bout en bout sur PostgreSQL réel.
 
-Parité avec `FunctionImportService` et `EquipeImportService` : import atomique (une ligne rejetée refuse tout le
+Import atomique (une ligne rejetée refuse tout le
 fichier, HTTP 400 avec le rapport), modèle vierge, audit avec l'empreinte du fichier, permission dédiée.
 """
 

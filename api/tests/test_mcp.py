@@ -1,5 +1,5 @@
-"""Serveur MCP Python (KAN-216) : parité avec `McpSecurityConfig` et les outils d'identité, de paramètres, de rôles et
-d'audit de Spring, sur le SDK MCP officiel monté dans l'application, avec un PostgreSQL réel.
+"""Serveur MCP Python (KAN-216) : authentification et outils d'identité, de paramètres, de rôles et
+d'audit, sur le SDK MCP officiel monté dans l'application, avec un PostgreSQL réel.
 
 Couvre l'authentification (jeton agent seul, compte relu à chaque requête, `Origin` refusé), les droits par outil, les
 filtres et pages, l'absence de toute écriture au journal d'audit par un appel d'outil, et le span de diagnostic.

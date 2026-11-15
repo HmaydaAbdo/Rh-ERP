@@ -1,7 +1,7 @@
 [project]
 name = "staport-intelligence-ia"
 version = "0.1.0"
-description = "Service IA de Staport Intelligence : graphe LangGraph, client MCP vers Spring, AG-UI vers Angular, modèles via LiteLLM"
+description = "Service IA de Staport Intelligence : graphe LangGraph, client MCP vers l'API, AG-UI vers Angular, modèles via LiteLLM"
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi",

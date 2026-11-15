@@ -86,7 +86,7 @@ def creer_serveur(
         version="1",
         auth=VerificateurJetonAgent(lambda: contexte().agent, fabrique),
     )
-    # Seuls les outils sont annoncés à l'initialisation, sans notification de changement (comme Spring AI).
+    # Seuls les outils sont annoncés à l'initialisation, sans notification de changement.
     serveur._mcp_server.get_capabilities = lambda *_, **__: ServerCapabilities(  # type: ignore[method-assign]
         tools=ToolsCapability(list_changed=False)
     )

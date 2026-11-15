@@ -50,7 +50,7 @@ class Memoire(NamedTuple):
 
 
 def sujet(jeton_agent: str) -> str:
-    """L'identité portée par le jeton agent (champ ``sub``), émis à l'instant par Spring pour l'utilisateur connecté.
+    """L'identité portée par le jeton agent (champ ``sub``), émis à l'instant par l'API pour l'utilisateur connecté.
 
     Un jeton illisible (doubles de test) donne une empreinte : l'espace reste propre à ce jeton, jamais partagé.
     """

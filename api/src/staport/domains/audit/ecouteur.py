@@ -1,4 +1,4 @@
-"""Historique des entités auditées : remplace Hibernate Envers par des écouteurs de session SQLAlchemy (ADR 0016 § 2).
+"""Historique des entités auditées : des écouteurs de session SQLAlchemy enregistrent chaque révision.
 
 Pendant la transaction, chaque vidage (`flush`) enregistre en mémoire l'état des entités auditées qui ont changé ; juste
 avant le commit, une **révision** est créée (qui, quand, d'où) et les instantanés sont insérés dans les tables
@@ -6,7 +6,7 @@ avant le commit, une **révision** est créée (qui, quand, d'où) et les instan
 Les tables d'audit n'acceptent que l'insertion (droits du compte applicatif) : chaque ligne est donc écrite une seule
 fois, à son état final dans la transaction.
 
-Règles de fusion d'une même transaction (comme Envers) : ajout puis modification = ajout ; modification puis
+Règles de fusion d'une même transaction : ajout puis modification = ajout ; modification puis
 suppression = suppression ; ajout puis suppression = rien ; une liaison ajoutée puis retirée (ou l'inverse) = rien.
 Un enregistrement dont aucun champ audité n'a changé (changement de mot de passe seul, par exemple) ne produit rien.
 """
@@ -201,7 +201,7 @@ def _avant_commit(session: Session) -> None:
         entite = registre.par_classe(classe)
         if entite is None:
             continue
-        noms.add(entite.nom_hibernate)
+        noms.add(entite.nom_stocke)
         session.execute(insert(entite.table_aud).values(id=identifiant, rev=revision, revtype=revtype, **valeurs))
     for (cle, proprietaire, element), revtype in etat.liens.items():
         nom_entite, _, nom_collection = cle.partition(".")
@@ -209,7 +209,7 @@ def _avant_commit(session: Session) -> None:
         collection = next((c for c in (entite.collections if entite else ()) if c.nom == nom_collection), None)
         if entite is None or collection is None:
             continue
-        noms.add(entite.nom_hibernate)
+        noms.add(entite.nom_stocke)
         session.execute(
             insert(collection.table_aud).values(
                 {

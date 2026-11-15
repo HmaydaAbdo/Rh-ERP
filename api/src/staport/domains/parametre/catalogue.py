@@ -64,13 +64,13 @@ class DefinitionParametre:
 
 
 def expression_cron_valide(valeur: str) -> bool:
-    """Six champs dans l'ordre de Spring (secondes, minutes, heures, jour, mois, jour de semaine), vérifiés par
+    """Six champs dans l'ordre (secondes, minutes, heures, jour, mois, jour de semaine), vérifiés par
     APScheduler.
 
-    Écart documenté avec Spring : APScheduler numérote les jours de semaine à partir du lundi (0 = lundi) alors que
-    Spring et cron comptent 0 ou 7 pour le dimanche. Une valeur numérique serait lue différemment selon le moteur : le
+    Particularité : APScheduler numérote les jours de semaine à partir du lundi (0 = lundi) alors que
+    cron compte 0 ou 7 pour le dimanche. Une valeur numérique serait lue différemment selon le moteur : le
     champ jour de semaine n'accepte donc que `*` et les noms `MON` à `SUN` (listes et plages comprises). Le caractère
-    `?` de Spring n'est pas reconnu : écrire `*`.
+    `?` n'est pas reconnu : écrire `*`.
     """
     try:
         declencheur_cron(valeur)

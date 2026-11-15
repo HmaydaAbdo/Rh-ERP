@@ -1,4 +1,4 @@
-"""Événements de sécurité (parité avec `EvenementSecurite` / `ActionSecurite` de Spring).
+"""Événements de sécurité.
 
 Les domaines publient un événement par le port `Auditeur` (`audit_contexte`) ; le domaine `audit` l'écrit dans le
 journal d'audit. Un événement ne contient jamais de mot de passe ni de jeton.

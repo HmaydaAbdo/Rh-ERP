@@ -8,7 +8,7 @@ sidebar_position: 3
 
 ## Endpoints backend
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /chantiers` | `CHANTIER_WRITE` |
 | `PUT /chantiers/{id}` | `CHANTIER_WRITE` |

@@ -79,7 +79,7 @@ def appel(nom: str, identifiant: str = "a1", **arguments: Any) -> AIMessage:
 
 
 def outil(nom: str, donnees: dict[str, Any] | Callable[..., Any], appels: list[str] | None = None) -> BaseTool:
-    """Un outil LangChain qui rend ``donnees`` en JSON, comme un outil MCP de Spring ; ``appels`` note chaque appel."""
+    """Un outil LangChain qui rend ``donnees`` en JSON, comme un outil MCP de l'API ; ``appels`` note chaque appel."""
 
     def executer(**arguments: Any) -> tuple[str, dict[str, Any]]:
         if appels is not None:

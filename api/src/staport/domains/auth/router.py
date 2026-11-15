@@ -1,4 +1,4 @@
-"""Routes HTTP du domaine auth : mêmes chemins, statuts, cookies et permissions que Spring (21 routes)."""
+"""Routes HTTP du domaine auth : chemins, statuts, cookies et permissions (21 routes)."""
 
 from typing import Annotated
 

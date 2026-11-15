@@ -1,6 +1,6 @@
-"""Outils MCP de la Paie et des heures supplémentaires (port de `OutilsPaie` et `OutilsHeuresSupp` de Spring).
+"""Outils MCP de la Paie et des heures supplémentaires.
 
-Mêmes noms, descriptions, permissions et clés de résultat que Spring. Les chiffres viennent des services des domaines
+Les chiffres viennent des services des domaines
 `paie` et `heuresupp` : le modèle ne calcule rien. Les montants sont rendus en nombres JSON. Aucune écriture, aucune
 ligne d'audit : le span du décorateur `@outil` diagnostique l'appel.
 """
@@ -711,7 +711,7 @@ def enregistrer(
             "Rend pour un mois et un périmètre les effectifs, heures décimales, Montant, STC (DH), Forfaits et Net à "
             "payer, avec toutes les répartitions par chantier, équipe et fonction. Accepte les filtres chantier, "
             "équipe, fonction, CIN et nom. Les définitions sont incluses dans la réponse. Montant, STC et Net sont "
-            "calculés par Spring ; ne les recalculez pas. Pour des lignes individuelles, utiliser "
+            "calculés par le serveur ; ne les recalculez pas. Pour des lignes individuelles, utiliser "
             "`heures_supp_rechercher` ; pour savoir quels mois existent, `heures_supp_periodes`."
         ),
     )
@@ -773,8 +773,8 @@ def enregistrer(
         description=(
             "Recherche les lignes importées par mois, chantier, fonction, CIN partiel ou nom partiel. Au moins un "
             "critère est obligatoire. Rend au plus 20 lignes par page avec le salaire horaire, P/H, Montant, STC "
-            "(DH), Forfait et Net à payer. Les montants et leur source sont calculés par Spring. Pour des totaux et "
-            "des répartitions plutôt que des lignes, utiliser `heures_supp_indicateurs`."
+            "(DH), Forfait et Net à payer. Les montants et leur source sont calculés par le serveur. Pour des "
+            "totaux et des répartitions plutôt que des lignes, utiliser `heures_supp_indicateurs`."
         ),
     )
     @outil(

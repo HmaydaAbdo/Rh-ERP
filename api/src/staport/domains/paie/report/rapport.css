@@ -2,29 +2,21 @@
 @font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; font-style: normal; }
 @font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Italic.ttf"); font-weight: normal; font-style: italic; }
 @font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-BoldItalic.ttf"); font-weight: bold; font-style: italic; }
-/* Feuille de style STATIQUE du rapport PDF de paie (voir PaieReportHtmlBuilder) — jamais chargée
+/* Feuille de style STATIQUE du rapport PDF de paie (voir `report.py`) — jamais chargée
    comme un template, jamais interpolée avec une donnée métier : son contenu est injecté tel quel
-   (jsoup DataNode) dans le document généré. Aucune valeur ici ne doit jamais dépendre d'une donnée
+   dans le document généré. Aucune valeur ici ne doit jamais dépendre d'une donnée
    de paie/employé — c'est précisément ce qui garantit qu'aucune injection n'est possible par ce
-   chemin (voir le Javadoc de PaieReportHtmlBuilder pour l'incident de production que ce choix
-   évite structurellement : un ancien pipeline HTML injectait du CSS non échappé et un commentaire
-   contenant "<tr>" avait cassé le parseur XML strict d'openhtmltopdf).
+   chemin.
 
    Toutes les dimensions sont en "pt" (point PDF, 1/72 pouce) — jamais en "px" CSS (qui vaut
-   1/96 pouce et fausserait la géométrie une fois imprimée sur A4 réel). Les valeurs numériques
-   reprennent telles quelles celles de l'ancien gabarit JasperReports (rapport.jrxml), qui étaient
-   déjà exprimées en points PDF.
+   1/96 pouce et fausserait la géométrie une fois imprimée sur A4 réel).
 
-   IMPORTANT — moteur CSS d'openhtmltopdf 1.0.x : c'est un moteur CSS 2.1 (+ quelques ajouts CSS3
-   ciblés), PAS un moteur de navigateur moderne. Constaté empiriquement (avertissements de
-   compilation lors du 1er rendu de test) : AUCUN support de `var()`/custom properties, AUCUN
-   support de flexbox (`display:flex`, `gap`, `align-items`, `justify-content`), AUCUN support de
-   `object-fit`/`text-overflow`. Toute mise en page horizontale ici utilise donc `float`+`margin`
-   (jamais flexbox) et toutes les couleurs sont des valeurs hexadécimales littérales (jamais une
-   variable) — pas une préférence de style, une CONTRAINTE du moteur de rendu cible.
+   Le rendu PDF est fait par WeasyPrint. Toute mise en page horizontale ici utilise `float`+`margin`
+   et toutes les couleurs sont des valeurs hexadécimales littérales (jamais une variable) : les
+   mesures de `report.py` supposent cette géométrie exacte.
 
    Pagination : chaque page physique est un DIV .page à taille FIXE (842×595pt, A4 paysage),
-   entièrement pré-découpé côté Java (RapportPageModelBuilder) — @page n'a donc qu'à fixer la
+   entièrement pré-découpé côté serveur avant le rendu (`report.py`) — @page n'a donc qu'à fixer la
    taille du support PDF, sans marge (la marge de 20pt devient le padding interne de .page), et
    aucune règle CSS de pagination avancée (running headers, string-set, compteurs de page) n'est
    utilisée : voir site/docs/domaines/rapport/index.md pour la justification de ce choix. */
@@ -67,8 +59,8 @@ html, body {
     page-break-after: avoid;
 }
 
-/* Page de garde : aucun page-header/page-footer (comportement JasperReports isTitleNewPage
-   délibérément reproduit — une couverture n'a pas besoin du bandeau récurrent). Centrage par
+/* Page de garde : aucun page-header/page-footer (une couverture
+   n'a pas besoin du bandeau récurrent). Centrage par
    text-align + largeurs fixes centrées (jamais flexbox, non supporté — voir en-tête du fichier). */
 .page.cover {
     text-align: center;
@@ -116,7 +108,7 @@ html, body {
 .page-header .bloc.bloc-niveau { margin-left: 10pt; width: 436pt; }
 
 /* Le bandeau fait 40 pt de haut : un niveau qui passe sur plusieurs lignes remonte (classe posée par
-   PaieReportHtmlBuilder d'après le nombre de lignes à 9 pt) et, au-delà de 3 lignes, passe en corps 7. */
+   `report.py` d'après le nombre de lignes à 9 pt) et, au-delà de 3 lignes, passe en corps 7. */
 .page-header .bloc.bloc-niveau.lignes-2 { margin-top: 8pt; }
 .page-header .bloc.bloc-niveau.lignes-3 { margin-top: 3pt; }
 .page-header .bloc.bloc-niveau.lignes-4 { margin-top: 3pt; font-size: 7pt; line-height: 8.5pt; }
@@ -199,9 +191,9 @@ html, body {
     margin-top: 2pt;
 }
 
-/* Largeur volontairement plus grande que 2×280+42=602pt : openhtmltopdf peut faire passer des
-   flottants à la ligne quand leur largeur cumulée correspond EXACTEMENT à celle du conteneur
-   (marge d'arrondi interne du moteur, constaté empiriquement) — une marge de sécurité de 20pt
+/* Largeur volontairement plus grande que 2×280+42=602pt : des flottants peuvent passer à la ligne
+   quand leur largeur cumulée correspond EXACTEMENT à celle du conteneur
+   (marge d'arrondi interne du moteur de rendu, constaté empiriquement) — une marge de sécurité de 20pt
    évite ce repli sans décalage perceptible du centrage. */
 
 .cover .signatures {
@@ -259,9 +251,9 @@ html, body {
 
 /* ================================ TITRES DE CHAPITRE / SECTION ================================ */
 
-/* Les interlignes des titres et des cartes KPI sont fixés ici pour que RapportPageModelBuilder (qui pagine avant
-   tout rendu) puisse prévoir leur hauteur quand le texte passe à la ligne — garder ses constantes INTERLIGNE_*
-   synchronisées. */
+/* Les interlignes des titres et des cartes KPI sont fixés ici pour que le découpage des pages de `report.py` (qui pagine avant
+   tout rendu) puisse prévoir leur hauteur quand le texte passe à la ligne — garder ses interlignes
+   synchronisés. */
 .titre-chapitre {
     font-size: 16pt;
     line-height: 20pt;
@@ -337,8 +329,8 @@ html, body {
 }
 
 /* Toutes les cartes ont la même largeur à tous les niveaux (jusqu'à 6 par rangée : 6 x 126 + 5 x 8 = 796 pt, juste
-   sous les 802 pt utiles — jamais exactement 802, sinon openhtmltopdf peut faire passer un flottant à la ligne). La
-   hauteur est posée en style par PaieReportHtmlBuilder : celle de la carte la plus haute de la rangée. */
+   sous les 802 pt utiles — jamais exactement 802, sinon un flottant peut passer à la ligne). La
+   hauteur est posée en style par `report.py` : celle de la carte la plus haute de la rangée. */
 .kpi-carte {
     width: 126pt;
     height: 54pt;
@@ -392,8 +384,8 @@ table.employes th {
 }
 
 /* Une cellule de données dont le texte dépasse sa largeur passe à la ligne (la ligne grandit) au lieu d'être
-   tronquée. Les interlignes sont fixés ici pour que RapportPageModelBuilder (qui pagine avant tout rendu) puisse
-   prévoir la hauteur de chaque ligne — garder RapportPageModelBuilder.INTERLIGNE_* synchronisés. */
+   tronquée. Les interlignes sont fixés ici pour que le découpage des pages de `report.py` (qui pagine avant tout rendu) puisse
+   prévoir la hauteur de chaque ligne — garder ses interlignes synchronisés. */
 table.employes td {
     white-space: normal;
     word-wrap: break-word;
@@ -407,7 +399,7 @@ table.employes th {
 }
 
 /* Largeurs de colonnes — somme = 802pt (voir spec). L'ordre des colonnes DOIT correspondre à
-   l'ordre d'émission des <col> dans PaieReportHtmlBuilder. */
+   l'ordre d'émission des <col> dans `report.py`. */
 table.employes col.nom-prenom { width: 120pt; }
 table.employes col.fonction { width: 100pt; }
 table.employes col.cin { width: 65pt; }
@@ -451,7 +443,7 @@ table.recap td {
 }
 
 /* Même principe que table.employes td : le texte long passe à la ligne, interligne fixe prévu par
-   RapportPageModelBuilder. */
+   le découpage des pages de `report.py`. */
 table.recap td {
     white-space: normal;
     word-wrap: break-word;

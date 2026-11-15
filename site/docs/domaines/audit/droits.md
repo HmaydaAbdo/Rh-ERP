@@ -13,7 +13,7 @@ d'écriture sur l'audit.
 
 ## Endpoints backend
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /logs/search` | `AUDIT_READ` |
 | `GET /logs/{id}` | `AUDIT_READ` |

@@ -1,4 +1,4 @@
-"""Journaux JSON et archivage quotidien, documentation d'API éteinte par défaut (parité avec l'ancien backend)."""
+"""Journaux JSON et archivage quotidien, documentation d'API éteinte par défaut."""
 
 import asyncio
 import gzip

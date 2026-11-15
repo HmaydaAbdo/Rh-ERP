@@ -7,7 +7,7 @@ table.heures td:not(.emargement) { font-weight: 600; }
 table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
-/* Émargement : cellule vide ; openhtmltopdf compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
+/* Émargement : cellule vide ; le moteur de rendu compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
 table.heures th.emargement.signature, table.heures td.emargement.signature { width: 90pt; }
 table.heures th.emargement.signature_empreinte, table.heures td.emargement.signature_empreinte { width: 170pt; }
 table.heures td.emargement { height: 42pt; }

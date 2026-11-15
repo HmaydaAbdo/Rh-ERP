@@ -43,7 +43,7 @@ automatiquement lors de la création des bulletins. Une équipe vide sur le bull
 l'équipe de la fiche. Un salaire différent de celui de la fiche reste soumis au wizard ; le type de
 salaire y est proposé selon le seuil de 500. Un salaire nul exige l'action distincte « Ignorer et
 conserver 0 ». Un bulletin déjà présent reste refusé. Les départs et STC ne sont pas déduits
-automatiquement. Voir migration Paie (`site/docs/migration/paie.md`) pour l'état du portage.
+automatiquement. Voir [Paie](./paie/index.md).
 
 **Exception — Heures supplémentaires** : un doublon employé + mois + chantier bloque l'import par défaut. Le remplacement
 de données déjà importées n'est possible qu'après une action explicite de l'utilisateur dans l'assistant et reste audité.
@@ -55,8 +55,8 @@ fichier : rien n'est créé, ni les lignes valides, ni les référentiels qui au
 corriger le fichier et de le réimporter.
 
 Cette règle impose une discipline de code : pendant la validation, on ne garde que des valeurs brutes (aucune
-entité JPA gérée). Charger ou modifier une entité plus tôt l'exposerait au « dirty checking » d'Hibernate, qui
-persisterait le changement même si l'import est finalement rejeté.
+entité suivie par la session). Charger ou modifier une entité plus tôt l'exposerait au suivi de modifications de la session
+SQLAlchemy, qui persisterait le changement même si l'import est finalement rejeté.
 
 ### 3. Une seule raison par ligne
 
@@ -123,9 +123,9 @@ frontend/README.md ([frontend/index](../frontend/index.md)).
 
 ## Ajouter un nouvel import
 
-1. Un sous-package `imports/` dans le domaine (service, contrôleur, DTO de résultat, exception de fichier
+1. Un sous-package `imports/` dans le domaine (service, routeur, schéma de résultat, exception de fichier
    illisible).
 2. Suivre les règles ci-dessus : ajout seul, atomique, une raison par ligne, même forme de réponse, modèle sans
    exemple, chargements préalables.
-3. Permission `<DOMAINE>_IMPORT` par migration (catalogue fixe) et ligne dans `EndpointSecurityTest`.
+3. Permission `<DOMAINE>_IMPORT` par migration (catalogue fixe) et ligne dans `test_auth_acces.py`.
 4. Documenter le format des colonnes dans le README du domaine et ajouter la ligne aux tableaux ci-dessus.

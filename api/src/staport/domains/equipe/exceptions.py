@@ -27,4 +27,4 @@ class EquipeUtilisee(ErreurMetier):
 
 
 class ErreurImportEquipe(ErreurMetier):
-    """Fichier illisible ou colonnes inattendues (HTTP 400, comme `EquipeImportException`)."""
+    """Fichier illisible ou colonnes inattendues (HTTP 400)."""

@@ -1,5 +1,6 @@
-"""Outils MCP Employé, Paie, rapport, heures supplémentaires et accueil (KAN-216, parité `OutilsEmploye`, `OutilsPaie`,
-`OutilsHeuresSupp`, `OutilsAccueil` de Spring), par appels JSON-RPC sur `/mcp` avec un PostgreSQL réel.
+"""Outils MCP Employé, Paie, rapport, heures supplémentaires et accueil (KAN-216).
+
+Appels JSON-RPC sur `/mcp` avec un PostgreSQL réel.
 
 Jeu de données : trois mois de paie (2096-01, 2096-02, 2096-04), un départ en 2096-02 (STC), un en 2096-03 (absence), un
 sans motif en 2096-05 ; les périmètres de chaque test se limitent à ces chantiers et fonctions, pour ne dépendre
@@ -169,7 +170,7 @@ OUTILS_PORTES: dict[str, tuple[tuple[str, ...], dict[str, Any]]] = {
 }
 
 
-def test_le_catalogue_compte_les_32_outils_de_spring_en_lecture_seule(
+def test_le_catalogue_compte_les_32_outils_en_lecture_seule(
     plateforme: Plateforme, admin: tuple[str, str, int]
 ) -> None:
     outils = {o["name"]: o for o in _rpc(plateforme, admin[0], "tools/list").json()["result"]["tools"]}

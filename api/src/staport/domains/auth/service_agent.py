@@ -1,4 +1,4 @@
-"""Jeton délégué de l'assistant IA (parité avec `AgentService` de Spring).
+"""Jeton délégué de l'assistant IA.
 
 Le jeton porte l'identité seule : les droits sont relus à chaque appel d'outil (`identite_active`). Sans jeu de clés
 (`MCP_ENABLED=false`), l'assistant est désactivé : 404.

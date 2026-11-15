@@ -1,6 +1,6 @@
-"""Outils MCP du domaine Employé et de l'accueil (port de `OutilsEmploye` et `OutilsAccueil` de Spring).
+"""Outils MCP du domaine Employé et de l'accueil.
 
-Mêmes noms, descriptions et clés de résultat que Spring. Le salaire et son type ne sont rendus qu'avec `PAIE_READ`
+Le salaire et son type ne sont rendus qu'avec `PAIE_READ`
 (règle de l'API) ; le CIN et les dates le sont avec `EMPLOYEE_READ`. Aucune écriture : les lectures ne sont pas
 auditées, le span du décorateur `@outil` les diagnostique. Les chiffres viennent des services du domaine.
 """
@@ -95,7 +95,7 @@ def _mois_ou_nul(periode: int | None) -> str | None:
 
 
 def _fiche(employe: EmployeeReponse, voit_paie: bool) -> dict[str, Any]:
-    """Une fiche Employé pour l'assistant (`OutilsEmploye.fiche`)."""
+    """Une fiche Employé pour l'assistant."""
     fonction, chantier, equipe = employe.fonction, employe.chantier, employe.equipe
     fiche: dict[str, Any] = {
         "id": employe.id,

@@ -23,7 +23,7 @@ _JOINTURES: dict[str, tuple[Any, ColumnElement[bool]]] = {
     "chantier": (_CHANTIER, _CHANTIER.id == Paie.chantier_id),
     "equipe": (_EQUIPE, _EQUIPE.id == Paie.equipe_id),
 }
-# Nom de tri public (celui du JSON, comme Spring Data) -> (colonne, jointure externe nécessaire ou None).
+# Nom de tri public (celui du JSON) -> (colonne, jointure externe nécessaire ou None).
 _TRIS: dict[str, tuple[Any, str | None]] = {
     "id": (Paie.id, None),
     "version": (Paie.version, None),

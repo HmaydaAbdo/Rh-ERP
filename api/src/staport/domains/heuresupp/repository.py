@@ -16,7 +16,7 @@ from .schemas import HeuresSuppRecherche
 Fiche = tuple[HeureSupp, Employee, Fonction, Chantier]
 FicheEquipe = tuple[HeureSupp, Employee, Fonction, Chantier, Equipe | None]
 
-# Noms de tri du client (propriétés de l'entité côté Spring) → colonnes.
+# Noms de tri du client (propriétés de l'entité) → colonnes.
 TRIS: dict[str, Any] = {
     "id": HeureSupp.id,
     "version": HeureSupp.version,

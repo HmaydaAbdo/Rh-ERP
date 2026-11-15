@@ -1,4 +1,4 @@
-"""Filtres de la recherche d'employés, règles de saisie et modification (parité de `EmployeeSpecification`)."""
+"""Filtres de la recherche d'employés, règles de saisie et modification."""
 
 import uuid
 from typing import Any

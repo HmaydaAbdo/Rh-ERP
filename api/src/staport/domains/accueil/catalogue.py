@@ -1,4 +1,4 @@
-"""Catalogue fixe des indicateurs de l'accueil (parité de `IndicateurAccueil`).
+"""Catalogue fixe des indicateurs de l'accueil.
 
 Chaque indicateur est protégé par la permission de lecture du domaine qui porte sa donnée : l'accueil ne donne jamais
 accès à ce que l'utilisateur ne pourrait pas lire ailleurs. La valeur vient des API des domaines ; ce domaine ne garde

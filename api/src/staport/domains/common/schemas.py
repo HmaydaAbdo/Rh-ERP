@@ -1,4 +1,4 @@
-"""Schémas partagés : base des DTO (JSON en camelCase, comme Spring) et page de résultats (`VIA_DTO` de Spring Data)."""
+"""Schémas partagés : base des DTO (JSON en camelCase) et page de résultats."""
 
 import re
 from decimal import Decimal
@@ -27,7 +27,7 @@ def _courriel(valeur: str) -> str:
 
 
 def regle_metier(champ: str, message: str) -> PydanticCustomError:
-    """Règle d'un `@AssertTrue` de Spring : l'erreur se rapporte à la propriété `champ`, pas à un champ saisi."""
+    """Règle de validation de l'objet : l'erreur se rapporte à la propriété `champ`, pas à un champ saisi."""
     return PydanticCustomError("regle_metier", message, {"champ": champ})  # pyright: ignore
 
 
@@ -35,7 +35,7 @@ NonVide = Annotated[str, AfterValidator(_non_vide)]
 """Équivalent de `@NotBlank` : au moins un caractère qui n'est pas une espace."""
 
 Courriel = Annotated[str, AfterValidator(_non_vide), AfterValidator(_courriel)]
-"""Équivalent de `@NotBlank @Email` (syntaxe tolérante comme Hibernate Validator : `local@domaine`)."""
+"""Adresse courriel non vide (syntaxe tolérante : `local@domaine`)."""
 
 
 Nombre = Annotated[

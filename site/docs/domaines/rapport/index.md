@@ -148,31 +148,28 @@ Les équipes sont proposées par leur libellé; les codes servent au rattachemen
 ## Permissions et audit
 
 Les deux routes d'export exigent `PAIE_EXPORT`. L'assistant lit également les périodes, marchés et
-tableaux matériel avec `PAIE_READ`. Le backend Spring trace actuellement les exports sous
-`PAIE_EXPORT_EXCEL` et `PAIE_RAPPORT_PDF`. Le backend Python suit la décision plus récente du
-propriétaire : le journal d'audit contient les opérations de modification, sans lectures ni sorties
+tableaux matériel avec `PAIE_READ`. Selon la décision du propriétaire, le journal d'audit contient les opérations de modification, sans lectures ni sorties
 de données ; les exports n'y produisent donc pas d'entrée. La permission d'export ne permet pas
 d'écrire dans la paie.
 Le [catalogue RBAC Paie](../paie/droits.md) indique les accès détaillés.
 
 ## Mise en œuvre et scénarios
 
-Les contrats d'export se trouvent dans `backend/src/main/java/staport/rh/paie/export/` et `report/`.
-Le périmètre Excel est construit par `PaiePerimetreService`. Le modèle PDF est construit par
-`PaieBiReportBuilder`; `RapportPageModelBuilder` le découpe en pages, puis `PaieReportHtmlBuilder`
-construit le document, rendu par `PaieReportHtmlPdfService`. Les polices, styles et logo sont embarqués.
+Les contrats d'export se trouvent dans `api/src/staport/domains/paie/` (`export.py`, `report.py`, `rapport_*.py` et
+`report/`). Le périmètre commun est construit par `service.py`. Le modèle PDF est construit par `rapport_calcul.py` ; `report.py`
+le découpe en pages, construit le document HTML et le rend avec WeasyPrint. Les polices, styles et logo sont embarqués.
 La sélection des lignes ne dépend jamais de la pagination de l'écran.
 
 | Scénario | Preuve automatisée |
 |---|---|
-| Agrégats, comparaison, STC, sections et absence de double détail | `PaieBiReportBuilderTest` |
-| Évolutions et effectifs filtrés comme le détail, caractères `%` et `_` littéraux | `PaieRechercheJokersTest` sur PostgreSQL |
-| Pagination, grands textes, tableaux et pages complètes de périmètre | `RapportPageModelBuilderTest` |
-| PDF valide, texte complet, filtres affichés, tableaux réellement rendus, données échappées | `PaieReportHtmlPdfServiceTest` |
-| Tableaux d'évolution, de répartition et de parc matériel | `RapportEvolutionSvgBuilderTest`, `RapportChartSvgBuilderTest` |
-| Feuilles Excel, exclusions, équipes et cellules | `PaieExportServiceTest` |
+| Agrégats, comparaison, STC, sections et absence de double détail | `api/tests/test_paie_rapport_calcul.py` |
+| Évolutions et effectifs filtrés comme le détail, caractères `%` et `_` littéraux | `api/tests/test_paie_rapport_calcul.py` sur PostgreSQL |
+| Pagination, grands textes, tableaux et pages complètes de périmètre | `api/tests/test_paie_rapport_texte.py` |
+| PDF valide, texte complet, filtres affichés, tableaux réellement rendus, données échappées | `api/tests/test_paie_rapport.py` |
+| Tableaux d'évolution, de répartition et de parc matériel | `api/tests/test_paie_rapport_graphique.py` |
+| Feuilles Excel, exclusions, équipes et cellules | `api/tests/test_paie_export_perimetre.py` |
 | Choix, données chargées, reprise après erreur et réponses obsolètes | Specs `paie-export-wizard` et de ses étapes |
-| Permission par route | `EndpointSecurityTest` |
+| Permission par route | `api/tests/test_auth_acces.py` |
 
 Les accords métier et la validation du document complet restent dans le PV global ([decisions/pv-n1-cadrage](../../decisions/pv-n1-cadrage.md)).
 Les résultats d'une exécution locale ou CI ne constituent pas une preuve de déploiement en production.
@@ -213,6 +210,6 @@ services documentés.
 
 Tester les formules contre fixtures synthétiques, périodes et filtres, arrondis, cohérence global →
 local, permissions, absence de double comptage et génération PDF/Excel.
-Pour les PDF, vérifier le texte et la mise en page des tableaux avec `PaieReportHtmlPdfServiceTest`; une
+Pour les PDF, vérifier le texte et la mise en page des tableaux avec `test_paie_rapport.py`; une
 extraction de texte seule ne prouve pas le rendu. Vérifier les grandes listes de filtres dans
-`RapportPageModelBuilderTest` et le filtrage PostgreSQL avec `PaieRechercheJokersTest`.
+`test_paie_rapport.py` et le filtrage PostgreSQL avec `test_paie_options.py`.

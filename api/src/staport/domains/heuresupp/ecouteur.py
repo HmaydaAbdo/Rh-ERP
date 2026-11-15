@@ -1,4 +1,4 @@
-"""Les lignes suivent leur bulletin (parité de `EcouteurPaieHeuresSupp`), dans la transaction de la paie.
+"""Les lignes suivent leur bulletin, dans la transaction de la paie.
 
 Appelé par `paie.service` et par l'import de paie : une modification du marqueur STC/sortie recalcule STC et net (le
 forfait, interdit en STC/sortie, est annulé), un changement de fonction du bulletin est repris ; la suppression d'un

@@ -6,7 +6,7 @@ process.env['PLAYWRIGHT_BROWSERS_PATH'] ??= resolve(process.cwd(), '.angular', '
 
 /**
  * Parcours E2E du frontend contre une API simulée (voir `e2e/support/api-mock.ts`) : rapides, déterministes, sans backend.
- * Le contrat réel avec le backend est couvert par les tests d'intégration Spring ; ici on vérifie ce que l'utilisateur voit
+ * Le contrat réel avec le backend est couvert par les tests d'intégration de `api/tests` ; ici on vérifie ce que l'utilisateur voit
  * et peut faire (connexion, permissions, listes, formulaires, export) et l'accessibilité (axe).
  * Hors CI, le Chrome installé sur la machine est utilisé ; en CI, `npx playwright install chromium`.
  */

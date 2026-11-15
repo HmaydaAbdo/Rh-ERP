@@ -1,4 +1,4 @@
-"""Base : schéma et données initiales équivalents à Flyway V1 à V44 (KAN-212, ADR 0016 § 3).
+"""Base : schéma et données initiales équivalents à Flyway V1 à V44 (KAN-212).
 
 Les 44 scripts SQL de Flyway sont rejoués tels quels, dans l'ordre numérique, pour que le schéma ET les données de
 référence (permissions, rôles, paramètres) soient identiques par construction. Une base existante gérée par Flyway

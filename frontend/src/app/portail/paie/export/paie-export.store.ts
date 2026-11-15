@@ -83,7 +83,7 @@ export class PaieExportStore {
   /** Codes des marchés retenus pour le PDF ; liste vide = tous les marchés. */
   readonly marchesChoisis = signal<string[]>([]);
   readonly rechercheChantier = signal('');
-  /** Retire le chapitre « Vue d'ensemble » du PDF (voir `PaieReportPdfRequestDto.sansVueEnsemble`). */
+  /** Retire le chapitre « Vue d'ensemble » du PDF (champ `sansVueEnsemble` de la requête). */
   readonly sansVueEnsemble = signal(false);
   /** Chantier -> libellé d'équipe -> présentation choisie ; une équipe absente reste dans la liste du chantier. */
   readonly traitements = signal<Record<string, Record<string, Traitement>>>({});

@@ -30,9 +30,9 @@ s'appliquent.
   sécurité obligatoire.
 * Ne pas dupliquer une même valeur dans plusieurs sources. Définir clairement la source faisant
   autorité et la priorité de résolution.
-* Utiliser le mécanisme de configuration typé et validé du framework. Dans Spring Boot, préférer des
-  propriétés liées à une classe de configuration validée pour un groupe cohérent de paramètres ;
-  réserver `@Value` aux cas simples.
+* Utiliser le mécanisme de configuration typé et validé du framework. Avec pydantic-settings, préférer
+  un modèle de réglages validé pour un groupe cohérent de paramètres ; réserver la lecture directe
+  d'une variable aux cas simples.
 
 ## Secrets
 

@@ -1,6 +1,6 @@
-"""Parité du domaine parametre avec Spring (KAN-215).
+"""Domaine parametre (KAN-215).
 
-Reprend `CleParametreTest` (catalogue, normalisation) et `ParametreServiceTest` (valeurs de départ, modification lue
+Catalogue, normalisation, valeurs de départ, modification lue
 aussitôt et tracée, refus sans effet, paramètre inconnu, cron invalide), sur un PostgreSQL réel par l'API HTTP, plus les
 droits `PARAMETRE_READ` / `PARAMETRE_WRITE`, le verrou optimiste et l'absence de valeur de repli.
 """
@@ -79,9 +79,9 @@ def test_une_expression_cron_a_six_champs_est_acceptee(expression: str) -> None:
         "0 0 23 * * * *",  # sept champs
         "0 0 24 * * *",  # heure hors plage
         "0 60 23 * * *",  # minute hors plage
-        "0 0 23 * * 1",  # jour numérique : 0 = lundi pour APScheduler, dimanche pour Spring
+        "0 0 23 * * 1",  # jour numérique : refusé (0 = lundi pour APScheduler, dimanche pour cron)
         "0 0 23 * * 0-6",
-        "0 0 23 ? * MON",  # `?` de Spring non reconnu
+        "0 0 23 ? * MON",  # `?` non reconnu
     ],
 )
 def test_une_expression_cron_invalide_est_refusee(expression: str) -> None:
@@ -315,7 +315,7 @@ def test_chaque_route_exige_sa_permission(
 
 
 def test_une_cle_du_catalogue_sans_ligne_est_une_installation_incomplete(plateforme: Plateforme) -> None:
-    """Aucune valeur de repli ne masque une installation incomplète (parité avec Spring)."""
+    """Aucune valeur de repli ne masque une installation incomplète."""
     inconnue = DefinitionParametre("test.absente", "Absente", "", TypeParametre.ENTIER, None, 1, 2)
     portail = plateforme.client.portal
     assert portail is not None

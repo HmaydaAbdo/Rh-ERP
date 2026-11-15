@@ -61,7 +61,7 @@ def _periode_import(
     periode_url: Annotated[str | None, Query(alias="periode")] = None,
     periode_formulaire: Annotated[str | None, Form(alias="periode")] = None,
 ) -> PeriodePaie:
-    """Mois d'un import, lu dans l'URL ou dans le formulaire comme `@RequestParam` de Spring."""
+    """Mois d'un import, lu dans l'URL ou dans le formulaire indifféremment."""
     brute = periode_url if periode_url is not None else periode_formulaire
     if brute is None:
         raise RequestValidationError(

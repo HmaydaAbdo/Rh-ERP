@@ -1,4 +1,4 @@
-"""Rôles et catalogue des permissions (parité avec `RoleService` de Spring)."""
+"""Rôles et catalogue des permissions."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

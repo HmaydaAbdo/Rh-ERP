@@ -1,4 +1,4 @@
-"""Aides communes aux imports Excel de référentiels (parité `DescriptionFichier` et `DataFormatter`)."""
+"""Aides communes aux imports Excel de référentiels."""
 
 import hashlib
 from typing import Any

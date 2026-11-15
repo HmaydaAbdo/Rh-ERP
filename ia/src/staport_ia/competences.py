@@ -6,7 +6,7 @@ Une compétence est un dossier ``competences/<domaine>/SKILL.md`` dont l'en-têt
 (``metadata.include_tools``). Le ``SkillsMiddleware`` de Deep Agents protège ces outils : un appel échoue comme un outil
 inconnu tant que la compétence n'est pas épinglée (``pinned_skills``, choisie hors modèle par ``routage.py``) ou que le
 modèle n'en a pas lu le ``SKILL.md`` (repli officiel). Le résolveur ne rend que les outils du catalogue MCP de
-l'utilisateur de ce run, donc déjà limités à ses droits par Spring.
+l'utilisateur de ce run, donc déjà limités à ses droits par l'API.
 """
 
 from collections.abc import Callable, Mapping, Sequence

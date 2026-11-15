@@ -1,4 +1,4 @@
-"""DTO du domaine parametre : mêmes champs et noms JSON que les `record` Java (contrat du frontend)."""
+"""DTO du domaine parametre : champs et noms JSON du contrat du frontend."""
 
 from typing import Annotated
 

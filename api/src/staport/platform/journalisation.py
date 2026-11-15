@@ -1,4 +1,4 @@
-"""Journaux applicatifs (parité avec `logback-spring.xml` de l'ancien backend, `LOGGING_FORMAT` et `LOGGING_FILE_PATH`).
+"""Journaux applicatifs (`LOGGING_FORMAT` et `LOGGING_FILE_PATH`).
 
 - `text` (défaut) : le format lisible de Python, rien n'est modifié.
 - `json` : une ligne JSON par événement sur la console, avec `requestId` pour seule clé de contexte

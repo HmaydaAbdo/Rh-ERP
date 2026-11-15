@@ -45,7 +45,7 @@ Les références y sont développées :
 
 | Contrat | Champs, types et contraintes | Description |
 |---|---|---|
-| `PaieSearchCriteria` | `cin:string|null` ≤ 30; `nomPrenom:string|null` ≤ 150; `periode:string|null`; `fonctionIds`, `chantierIds`, `equipeIds:integer[]|null`, au plus 500 valeurs par liste | Critères combinés. Un filtre vide est ignoré; nom/CIN « contient » sans casse; `equipeIds` peut contenir `0` pour inclure les bulletins sans équipe. |
+| `PaieRecherche` | `cin:string|null` ≤ 30; `nomPrenom:string|null` ≤ 150; `periode:string|null`; `fonctionIds`, `chantierIds`, `equipeIds:integer[]|null`, au plus 500 valeurs par liste | Critères combinés. Un filtre vide est ignoré; nom/CIN « contient » sans casse; `equipeIds` peut contenir `0` pour inclure les bulletins sans équipe. |
 | Page de recherche | `content:PaieResponseDto[]`, `page:{size:number,number:number,totalElements:number,totalPages:number}` | Pagination et tri demandés dans l'URL de `/search`. Les numéros de page commencent à zéro. |
 | `PaieOptionsChantierRequest` | `periode:string` obligatoire; `recherche:string|null` ≤ 100 | Recherche paginée des chantiers ayant des bulletins ce mois. |
 | Option chantier | `id:integer`, `code:string`, `nom:string|null`, `designation:string|null`, `actif:boolean` | Référence du filtre; le statut n'enlève pas l'historique des bulletins. |
@@ -78,7 +78,7 @@ Les collections de mois et de marchés utilisent les résumés suivants :
 | `Tranche` | `min:number`, `max:number|null`, `effectif:integer` | Minimum inclus, maximum exclu; dernière tranche ouverte. |
 | `Evolution` | `periode:string`, `masse:number`, `effectif:integer`, `stc:integer`, `stcMontant:number` | Tous les mois disponibles du périmètre, du plus ancien au plus récent. |
 | `Qualite` | `sansEquipe:integer`, `sansObservation:integer` | Bulletins du mois auxquels manque une information facultative. |
-| `EffectifsCriteria` | `chantierIds`, `fonctionIds`, `equipeIds:integer[]|null` ≤ 500; `nomPrenom:string|null` ≤ 150; `cin:string|null` ≤ 30 | Même périmètre textuel et de rattachements que la recherche Paie. Aucun filtre de mois : tendance historique. |
+| `PaieRecherche` | `chantierIds`, `fonctionIds`, `equipeIds:integer[]|null` ≤ 500; `nomPrenom:string|null` ≤ 150; `cin:string|null` ≤ 30 | Même périmètre textuel et de rattachements que la recherche Paie. Aucun filtre de mois : tendance historique. |
 | `EffectifMoisDto` | `periode:string`, `effectif:integer`, `effectifMoisPrecedent:integer|null`, `variation:integer|null`, `entrees:integer|null`, `plusPayes:integer|null`, `sorties:integer`, `mutations:integer|null` | Indicateurs mensuels en personnes. `effectifMoisPrecedent`, `variation` et `plusPayes` sont `null` lorsque le mois calendaire précédent est absent du périmètre. |
 | `PaieRepartitionDto` | `periode:string`, `dimension:CHANTIER\|EQUIPE\|FONCTION`, `nombreGroupes:integer`, `groupes:Groupe[]` | Répartition triée par l'API publique selon masse (défaut, décroissant), effectif, STC, montant STC, libellé ou code ; l'adaptateur MCP applique la limite de transport. |
 
@@ -88,13 +88,13 @@ bulletin sur ce périmètre.
 
 ## Export Excel et regroupement d'équipes
 
-L'export Python doit reproduire le classeur Spring à options identiques : feuille globale, feuilles
+L'export produit un classeur avec : feuille globale, feuilles
 par chantier, feuilles par équipe, totaux, mois précédent et tableaux matériel. Le regroupement est
 une option de présentation de l'export, jamais une modification de la base. Une configuration peut
 déclarer un libellé de groupe et plusieurs codes d'équipes sources, par exemple `CH+OP = [CH, OP]`.
 Toutes les lignes des équipes sources sont alors agrégées sous ce seul libellé dans chaque feuille,
 et tous les calculs (effectif, masse, totaux et comparaisons) utilisent le groupe agrégé. Sans option
-de regroupement, le résultat reste strictement celui du Spring.
+de regroupement, le résultat est celui de l'export sans regroupement.
 La requête accepte aussi `materiel: {libelle: quantité}` pour reproduire les lignes matériel du
 classeur; une quantité absente reste vide et n'est jamais inventée.
 
@@ -168,9 +168,9 @@ texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, date
 dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
 identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
 de correction exige `PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`; l'analyse exige `PAIE_IMPORT` et
-`PAIE_READ`. Les contrôles de contrat et les preuves de parité restent consignés dans KAN-226.
+`PAIE_READ`. Les contrôles de contrat sont couverts par `api/tests/test_paie_contrat.py` (KAN-226).
 
-Le modèle Excel utilisateur respecte l'ordre historique Spring suivant (trois lignes d'en-tête) :
+Le modèle Excel utilisateur respecte l'ordre historique suivant (trois lignes d'en-tête) :
 `Nom & prénom`, `Fonction`, `CIN`, `Nbre Jrs`, `J.R.O`, `J.R.D`, `Salaire`, `Prime RO`, `Prime RD`,
 `Total`, `Observation`, `Chantier`, `Équipe`.
 

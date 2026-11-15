@@ -88,7 +88,7 @@ ESPACE = "/espace/"
 def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend:
     """Les compétences (lecture seule) et, sous ``/espace/``, l'espace de fichiers propre à cet utilisateur.
 
-    L'identité est celle du jeton agent validé par Spring (``memoire.sujet``), jamais une valeur du navigateur ou du
+    L'identité est celle du jeton agent validé par l'API (``memoire.sujet``), jamais une valeur du navigateur ou du
     modèle : le même chemin chez deux utilisateurs désigne deux fichiers distincts (``StoreBackend`` avec fabrique
     d'espace de noms, documenté par Deep Agents)."""
     return CompositeBackend(

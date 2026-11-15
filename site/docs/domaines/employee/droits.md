@@ -8,7 +8,7 @@ sidebar_position: 3
 
 ## Endpoints backend
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /employees` | `EMPLOYEE_WRITE` |
 | `PUT /employees/{id}` | `EMPLOYEE_WRITE` |
@@ -41,7 +41,7 @@ sidebar_position: 3
 ## Salaire : donnée de paie
 
 Le salaire et son type (`salaire`, `typeSalaire`) ne sont visibles et modifiables qu'avec **`PAIE_READ`**, en plus de la
-permission de l'endpoint. Sans elle, `EmployeeController` renvoie ces champs à `null` (consultation, recherche, réponse
+permission de l'endpoint. Sans elle, la route Employé renvoie ces champs à `null` (consultation, recherche, réponse
 d'une écriture), ignore ceux qui sont saisis (la fiche garde les siens) et retire un tri par salaire, qui dévoilerait leur
 ordre. Le frontend suit la même règle : colonne Salaire de la liste, champs du formulaire et ligne de la consultation
 n'apparaissent qu'avec `PAIE_READ` — tout comme le **parcours** de la fiche (`GET /paie/employes/{id}/parcours`, `PAIE_READ`). Les changements de salaire restent visibles dans l'historique d'audit (`AUDIT_READ`),

@@ -218,7 +218,7 @@ modification (`*_WRITE`), suppression (`*_DELETE`), import et modèle Excel (`*_
 (`PAIE_EXPORT`), synchronisation des chantiers (`CHANTIER_SYNC`). Un utilisateur qui n'a que la lecture voit les
 données sans aucun bouton d'action. Le détail par écran est dans [../rbac/](../domaines/rbac/index.md).
 
-> Le masquage côté interface est un confort : la sécurité réelle est portée par le backend (`@PreAuthorize`).
+> Le masquage côté interface est un confort : la sécurité réelle est portée par le backend (permission exigée par chaque route).
 
 ---
 

@@ -270,7 +270,7 @@ class PaieEffectifMois(ModeleApi):
 
 
 class PaieParcoursMois(ModeleApi):
-    """La photo du bulletin : libellé de la fonction, codes du chantier et de l'équipe du mois (`MoisDto`)."""
+    """La photo du bulletin : libellé de la fonction, codes du chantier et de l'équipe du mois."""
 
     bulletin_id: int
     periode: PeriodePaie
@@ -341,7 +341,7 @@ class PaieRepartitionGroupe(ModeleApi):
 
 
 class PaieRepartitionReponse(ModeleApi):
-    """Répartition d'un mois de paie triée selon le critère demandé (`PaieRepartitionDto`)."""
+    """Répartition d'un mois de paie triée selon le critère demandé."""
 
     periode: PeriodePaie
     dimension: DimensionPaie
@@ -386,7 +386,7 @@ class PaieComparaisonGroupe(ModeleApi):
 
 
 class PaieComparaisonReponse(ModeleApi):
-    """Comparaison de deux mois de paie sur le même périmètre (`PaieComparaisonDto`)."""
+    """Comparaison de deux mois de paie sur le même périmètre."""
 
     periode: PeriodePaie
     periode_reference: PeriodePaie

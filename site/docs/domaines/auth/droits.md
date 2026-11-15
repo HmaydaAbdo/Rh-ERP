@@ -35,7 +35,7 @@ Chaque outil MCP exige en plus la permission de son domaine, revérifiée à cha
 
 ## Endpoints d'administration
 
-| Endpoint | Permission (`@PreAuthorize`) |
+| Endpoint | Permission requise |
 |---|---|
 | `POST /users/search`, `GET /users/{id}` | `USER_MANAGE` |
 | `POST /users` | `USER_MANAGE` |
@@ -85,7 +85,7 @@ présenté par un compte inactif est de toute façon refusé.
 ## Suppression d'un rôle
 
 `DELETE /roles/{id}` répond `409` (message affiché par l'interface) quand le rôle est **encore attribué** à au moins un compte
-(`RoleInUseException`, avec le nombre de comptes) ou quand c'est `SYSTEM_ADMIN` (`ProtectedRoleException`). `PUT /roles/{id}` répond aussi `409` pour `SYSTEM_ADMIN` s'il est **renommé** ou **privé d'une permission** (sa description seule se modifie ; ses nouvelles permissions viennent des migrations). Les liaisons sont en
+(rôle encore attribué, avec le nombre de comptes) ou quand c'est `SYSTEM_ADMIN` (rôle protégé). `PUT /roles/{id}` répond aussi `409` pour `SYSTEM_ADMIN` s'il est **renommé** ou **privé d'une permission** (sa description seule se modifie ; ses nouvelles permissions viennent des migrations). Les liaisons sont en
 `ON DELETE RESTRICT` (`V13`) : plus aucun droit ne se retire en silence par une cascade SQL. Chaque tentative, réussie ou
 refusée, est une entrée du journal d'audit (`ROLE_SUPPRESSION`).
 
@@ -98,9 +98,9 @@ restent indiscernables pour l'appelant.
 
 ## Vérification automatique des permissions
 
-`EndpointSecurityTest` découvre tous les `@RestController` (sauf `AuthController`) et vérifie, sans base de
-données, que chaque endpoint a un `@PreAuthorize`, refuse une identité sans la permission requise, l'accepte
+`test_auth_acces.py` découvre toutes les routes de l'application (sauf les routes publiques d'`/auth`) et vérifie
+que chaque route déclare sa permission (`Depends(exiger(...))`), refuse une identité sans la permission requise, l'accepte
 avec elle, et correspond à une **table de référence** endpoint → permission (miroir des fichiers
 `docs/rbac/*.md`) : tout nouvel endpoint ou changement de permission doit être répercuté dans cette table
-et dans la doc. `JwtSecurityChainTest` valide la chaîne complète avec de vrais JWT (401 sans token, token
+et dans la doc. `test_auth_acces.py` valide la chaîne complète avec de vrais JWT (401 sans token, token
 invalide ou signé avec un autre secret ; 403 sans la permission, même avec un rôle d'administrateur ; 200 avec).
