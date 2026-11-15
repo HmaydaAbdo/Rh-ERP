@@ -6,6 +6,7 @@ import { AccordInterruptionComponent } from './accord-interruption.component';
 import { FilAssistant } from './fil-assistant.service';
 import { ListeConversationsComponent } from './liste-conversations.component';
 import { MemoireAssistantComponent } from './memoire-assistant.component';
+import { RaisonnementAssistantComponent } from './raisonnement-assistant.component';
 
 
 /**
@@ -50,7 +51,7 @@ import { MemoireAssistantComponent } from './memoire-assistant.component';
     @if (erreur()) {
       <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
     }
-    <copilot-chat />
+    <copilot-chat [reasoningMessageComponent]="raisonnement" />
     @if (fil.listeOuverte()) {
       <app-liste-conversations />
     }
@@ -62,6 +63,8 @@ import { MemoireAssistantComponent } from './memoire-assistant.component';
 })
 export class AssistantChatComponent {
   protected readonly fil = inject(FilAssistant);
+  /** Le message de raisonnement aux couleurs de Staport (emplacement officiel de la discussion, KAN-88). */
+  protected readonly raisonnement = RaisonnementAssistantComponent;
   private readonly store = injectAgentStore('default');
   private readonly copilotKit = inject(CopilotKit);
   private readonly configuration = injectChatConfiguration();

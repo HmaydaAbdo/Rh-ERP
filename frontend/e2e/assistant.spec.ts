@@ -249,6 +249,9 @@ test.describe('Staport Intelligence', () => {
     await expect(assistant.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
     await expect(assistant.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
     await expect(assistant.getByRole('heading', { name: 'Masse par chantier' })).toBeVisible();
+    // Le raisonnement s'affiche dans la carte de Staport, en français (KAN-88), et non avec le libellé anglais d'origine.
+    await expect(assistant.getByText(/Réflexion (en cours|de )/)).toBeVisible();
+    await expect(assistant.getByText(/Thinking|Thought for/)).toHaveCount(0);
     // La consultation s'affiche en carte au titre français (KAN-87), jamais avec le nom technique de l'outil.
     await expect(assistant.getByText('Indicateurs de paie d’un mois')).toBeVisible();
     await expect(assistant.getByText('Consultation terminée')).toBeAttached();
