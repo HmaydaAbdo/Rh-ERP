@@ -2,7 +2,7 @@ import { FilAssistant } from './fil-assistant.service';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { CopilotSidebar, connectAgentContext, registerFrontendTool, registerRenderToolCall } from '@copilotkit/angular';
+import { CopilotSidebar, connectAgentContext, registerRenderToolCall } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
 import { z } from 'zod';
 
@@ -13,8 +13,6 @@ import { CarteOutilComponent } from './carte-outil.component';
 import { contexteEcran } from './ecran-assistant';
 import { ExportPaieAssistantComponent } from './export-paie-assistant.component';
 import { OUTIL_EXPORT_PAIE } from './export-paie-assistant';
-import { OUTIL_PROPOSER_VUE, validerVue } from './vue-assistant';
-import { VueAssistantComponent } from './vue-assistant.component';
 
 /**
  * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
@@ -63,25 +61,6 @@ export class AssistantComponent {
     // Rendu universel (`*`) des consultations d'outils (KAN-87) : une carte au titre français, jamais le nom technique ;
     // le rendu du classeur de paie, enregistré par son nom, garde la priorité.
     registerRenderToolCall({ name: '*', args: z.record(z.string(), z.unknown()), component: CarteOutilComponent });
-
-    // Outil frontend réversible (KAN-89) : l'agent propose une vue filtrée, l'utilisateur l'ouvre d'un clic (et peut
-    // revenir). Rien ne s'ouvre seul, aucun droit n'est accordé ; les arguments du modèle sont revalidés ici.
-    registerFrontendTool({
-      name: OUTIL_PROPOSER_VUE,
-      description:
-        'Propose à l’utilisateur d’ouvrir une vue filtrée de l’application (bouton « Ouvrir la vue » dans la discussion). ' +
-        'N’ouvre rien seul. Domaines : paie, employees, chantiers, equipes, functions, audit. ' +
-        'Filtres : periode, chantierIds, equipeIds, fonctionIds, statut, actif, page.',
-      parameters: z.object({
-        domaine: z.enum(['paie', 'employees', 'chantiers', 'equipes', 'functions', 'audit']),
-        filtres: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional()
-      }),
-      component: VueAssistantComponent,
-      handler: async ({ domaine, filtres }) =>
-        validerVue(domaine, filtres)
-          ? 'Vue proposée à l’utilisateur : il peut l’ouvrir d’un clic ; elle n’accorde aucun droit.'
-          : 'Proposition refusée : domaine ou filtre inconnu.'
-    });
 
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.
     connectAgentContext(() => ({
