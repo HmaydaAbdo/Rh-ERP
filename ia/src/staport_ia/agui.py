@@ -29,6 +29,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import RunControl
 from langgraph.types import Durability
 
+from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
 from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp
 
@@ -263,11 +264,15 @@ def routeur_agui(
         fil = espace_conversation(sujet(jeton), entree.thread_id)
         # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
         # Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte rien.
+        # Le contexte d'écran du navigateur est un indice : le serveur le revérifie et le réécrit (ecran.py, KAN-83).
+        contexte_ecran = contexte_verifie(entree.context)
         if est_reprise(entree):
-            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil, "context": contexte_ecran})
         else:
             epinglees = await routage()(texte_question(entree), outils) if routage else []
-            entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
+            entree_serveur = entree.model_copy(
+                update={"state": {"pinned_skills": epinglees}, "thread_id": fil, "context": contexte_ecran}
+            )
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
