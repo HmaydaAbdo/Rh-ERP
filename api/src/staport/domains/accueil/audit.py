@@ -1,4 +1,4 @@
-"""Historique du domaine accueil (Flyway V42) : table `accueil_preference_aud` et ses champs."""
+"""Historique du domaine accueil (script V42) : table `accueil_preference_aud` et ses champs."""
 
 from sqlalchemy import BigInteger, Column, ForeignKey, Index, SmallInteger, String, Table
 

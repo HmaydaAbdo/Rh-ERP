@@ -1,4 +1,4 @@
-"""Base Alembic équivalente à l'historique Flyway V1-V44 sur un vrai PostgreSQL (KAN-212).
+"""Base Alembic (scripts SQL V1-V44 puis révisions) sur un vrai PostgreSQL (KAN-212).
 
 Même image PostgreSQL que les autres tests (`conftest.py`). Sans Docker, les tests sont ignorés avec la cause.
 """
@@ -15,59 +15,10 @@ from sqlalchemy import BigInteger, Column, Connection, MetaData, String, Table, 
 from sqlalchemy.engine import make_url
 
 from staport.migrations.deploiement import migrer
-from staport.migrations.historique_flyway import sommes_attendues
 
 RACINE = Path(__file__).resolve().parent.parent
-SCRIPTS_V44 = list((RACINE / "src" / "staport" / "migrations" / "flyway_v44").glob("V*.sql"))
-# Sommes de contrôle enregistrées par Flyway sur la base d'origine (flyway_schema_history, V1 à V3).
-# Sommes de contrôle enregistrées par Flyway sur la base d'origine (V1 à V44) : un script figé modifié, même d'un
-# commentaire, change sa somme et fait refuser l'estampillage (KAN-240 : V20 modifié par un renommage en bloc).
-SOMMES_FLYWAY_REELLES = [
-    -238928879,
-    1637160539,
-    164349915,
-    678096492,
-    -1103216252,
-    553115352,
-    -1537015298,
-    -445241616,
-    -1558136517,
-    267216204,
-    1662625209,
-    -830745142,
-    127936828,
-    674522724,
-    -780372567,
-    -2133275086,
-    -1290831328,
-    980775875,
-    -1515690794,
-    166664622,
-    -1405659830,
-    -1383921563,
-    -1813513043,
-    -1218458979,
-    584603305,
-    -1514755796,
-    -258836298,
-    -1911377105,
-    -876943342,
-    928037331,
-    -1715496099,
-    1958199860,
-    -312618611,
-    -1263165067,
-    1102136949,
-    673368266,
-    -404778051,
-    -939074117,
-    1740814084,
-    65875110,
-    202456886,
-    668838032,
-    853069696,
-    1351203021,
-]
+SCRIPTS_V44 = list((RACINE / "src" / "staport" / "migrations" / "base_v44").glob("V*.sql"))
+
 COMPTE_APP = "staport_app"
 MOT_DE_PASSE_APP = "mdp-app-essai"
 
@@ -102,9 +53,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert (
-            c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0005_permission_employee_export"
-        )
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0006_retrait_table_suivi"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -166,70 +115,12 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0005_permission_employee_export"
+            == "0006_retrait_table_suivi"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
         ).scalar_one()
-    moteur.dispose()
-
-
-def _historique_flyway(connexion: Connection, nombre: int, *, altere: int | None = None) -> None:
-    """Crée un historique Flyway aux sommes de contrôle réelles des scripts fournis (``altere`` : une somme faussée)."""
-    sommes = sommes_attendues()
-    connexion.execute(
-        text(
-            "CREATE TABLE flyway_schema_history "
-            "(installed_rank int, version text, type text, success boolean, checksum int)"
-        )
-    )
-    connexion.execute(
-        text("INSERT INTO flyway_schema_history VALUES (:i, :v, 'SQL', true, :c)"),
-        [{"i": n, "v": str(n), "c": sommes[n] + (1 if n == altere else 0)} for n in range(1, nombre + 1)],
-    )
-
-
-def test_deploiement_estampille_une_base_flyway_v44_sans_rejouer_les_donnees(
-    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    url = creer_base("deploiement_flyway")
-    command.upgrade(_config(url), "0001_base_v44")  # l'état d'une base Flyway V44 : sans les révisions suivantes
-    moteur = create_engine(url)
-    with moteur.begin() as connexion:
-        roles_avant = connexion.execute(text("SELECT count(*) FROM role")).scalar_one()
-        connexion.execute(text("DROP TABLE alembic_version"))
-        _historique_flyway(connexion, 44)
-    moteur.dispose()
-    _variables_migration(url, monkeypatch)
-    migrer()
-    moteur = create_engine(url)
-    with moteur.connect() as connexion:
-        assert (
-            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0005_permission_employee_export"
-        )
-        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
-        assert not connexion.execute(
-            text("SELECT has_table_privilege('staport_env_test', 'flyway_schema_history', 'INSERT')")
-        ).scalar_one()
-    moteur.dispose()
-
-
-def test_deploiement_refuse_un_historique_flyway_partiel(
-    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    url = creer_base("deploiement_partiel")
-    moteur = create_engine(url)
-    with moteur.begin() as connexion:
-        _historique_flyway(connexion, 43)
-    moteur.dispose()
-    _variables_migration(url, monkeypatch)
-    with pytest.raises(RuntimeError, match="stamp refusé"):
-        migrer()
-    moteur = create_engine(url)
-    with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT to_regclass('public.alembic_version')")).scalar_one() is None
     moteur.dispose()
 
 
@@ -291,43 +182,44 @@ def test_tous_les_montants_sont_des_entiers_de_dirham_et_le_retour_arriere_rend_
     moteur.dispose()
 
 
-def test_deploiement_refuse_un_script_flyway_modifie(
+def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l_historique_de_l_ancien_outil(
     creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    url = creer_base("deploiement_modifie")
+    """Base de production restaurée : révision 0004 et table de suivi obsolète encore présente."""
+    url = creer_base("deploiement_restaure")
+    command.upgrade(_config(url), "0004_nombres_metier_entiers")
     moteur = create_engine(url)
     with moteur.begin() as connexion:
-        _historique_flyway(connexion, 44, altere=17)
+        connexion.execute(text("CREATE TABLE flyway_schema_history (installed_rank int)"))
+        roles_avant = connexion.execute(text("SELECT count(*) FROM role")).scalar_one()
     moteur.dispose()
     _variables_migration(url, monkeypatch)
-    with pytest.raises(RuntimeError, match="stamp refusé"):
-        migrer()
-
-
-def test_les_sommes_de_controle_reprennent_l_algorithme_de_flyway() -> None:
-    """Sommes réellement enregistrées par Flyway sur la base d'origine (V1 à V44) : scripts figés et algorithme."""
-    sommes = sommes_attendues()
-    assert len(sommes) == 44
-    assert [sommes[n] for n in range(1, 45)] == SOMMES_FLYWAY_REELLES
-
-
-def test_une_base_flyway_existante_est_estampillee_sans_rejouer_le_schema(creer_base: Callable[[str], str]) -> None:
-    url = creer_base("estampillee")
+    migrer()
     moteur = create_engine(url)
-    with moteur.begin() as c:
-        c.execute(text("CREATE TABLE flyway_schema_history (installed_rank int)"))  # base déjà gérée par Flyway
-        c.execute(text("CREATE TABLE employe (id int)"))  # schéma existant : un rejeu échouerait
-    moteur.dispose()
-    config = _config(url)
-    command.stamp(config, "0001_base_v44")
-    command.upgrade(config, "0001_base_v44")  # ne fait rien : la base est déjà estampillée
-    moteur = create_engine(url)
-    with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0001_base_v44"
+    with moteur.connect() as connexion:
         assert (
-            c.execute(text("SELECT count(*) FROM information_schema.columns WHERE table_name='employe'")).scalar_one()
-            == 1
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0006_retrait_table_suivi"
         )
+        assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
+        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
+    moteur.dispose()
+
+
+def test_deploiement_refuse_un_schema_non_vide_sans_historique_alembic(
+    creer_base: Callable[[str], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    url = creer_base("deploiement_sans_historique")
+    moteur = create_engine(url)
+    with moteur.begin() as connexion:
+        connexion.execute(text("CREATE TABLE employe (id int)"))
+    moteur.dispose()
+    _variables_migration(url, monkeypatch)
+    with pytest.raises(RuntimeError, match="restauration requise"):
+        migrer()
+    moteur = create_engine(url)
+    with moteur.connect() as connexion:
+        assert connexion.execute(text("SELECT to_regclass('public.alembic_version')")).scalar_one() is None
     moteur.dispose()
 
 

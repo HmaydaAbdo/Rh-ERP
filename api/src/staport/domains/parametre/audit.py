@@ -1,4 +1,4 @@
-"""Historique du domaine parametre (Flyway V16) : table `parametre_aud` et champs de `Parametre`.
+"""Historique du domaine parametre (script V16) : table `parametre_aud` et champs de `Parametre`.
 
 Les noms de champs et le nom d'entité enregistré sont stables : l'historique existant et le nouveau forment une
 seule chronologie.

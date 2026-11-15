@@ -57,8 +57,7 @@ est structurant, un ADR.
 ### 3. Migrations : Alembic
 
 - Le schéma est géré **exclusivement** par des révisions Alembic. La révision de base `0001_base_v44` rejoue les 44 scripts SQL
-  historiques conservés dans `api/src/staport/migrations/flyway_v44` ; une base déjà créée par ces scripts est « estampillée »
-  sur cette révision (`alembic stamp`) après le contrôle de son historique (`historique_flyway.py`).
+  de `api/src/staport/migrations/base_v44` ; une base déjà migrée ne les rejoue pas.
 - Les révisions sont écrites à la main en SQL explicite (`op.execute`) pour garder les contraintes `CHECK`, les index et les
   règles de `conventions/database.md` ; l'autogénération sert de contrôle de dérive, pas de source de vérité.
 - Exécution : étape de déploiement dédiée (`api-migrate`) avant le démarrage de l'application, jamais dans sa durée de vie.

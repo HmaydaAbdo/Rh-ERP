@@ -1,4 +1,4 @@
-"""Historique du domaine auth (Flyway V11) : tables `*_aud` et champs de `Permission`, `Role`, `Utilisateur`.
+"""Historique du domaine auth (script V11) : tables `*_aud` et champs de `Permission`, `Role`, `Utilisateur`.
 
 Un champ absent d'ici n'est jamais historisé : ni le hash du mot de passe, ni l'état de verrouillage (journalisés par
 événement de sécurité), ni la version. Les noms de champs sont stables pour garder un historique continu.

@@ -8,10 +8,8 @@
 ## Principe fondamental
 
 Le schéma est géré **exclusivement** par des révisions Alembic versionnées (`api/src/staport/migrations/versions`).
-La base d'origine (V1 à V44) a été créée par Flyway, qui n'est plus exécuté : ses 44 scripts SQL sont conservés tels quels
-(`api/src/staport/migrations/flyway_v44`) et rejoués par la révision `0001_base_v44` sur une base neuve ; une base de
-production issue de Flyway est contrôlée (versions et sommes de contrôle) puis estampillée à cette révision, sans rejouer
-les données. Les modèles SQLAlchemy ne modifient jamais la base : un test de dérive compare les modèles au schéma
+La base d'origine (V1 à V44) est décrite par 44 scripts SQL (`api/src/staport/migrations/base_v44`), rejoués par la
+révision `0001_base_v44` sur une base neuve ; une base de production déjà migrée ne les rejoue pas. Les modèles SQLAlchemy ne modifient jamais la base : un test de dérive compare les modèles au schéma
 réellement migré et **échoue** à la moindre divergence.
 
 Conséquence directe : **toute modification d'un modèle qui touche au schéma (nouvelle colonne, colonne renommée, type
@@ -77,7 +75,7 @@ backfill sûr et sa stratégie de déploiement.
 - Un fichier de migration déjà appliqué sur un environnement partagé (donc a fortiori une fois
   poussé sur la branche principale) **n'est jamais modifié ni renuméroté** — Alembic ne rejoue pas
   une révision déjà appliquée : la modifier fait diverger les bases. Toute correction se fait par
-  une nouvelle révision. Les scripts `flyway_v44` sont figés : le garde de bascule en vérifie la somme de contrôle.
+  une nouvelle révision. Les scripts de `base_v44` ne se modifient plus : une évolution est une nouvelle révision.
 - Un identifiant de révision n'est jamais réutilisé.
 - Une migration ne doit faire qu'une chose cohérente (une table, une évolution logique) — pas de
   fichier fourre-tout accumulant plusieurs changements sans rapport.

@@ -1,8 +1,8 @@
-"""Bascule Flyway V44 vers Alembic (KAN-219, KAN-237).
+"""Étape de migration du déploiement (KAN-219, KAN-237).
 
-Flyway n'est plus exécuté. Ce garde vérifie lui-même l'historique Flyway (versions, types, succès et sommes de
-contrôle des scripts V1 à V44, voir ``historique_flyway``) et refuse un ``stamp`` sur une base partielle, étrangère ou
-modifiée ; Alembic exécute ensuite les migrations et recalcule les droits avec le compte propriétaire du schéma.
+Alembic est le seul outil de migration. L'étape construit le schéma d'une base neuve, monte une base déjà migrée à la
+dernière révision et refuse une base non vide sans historique Alembic (restauration requise) ; les droits du compte
+applicatif sont recalculés avec le compte propriétaire du schéma.
 """
 
 from alembic import command
@@ -11,7 +11,6 @@ from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 
-from staport.migrations.historique_flyway import historique_complet
 from staport.platform.configuration import ConfigurationMigration
 
 
@@ -20,28 +19,17 @@ def _preparer(config: Config, parametres: ConfigurationMigration) -> str:
     try:
         with moteur.connect() as connexion:
             alembic = connexion.execute(text("SELECT to_regclass('public.alembic_version')")).scalar_one() is not None
-            flyway = (
-                connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is not None
-            )
             if alembic:
                 revision = MigrationContext.configure(connexion).get_current_revision()
                 if revision is None:
-                    raise RuntimeError("Historique Alembic vide : restauration requise avant la bascule")
+                    raise RuntimeError("Historique Alembic vide : restauration requise avant la migration")
                 return f"Alembic déjà initialisé : {revision}"
-            if flyway:
-                if not historique_complet(connexion):
-                    raise RuntimeError("Historique Flyway incomplet, inattendu ou modifié : stamp refusé")
-            else:
-                tables = connexion.execute(
-                    text("SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")
-                ).scalar_one()
-                if tables:
-                    raise RuntimeError("Schéma non vide sans historique de migration : restauration requise")
-                return "Base neuve : Alembic construit le schéma"
+            tables = connexion.execute(text("SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")).scalar_one()
+            if tables:
+                raise RuntimeError("Schéma non vide sans historique de migration : restauration requise")
+            return "Base neuve : Alembic construit le schéma"
     finally:
         moteur.dispose()
-    command.stamp(config, "0001_base_v44")
-    return "Flyway V1-V44 validé : estampillage Alembic 0001_base_v44"
 
 
 def migrer() -> None:

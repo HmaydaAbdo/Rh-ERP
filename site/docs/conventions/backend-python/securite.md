@@ -10,9 +10,8 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
 
 ## Authentification et jetons
 
-* Contrat externe inchangé à la bascule : mêmes routes `/auth/*`, mêmes cookies et jetons de rafraîchissement (ADR 0016, § 4).
-* **RS256 pour tous les jetons** : clé privée sur le serveur seulement, clé publique publiable, rotation par identifiant de clé (`kid`) ; le passage de HS256 à RS256
-  est une déconnexion unique, planifiée avec la bascule du domaine `auth` (accord du propriétaire du 2026-11-03).
+* Contrat externe : routes `/auth/*`, cookies et jetons de rafraîchissement (ADR 0016, § 4).
+* **RS256 pour tous les jetons** : clé privée sur le serveur seulement, clé publique publiable, rotation par identifiant de clé (`kid`).
 * Bibliothèque : **PyJWT** (celle de la documentation FastAPI). Vérifier toujours avec une liste d'algorithmes explicite (`algorithms=["RS256"]`), exiger les
   claims nécessaires (`options={"require": ["exp", "iss", "sub", ...]}`), et contrôler émetteur et destinataire. Les clés de signature viennent de la configuration ou
   d'un JWKS (`PyJWKClient`, qui met en cache et se rafraîchit quand le `kid` est inconnu).

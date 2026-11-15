@@ -1,10 +1,9 @@
-"""Base : schéma et données initiales équivalents à Flyway V1 à V44 (KAN-212).
+"""Base : schéma et données initiales (scripts SQL V1 à V44 de `base_v44`, KAN-212).
 
-Les 44 scripts SQL de Flyway sont rejoués tels quels, dans l'ordre numérique, pour que le schéma ET les données de
-référence (permissions, rôles, paramètres) soient identiques par construction. Une base existante gérée par Flyway
-n'exécute pas cette révision : elle est « estampillée » (`alembic stamp 0001_base_v44`). La seule substitution est
-`${pgaudit_enabled}` (V20), lue dans la variable d'environnement PGAUDIT_ENABLED (faux par défaut), comme le faisait la
-configuration de Flyway.
+Les 44 scripts SQL sont rejoués tels quels, dans l'ordre numérique, pour que le schéma ET les données de
+référence (permissions, rôles, paramètres) soient identiques par construction. Une base de production déjà migrée
+n'exécute pas cette révision. La seule substitution est `${pgaudit_enabled}` (V20), lue dans la variable
+d'environnement PGAUDIT_ENABLED (faux par défaut).
 
 Revision ID: 0001_base_v44
 Revises:
@@ -21,7 +20,7 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-DOSSIER = Path(__file__).resolve().parent.parent / "flyway_v44"
+DOSSIER = Path(__file__).resolve().parent.parent / "base_v44"
 
 
 def _numero(chemin: Path) -> int:
@@ -43,9 +42,8 @@ def upgrade() -> None:
     for chemin in scripts():
         contenu = chemin.read_text(encoding="utf-8").replace("${pgaudit_enabled}", pgaudit)
         connexion.execute(contenu)  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue,reportOptionalMemberAccess]
-        # Flyway exécute chaque script dans sa propre transaction : certains créent des tables temporaires
-        # `ON COMMIT DROP`
-        # de même nom (V9, V28, V32...) qui échouent si deux scripts partagent une transaction.
+        # Chaque script a sa propre transaction : certains créent des tables temporaires `ON COMMIT DROP` de même nom
+        # (V9, V28, V32...) qui échouent si deux scripts partagent une transaction.
         connexion.commit()  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue,reportOptionalMemberAccess]
 
 

@@ -1,12 +1,12 @@
 -- Aucune cascade SQL sur une table auditée (conventions/database.md, « Tables auditées ») : une cascade supprime des
--- liaisons sans passer par Hibernate, donc sans que l'audit voie le retrait d'un droit.
+-- liaisons sans passer par l'application, donc sans que l'audit voie le retrait d'un droit.
 --
 -- Avant : supprimer un rôle retirait ce rôle à tous ses comptes, en silence (ON DELETE CASCADE sur
 -- utilisateur_role.role_id), et pouvait supprimer SYSTEM_ADMIN d'un coup. Après : la base refuse (RESTRICT) et le
--- service répond 409 avant d'y arriver (RoleService.delete) — un rôle attribué n'est plus supprimable.
+-- service répond 409 avant d'y arriver (service des rôles) — un rôle attribué n'est plus supprimable.
 --
--- role_permission.role_id reste cohérent avec la suppression d'un rôle : c'est Hibernate (propriétaire de la
--- collection Role.permissions) qui supprime les liaisons du rôle avant le rôle, donc audité.
+-- role_permission.role_id reste cohérent avec la suppression d'un rôle : c'est l'application (propriétaire de la
+-- collection des permissions du rôle) qui supprime les liaisons du rôle avant le rôle, donc audité.
 
 ALTER TABLE role_permission DROP CONSTRAINT fk_role_permission_role;
 ALTER TABLE role_permission ADD CONSTRAINT fk_role_permission_role
