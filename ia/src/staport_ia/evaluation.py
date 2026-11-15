@@ -41,6 +41,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
 
 from staport_ia.app import fabrique_reelle
 from staport_ia.config import Settings
@@ -269,7 +270,7 @@ async def repondre(
     tours = [questions] if isinstance(questions, str) else questions
     # Même agent que le service : modèle principal, résumeur officiel et compétences épinglées par le routage.
     memoire = InMemorySaver() if len(tours) > 1 else None
-    agent = fabrique_reelle(config)(outils, memoire, "evaluation")
+    agent = fabrique_reelle(config, InMemoryStore())(outils, memoire, "evaluation")
     options: RunnableConfig = {"recursion_limit": 200}
     if memoire is not None:
         options["configurable"] = {"thread_id": uuid.uuid4().hex}

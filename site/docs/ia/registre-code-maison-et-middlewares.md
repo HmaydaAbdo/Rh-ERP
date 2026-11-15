@@ -72,7 +72,7 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `ShellToolMiddleware` (`DockerExecutionPolicy`) | ⬜, décision de sécurité | M6 |
 | Crochets `before_agent`, `after_agent`, `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, `dynamic_prompt` | utilisés par les middlewares ci-dessus ; `dynamic_prompt` remplace `contexte.py` | T24 |
 | LangGraph : checkpointer PostgreSQL | ✅ en place | — |
-| LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ⬜ | T25, J4 |
+| LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ✅ `AsyncPostgresStore` pour les fichiers d'espace par utilisateur (`/espace/`), expiration native `TTLConfig`, testé sur PostgreSQL réel (KAN-73) ; reste la purge et le préfixe de fil des conversations, écrits par nous | T25, J4 |
 
 ### Matrice des erreurs d'outil (KAN-32)
 

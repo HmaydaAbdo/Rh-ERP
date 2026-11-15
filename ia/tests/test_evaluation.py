@@ -150,7 +150,7 @@ async def test_repondre_reutilise_la_fabrique_de_production(monkeypatch: Any) ->
         async def ainvoke(self, entree: object, options: object) -> dict[str, list[AIMessage]]:
             return {"messages": [AIMessage(content="Réponse de test.")]}
 
-    def fabrique_factice(settings: Settings) -> Any:
+    def fabrique_factice(settings: Settings, espaces: object) -> Any:
         assert settings is config
 
         def construire(outils: object, checkpointer: object, utilisateur: object) -> AgentFactice:

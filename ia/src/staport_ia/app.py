@@ -12,7 +12,7 @@ from fastapi import APIRouter, FastAPI, Response, status
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.store.memory import InMemoryStore
+from langgraph.store.base import BaseStore
 from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
@@ -29,16 +29,13 @@ class Sante(BaseModel):
     passerelle: Literal["PRETE", "INDISPONIBLE", "NON_VERIFIEE"]
 
 
-def fabrique_reelle(config: Settings) -> FabriqueAgent:
+def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
     """L'agent servi : ``complex`` pour répondre ; les outils sont choisis hors modèle (``routage.py``)."""
     # Laisser le fournisseur appliquer son comportement natif : `reasoning_effort` est incompatible avec certains
     # modèles Gemma 4 derrière LiteLLM et provoque une erreur 400 pendant le basculement.
     principal = modele(config, Tache.COMPLEX)
     # Résume le début d'une conversation devenue longue ; le résumé reste interne, jamais affiché dans le fil.
     resumeur = modele(config, Tache.SIMPLE, interne=True)
-
-    # Espace de fichiers par identité : en mémoire du processus tant que rien n'écrit (épopée d'écriture : PostgreSQL).
-    espaces = InMemoryStore()
 
     def fabriquer(
         outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str
@@ -61,8 +58,9 @@ def cycle_ia(
         url = config.database_url.get_secret_value() if config.database_url else None
         async with httpx.AsyncClient(timeout=30.0) as client, ouvrir_memoire(url, config.conversation_jours) as memoire:
             app.state.http = client
-            app.state.memoire = memoire
-            app.state.fabrique = fabrique or fabrique_reelle(config)
+            app.state.memoire = memoire.checkpointer
+            # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL en service).
+            app.state.fabrique = fabrique or fabrique_reelle(config, memoire.store)
             app.state.routage = routage or Routeur().adomaines
             app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
             yield
