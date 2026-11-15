@@ -5,7 +5,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 
 // Le serveur MCP est celui de l'API Python (FastMCP, route /mcp), démarré par `api/tests/test_mcp_clients_externes.py`
-// avec une base de test réelle ; le jeton est le jeton agent RS256 émis par `POST /auth/jetons/agent`.
+// avec une base de test réelle ; le jeton est le jeton agent RS256 émis par `POST /oauth/token` (échange RFC 8693).
 const endpoint = new URL(process.env.MCP_STAPORT_URL ?? "http://invalid.invalid/");
 const jeton = process.env.MCP_STAPORT_JETON ?? "";
 const utilisateur = process.env.MCP_STAPORT_UTILISATEUR ?? "";

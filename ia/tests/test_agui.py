@@ -4,7 +4,6 @@ import json
 from collections.abc import Sequence
 from typing import Any, cast
 
-import httpx
 import pytest
 from ag_ui.core import EventType
 from doubles import INDICATEURS, ModeleScripte, appel, memoire_processus, modele, outil, store_avec_competences
@@ -20,6 +19,7 @@ from staport_ia.app import creer_app
 from staport_ia.config import Settings
 from staport_ia.fichiers import FICHIERS_MAX, TAILLE_MAX_FICHIER
 from staport_ia.memoire import sujet
+from staport_ia.outils import EchangeRefuse
 
 QUESTION = "Masse salariale de 2026-09 ?"
 REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."
@@ -28,7 +28,7 @@ REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."
 class AccesSimule:
     """API simulée : échange de jeton (ou refus HTTP), puis catalogue d'outils au nom du jeton agent."""
 
-    def __init__(self, outils: Sequence[BaseTool], refus: int | None = None) -> None:
+    def __init__(self, outils: Sequence[BaseTool], refus: str | None = None) -> None:
         self._outils = outils
         self._refus = refus
         self.jetons_connexion: list[str] = []
@@ -40,8 +40,7 @@ class AccesSimule:
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
         if self._refus is not None:
-            requete = httpx.Request("POST", "http://backend/auth/jetons/agent")
-            raise httpx.HTTPStatusError("refus", request=requete, response=httpx.Response(self._refus, request=requete))
+            raise EchangeRefuse(self._refus)
         self.jetons_connexion.append(jeton_connexion)
         return "jeton-agent"
 
@@ -162,13 +161,13 @@ def test_un_outil_declare_par_le_navigateur_est_propose_au_modele() -> None:
     [
         (False, "c", None, 503),  # IA désactivée
         (True, None, None, 401),  # pas de jeton
-        (True, "c", 401, 401),  # connexion expirée côté API
-        (True, "c", 403, 403),  # droit IA_UTILISER absent
-        (True, "c", 404, 503),  # IA non activée côté API
+        (True, "c", "invalid_grant", 401),  # connexion expirée côté API
+        (True, "c", "access_denied", 403),  # droit IA_UTILISER absent
+        (True, "c", "reponse_invalide", 503),  # IA non activée côté API (404 sans erreur OAuth2)
     ],
 )
 def test_les_refus_sont_des_erreurs_http_avant_tout_flux(
-    enabled: bool, jeton: str | None, refus: int | None, attendu: int
+    enabled: bool, jeton: str | None, refus: str | None, attendu: int
 ) -> None:
     acces = AccesSimule([], refus=refus)
 

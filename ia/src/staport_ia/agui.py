@@ -30,7 +30,7 @@ from langgraph.runtime import RunControl
 from langgraph.types import Durability
 
 from staport_ia.memoire import espace_conversation, sujet
-from staport_ia.outils import contexte_erp, jeton_agent, outils_erp
+from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
 
@@ -211,14 +211,14 @@ async def evenements(
 
 
 class AccesHttp:
-    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` de l'API ERP."""
+    """``AccesErp`` réel : échange RFC 8693 (``/oauth/token``) puis ``/mcp`` de l'API ERP."""
 
     def __init__(self, client: httpx.AsyncClient, api: str) -> None:
         self._client = client
         self._api = api.rstrip("/")
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
-        return await jeton_agent(self._client, self._api, jeton_connexion)
+        return await jeton_agent(self._api, jeton_connexion)
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
@@ -307,14 +307,13 @@ async def _jeton(erp: AccesErp, jeton_connexion: str) -> str:
     """Les refus de l'API gardent leur sens HTTP ; le reste est une indisponibilité, sans détail."""
     try:
         return await erp.jeton_agent(jeton_connexion)
-    except httpx.HTTPStatusError as refus:
-        code = refus.response.status_code
-        if code == status.HTTP_401_UNAUTHORIZED:
+    except EchangeRefuse as refus:
+        if refus.erreur == "invalid_grant":
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion expirée.") from None
-        if code == status.HTTP_403_FORBIDDEN:
+        if refus.erreur == "access_denied":
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Droit IA_UTILISER requis.") from None
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
-    except httpx.HTTPError:
+    except httpx.HTTPError, ValueError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
 
 

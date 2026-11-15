@@ -12,9 +12,8 @@ ressource, erreurs sans fuite). Cette page donne leur mise en œuvre avec FastAP
 
 * Contrat externe : routes `/auth/*`, cookies et jetons de rafraîchissement (ADR 0016, § 4).
 * **RS256 pour tous les jetons** : clé privée sur le serveur seulement, clé publique publiable, rotation par identifiant de clé (`kid`).
-* Bibliothèque : **PyJWT** (celle de la documentation FastAPI). Vérifier toujours avec une liste d'algorithmes explicite (`algorithms=["RS256"]`), exiger les
-  claims nécessaires (`options={"require": ["exp", "iss", "sub", ...]}`), et contrôler émetteur et destinataire. Les clés de signature viennent de la configuration ou
-  d'un JWKS (`PyJWKClient`, qui met en cache et se rafraîchit quand le `kid` est inconnu).
+* Bibliothèque : **joserfc** (JOSE d'Authlib, KAN-74 ; PyJWT n'est plus qu'une dépendance de test pour forger des jetons hostiles). Vérifier toujours avec une liste d'algorithmes explicite (`algorithms=["RS256"]`), exiger les
+  claims nécessaires (`JWTClaimsRegistry` : `exp`, `iss`, `sub`, `aud` essentiels), et contrôler émetteur et destinataire. Les clés de signature viennent de la configuration (`JeuDeCles`, jeu de clés `KeySet`) ; le jeton agent est émis par le serveur OAuth2 d'Authlib (`echange_jetons.py`).
 * Une signature valide ne signifie pas un jeton révocable : la durée, la révocation et le délai de propagation d'un changement de droits restent documentés.
 * Hachage des mots de passe : fonction adaptative maintenue ; la documentation FastAPI emploie `pwdlib` (Argon2). Les hachages **existants** doivent rester
   vérifiables sans réinitialisation (format confirmé à l'inventaire KAN-45). `PasswordHash((Argon2Hasher(), BcryptHasher()))` vérifie contre tous les algorithmes activés

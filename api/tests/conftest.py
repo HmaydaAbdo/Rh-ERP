@@ -109,6 +109,22 @@ class Journal(Audit):
         ]
 
 
+TYPE_ECHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
+TYPE_JETON_ACCES = "urn:ietf:params:oauth:token-type:access_token"
+
+
+def formulaire_echange(acces: str, **remplacements: str) -> dict[str, str]:
+    """Corps de l'échange RFC 8693 de `POST /oauth/token` : le jeton de connexion contre un jeton agent."""
+    corps = {
+        "grant_type": TYPE_ECHANGE,
+        "client_id": "staport-ia",
+        "subject_token": acces,
+        "subject_token_type": TYPE_JETON_ACCES,
+        "audience": "staport-intelligence-mcp",
+    }
+    return {**corps, **remplacements}
+
+
 @dataclass
 class Plateforme:
     app: FastAPI

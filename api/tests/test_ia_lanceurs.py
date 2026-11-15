@@ -31,7 +31,7 @@ from typing import Any
 import httpx
 import psutil
 import pytest
-from conftest import Plateforme
+from conftest import Plateforme, formulaire_echange
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from test_mcp_clients_externes import serveur_loopback  # noqa: F401  # pyright: ignore[reportUnusedImport]
@@ -229,7 +229,7 @@ def test_le_service_ia_demarre_contre_l_api_python_et_refuse_un_appel_sans_jeton
         assert httpx.post(f"{racine}/agui", json=corps, headers=faux).status_code == 401
         jeton, _ = _jeton(plateforme, creer_utilisateur, DROITS_FLUX)
         # Le jeton est accepté pour l'échange : seule la passerelle (absente ici) empêcherait la suite du flux.
-        echange = httpx.post(f"{serveur_loopback}/auth/jetons/agent", headers={"Authorization": f"Bearer {jeton}"})
+        echange = httpx.post(f"{serveur_loopback}/oauth/token", data=formulaire_echange(jeton))
         assert echange.status_code == 200, echange.text
 
 

@@ -320,11 +320,11 @@ def _verites(cas: dict[str, Any]) -> list[dict[str, Any]]:
 async def evaluer_cas(cas: dict[str, Any], ctx: Contexte, repetition: int = 1) -> ResultatCas:
     type_cas = str(cas.get("type", "reponse"))
     questions = [str(remplir(q, ctx.donnees)) for q in [*cas.get("tours", []), cas["question"]]]
-    jeton = await jeton_agent(ctx.client, ctx.api, ctx.jetons[str(cas.get("jeton", "complet"))])
+    jeton = await jeton_agent(ctx.api, ctx.jetons[str(cas.get("jeton", "complet"))])
     outils = await outils_erp(f"{ctx.api}/mcp", jeton)
     pleins = outils
     if cas.get("jeton", "complet") != "complet":
-        pleins = await outils_erp(f"{ctx.api}/mcp", await jeton_agent(ctx.client, ctx.api, ctx.jetons["complet"]))
+        pleins = await outils_erp(f"{ctx.api}/mcp", await jeton_agent(ctx.api, ctx.jetons["complet"]))
     attendus: list[tuple[str, Any]] = []
     verite_texte: list[str] = []
     for lecture in _verites(cas):
