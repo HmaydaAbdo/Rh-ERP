@@ -25,7 +25,7 @@ from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
 from deepagents.backends import CompositeBackend, FilesystemBackend, StoreBackend
-from deepagents.middleware import FilesystemMiddleware, FilesystemPermission, SkillsMiddleware
+from deepagents.middleware import FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
     ModelCallLimitMiddleware,
@@ -54,7 +54,14 @@ from staport_ia.surfaces import SurfacesResultats
 #: Profil d'harnais documenté de Deep Agents : pas de sous-agent généraliste (outil ``task``). Chaque sous-agent ajoute
 #: des appels de modèle, donc de la latence et des quotas ; les sous-agents par domaine viendront avec leur jeu de
 #: référence.
-PROFIL_HARNAIS = HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False))
+#: Le modèle ne voit du système de fichiers que ``read_file`` (lecture des ``SKILL.md``) : les autres outils du harnais
+#: sont masqués par le profil officiel (``excluded_tools``, KAN-258), sans middleware à nous. L'ouverture de
+#: l'écriture sous ``/espace/`` (KAN-267) retirera ``write_file`` et ``edit_file`` de cette liste.
+OUTILS_FICHIERS_MASQUES = frozenset({"ls", "write_file", "edit_file", "delete", "glob", "grep", "execute"})
+PROFIL_HARNAIS = HarnessProfile(
+    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+    excluded_tools=OUTILS_FICHIERS_MASQUES,
+)
 #: Le fournisseur des modèles de l'ERP (``ChatLiteLLM``) ; les tests enregistrent celui de leur faux modèle.
 register_harness_profile("litellm", PROFIL_HARNAIS)
 
@@ -310,8 +317,6 @@ def creer_agent(
         )
     # Un outil métier n'est exposé que par une compétence : un appel non épinglé échoue sans s'exécuter (testé).
     intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
-    # Le harnais n'expose que la lecture des SKILL.md : pas d'écriture, de recherche ni de commande.
-    intergiciels.append(FilesystemMiddleware(backend=backend, tools=["read_file"], permissions=PERMISSIONS_FICHIERS))
     return create_deep_agent(
         model=modele,
         tools=[outil for outil in outils if outil.name in OUTILS_PERMANENTS],

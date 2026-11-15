@@ -230,7 +230,8 @@ def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.
 
 
 async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() -> None:
-    """Avec ``write_file`` lié par erreur, les permissions refusent et le fichier reste intact."""
+    """Avec ``write_file`` lié par erreur, le fichier reste intact : le profil d'harnais masque l'outil
+    (« not available ») et, en second rempart, les permissions refuseraient l'écriture."""
     with tempfile.TemporaryDirectory() as dossier:
         racine = Path(dossier)
         (racine / "paie").mkdir()
@@ -258,6 +259,6 @@ async def test_l_ecriture_est_refusee_meme_si_un_outil_d_ecriture_etait_lie() ->
 
         retours = [m.text.lower() for m in etat["messages"] if isinstance(m, ToolMessage)]
         assert len(retours) == 2
-        assert all("permission" in r or "denied" in r for r in retours), retours
+        assert all("not available" in r or "permission" in r or "denied" in r for r in retours), retours
         assert cible.read_text(encoding="utf-8") == "original"
         assert not (racine / "nouveau.md").exists()

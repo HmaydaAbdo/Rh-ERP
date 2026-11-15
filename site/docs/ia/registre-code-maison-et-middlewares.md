@@ -118,3 +118,12 @@ Autres points non terminés, gardés ouverts :
 | Lint : frontend à 0 avertissement (règles en `error`), Checkstyle Java et ESLint du runtime Node, branchés dans la CI | ✅ |
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) | ✅ Cause isolée et corrigée le 2026-11-02 (E5.6) : flux de run coupé côté client, le serveur garde la réponse ; rattachement par `connectAgent` |
+
+### Outils du harnais visibles par le modèle (KAN-258)
+
+Le modèle ne voit du système de fichiers que `read_file` : les autres outils du harnais (`ls`, `write_file`,
+`edit_file`, `delete`, `glob`, `grep`, `execute`) sont masqués par `HarnessProfile(excluded_tools=…)` dans
+`ia/src/staport_ia/agent.py`, la voie officielle de Deep Agents, qui remplace notre `FilesystemMiddleware(tools=["read_file"])`.
+Les permissions de fichiers (écriture refusée) restent un second rempart. Test : liste exacte des outils exposés dans
+`ia/tests/test_agent.py`.
+
