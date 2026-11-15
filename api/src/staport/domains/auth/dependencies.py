@@ -20,7 +20,7 @@ def contexte_auth(requete: Request) -> ContexteAuth:
 Contexte = Annotated[ContexteAuth, Depends(contexte_auth)]
 
 
-def _jeton_bearer(requete: Request) -> str | None:
+def jeton_bearer(requete: Request) -> str | None:
     en_tete = requete.headers.get("Authorization", "")
     schema, _, valeur = en_tete.partition(" ")
     return valeur.strip() if schema.lower() == "bearer" and valeur.strip() else None
@@ -36,7 +36,7 @@ def _route_sans_identifiants(chemin: str) -> str:
 
 async def authentifie(requete: Request, contexte: Contexte) -> JetonAcces:
     """Jeton d'accès valide (RS256, émetteur, destinataire, échéance, claims requis) ou 401 sans corps."""
-    brut = _jeton_bearer(requete)
+    brut = jeton_bearer(requete)
     if brut is None:
         await _refuser_anonyme(requete, contexte)
         raise NonAuthentifie

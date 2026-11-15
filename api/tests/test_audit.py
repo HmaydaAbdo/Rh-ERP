@@ -486,6 +486,7 @@ EVENEMENTS_SECURITE = {
     ("POST", "/auth/forgot-password"),
     ("POST", "/auth/reset-password"),
     ("POST", "/auth/jetons/agent"),
+    ("POST", "/interne/ia/ecritures-fichier"),
     ("POST", "/users/{identifiant}/reset-password"),
 }
 """Routes d'écriture tracées par un événement de sécurité (session ou secret, jamais historisés)."""

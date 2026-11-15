@@ -13,6 +13,7 @@ utilisateur (``QuotaEspace``, crochet officiel ``wrap_tool_call``, appliqué à 
 l'expiration est celle du Store (``memoire.py``).
 """
 
+import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -24,8 +25,10 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Command
 from pydantic import BaseModel
 
-from staport_ia.agui import AccesErp, _jeton  # pyright: ignore[reportPrivateUsage]
+from staport_ia.agui import SIGNALEUR_ECRITURE, AccesErp, _jeton  # pyright: ignore[reportPrivateUsage]
 from staport_ia.memoire import sujet
+
+journal = logging.getLogger(__name__)
 
 #: Taille maximale d'un fichier écrit par l'agent (caractères) et nombre maximal de fichiers par utilisateur.
 TAILLE_MAX_FICHIER = 200_000
@@ -65,7 +68,28 @@ class QuotaEspace(AgentMiddleware[Any, Any, Any]):
             cles = {item.key for item in existants}
             if len(cles) >= FICHIERS_MAX and chemin.removeprefix("/espace") not in cles:
                 return _refus(appel, f"Espace plein ({FICHIERS_MAX} fichiers au plus) : supprimez-en avant d'écrire.")
-        return await handler(request)
+        resultat = await handler(request)
+        if chemin.startswith("/espace/") and _reussie(resultat):
+            await _signaler(chemin, len(contenu), appel["name"])
+        return resultat
+
+
+def _reussie(resultat: ToolMessage | Command[Any]) -> bool:
+    if isinstance(resultat, ToolMessage):
+        return resultat.status != "error" and not str(resultat.content).startswith("Error")
+    return True
+
+
+async def _signaler(chemin: str, taille: int, outil: str) -> None:
+    """Journalise l'écriture dans l'audit de l'API (chemin, taille, outil ; jamais le contenu). Une panne du
+    signalement n'interrompt pas le run : elle est consignée côté serveur."""
+    signaleur = SIGNALEUR_ECRITURE.get()
+    if signaleur is None:
+        return
+    try:
+        await signaleur(chemin, taille, outil)
+    except Exception as panne:
+        journal.warning("Écriture de fichier non journalisée : %s", type(panne).__name__)
 
 
 def _refus(appel: Any, message: str) -> ToolMessage:

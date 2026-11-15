@@ -192,6 +192,10 @@ PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
 - **Bornes** (écrites par nous, aucun framework ne les fournit) : 200 000 caractères par fichier et 50 fichiers par
   utilisateur, par un middleware `wrap_tool_call` (`ia/src/staport_ia/fichiers.py`) ; le refus arrive à l'exécution,
   après l'accord, avec son motif. Remplacer un fichier existant reste permis quand l'espace est plein.
+- **Audit** (KAN-268) : le même middleware signale chaque écriture réussie à l'API (`POST /interne/ia/ecritures-fichier`,
+  jeton agent) qui journalise `ECRITURE_FICHIER_AGENT` (chemin, taille, outil ; jamais le contenu). Le signaleur est une
+  `ContextVar` posée par le run (`agui.py`), donc jamais partagée entre utilisateurs ; une panne du signalement est
+  consignée côté serveur sans interrompre le run.
 
 ### Question de l'agent à l'utilisateur : interruption native (KAN-264)
 

@@ -177,7 +177,8 @@ le transmet au service IA, qui le présente à la route `/mcp`. Décision et arc
 | Cloisonnement | Refusé par toutes les routes REST ; le jeton d'accès REST est refusé par `/mcp` |
 | Contrôle à chaque appel MCP | Compte actif, identifiant cohérent avec `sub`, permissions effectives (refus individuels compris), `IA_UTILISER` et scope |
 | Clés publiques | `GET /.well-known/jwks.json` : clé courante et, pendant un changement, clé précédente |
-| Journal | `JETON_AGENT_EMIS` (identifiant `jti` et durée, jamais le jeton) et `JETON_AGENT_REFUSE` (motif) |
+| Journal | `JETON_AGENT_EMIS` (identifiant `jti` et durée, jamais le jeton) et `JETON_AGENT_REFUSE` (motif) ; `ECRITURE_FICHIER_AGENT` (chemin, taille, outil, jamais le contenu) |
+| Journal des écritures de fichier | `POST /interne/ia/ecritures-fichier` : appelée par le service IA avec le jeton agent après chaque écriture réussie sous `/espace/` (KAN-268). Route interne, absente de la liste blanche nginx, qui refuse l'en-tête `Origin` ; l'identité vient du jeton agent. Limite : un porteur de son propre jeton agent pourrait journaliser un faux enregistrement à son seul nom |
 
 **Changer de clé** : générer une nouvelle clé, placer l'ancienne clé publique (base64 d'un X.509 DER) dans
 `MCP_JWT_PREVIOUS_PUBLIC_KEY` et son identifiant dans `MCP_JWT_PREVIOUS_KEY_ID`, la nouvelle clé dans `MCP_JWT_PRIVATE_KEY`

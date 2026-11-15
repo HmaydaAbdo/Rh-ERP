@@ -33,6 +33,10 @@ class AccesSimule:
         self._refus = refus
         self.jetons_connexion: list[str] = []
         self.jetons_agent: list[str] = []
+        self.ecritures: list[tuple[str, str, int, str]] = []
+
+    async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
+        self.ecritures.append((jeton_agent, chemin, taille, outil))
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
         if self._refus is not None:
@@ -274,6 +278,8 @@ def test_une_ecriture_dans_l_espace_s_interrompt_dans_le_flux_puis_reprend_apres
     assert "".join(e["delta"] for e in fin if e["type"] == "TEXT_MESSAGE_CONTENT") == "Rapport enregistré."
     ecrits = [i for i in store.search((utilisateur, "espace"))]
     assert len(ecrits) == 1 and ecrits[0].key == "/rapport.md"
+    # KAN-268 : une seule écriture journalisée, après l'accord, avec chemin, taille et outil, jamais le contenu.
+    assert acces.ecritures == [("jeton-agent", "/espace/rapport.md", len("Masse : 1 250 000,50 MAD."), "write_file")]
 
 
 def test_les_fichiers_de_l_espace_se_listent_et_se_telechargent_pour_leur_seul_proprietaire() -> None:
