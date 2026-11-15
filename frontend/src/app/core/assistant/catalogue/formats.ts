@@ -16,11 +16,3 @@ export function formater(valeur: unknown, format: FormatColonne = 'texte'): stri
   }
   return String(valeur);
 }
-
-/** Ordre de tri d'une colonne : nombres par valeur, texte par ordre alphabétique français, vides en dernier. */
-export function comparer(a: unknown, b: unknown): number {
-  if (a == null || a === '') return b == null || b === '' ? 0 : 1;
-  if (b == null || b === '') return -1;
-  if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return String(a).localeCompare(String(b), 'fr', { numeric: true, sensitivity: 'base' });
-}
