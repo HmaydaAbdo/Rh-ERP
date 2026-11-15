@@ -151,6 +151,29 @@ async def test_un_refus_n_est_pas_rejoue_et_le_modele_voit_une_erreur_sans_le_me
     assert resultat["messages"][-1].content == "Je n'ai pas pu consulter la paie."
 
 
+async def test_le_budget_total_de_reprises_est_borne_sans_cascade() -> None:
+    """KAN-33 : une seule politique de reprise. Le client du modèle ne rejoue pas (``max_retries=0``, testé dans
+    test_service) et LiteLLM non plus (``num_retries: 0``, bascule seulement) ; il reste les 2 reprises de l'outil,
+    sous la limite d'appels d'outils du run : au plus ``appels_outils`` x 3 exécutions, même si le modèle insiste."""
+    essais: list[int] = []
+
+    def indicateurs(**_: Any) -> dict[str, Any]:
+        essais.append(1)
+        raise httpx.ConnectError("réseau coupé")
+
+    insistance = [appel("paie_indicateurs", f"a{i}", periode="2026-09") for i in range(10)]
+    faux = modele(*insistance, AIMessage(content="Information indisponible."))
+    agent = creer_agent(
+        faux,
+        [outil("paie_indicateurs", indicateurs)],  # pyright: ignore[reportArgumentType]
+        appels_modele=20,
+        appels_outils=3,
+    )
+    await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")], "pinned_skills": ["paie"]})
+
+    assert len(essais) == 3 * 3  # 3 appels d'outil autorisés, chacun avec ses 2 reprises, puis plus rien
+
+
 def _statut(code: int) -> httpx.HTTPStatusError:
     requete = httpx.Request("GET", "http://erp/api/paie")
     return httpx.HTTPStatusError("secret-interne", request=requete, response=httpx.Response(code, request=requete))

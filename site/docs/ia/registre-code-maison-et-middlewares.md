@@ -63,7 +63,7 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
 | `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
 | `ToolErrorMiddleware`, `ToolRetryMiddleware` | ✅ en place, matrice des erreurs ci-dessous et testée | — |
-| `ModelRetryMiddleware` | ⬜ | M1 |
+| `ModelRetryMiddleware` | ⛔ non repris (décision du 2026-11-01) : la reprise des modèles reste dans le routage LiteLLM, qui bascule sans rejouer (`num_retries: 0`), et le client n'en ajoute pas (`max_retries=0`) ; le budget de reprises est borné et testé (`ia/tests/test_agent.py`, KAN-33) | — |
 | `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
 | `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
 | `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
