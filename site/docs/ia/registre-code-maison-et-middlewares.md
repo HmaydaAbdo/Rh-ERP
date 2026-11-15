@@ -119,13 +119,18 @@ Autres points non terminés, gardés ouverts :
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) | ✅ Cause isolée et corrigée le 2026-11-02 (E5.6) : flux de run coupé côté client, le serveur garde la réponse ; rattachement par `connectAgent` |
 
-### Outils du harnais visibles par le modèle (KAN-258)
+### Outils du harnais visibles par le modèle (KAN-258, KAN-260, KAN-267)
 
-Le modèle ne voit du système de fichiers que `read_file` : les autres outils du harnais (`ls`, `write_file`,
-`edit_file`, `delete`, `glob`, `grep`, `execute`) sont masqués par `HarnessProfile(excluded_tools=…)` dans
-`ia/src/staport_ia/agent.py`, la voie officielle de Deep Agents, qui remplace notre `FilesystemMiddleware(tools=["read_file"])`.
-Les permissions de fichiers (écriture refusée) restent un second rempart. Test : liste exacte des outils exposés dans
-`ia/tests/test_agent.py`.
+Le modèle voit du système de fichiers `read_file` (lecture des `SKILL.md`), `write_file` et `edit_file` ; `ls`, `delete`,
+`glob`, `grep` et `execute` sont masqués par `HarnessProfile(excluded_tools=…)` dans `ia/src/staport_ia/agent.py`, la
+voie officielle de Deep Agents, qui remplace notre `FilesystemMiddleware(tools=["read_file"])`.
+
+Les permissions de fichiers (`FilesystemPermission`, la première règle qui correspond l'emporte) bornent l'écriture :
+sous `/espace/` (propre à l'identité de l'utilisateur, `StoreBackend` sur PostgreSQL), elle **attend l'accord de
+l'utilisateur** par une interruption LangGraph (`mode="interrupt"`, `HumanInTheLoopMiddleware` construit par Deep Agents ;
+reprise par `Command(resume={"decisions": [{"type": "approve"}]})` ou `"reject"`) ; ailleurs, elle est refusée sans
+question. Tests dans `ia/tests/test_agent.py` : accord, refus, isolation entre utilisateurs, refus hors de l'espace,
+liste exacte des outils exposés.
 
 ### Client MCP : `langchain.mcp` conservé, `langchain-mcp-adapters` écarté (KAN-256, 2026-11-15)
 
