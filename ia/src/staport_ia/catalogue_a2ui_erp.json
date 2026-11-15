@@ -5,7 +5,7 @@
   "components": {
     "DataTable": {
       "type": "object",
-      "description": "Tableau de données : tri par colonne, recherche, export CSV et plein écran. Pour toute liste de plus de trois lignes.",
+      "description": "Tableau de données : tri par colonne, recherche et plein écran. Pour toute liste de plus de trois lignes.",
       "properties": {
         "component": { "const": "DataTable" },
         "title": { "type": "string", "description": "Titre court du tableau." },

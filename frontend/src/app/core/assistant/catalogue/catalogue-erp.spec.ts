@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { attendreGrille, lignesGrille } from '../../../shared/testing/grille';
 import { catalogueErp } from './catalogue-erp';
 import { CHAMP_CATALOGUE_ERP } from './identifiant-catalogue';
 import { SurfaceA2uiErpComponent } from './surface-a2ui-erp.component';
@@ -70,21 +71,34 @@ describe('catalogue ERP', () => {
 
     expect(page.querySelector('h3')?.textContent).toContain('Chantiers');
     expect(page.querySelector('.app-datagrid__meta')?.textContent).toContain('4');
-    expect(Array.from(page.querySelectorAll('[role="columnheader"]')).map((c) => c.textContent?.trim())).toEqual([
+    expect(Array.from(page.querySelectorAll('.ag-header-cell')).map((c) => c.textContent?.trim())).toEqual([
       'Code',
       'Effectif',
       'Masse salariale'
     ]);
   });
 
-  it('trie une colonne numérique par valeur décroissante au premier clic', async () => {
+  it('trie avec le tableau AG Grid de l’application', async () => {
     const { fixture, page } = await monter();
+    await attendreGrille(fixture);
 
-    (page.querySelectorAll('[role="columnheader"] button')[1] as HTMLButtonElement).click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    (page.querySelectorAll('.ag-header-cell-label')[1] as HTMLElement).click();
+    await attendreGrille(fixture);
 
-    expect(page.querySelectorAll('[role="columnheader"]')[1].getAttribute('aria-sort')).toBe('descending');
+    expect(page.querySelectorAll('.ag-header-cell')[1].getAttribute('aria-sort')).toBe('ascending');
+    expect(lignesGrille(page).map((l) => l.cells[0]?.textContent?.trim())).toEqual(['CH4', 'CH1', 'CH3', 'CH2']);
+  });
+
+  it('filtre les lignes avec la recherche', async () => {
+    const { fixture, page } = await monter();
+    const champ = page.querySelector('input[type="search"]') as HTMLInputElement;
+
+    champ.value = 'ch2';
+    champ.dispatchEvent(new Event('input'));
+    await attendreGrille(fixture);
+
+    expect(page.querySelector('.app-datagrid__meta')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('1 sur 4 ligne');
+    expect(lignesGrille(page)).toHaveLength(1);
   });
 
   const surface = (composants: unknown[], donnees: unknown = {}) => [
