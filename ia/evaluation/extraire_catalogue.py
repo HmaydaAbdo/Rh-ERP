@@ -26,12 +26,19 @@ def _outils_du_module(chemin: Path) -> list[dict[str, str]]:
         fonction = noeud.func
         if not (isinstance(fonction, ast.Attribute) and fonction.attr == "tool"):
             continue
-        champs = {mot.arg: ast.literal_eval(mot.value) for mot in noeud.keywords if mot.arg in {"name", "title", "description"}}
+        champs = {
+            mot.arg: ast.literal_eval(mot.value)
+            for mot in noeud.keywords
+            if mot.arg in {"name", "title", "description"}
+        }
         if "name" not in champs:
             continue
         description = re.sub(r"\s+", " ", str(champs.get("description", ""))).strip()
         trouves.append(
-            (noeud.lineno, {"name": str(champs["name"]), "title": str(champs.get("title", "")), "description": description})
+            (
+                noeud.lineno,
+                {"name": str(champs["name"]), "title": str(champs.get("title", "")), "description": description},
+            )
         )
     return [outil for _, outil in sorted(trouves, key=lambda t: t[0])]
 
