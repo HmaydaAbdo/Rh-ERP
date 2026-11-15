@@ -26,7 +26,7 @@ traduisent dans l'idiome de FastAPI, Pydantic, SQLAlchemy et Alembic.
 Règle d'`AGENTS.md` : ne jamais supposer le comportement d'un framework. Les règles ci-dessous s'appuient sur la documentation officielle
 lue via Context7 puis la source officielle : FastAPI (grandes applications, dépendances avec `yield`, `lifespan`, tests, gestion des
 erreurs, sécurité OAuth2/JWT, `async`/`def`, réglages), SQLAlchemy 2.x (asyncio, `version_id_col`, événements de session), Alembic
-(`stamp`, modèle `async`, `op.execute`), Pydantic et pydantic-settings, PyJWT, pytest, testcontainers-python, Ruff,
+(`stamp`, modèle `async`, `op.execute`), Pydantic et pydantic-settings, joserfc et Authlib, pytest, testcontainers-python, Ruff,
 OpenTelemetry Python (instrumentation FastAPI).
 
 Lectures complémentaires du même jour : SDK MCP Python (ligne 2.x), pyright, coverage.py, pytest-asyncio et le plugin AnyIO, pwdlib, `CORSMiddleware` de Starlette,

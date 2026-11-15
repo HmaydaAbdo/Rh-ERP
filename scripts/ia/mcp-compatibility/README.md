@@ -2,7 +2,7 @@
 
 Client de test du SDK MCP TypeScript (le même SDK que celui du runtime Node CopilotKit) qui appelle le
 **serveur MCP de l'API Python** (FastMCP, route `/mcp`) avec un **jeton agent RS256** émis par
-`POST /auth/jetons/agent`. Il ne fait pas partie du runtime : il prouve l'interopérabilité (KAN-50).
+`POST /oauth/token` (échange RFC 8693). Il ne fait pas partie du runtime : il prouve l'interopérabilité (KAN-50).
 
 Le test est lancé par `api/tests/test_mcp_clients_externes.py`, qui démarre l'application complète sur un
 port loopback éphémère (uvicorn, PostgreSQL réel par testcontainers), crée un administrateur, émet son jeton

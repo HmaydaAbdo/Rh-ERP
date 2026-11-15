@@ -2782,6 +2782,7 @@ source = { editable = "." }
 dependencies = [
     { name = "ag-ui-langgraph" },
     { name = "ag-ui-protocol" },
+    { name = "authlib" },
     { name = "copilotkit" },
     { name = "deepagents" },
     { name = "fastapi" },
@@ -2821,6 +2822,7 @@ dev = [
 requires-dist = [
     { name = "ag-ui-langgraph", specifier = "==0.0.47" },
     { name = "ag-ui-protocol", specifier = "==1.0.0" },
+    { name = "authlib" },
     { name = "copilotkit", specifier = ">=0.1.97" },
     { name = "deepagents", specifier = ">=0.7.38" },
     { name = "fastapi" },

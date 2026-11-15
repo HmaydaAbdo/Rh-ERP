@@ -28,7 +28,7 @@ sidebar_position: 3
 
 | Endpoint | Permission | Note |
 |---|---|---|
-| `POST /auth/jetons/agent` | `IA_UTILISER` | Jeton délégué RS256 de 5 minutes ; compte actif et droit revérifiés en base avant l'émission |
+| `POST /oauth/token` | `IA_UTILISER` (relu en base) | Échange RFC 8693 : jeton de connexion contre un jeton délégué RS256 de 5 minutes ; compte actif et droit revérifiés en base avant l'émission ; réseau interne seulement (nginx ne relaie pas `/oauth`) |
 | `POST /mcp` | Jeton agent + `IA_UTILISER` | Réseau interne seulement (nginx ne relaie pas `/mcp`) ; compte et permissions relus à chaque requête ; tout en-tête `Origin` refusé |
 
 Chaque outil MCP exige en plus la permission de son domaine, revérifiée à chaque appel ; le catalogue complet (arguments, données, vues) est dans [ia.md](../../ia/etat-technique-et-catalogue-mcp.md#catalogue-mcp). Le salaire suit `PAIE_READ` comme dans l'API ; aucune écriture n'est exposée.

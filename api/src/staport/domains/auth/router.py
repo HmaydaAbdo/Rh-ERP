@@ -11,7 +11,6 @@ from staport.domains.auth.exceptions import JetonAgentRefuse, RefreshTokenInvali
 from staport.domains.auth.schemas import (
     ConnexionReponse,
     EcritureFichierAgentRequete,
-    JetonAgentReponse,
     LoginRequete,
     OubliMotDePasseRequete,
     PermissionReponse,
@@ -28,7 +27,6 @@ from staport.domains.auth.schemas import (
     UtilisateurRecherche,
     UtilisateurReponse,
 )
-from staport.domains.auth.securite import JetonAcces
 from staport.domains.auth.service_auth import Connexion
 from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
@@ -154,14 +152,17 @@ async def ressource_protegee(requete: Request) -> JSONResponse:
 
 
 @agent.post(
-    "/auth/jetons/agent",
-    summary="Obtenir un jeton délégué pour l'assistant IA",
+    "/oauth/token",
+    summary="Échanger le jeton de connexion contre un jeton délégué pour l'assistant IA (RFC 8693)",
 )
-async def jeton_agent(
-    session: Session, contexte: Contexte, acces: Annotated[JetonAcces, Depends(exiger("IA_UTILISER"))]
-) -> JSONResponse:
-    jeton: JetonAgentReponse = await contexte.agent.emettre_jeton(session, acces.utilisateur_id)
-    return JSONResponse(jeton.model_dump(by_alias=True), headers={"Cache-Control": "no-store"})
+async def echange_jetons(requete: Request, session: Session, contexte: Contexte) -> JSONResponse:
+    """Point d'accès de jeton OAuth 2.0 : `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`. Hors des
+    chemins relayés par nginx : appelé par le seul service IA. Les erreurs suivent le RFC 6749 (`error`,
+    `error_description`)."""
+    formulaire = {cle: str(valeur) for cle, valeur in (await requete.form()).items()}
+    reponse = await contexte.agent.echanger(session, str(requete.url), formulaire)
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
 
 
 @agent.post("/interne/ia/ecritures-fichier", status_code=status.HTTP_204_NO_CONTENT)
