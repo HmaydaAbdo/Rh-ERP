@@ -3,11 +3,14 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 """Agent ``create_deep_agent`` et faux modèle de LangChain : forme de réponse, outils, plan, surface et consignes."""
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
-from doubles import INDICATEURS, appel, modele, outil
-from langchain_core.messages import AIMessage, HumanMessage
+import pytest
+from doubles import INDICATEURS, ModeleScripte, appel, modele, outil
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.outputs import ChatGenerationChunk
 
 from staport_ia.agent import SYSTEME, _parametres_a2ui, creer_agent  # pyright: ignore[reportPrivateUsage]
 from staport_ia.surfaces import OUTIL_A2UI
@@ -172,6 +175,39 @@ async def test_le_budget_total_de_reprises_est_borne_sans_cascade() -> None:
     await agent.ainvoke({"messages": [HumanMessage(content="Masse de septembre ?")], "pinned_skills": ["paie"]})
 
     assert len(essais) == 3 * 3  # 3 appels d'outil autorisés, chacun avec ses 2 reprises, puis plus rien
+
+
+class _ModelePrincipalEnPanne(ModeleScripte):
+    """Un modèle dont chaque appel échoue : le routage LiteLLM a épuisé ses bascules."""
+
+    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> Any:
+        raise httpx.ConnectError("principal indisponible")
+
+    async def _astream(
+        self, messages: list[BaseMessage], *args: Any, **kwargs: Any
+    ) -> AsyncIterator[ChatGenerationChunk]:
+        raise httpx.ConnectError("principal indisponible")
+        yield  # pragma: no cover - fait de cette méthode un générateur asynchrone
+
+
+async def test_une_panne_du_modele_principal_est_rendue_par_le_modele_de_repli() -> None:
+    """KAN-35 : second filet officiel (``ModelFallbackMiddleware``), actif seulement si un repli est fourni."""
+    principal = _ModelePrincipalEnPanne(responses=[])
+    repli = modele(AIMessage(content="Réponse du repli."))
+    agent = creer_agent(principal, [outil("paie_indicateurs", INDICATEURS)], repli=[repli])  # pyright: ignore[reportArgumentType]
+
+    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Bonjour")], "pinned_skills": ["paie"]})
+
+    assert resultat["messages"][-1].content == "Réponse du repli."
+    assert len(repli.vus) == 1
+
+
+async def test_sans_repli_la_panne_du_modele_principal_remonte() -> None:
+    principal = _ModelePrincipalEnPanne(responses=[])
+    agent = creer_agent(principal, [outil("paie_indicateurs", INDICATEURS)])  # pyright: ignore[reportArgumentType]
+
+    with pytest.raises(httpx.ConnectError):
+        await agent.ainvoke({"messages": [HumanMessage(content="Bonjour")], "pinned_skills": ["paie"]})
 
 
 def _statut(code: int) -> httpx.HTTPStatusError:

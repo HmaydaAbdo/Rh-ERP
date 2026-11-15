@@ -65,7 +65,8 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `ToolErrorMiddleware`, `ToolRetryMiddleware` | ✅ en place, matrice des erreurs ci-dessous et testée | — |
 | `ModelRetryMiddleware` | ⛔ non repris (décision du 2026-11-01) : la reprise des modèles reste dans le routage LiteLLM, qui bascule sans rejouer (`num_retries: 0`), et le client n'en ajoute pas (`max_retries=0`) ; le budget de reprises est borné et testé (`ia/tests/test_agent.py`, KAN-33) | — |
 | `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
-| `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
+| `ModelFallbackMiddleware` | ✅ en place, **inactif tant qu'aucun modèle de repli n'est configuré** (paramètre `repli` de `creer_agent`) ; panne simulée du principal rendue par le repli, testé (KAN-35). Choisir et brancher le modèle de repli du service reste une décision du propriétaire | — |
+| `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
 | `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
 | `FilesystemFileSearchMiddleware` | ⬜ | M5 |
 | `ShellToolMiddleware` (`DockerExecutionPolicy`) | ⬜, décision de sécurité | M6 |
