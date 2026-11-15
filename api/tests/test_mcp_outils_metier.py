@@ -259,6 +259,12 @@ def test_sans_la_paie_le_salaire_est_omis_et_le_tri_par_salaire_refuse(
     resultat = _donnees(_appel(plateforme, jeton, "employes_rechercher", fonctionIds=donnees.fonctions))
     assert resultat["salaireVisible"] is False and resultat["total"] == 4
     assert all("salaire" not in e and "typeSalaire" not in e for e in resultat["employes"])
+    # Le tableau de l'assistant (KAN-80) suit : 4 lignes, aucune colonne de salaire, aucune donnée hors liste blanche.
+    tableau = resultat["a2ui_operations"][1]["updateComponents"]["components"][0]
+    assert tableau["component"] == "DataTable" and tableau["title"] == "Employés trouvés"
+    assert not {"salaire", "typeSalaire"} & {c["key"] for c in tableau["columns"]}
+    lignes = resultat["a2ui_operations"][2]["updateDataModel"]["value"]["lignes"]
+    assert len(lignes) == 4 and all(set(ligne) == {c["key"] for c in tableau["columns"]} for ligne in lignes)
     refus = _appel(plateforme, jeton, "employes_rechercher", fonctionIds=donnees.fonctions, tri="SALAIRE")
     assert refus["isError"] is True and "salaire" in refus["content"][0]["text"]
     fiche = _donnees(_appel(plateforme, jeton, "employe_fiche", id=donnees.employes["A"]))
@@ -841,3 +847,44 @@ def test_les_prerequis_d_import_verifient_le_mois_et_le_chantier(
     assert sans_paie["pret"] is False and sans_paie["bulletinsDisponibles"] == 0 and sans_paie["message"]
     for arguments in ({"periode": MOIS}, {"chantierId": 1}, {"periode": MOIS, "chantierId": 0}):
         assert _appel(plateforme, admin[0], "heures_supp_import_prerequis", **arguments)["isError"] is True
+
+
+# --- Ressource de contexte (KAN-72) ----------------------------------------------------------------
+
+
+def _contexte(plateforme: Plateforme, jeton: str) -> str:
+    reponse = _rpc(plateforme, jeton, "resources/read", {"uri": "erp://contexte"})
+    assert reponse.status_code == 200, reponse.text
+    contenus = reponse.json()["result"]["contents"]
+    assert len(contenus) == 1 and contenus[0]["mimeType"] == "text/plain"
+    return contenus[0]["text"]
+
+
+def test_la_ressource_de_contexte_donne_la_date_et_le_dernier_mois_de_paie(
+    plateforme: Plateforme, admin: tuple[str, str, int], donnees: Donnees
+) -> None:
+    ressources = _rpc(plateforme, admin[0], "resources/list").json()["result"]["resources"]
+    assert [r["uri"] for r in ressources] == ["erp://contexte"]
+
+    texte = _contexte(plateforme, admin[0])
+
+    assert f"Date du jour : {date.today().isoformat()}." in texte
+    assert "Dernier mois de paie importé : " in texte
+    assert "PAIE_READ" not in texte  # ni droit ni donnée RH dans le texte
+
+
+def test_sans_le_droit_de_paie_la_ressource_ne_donne_que_la_date(
+    plateforme: Plateforme,
+    creer_utilisateur: Fabrique,
+    connecter: Callable[[str, str], dict[str, Any]],
+    donnees: Donnees,
+) -> None:
+    jeton = _sans(plateforme, creer_utilisateur, connecter, "PAIE_READ")
+
+    texte = _contexte(plateforme, jeton)
+
+    assert texte == f"Date du jour : {date.today().isoformat()}."
+
+
+def test_la_ressource_de_contexte_exige_un_jeton_agent(plateforme: Plateforme) -> None:
+    assert _rpc(plateforme, None, "resources/read", {"uri": "erp://contexte"}).status_code == 401

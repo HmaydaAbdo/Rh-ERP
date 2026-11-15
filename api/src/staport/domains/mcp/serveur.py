@@ -13,8 +13,9 @@ from fastmcp.server.http import StarletteWithLifespan
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from mcp.types import ServerCapabilities, ToolsCapability
+from mcp.types import ResourcesCapability, ServerCapabilities, ToolsCapability
 from staport.domains.auth.composition import ContexteAuth
+from staport.domains.mcp import contexte as contexte_du_moment
 from staport.domains.mcp import outils, outils_employe, outils_paie
 from staport.domains.mcp.acces import VerificateurJetonAgent
 
@@ -86,10 +87,12 @@ def creer_serveur(
         version="1",
         auth=VerificateurJetonAgent(lambda: contexte().agent, fabrique),
     )
-    # Seuls les outils sont annoncés à l'initialisation, sans notification de changement.
+    # Seuls les outils et la ressource de contexte sont annoncés à l'initialisation, sans notification de changement
+    # (ni prompts, ni abonnement : le contexte est lu une fois par exécution).
     serveur._mcp_server.get_capabilities = lambda *_, **__: ServerCapabilities(  # type: ignore[method-assign]
-        tools=ToolsCapability(list_changed=False)
+        tools=ToolsCapability(list_changed=False), resources=ResourcesCapability(subscribe=False, list_changed=False)
     )
+    contexte_du_moment.enregistrer(serveur, contexte, fabrique)
     outils.enregistrer(serveur, contexte, fabrique)
     outils_employe.enregistrer(serveur, contexte, fabrique)
     outils_paie.enregistrer(serveur, contexte, fabrique)

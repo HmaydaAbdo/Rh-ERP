@@ -17,7 +17,15 @@ from typing import Any
 
 import jwt
 import pytest
-from conftest import ORIGINE, Journal, Plateforme, construire_configuration, construire_contexte
+from conftest import (
+    ORIGINE,
+    TYPE_JETON_ACCES,
+    Journal,
+    Plateforme,
+    construire_configuration,
+    construire_contexte,
+    formulaire_echange,
+)
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
@@ -283,10 +291,10 @@ PUBLIQUES = {
     ("GET", "/.well-known/jwks.json"),
     ("GET", "/.well-known/oauth-protected-resource"),
     ("POST", "/interne/ia/ecritures-fichier"),  # jeton agent, hors nginx (KAN-268)
+    ("POST", "/oauth/token"),  # le jeton de connexion est le sujet de l'échange, vérifié dans le grant (KAN-74)
 }
 AUTHENTIFIEES = {("POST", "/auth/logout"), ("GET", "/auth/me")}
 EXIGENCES: dict[tuple[str, str], set[str]] = {
-    ("POST", "/auth/jetons/agent"): {"IA_UTILISER"},
     ("POST", "/users/search"): {"USER_MANAGE"},
     ("GET", "/users/{identifiant}"): {"USER_MANAGE"},
     ("POST", "/users"): {"USER_MANAGE"},
@@ -461,31 +469,59 @@ def test_les_routes_publiques_et_authentifiees(plateforme: Plateforme) -> None:
 # --- Jeton délégué de l'agent IA ------------------------------------------------------------------
 
 
-def test_le_jeton_agent_porte_l_identite_seule_pendant_cinq_minutes(
+def test_l_echange_de_jetons_donne_un_jeton_agent_qui_porte_l_identite_seule_pendant_cinq_minutes(
     plateforme: Plateforme, creer_utilisateur: Fabrique, connecter: Callable[[str, str], dict[str, Any]]
 ) -> None:
     identifiant, mdp = creer_utilisateur("agent", roles=("SYSTEM_ADMIN",))
     with plateforme.moteur.connect() as c:
         nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
     acces = connecter(nom, mdp)["accessToken"]
-    reponse = plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces))
+    reponse = plateforme.client.post("/oauth/token", data=formulaire_echange(acces))
     assert reponse.status_code == 200 and reponse.headers["cache-control"] == "no-store"
     corps = reponse.json()
-    assert corps["typeJeton"] == "Bearer" and corps["expireDansSecondes"] == 300
-    entete = jwt.get_unverified_header(corps["jeton"])
-    assert entete["alg"] == "RS256" and entete["kid"] == "cle-essai-1" and entete["typ"] == "JWT"
-    claims = jwt.decode(corps["jeton"], options={"verify_signature": False})
+    assert corps["token_type"] == "Bearer" and corps["expires_in"] == 300  # noqa: S105
+    assert corps["issued_token_type"] == TYPE_JETON_ACCES
+    entete = jwt.get_unverified_header(corps["access_token"])
+    assert entete["alg"] == "RS256" and entete["typ"] == "at+jwt"  # RFC 9068, sans `kid` : Authlib n'en pose pas
+    claims = jwt.decode(corps["access_token"], options={"verify_signature": False})
     assert claims["iss"] == EMETTEUR and claims["sub"] == nom and claims["uid"] == identifiant
     assert (
         set(claims["aud"]) == {"staport-intelligence-ia", "staport-intelligence-mcp"}
         and claims["scope"] == "mcp:lecture"
     )
-    assert claims["exp"] - claims["iat"] == 300 and claims["jti"] and claims["nbf"] == claims["iat"]
+    assert claims["exp"] - claims["iat"] == 300 and claims["jti"] and claims["client_id"] == "staport-ia"
+    assert claims["act"] == {"sub": "staport-ia"}  # RFC 8693 : l'application agit pour l'utilisateur
     assert "permissions" not in claims and "roles" not in claims
     cles = JeuDeCles.depuis_configuration(plateforme.cle_b64, "cle-essai-1", "", "", "MCP_JWT")
-    assert verifier_jeton_agent(cles, corps["jeton"]) == (identifiant, nom, "mcp:lecture")
+    assert verifier_jeton_agent(cles, corps["access_token"]) == (identifiant, nom, "mcp:lecture")
     emis = plateforme.journal.de(nom, Action.JETON_AGENT_EMIS)[0]
-    assert emis.details["jti"] == claims["jti"] and corps["jeton"] not in str(emis)
+    assert emis.details["jti"] == claims["jti"] and corps["access_token"] not in str(emis)
+
+
+TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt"
+
+
+def test_un_echange_mal_forme_est_refuse_avec_une_erreur_oauth2(
+    plateforme: Plateforme, creer_utilisateur: Fabrique, connecter: Callable[[str, str], dict[str, Any]]
+) -> None:
+    identifiant, mdp = creer_utilisateur("mal-forme", roles=("SYSTEM_ADMIN",))
+    with plateforme.moteur.connect() as c:
+        nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
+    acces = connecter(nom, mdp)["accessToken"]
+    cas: list[tuple[dict[str, str], int, str]] = [
+        (formulaire_echange("pas.un.jeton"), 400, "invalid_grant"),
+        (formulaire_echange(acces, subject_token_type=TYPE_JWT), 400, "invalid_request"),
+        (formulaire_echange(acces, audience="autre-ressource"), 400, "invalid_request"),
+        (formulaire_echange(acces, scope="mcp:ecriture"), 400, "invalid_scope"),
+        (formulaire_echange(acces, client_id="autre-client"), 400, "invalid_client"),
+        (formulaire_echange(acces, grant_type="client_credentials"), 400, "unsupported_grant_type"),
+    ]
+    for corps, statut, erreur in cas:
+        reponse = plateforme.client.post("/oauth/token", data=corps)
+        assert (reponse.status_code, reponse.json()["error"]) == (statut, erreur), corps
+    sans_sujet = {k: v for k, v in formulaire_echange(acces).items() if k != "subject_token"}
+    assert plateforme.client.post("/oauth/token", data=sans_sujet).json()["error"] == "invalid_request"
+    assert plateforme.journal.de(nom, Action.JETON_AGENT_EMIS) == []
 
 
 def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_seulement(
@@ -497,7 +533,7 @@ def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_
     with plateforme.moteur.connect() as c:
         nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
     acces = connecter(nom, mdp)["accessToken"]
-    agent = plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces)).json()["jeton"]
+    agent = plateforme.client.post("/oauth/token", data=formulaire_echange(acces)).json()["access_token"]
     route = "/interne/ia/ecritures-fichier"
     ecriture = {"chemin": "/espace/rapport.md", "taille": 42, "outil": "write_file", "contenu": "secret"}
 
@@ -515,6 +551,12 @@ def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_
     invalides = [{**ecriture, "chemin": "/etc/passwd"}, {**ecriture, "outil": "execute"}, {**ecriture, "taille": -1}]
     assert [plateforme.client.post(route, headers=_bearer(agent), json=e).status_code for e in invalides] == [400] * 3
     assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 1
+    # La mémoire longue (KAN-84) est journalisée de la même façon : chemin, taille et action, jamais le contenu.
+    memoire = {"chemin": "/memoire/AGENTS.md", "taille": 12, "outil": "memoire_modifier"}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=memoire).status_code == 204
+    hors_memoire = {**memoire, "chemin": "/autre/AGENTS.md"}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=hors_memoire).status_code == 400
+    assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 2
 
 
 def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive(
@@ -525,12 +567,12 @@ def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive
     acces = plateforme.contexte.emetteur.emettre_acces(
         identifiant, "retire", {"IA_UTILISER"}, set(), timedelta(minutes=5)
     )
-    reponse = plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces))
-    assert reponse.status_code == 403
+    reponse = plateforme.client.post("/oauth/token", data=formulaire_echange(acces))
+    assert reponse.status_code == 403 and reponse.json()["error"] == "access_denied"
     assert plateforme.journal.de(None, Action.JETON_AGENT_REFUSE)[-1].motif == "DROIT_IA_RETIRE"
     with plateforme.moteur.begin() as c:
         c.execute(text("UPDATE utilisateur SET actif = false WHERE id = :i"), {"i": identifiant})
-    assert plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces)).status_code == 403
+    assert plateforme.client.post("/oauth/token", data=formulaire_echange(acces)).status_code == 403
     assert plateforme.journal.de(None, Action.JETON_AGENT_REFUSE)[-1].motif == "COMPTE_INACTIF"
 
 
@@ -562,7 +604,7 @@ def test_l_assistant_ia_desactive_repond_404(plateforme_sans_ia: Plateforme) -> 
     assert p.client.get("/.well-known/jwks.json").status_code == 404
     assert p.client.get("/.well-known/jwks.json").json()["message"] == "L'assistant IA n'est pas activé"
     acces = _jeton(p, {"IA_UTILISER"})
-    assert p.client.post("/auth/jetons/agent", headers=_bearer(acces)).status_code == 404
+    assert p.client.post("/oauth/token", data=formulaire_echange(acces)).status_code == 404
 
 
 # --- Jeu de clés ----------------------------------------------------------------------------------

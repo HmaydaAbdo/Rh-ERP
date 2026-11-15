@@ -135,9 +135,9 @@ class EcritureFichierAgentRequete(ModeleApi):
     """Une écriture de fichier faite par l'assistant IA dans l'espace de l'utilisateur, après son accord (KAN-268).
     Le contenu n'est jamais transmis : seulement le chemin, la taille et l'outil."""
 
-    chemin: Annotated[str, Field(pattern=r"^/espace/[^\x00-\x1f]{1,300}$")]
+    chemin: Annotated[str, Field(pattern=r"^/(espace|memoire)/[^\x00-\x1f]{1,300}$")]
     taille: Annotated[int, Field(ge=0, le=1_000_000)]
-    outil: Annotated[str, Field(pattern=r"^(write_file|edit_file)$")]
+    outil: Annotated[str, Field(pattern=r"^(write_file|edit_file|memoire_modifier|memoire_oublier)$")]
 
 
 class JetonAgentReponse(ModeleApi):

@@ -21,7 +21,7 @@ from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunSt
 from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -29,8 +29,9 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import RunControl
 from langgraph.types import Durability
 
+from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
-from staport_ia.outils import jeton_agent, outils_erp
+from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp
 
 journal = logging.getLogger(__name__)
 
@@ -71,12 +72,16 @@ class AgentAGUI(LangGraphAGUIAgent):
     sous-classe n'ajoute que ces deux arguments au point d'extension ``get_stream_kwargs``. Écart au 0 % de code maison
     à retirer quand l'intégration les prendra en charge (registre des abstractions, KAN-39)."""
 
-    def __init__(self, *args: Any, controle: RunControl, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, controle: RunControl, contexte_erp: str = "", **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._controle = controle
+        self._contexte_erp = contexte_erp
 
     def get_stream_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {**super().get_stream_kwargs(*args, **kwargs), "control": self._controle, "durability": DURABILITE}
+        base = super().get_stream_kwargs(*args, **kwargs)
+        # Contexte d'exécution immuable (``context_schema`` de l'agent) : le service le fournit, jamais le navigateur.
+        contexte = {**base.get("context", {}), "contexte_erp": self._contexte_erp}
+        return {**base, "context": contexte, "control": self._controle, "durability": DURABILITE}
 
 
 class _SansDetail(logging.Filter):
@@ -101,6 +106,8 @@ class AccesErp(Protocol):
     async def jeton_agent(self, jeton_connexion: str) -> str: ...
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
+
+    async def contexte(self, jeton_agent: str) -> str: ...
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
 
@@ -157,6 +164,7 @@ async def evenements(
     memoire: BaseCheckpointSaver[Any] | None = None,
     thread_id: str | None = None,
     utilisateur: str = "anonyme",
+    contexte_erp: str = "",
 ) -> AsyncGenerator[BaseEvent]:
     """Le run en événements AG-UI ; toute panne devient un ``RUN_ERROR`` générique, sans détail.
 
@@ -168,6 +176,7 @@ async def evenements(
     try:
         officiel = AgentAGUI(
             controle=controle,
+            contexte_erp=contexte_erp,
             name="staport-intelligence",
             graph=fabrique(
                 outils, memoire or InMemorySaver(), utilisateur
@@ -203,17 +212,20 @@ async def evenements(
 
 
 class AccesHttp:
-    """``AccesErp`` réel : ``/auth/jetons/agent`` puis ``/mcp`` de l'API ERP."""
+    """``AccesErp`` réel : échange RFC 8693 (``/oauth/token``) puis ``/mcp`` de l'API ERP."""
 
     def __init__(self, client: httpx.AsyncClient, api: str) -> None:
         self._client = client
         self._api = api.rstrip("/")
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
-        return await jeton_agent(self._client, self._api, jeton_connexion)
+        return await jeton_agent(self._api, jeton_connexion)
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         return await outils_erp(f"{self._api}/mcp", jeton_agent)
+
+    async def contexte(self, jeton_agent: str) -> str:
+        return await contexte_erp(f"{self._api}/mcp", jeton_agent)
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
         reponse = await self._client.post(
@@ -244,6 +256,7 @@ def routeur_agui(
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)
+        texte_contexte = await _contexte(erp, jeton)
         encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
         # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
         # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
@@ -251,11 +264,15 @@ def routeur_agui(
         fil = espace_conversation(sujet(jeton), entree.thread_id)
         # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
         # Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte rien.
+        # Le contexte d'écran du navigateur est un indice : le serveur le revérifie et le réécrit (ecran.py, KAN-83).
+        contexte_ecran = contexte_verifie(entree.context)
         if est_reprise(entree):
-            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil})
+            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil, "context": contexte_ecran})
         else:
             epinglees = await routage()(texte_question(entree), outils) if routage else []
-            entree_serveur = entree.model_copy(update={"state": {"pinned_skills": epinglees}, "thread_id": fil})
+            entree_serveur = entree.model_copy(
+                update={"state": {"pinned_skills": epinglees}, "thread_id": fil, "context": contexte_ecran}
+            )
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 
@@ -272,6 +289,7 @@ def routeur_agui(
                     memoire() if memoire and not suggestion_sans_etat else None,
                     entree.thread_id,
                     sujet(jeton),
+                    texte_contexte,
                 ):
                     yield encodeur.encode(evenement)
             finally:
@@ -287,6 +305,21 @@ def routeur_agui(
             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
 
+    @routeur.delete("/conversations/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def supprimer(thread_id: str, requete: Request) -> Response:  # pyright: ignore[reportUnusedFunction]
+        """Efface la mémoire de la conversation de l'utilisateur connecté (KAN-81) : jamais celle d'un autre, puisque
+        le fil est préfixé par l'identité portée par son jeton ; appelée par le runtime avant de retirer la ligne."""
+        if not actif():
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA désactivé.")
+        autorisation = requete.headers.get("authorization", "")
+        if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
+        jeton = await _jeton(acces(), autorisation[7:].strip())
+        saver = memoire() if memoire else None
+        if saver is not None:
+            await saver.adelete_thread(espace_conversation(sujet(jeton), thread_id))
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
     return routeur
 
 
@@ -294,14 +327,13 @@ async def _jeton(erp: AccesErp, jeton_connexion: str) -> str:
     """Les refus de l'API gardent leur sens HTTP ; le reste est une indisponibilité, sans détail."""
     try:
         return await erp.jeton_agent(jeton_connexion)
-    except httpx.HTTPStatusError as refus:
-        code = refus.response.status_code
-        if code == status.HTTP_401_UNAUTHORIZED:
+    except EchangeRefuse as refus:
+        if refus.erreur == "invalid_grant":
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion expirée.") from None
-        if code == status.HTTP_403_FORBIDDEN:
+        if refus.erreur == "access_denied":
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Droit IA_UTILISER requis.") from None
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
-    except httpx.HTTPError:
+    except httpx.HTTPError, ValueError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
 
 
@@ -311,3 +343,12 @@ async def _outils(erp: AccesErp, jeton: str) -> Sequence[BaseTool]:
     except Exception as panne:  # API injoignable ou catalogue refusé : indisponibilité, sans détail
         journal.warning("Catalogue MCP indisponible : %s", type(panne).__name__)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
+
+
+async def _contexte(erp: AccesErp, jeton: str) -> str:
+    """Le contexte du moment (ressource MCP) ; une panne laisse l'instruction du modèle plus courte."""
+    try:
+        return await erp.contexte(jeton)
+    except Exception as panne:  # jamais un échec de la question
+        journal.warning("Contexte MCP indisponible : %s", type(panne).__name__)
+        return ""

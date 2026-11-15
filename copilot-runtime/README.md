@@ -7,13 +7,21 @@ Il ne contient aucune logique métier à nous :
   la fabrique d'agents officielle ; le service IA fait valider ce jeton par l'API ;
 - il applique le middleware A2UI officiel (`a2ui: { injectA2UITool: true }`) : le service IA offre alors l'outil
   `generate_a2ui`, et le flux de cet outil devient une surface affichée par CopilotKit Angular ;
-- il refuse d'emblée une requête sans jeton `Bearer`.
+- il authentifie chaque requête (crochet officiel `onRequest`, `/auth/me`) et ne sert que les routes de l'assistant ; chaque fil appartient à l'utilisateur dont le premier run l'a créé (`identifyUser` et propriété des fils du `SqliteAgentRunner`, officiels depuis le runtime 1.88) ; le gestionnaire est `createCopilotExpressHandler` (`src/app.mjs`), `src/serveur.mjs` ne fait que l'écoute.
 
 Routes, sous `/copilotkit` (relayées par nginx sous `/ia/copilotkit/`) : `GET /info`, `POST /agent/default/run`,
 `POST /agent/default/suggest` (suggestions CopilotKit authentifiées, sans fil persistant), et les routes de connexion et
 d'arrêt ; les routes de fils, mémoires, inspecteur et transcription restent fermées. Chaque requête exige le jeton du compte
-et la permission `IA_UTILISER`. Les suggestions portent des identifiants temporaires : l'authentification est obligatoire,
+et la permission `IA_UTILISER` ; un fil n'est lancé, repris ni arrêté que par son propriétaire (un autre utilisateur reçoit 404 et ne rejoue rien). Les suggestions portent des identifiants temporaires : l'authentification est obligatoire,
 mais le contrôle de propriété des fils persistants ne s'applique pas à cette route sans état.
+
+## Conversations (KAN-81)
+
+`/copilotkit/conversations` (GET liste, PATCH `{ "title" }` renommer, DELETE supprimer) est servi par `src/conversations.mjs`, avec la même authentification que le reste du runtime. Chaque run réussi crée ou date la ligne de la conversation dans la table `assistant_conversations` (titre : début de la première question) ; la table ne sert qu'à l'affichage, l'accès aux fils reste celui du runner officiel. La suppression appelle d'abord `DELETE /conversations/{id}` du service IA (mémoire LangGraph) : en cas d'échec, 502 et rien n'est supprimé.
+
+## Expiration (KAN-82)
+
+Le runner SQLite officiel n'a ni durée de vie ni purge. `serveur.mjs` supprime au démarrage puis chaque jour les conversations sans échange depuis `CONVERSATION_JOURS` jours (30 par défaut, valeur de `IA_CONVERSATION_JOURS` dans Compose) : ligne de liste, historique du runner et propriété du fil, y compris les fils créés avant la liste. La mémoire du service IA expire de son côté à la même échéance (`memoire.purger`).
 
 ## Exploitation
 
@@ -24,6 +32,10 @@ mais le contrôle de propriété des fils persistants ne s'applique pas à cette
   d'installation, utilisateur non privilégié, système de fichiers en lecture seule.
 - Télémétrie de CopilotKit et de ses dépendances coupée (`COPILOTKIT_TELEMETRY_DISABLED`, `DO_NOT_TRACK`,
   `SCARF_ANALYTICS`).
+
+## Tests
+
+`npm test` (`node --test`) : authentification, routes fermées et accès croisé aux fils refusé, avec l'API et le service IA simulés (nécessite `npm rebuild better-sqlite3`).
 
 ## En local
 

@@ -104,3 +104,18 @@ seule fois, ici. Format : constat, cause, règle.
 - `pygal.HorizontalBar` inverse les options : `show_y_labels=False` masque les **noms** (axe vertical), `show_x_labels=False` masque l'échelle des **valeurs**. Vérifié en rendu WeasyPrint (Docker), pas dans la documentation.
 - `print_values` dessine la valeur au centre de la barre, illisible sur une petite barre : la valeur exacte et le pourcentage sont écrits dans l'étiquette du nom.
 - Pygal n'a pas d'annotations : une façade `Any` (`rapport_graphique.py`) garde le typage strict ailleurs. Le rendu PDF se contrôle dans l'image Linux (Pango absent sous Windows).
+
+## 2026-11-15 — Relire la doc de la version installée avant de coder une protection (KAN-79)
+
+J'ai écrit une table de propriété des fils en suivant la doc indexée et le ticket (« `identifyUser` est réservé à Intelligence »), alors que le runtime 1.88 que je venais d'installer fournit la propriété des fils avec `identifyUser` et le `SqliteAgentRunner`. Ma table portait en plus le même nom (`thread_owners`) que celle du runner : elle aurait cassé le premier run en production, et les tests n'ouvraient pas de base fichier pour le voir.
+**À faire :** après chaque montée de version, lire les `.d.mts` et le code de la version installée (pas seulement la doc en ligne) avant d'écrire du code de sécurité, et tester avec le même stockage que la production (base fichier, pas mémoire).
+
+## 2026-11-15 — Mesurer le comportement natif avant de supprimer un contournement (KAN-77)
+
+Le script `filtrer_config.py` contournait le fait que LiteLLM ne bascule pas sur une 401. La documentation proposait deux mécanismes natifs, dont l'un (`allowed_fails_policy`) désactive précisément le filtre de santé dont on avait besoin : seule une mesure dans Docker avec un faux fournisseur (un déploiement sans clé, un avec) a montré lequel marche (0 échec sur 95 requêtes sans `allowed_fails_policy`). Le CLI officiel, lui, ne couvre pas la mise à jour d'une clé virtuelle : on vérifie `--help` avant de promettre un remplacement.
+**À faire :** avant de retirer un contournement, reproduire le défaut puis la solution native sur un banc local (conteneur et faux fournisseur) ; ne pas déduire un remplacement du seul nom d'une commande.
+
+## 2026-11-15 — Un état mis en cache dans le fil survit à la suppression de sa source (KAN-84)
+
+Le `MemoryMiddleware` officiel de Deep Agents charge `AGENTS.md` une seule fois par conversation et le garde dans l'état du fil. Un « tout oublier » aurait donc laissé la mémoire visible dans toutes les conversations déjà commencées : un oubli qui n'oublie pas. Le test d'une seule conversation ne l'aurait pas montré ; il a fallu un test sur trois tours d'un même fil (correction, puis oubli entre deux tours).
+**À faire :** pour toute donnée copiée dans l'état d'un fil (mémoire, droits, contexte), se demander qui la met à jour quand sa source change ; tester le changement de la source entre deux tours d'un même fil, pas seulement au premier tour.

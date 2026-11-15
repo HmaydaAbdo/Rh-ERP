@@ -166,13 +166,12 @@ base à chaque requête).
 
 ### Jeton délégué de l'assistant IA
 
-Le navigateur obtient, avec son jeton d'accès, un **jeton agent** (`POST /auth/jetons/agent`, permission `IA_UTILISER`) et
-le transmet au service IA, qui le présente à la route `/mcp`. Décision et architecture : [ia.md](../../ia/vue-d-ensemble.md), § 5.
+Le service IA échange le jeton de connexion de l'utilisateur contre un **jeton agent** (OAuth 2.0 Token Exchange, RFC 8693, `POST /oauth/token`, permission `IA_UTILISER` relue en base) et le présente à la route `/mcp`. Le serveur est celui d'Authlib, le jeton un JWT d'accès RFC 9068 ; seule la classe du grant 8693 est écrite ici, Authlib n'en publiant pas encore. Décision et architecture : [ia.md](../../ia/vue-d-ensemble.md), § 5.
 
 | Élément | Règle |
 |---|---|
 | Signature | RS256, clé RSA de 3072 bits au moins (`MCP_JWT_PRIVATE_KEY`, `MCP_JWT_KEY_ID`) ; jamais le `JWT_SECRET` |
-| Contenu | `iss`, `sub`, `uid`, `aud` = `staport-intelligence-ia` et `staport-intelligence-mcp`, `scope` = `mcp:lecture`, `jti`, dates ; **aucune permission** |
+| Contenu | `iss`, `sub`, `uid`, `client_id`, `act` (acteur : le service IA, RFC 8693), `aud` = `staport-intelligence-ia` et `staport-intelligence-mcp`, `scope` = `mcp:lecture`, `jti`, dates ; **aucune permission**. En-tête `typ` = `at+jwt` (RFC 9068) |
 | Durée | 5 minutes ; Angular en redemande un à chaque question |
 | Cloisonnement | Refusé par toutes les routes REST ; le jeton d'accès REST est refusé par `/mcp` |
 | Contrôle à chaque appel MCP | Compte actif, identifiant cohérent avec `sub`, permissions effectives (refus individuels compris), `IA_UTILISER` et scope |
@@ -259,7 +258,7 @@ Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `
 | `POST` | `/auth/forgot-password` | Demande de lien de réinitialisation (toujours `202`) | Public |
 | `POST` | `/auth/reset-password` | Réinitialisation avec le jeton du courriel | Public |
 | `GET` | `/auth/password-policy` | Lire la longueur minimale du mot de passe | Public |
-| `POST` | `/auth/jetons/agent` | Jeton délégué de l'assistant IA (5 minutes) | `IA_UTILISER` |
+| `POST` | `/oauth/token` | Échange de jetons RFC 8693 : jeton délégué de l'assistant IA (5 minutes) | Jeton de connexion + `IA_UTILISER` (relu en base) |
 | `GET` | `/.well-known/jwks.json` | Clés publiques des jetons agent | Public |
 | `POST` | `/users/search` | Rechercher avec filtres et pagination serveur | `USER_MANAGE` |
 | `GET` | `/users/{id}` | Consulter | `USER_MANAGE` |

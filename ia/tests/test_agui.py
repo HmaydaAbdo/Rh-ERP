@@ -4,7 +4,6 @@ import json
 from collections.abc import Sequence
 from typing import Any, cast
 
-import httpx
 import pytest
 from ag_ui.core import EventType
 from doubles import INDICATEURS, ModeleScripte, appel, memoire_processus, modele, outil, store_avec_competences
@@ -19,7 +18,8 @@ from staport_ia.agui import FabriqueAgent, demander_arret
 from staport_ia.app import creer_app
 from staport_ia.config import Settings
 from staport_ia.fichiers import FICHIERS_MAX, TAILLE_MAX_FICHIER
-from staport_ia.memoire import sujet
+from staport_ia.memoire import espace_conversation, sujet
+from staport_ia.outils import EchangeRefuse
 
 QUESTION = "Masse salariale de 2026-09 ?"
 REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."
@@ -28,7 +28,7 @@ REPONSE = "En 2026-09 : masse 1 250 000,50 MAD."
 class AccesSimule:
     """API simulée : échange de jeton (ou refus HTTP), puis catalogue d'outils au nom du jeton agent."""
 
-    def __init__(self, outils: Sequence[BaseTool], refus: int | None = None) -> None:
+    def __init__(self, outils: Sequence[BaseTool], refus: str | None = None) -> None:
         self._outils = outils
         self._refus = refus
         self.jetons_connexion: list[str] = []
@@ -40,14 +40,16 @@ class AccesSimule:
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
         if self._refus is not None:
-            requete = httpx.Request("POST", "http://backend/auth/jetons/agent")
-            raise httpx.HTTPStatusError("refus", request=requete, response=httpx.Response(self._refus, request=requete))
+            raise EchangeRefuse(self._refus)
         self.jetons_connexion.append(jeton_connexion)
         return "jeton-agent"
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
         self.jetons_agent.append(jeton_agent)
         return self._outils
+
+    async def contexte(self, jeton_agent: str) -> str:
+        return "Date du jour : 2026-11-15."
 
 
 async def _routage_paie(_question: str, _outils: Sequence[BaseTool]) -> list[str]:
@@ -159,13 +161,13 @@ def test_un_outil_declare_par_le_navigateur_est_propose_au_modele() -> None:
     [
         (False, "c", None, 503),  # IA désactivée
         (True, None, None, 401),  # pas de jeton
-        (True, "c", 401, 401),  # connexion expirée côté API
-        (True, "c", 403, 403),  # droit IA_UTILISER absent
-        (True, "c", 404, 503),  # IA non activée côté API
+        (True, "c", "invalid_grant", 401),  # connexion expirée côté API
+        (True, "c", "access_denied", 403),  # droit IA_UTILISER absent
+        (True, "c", "reponse_invalide", 503),  # IA non activée côté API (404 sans erreur OAuth2)
     ],
 )
 def test_les_refus_sont_des_erreurs_http_avant_tout_flux(
-    enabled: bool, jeton: str | None, refus: int | None, attendu: int
+    enabled: bool, jeton: str | None, refus: str | None, attendu: int
 ) -> None:
     acces = AccesSimule([], refus=refus)
 
@@ -365,3 +367,34 @@ def test_un_arret_du_service_termine_l_etape_puis_la_conversation_reprend() -> N
     assert erreur["code"] == "SERVICE_REDEMARRE" and "AB123456" not in json.dumps(arret)
     assert reprise[-1]["type"] == EventType.RUN_FINISHED and EventType.RUN_ERROR not in [e["type"] for e in reprise]
     assert "".join(e["delta"] for e in reprise if e["type"] == "TEXT_MESSAGE_CONTENT") == REPONSE
+
+
+def _fil_existe(app: Any, thread_id: str, jeton_agent: str = "jeton-agent") -> bool:
+    config = {"configurable": {"thread_id": espace_conversation(sujet(jeton_agent), thread_id)}}
+    return app.state.memoire.get_tuple(config) is not None
+
+
+def test_la_suppression_efface_la_memoire_de_la_conversation_de_l_utilisateur() -> None:
+    acces = AccesSimule([outil("paie_indicateurs", INDICATEURS)])
+    app = creer_app(
+        _settings(), fabrique=_fabrique(_masse()), acces=acces, routage=_routage_paie, memoire=memoire_processus
+    )
+    with TestClient(app) as client:
+        entetes = {"Accept": "text/event-stream", "Authorization": "Bearer c"}
+        assert client.post("/agui", json=_corps(), headers=entetes).status_code == 200
+        assert _fil_existe(app, "t1")
+
+        # Une autre conversation du même utilisateur n'est pas touchée.
+        assert client.delete("/conversations/autre", headers={"Authorization": "Bearer c"}).status_code == 204
+        assert _fil_existe(app, "t1")
+
+        assert client.delete("/conversations/t1", headers={"Authorization": "Bearer c"}).status_code == 204
+        assert not _fil_existe(app, "t1")
+
+
+def test_la_suppression_exige_une_connexion_valide() -> None:
+    acces = AccesSimule([], refus="invalid_grant")
+    app = creer_app(_settings(), fabrique=_fabrique(_masse()), acces=acces, memoire=memoire_processus)
+    with TestClient(app) as client:
+        assert client.delete("/conversations/t1").status_code == 401
+        assert client.delete("/conversations/t1", headers={"Authorization": "Bearer expire"}).status_code == 401

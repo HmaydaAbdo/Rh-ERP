@@ -52,12 +52,12 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 | Choix des outils visibles par tour | `SkillsMiddleware` avec résolveur lié à l'identité ; repli par lecture du `SKILL.md` | `routage.py` (embeddings MiniLM, déclaré) : à remplacer si un point d'extension officiel équivalent apparaît |
 | Limites et pannes de la boucle | `ToolRetryMiddleware`, `ToolErrorMiddleware` (aucun plafond d'appels par run, décision du 2026-10-31) | aucune |
 | Contrôle de la réponse finale | middleware `after_agent` (guardrails LangChain) | motifs de `garde_sortie.py` (règle métier de sécurité) |
-| Interface composée à partir des résultats | A2UI et `CopilotKitMiddleware` | `surfaces.py` (middleware `wrap_tool_call`, motif officiel) : à vérifier contre la version courante de CopilotKit |
+| Interface composée à partir des résultats | A2UI et `CopilotKitMiddleware` | motif officiel « schéma fixe » (KAN-80) : l'outil MCP décrit sa surface (`api/.../mcp/surfaces.py`), `surfaces.py` du service IA la transmet (`wrap_tool_call`) |
 | Conversations durables | `AsyncPostgresSaver` (LangGraph) | raccordement dans `memoire.py` |
 | Protocole agent ↔ interface | AG-UI via `LangGraphAGUIAgent` | filtres de sortie de `agui.py` (événements RAW, erreur générique) |
 | Passerelle de modèles | LiteLLM | configuration |
 | Outils métier exposés à l'agent | serveur FastMCP (API), client MCP LangChain | définitions d'outils (métier) |
-| Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | rejoueur et critères déterministes de `evaluation.py` (dette déclarée, KAN-208 puis E10) |
+| Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | critères métier déterministes de `evaluation.py` (formats français, aucun équivalent officiel) ; lanceur remplacé par pytest (KAN-76) |
 | Traces et métriques | OpenTelemetry, Phoenix | configuration |
 | Droits, périmètre, audit | dépendances d'authentification FastAPI, décorateur d'action auditée | règles métier (permanentes) |
 | Schéma de base de données | Alembic | aucune |

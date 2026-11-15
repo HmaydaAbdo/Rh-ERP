@@ -251,7 +251,7 @@ propriétaire avant d'écrire quoi que ce soit.
 | Modèles via la passerelle | Modèle de chat LangChain qui transmet le raisonnement (`ChatLiteLLM` de `langchain-litellm`) pointé sur LiteLLM |
 | Outils MCP côté agent | MCP intégré à LangChain (`langchain.mcp`, client FastMCP) ; `langchain-mcp-adapters` n'est plus maintenu |
 | Serveur MCP côté API | FastMCP monté dans FastAPI, outils déclarés par décorateur |
-| Jeton délégué de l'agent | Jeton JWT RS256 émis par l'API (`POST /auth/jetons/agent`), d'audience MCP |
+| Jeton délégué de l'agent | Échange de jetons OAuth 2.0 (RFC 8693, `POST /oauth/token`) : serveur Authlib côté API, JWT d'accès RFC 9068 d'audience MCP ; client OAuth2 d'Authlib côté IA |
 | Garde-fous, budgets et limites par utilisateur | Fonctions natives de LiteLLM (détection d'injection, masquage par Presidio, budgets par utilisateur et par équipe) |
 | Conversations et mémoire durables | Checkpointer LangGraph PostgreSQL et `Store` LangGraph |
 | Traces, coûts, retours, versions de prompts | OpenTelemetry et Langfuse auto-hébergé |

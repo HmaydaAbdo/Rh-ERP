@@ -1,10 +1,21 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { v4 as uuid } from 'uuid';
 
 import { AuthService } from '../auth/services/auth.service';
 
 const CLE = 'staport.assistant.fil';
 const CLE_UTILISE = 'staport.assistant.fil-utilise';
+const URL_CONVERSATIONS = 'ia/copilotkit/conversations';
+
+/** Une conversation de la liste : le titre est le début de la première question, ou le nom donné par l'utilisateur. */
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
 /**
  * Le fil de discussion de l'assistant pour l'utilisateur connecté : repris après un rechargement de la page (le runtime
@@ -14,6 +25,13 @@ const CLE_UTILISE = 'staport.assistant.fil-utilise';
 @Injectable()
 export class FilAssistant {
   private readonly auth = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  /** Les conversations de l'utilisateur, la plus récente en tête (liste tenue par le runtime, KAN-81). */
+  readonly conversations = signal<Conversation[]>([]);
+  /** Liste des conversations affichée par-dessus la discussion. */
+  readonly listeOuverte = signal(false);
+  /** Panneau « Ce que l'assistant retient » (mémoire longue, KAN-84), affiché par-dessus la discussion. */
+  readonly memoireOuverte = signal(false);
   /** Panneau agrandi (bouton de l'en-tête) : la barre CopilotKit prend alors `width` de `AssistantComponent`. */
   readonly agrandi = signal(false);
   private readonly courant = signal<string | null>(null);
@@ -27,12 +45,53 @@ export class FilAssistant {
     return fil?.startsWith(`u${utilisateur}-`) ? fil : this.reprendre(utilisateur);
   });
 
-  /** Commence une conversation vide ; l'ancienne reste dans la mémoire de l'agent jusqu'à sa purge. */
+  /** Commence une conversation vide ; l'ancienne reste dans la liste et dans la mémoire de l'agent. */
   nouveau(): void {
     const utilisateur = this.auth.user()?.id;
     if (utilisateur !== undefined) {
       this.courant.set(this.enregistrer(utilisateur, `u${utilisateur}-${uuid()}`));
+      this.listeOuverte.set(false);
     }
+  }
+
+  /** Reprend une conversation de la liste : son historique est rejoué (elle est marquée commencée). */
+  ouvrir(id: string): void {
+    const utilisateur = this.auth.user()?.id;
+    if (utilisateur === undefined || !id.startsWith(`u${utilisateur}-`)) {
+      return;
+    }
+    try {
+      localStorage.setItem(`${CLE_UTILISE}.${utilisateur}`, id);
+    } catch {
+      // Sans stockage, l'historique sera rejoué à cette sélection seulement.
+    }
+    this.courant.set(this.enregistrer(utilisateur, id));
+    this.listeOuverte.set(false);
+  }
+
+  async rafraichir(): Promise<void> {
+    if (!this.auth.user()) {
+      return;
+    }
+    try {
+      this.conversations.set(await firstValueFrom(this.http.get<Conversation[]>(URL_CONVERSATIONS)));
+    } catch {
+      // Liste indisponible : l'assistant reste utilisable, le message d'erreur est celui de l'intercepteur.
+    }
+  }
+
+  async renommer(id: string, titre: string): Promise<void> {
+    await firstValueFrom(this.http.patch(`${URL_CONVERSATIONS}/${encodeURIComponent(id)}`, { title: titre }));
+    await this.rafraichir();
+  }
+
+  /** Supprime la conversation (liste, historique et mémoire de l'agent) ; si c'était la courante, une neuve la remplace. */
+  async supprimer(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete(`${URL_CONVERSATIONS}/${encodeURIComponent(id)}`));
+    if (this.fil() === id) {
+      this.nouveau();
+    }
+    await this.rafraichir();
   }
 
   /** Le fil a-t-il déjà reçu une question ? Un fil neuf n'a rien à rejouer : l'accueil s'affiche (voir `AssistantChatComponent`). */

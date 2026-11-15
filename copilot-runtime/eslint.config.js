@@ -6,7 +6,7 @@ export default [
   { ignores: ['node_modules/**'] },
   js.configs.recommended,
   {
-    files: ['src/**/*.mjs'],
+    files: ['src/**/*.mjs', 'test/**/*.mjs'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
     rules: {
       // Les variables inutilisées préfixées par `_` sont voulues (paramètres imposés par une signature).

@@ -8,12 +8,19 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
 |---|---|
 | `Dockerfile` | Image LiteLLM v1.109.1 (stable, 2026-11-15) épinglée par version et digest, configuration intégrée |
 | `entrypoint.sh` | Refuse de démarrer sans `LITELLM_MASTER_KEY` (préfixe `sk-`), `LITELLM_SALT_KEY` ou `DATABASE_URL` |
-| `filtrer_config.py` | Au démarrage, retire les déploiements dont la clé est vide (LiteLLM ne bascule pas sur une 401) |
-| `litellm_config.yaml` | Groupes officiels par capacité, poids, limites, réglages du routeur |
+| `litellm_config.yaml` | Groupes officiels par capacité, poids, limites, réglages du routeur, sondes de santé natives |
+| `enregistrer_cles.py` | Enregistre et synchronise les clés virtuelles par l'API officielle (voir « Démarrer ») |
 | `test_providers.py` | Tests de fumée, bibliothèque standard Python uniquement |
 
 ## Fonctionnement
 
+- Un modèle dont la clé est vide ou refusée (401) sort du routage par les **sondes natives** de LiteLLM
+  (`background_health_checks` et `enable_health_check_routing`, `general_settings`), sans script de filtrage : LiteLLM ne
+  bascule pas sur une 401, et la sonde évite qu'une question tombe sur ce modèle. Une sonde est une vraie requête
+  d'un jeton, toutes les 4 h par déploiement ; elle est désactivée (`disable_background_health_check`) pour les modèles
+  Cohere d'évaluation (quota d'essai de 1 000 appels par mois) et pour la sonde volontairement cassée de l'auto-test de
+  bascule. `allowed_fails_policy` ne doit pas être défini : il désactiverait ce filtre au profit du seul cooldown. L'état
+  se lit avec `GET /health` (clé master) : `healthy_endpoints` et `unhealthy_endpoints`, avec la cause.
 - Cinq groupes de capacité : `ai-gateway-simple`, `ai-gateway-medium`, `ai-gateway-complex`, `ai-gateway-code`,
   `ai-gateway-ocr`. Le groupe `ai-gateway-tool-selection` a été retiré le 2026-11-03 : le service IA choisit ses outils hors
   modèle (compétences de Deep Agents épinglées par similarité, `site/docs/ia` T32) et n'appelle plus de modèle pour cela.
@@ -105,7 +112,8 @@ Le script lit `LITELLM_GATEWAY_URL` et `LITELLM_TEST_API_KEY` dans le `.env` rac
 ## Diagnostic
 
 - **401/403 de la passerelle** : vérifier les groupes autorisés sur la clé (`litellm-cles` les synchronise).
-- **401/403 du fournisseur** : clé fournisseur invalide ou indisponible ; la sonde ciblée identifie le déploiement.
+- **401/403 du fournisseur** : clé fournisseur invalide ou indisponible ; `GET /health` (ou `/health?model_id=<id>`)
+  identifie le déploiement et la cause ; il sort du routage jusqu'à la prochaine sonde.
 - **429** : quota fournisseur ou limite locale ; vérifier les tentatives de bascule dans le même groupe.
 - **Modèle inattendu** : comparer le groupe demandé et `x-litellm-model-id` aux déploiements configurés.
 - **Défaut upstream des tags avec garde-fou** : [#45543](https://github.com/BerriAI/litellm/issues/45543)
