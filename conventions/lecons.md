@@ -115,3 +115,7 @@ J'ai écrit une table de propriété des fils en suivant la doc indexée et le t
 Le script `filtrer_config.py` contournait le fait que LiteLLM ne bascule pas sur une 401. La documentation proposait deux mécanismes natifs, dont l'un (`allowed_fails_policy`) désactive précisément le filtre de santé dont on avait besoin : seule une mesure dans Docker avec un faux fournisseur (un déploiement sans clé, un avec) a montré lequel marche (0 échec sur 95 requêtes sans `allowed_fails_policy`). Le CLI officiel, lui, ne couvre pas la mise à jour d'une clé virtuelle : on vérifie `--help` avant de promettre un remplacement.
 **À faire :** avant de retirer un contournement, reproduire le défaut puis la solution native sur un banc local (conteneur et faux fournisseur) ; ne pas déduire un remplacement du seul nom d'une commande.
 
+## 2026-11-15 — Un état mis en cache dans le fil survit à la suppression de sa source (KAN-84)
+
+Le `MemoryMiddleware` officiel de Deep Agents charge `AGENTS.md` une seule fois par conversation et le garde dans l'état du fil. Un « tout oublier » aurait donc laissé la mémoire visible dans toutes les conversations déjà commencées : un oubli qui n'oublie pas. Le test d'une seule conversation ne l'aurait pas montré ; il a fallu un test sur trois tours d'un même fil (correction, puis oubli entre deux tours).
+**À faire :** pour toute donnée copiée dans l'état d'un fil (mémoire, droits, contexte), se demander qui la met à jour quand sa source change ; tester le changement de la source entre deux tours d'un même fil, pas seulement au premier tour.

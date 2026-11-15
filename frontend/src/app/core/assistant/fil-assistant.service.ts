@@ -30,6 +30,8 @@ export class FilAssistant {
   readonly conversations = signal<Conversation[]>([]);
   /** Liste des conversations affichée par-dessus la discussion. */
   readonly listeOuverte = signal(false);
+  /** Panneau « Ce que l'assistant retient » (mémoire longue, KAN-84), affiché par-dessus la discussion. */
+  readonly memoireOuverte = signal(false);
   /** Panneau agrandi (bouton de l'en-tête) : la barre CopilotKit prend alors `width` de `AssistantComponent`. */
   readonly agrandi = signal(false);
   private readonly courant = signal<string | null>(null);

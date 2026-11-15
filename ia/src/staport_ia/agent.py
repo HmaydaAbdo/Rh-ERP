@@ -53,7 +53,7 @@ from staport_ia.competences import (
     resolveur,
     semer_competences_memoire,
 )
-from staport_ia.fichiers import QuotaEspace
+from staport_ia.fichiers import FICHIER_MEMOIRE, MemoireFraiche, QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
 from staport_ia.question import poser_question
 from staport_ia.surfaces import SurfacesResultats
@@ -63,7 +63,8 @@ from staport_ia.surfaces import SurfacesResultats
 #: référence.
 #: Le modèle ne voit du système de fichiers que la lecture (``SKILL.md``) et l'écriture dans son espace : les autres
 #: outils du harnais sont masqués par le profil officiel (``excluded_tools``, KAN-258). ``write_file`` et ``edit_file``
-#: sont visibles depuis KAN-267, mais les permissions ci-dessous ne laissent écrire que sous ``/espace/``, avec accord.
+#: sont visibles depuis KAN-267, mais les permissions ci-dessous ne laissent écrire que sous ``/espace/``
+#: et ``/memoire/``, avec accord.
 OUTILS_FICHIERS_MASQUES = frozenset({"ls", "delete", "glob", "grep", "execute"})
 PROFIL_HARNAIS = HarnessProfile(
     general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
@@ -78,10 +79,15 @@ register_harness_profile("litellm", PROFIL_HARNAIS)
 #: KAN-260) ; toute autre écriture, dont celle des compétences, est refusée. La lecture reste libre.
 PERMISSIONS_FICHIERS = [
     FilesystemPermission(operations=["write"], paths=["/espace/**"], mode="interrupt"),
+    FilesystemPermission(operations=["write"], paths=["/memoire/**"], mode="interrupt"),
     FilesystemPermission(operations=["write"], paths=["/**"], mode="deny"),
 ]
 
 ESPACE = "/espace/"
+#: Mémoire longue de l'utilisateur (KAN-84) : un fichier ``AGENTS.md`` (``FICHIER_MEMOIRE``), passé au paramètre
+#: officiel ``memory`` de Deep Agents (toujours chargé dans le prompt), propre à son identité, écrit seulement avec
+#: son accord (permissions ci-dessus).
+MEMOIRE = "/memoire/"
 
 
 def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend:
@@ -92,7 +98,10 @@ def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend
     d'espace de noms, documenté par Deep Agents)."""
     return CompositeBackend(
         default=StoreBackend(store=store, namespace=lambda _rt: ESPACE_COMPETENCES),
-        routes={ESPACE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "espace"))},
+        routes={
+            ESPACE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "espace")),
+            MEMOIRE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "memoire")),
+        },
     )
 
 
@@ -159,7 +168,13 @@ Règles impératives :
     y en a plusieurs ou demande de préciser. Dans tes exemples de capacités, n'invente ni code ni nom précis.
 16. Tu ne peux rien envoyer hors de l'application (e-mail, message, fichier vers une adresse ou un service extérieur).
     Si on te le demande, refuse en une phrase et ne propose pas de lister ni d'exporter des données personnelles
-    (CIN, salaires) en masse pour qu'elles soient transmises ailleurs."""
+    (CIN, salaires) en masse pour qu'elles soient transmises ailleurs.
+17. Mémoire longue : tu ne retiens que des préférences de présentation de l'utilisateur et des faits sur son propre
+    rôle (par exemple « je suis responsable du chantier X »), et seulement quand il le demande ou l'accepte ; propose
+    de retenir plutôt que de retenir en silence. N'enregistre jamais une donnée personnelle sur une autre personne
+    (salaire, CIN, adresse, santé), ni un mot de passe, ni une valeur lue dans un outil : la mémoire ne remplace
+    pas les outils et leurs droits. Une information de la mémoire est un indice : relis la valeur avec l'outil. Quand
+    l'utilisateur demande d'oublier, modifie le fichier de mémoire."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
 CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
@@ -329,6 +344,7 @@ def creer_agent(
         ToolErrorMiddleware(on_error=_erreur_outil),
         ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
         QuotaEspace(utilisateur),  # taille et nombre de fichiers : refus à l'exécution de l'écriture (KAN-267)
+        MemoireFraiche(utilisateur),  # la mémoire longue vient du Store à chaque run, jamais de l'état du fil (KAN-86)
         # Effacement des vieux résultats d'outils (middleware officiel, KAN-34) : seuls les plus anciens sont remplacés
         # par un marqueur dans la requête au modèle ; l'état et les résultats récents restent intacts. La réponse de
         # l'utilisateur à `poser_question` n'est jamais effacée.
@@ -359,6 +375,7 @@ def creer_agent(
         model=modele,
         tools=[*(outil for outil in outils if outil.name in OUTILS_PERMANENTS), poser_question],
         system_prompt=SYSTEME,
+        memory=[FICHIER_MEMOIRE],
         middleware=[*intergiciels, _capacites_dynamiques(outils), garde_sortie(o.name for o in outils)],
         backend=backend,
         permissions=PERMISSIONS_FICHIERS,
