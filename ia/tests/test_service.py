@@ -76,9 +76,29 @@ def test_la_fabrique_n_utilise_plus_de_modele_de_selection_d_outils(monkeypatch:
 
     fabrique([], None, "u1")  # type: ignore[arg-type]
 
-    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SIMPLE]
+    assert [tache for tache, _ in modeles] == [Tache.COMPLEX, Tache.SIMPLE, Tache.MEDIUM]
     assert "selecteur" not in agents[0]
     assert agents[0]["resumeur"] is modeles[1][1]
+    assert agents[0]["repli"] == [modeles[2][1]]  # KAN-265 : un groupe LiteLLM d'une autre famille que `complex`
+
+
+def test_un_repli_vide_ne_branche_aucun_modele_de_repli(monkeypatch: pytest.MonkeyPatch) -> None:
+    agents: list[dict[str, object]] = []
+
+    def modele_factice(*_: object, **__: object) -> object:
+        return object()
+
+    def creer_agent_factice(*_: object, **kwargs: object) -> object:
+        agents.append(kwargs)
+        return object()
+
+    monkeypatch.setattr("staport_ia.app.modele", modele_factice)
+    monkeypatch.setattr("staport_ia.app.creer_agent", creer_agent_factice)
+    config = _settings().model_copy(update={"llm_repli": ""})
+
+    fabrique_reelle(config, InMemoryStore())([], None, "u1")  # type: ignore[arg-type]
+
+    assert agents[0]["repli"] == []
 
 
 def test_sante_ne_depend_de_rien() -> None:
