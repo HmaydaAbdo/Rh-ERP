@@ -26,6 +26,9 @@ let fermer;
 let purger;
 const suppressionsIa = [];
 let panneIa = false;
+// Exécutions du service IA (un POST = un run de l'agent) et lenteur du flux simulé, pour la reprise d'un flux coupé (KAN-85).
+let executionsIa = 0;
+let lenteurIaMs = 0;
 
 before(async () => {
   api = createServer((requete, reponse) => {
@@ -42,6 +45,7 @@ before(async () => {
     let corps = '';
     requete.on('data', (morceau) => (corps += morceau));
     requete.on('end', () => {
+      executionsIa += 1;
       const { threadId, runId } = JSON.parse(corps);
       const evenements = [
         { type: 'RUN_STARTED', threadId, runId },
@@ -50,10 +54,15 @@ before(async () => {
         { type: 'TEXT_MESSAGE_END', messageId: `m-${runId}` },
         { type: 'RUN_FINISHED', threadId, runId }
       ];
-      reponse.writeHead(200, { 'content-type': 'text/event-stream' });
-      reponse.end(evenements.map((evenement) => `data: ${JSON.stringify(evenement)}
+      const ecrire = (evenement) => reponse.write(`data: ${JSON.stringify(evenement)}
 
-`).join(''));
+`);
+      reponse.writeHead(200, { 'content-type': 'text/event-stream' });
+      ecrire(evenements[0]);
+      setTimeout(() => {
+        evenements.slice(1).forEach(ecrire);
+        reponse.end();
+      }, lenteurIaMs);
     });
   });
   await new Promise((ok) => agent.listen(0, '127.0.0.1', ok));
@@ -268,5 +277,43 @@ describe('expiration des conversations (KAN-82)', () => {
     assert.equal(purger(30), 1);
     assert.equal(lignes('agent_runs', 'u1-exp-orphelin'), 0);
     assert.equal(purger(30), 0);
+  });
+});
+
+describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agent', () => {
+  test('après un run terminé, se rattacher plusieurs fois rejoue la réponse sans nouvelle exécution', async () => {
+    const fil = 'u1-rattache';
+    await appeler('/agent/default/run', { jeton: 'jeton-1', corps: corpsRun(fil) });
+    const avant = executionsIa;
+
+    const premiere = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun(fil) });
+    const seconde = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun(fil) });
+
+    assert.ok(premiere.texte.includes(SECRET) && seconde.texte.includes(SECRET));
+    assert.equal(executionsIa, avant); // aucun run relancé : le rattachement est une lecture
+  });
+
+  test('un flux coupé en cours de run : le run continue, se rattacher donne la réponse sans le relancer', async () => {
+    const fil = 'u1-coupe';
+    lenteurIaMs = 400;
+    const avant = executionsIa;
+    try {
+      const controle = new AbortController();
+      const reponse = await fetch(`${base}/agent/default/run`, {
+        method: 'POST',
+        headers: { authorization: 'Bearer jeton-1', 'content-type': 'application/json' },
+        body: JSON.stringify(corpsRun(fil)),
+        signal: controle.signal
+      });
+      await reponse.body.getReader().read(); // le début du flux est arrivé…
+      controle.abort(); // … puis le réseau est coupé
+
+      const rattache = await appeler('/agent/default/connect', { jeton: 'jeton-1', corps: corpsRun(fil) });
+
+      assert.ok(rattache.texte.includes(SECRET), 'la réponse du run coupé est livrée au rattachement');
+      assert.equal(executionsIa, avant + 1); // un seul run, jamais deux
+    } finally {
+      lenteurIaMs = 0;
+    }
   });
 });
