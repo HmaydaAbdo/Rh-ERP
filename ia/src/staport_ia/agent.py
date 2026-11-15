@@ -28,6 +28,8 @@ from deepagents.backends import CompositeBackend, StoreBackend
 from deepagents.middleware import FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
+    ClearToolUsesEdit,
+    ContextEditingMiddleware,
     ModelFallbackMiddleware,
     SummarizationMiddleware,
     TodoListMiddleware,
@@ -177,6 +179,12 @@ CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
 # chiffres tout juste lus par un texte tronqué, puis l'agent devinait des montants. Le seuil a été relevé pour que le
 # résumé ne se déclenche pas au milieu d'un run de plusieurs outils (8 appels d'outils au plus par run).
 SEUIL_RESUME_JETONS = 40_000
+#: Effacement des vieux résultats d'outils (KAN-34, ``ContextEditingMiddleware``) : au-delà de ce nombre de jetons, les
+#: résultats les plus anciens sont remplacés par un marqueur, avant que le résumé ne s'applique (seuil plus bas) ; les
+#: ``RESULTATS_GARDES`` derniers résultats ne sont jamais effacés, donc ceux du tour en cours restent entiers.
+SEUIL_EFFACEMENT_JETONS = 30_000
+RESULTATS_GARDES = 6
+MARQUEUR_EFFACE = "[ancien résultat effacé pour alléger la conversation : relancez l'outil si cette donnée est utile]"
 
 
 def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
@@ -294,6 +302,7 @@ def creer_agent(
     utilisateur: str = "anonyme",
     store: BaseStore | None = None,
     repli: Sequence[BaseChatModel] = (),
+    effacement_jetons: int = SEUIL_EFFACEMENT_JETONS,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
@@ -312,6 +321,19 @@ def creer_agent(
         ToolErrorMiddleware(on_error=_erreur_outil),
         ToolRetryMiddleware(max_retries=2, retry_on=_panne_transitoire, on_failure="error", initial_delay=0.5),
         QuotaEspace(utilisateur),  # taille et nombre de fichiers : refus à l'exécution de l'écriture (KAN-267)
+        # Effacement des vieux résultats d'outils (middleware officiel, KAN-34) : seuls les plus anciens sont remplacés
+        # par un marqueur dans la requête au modèle ; l'état et les résultats récents restent intacts. La réponse de
+        # l'utilisateur à `poser_question` n'est jamais effacée.
+        ContextEditingMiddleware(
+            edits=[
+                ClearToolUsesEdit(
+                    trigger=effacement_jetons,
+                    keep=RESULTATS_GARDES,
+                    exclude_tools=["poser_question"],
+                    placeholder=MARQUEUR_EFFACE,
+                )
+            ]
+        ),
     ]
     if repli:
         # Second filet (KAN-35) : si le modèle principal échoue après le routage LiteLLM, les modèles de repli sont

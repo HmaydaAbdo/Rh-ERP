@@ -9,13 +9,13 @@ from typing import Any
 import httpx
 import pytest
 from doubles import INDICATEURS, ModeleScripte, appel, modele, outil, store_avec_competences
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
 
-from staport_ia.agent import SYSTEME, _parametres_a2ui, creer_agent  # pyright: ignore[reportPrivateUsage]
+from staport_ia.agent import MARQUEUR_EFFACE, RESULTATS_GARDES, SYSTEME, _parametres_a2ui, creer_agent  # pyright: ignore[reportPrivateUsage]
 from staport_ia.surfaces import OUTIL_A2UI
 
 
@@ -327,3 +327,30 @@ async def test_une_ecriture_hors_de_l_espace_est_refusee_sans_demander_l_accord(
     assert "__interrupt__" not in etat  # refus direct : aucune question posée
     retour = next(m for m in etat["messages"] if m.type == "tool")
     assert retour.status == "error" and "permission" in retour.content.lower()
+
+
+async def test_les_vieux_resultats_d_outils_sont_effaces_et_les_recents_gardes() -> None:
+    """KAN-34 : ``ContextEditingMiddleware`` remplace les plus anciens résultats par un marqueur au-delà du seuil, sans
+    toucher aux ``RESULTATS_GARDES`` derniers (ceux du tour en cours) ni à l'état de la conversation."""
+    gros = {"periode": "2026-09", "lignes": [{"chantier": f"Chantier {i}", "masse": 1000 + i} for i in range(80)]}
+    nombre = RESULTATS_GARDES + 3
+    faux = modele(
+        *[appel("paie_indicateurs", f"a{i}", periode="2026-09") for i in range(nombre)],
+        AIMessage(content="Terminé."),
+    )
+    agent = creer_agent(
+        faux,
+        [outil("paie_indicateurs", gros)],  # pyright: ignore[reportArgumentType]
+        effacement_jetons=2_000,
+    )
+
+    resultat = await agent.ainvoke({"messages": [HumanMessage(content="Détaille la paie.")], "pinned_skills": ["paie"]})
+
+    derniere_requete = faux.vus[-1]
+    vus = [m.content for m in derniere_requete if isinstance(m, ToolMessage) and m.name == "paie_indicateurs"]
+    assert len(vus) == nombre
+    assert vus[: nombre - RESULTATS_GARDES] == [MARQUEUR_EFFACE] * (nombre - RESULTATS_GARDES)
+    assert all("Chantier 0" in str(contenu) for contenu in vus[nombre - RESULTATS_GARDES :])
+    # L'état de la conversation garde tous les résultats : l'effacement ne vaut que pour la requête au modèle.
+    en_etat = [m.content for m in resultat["messages"] if isinstance(m, ToolMessage) and m.name == "paie_indicateurs"]
+    assert all("Chantier 0" in str(contenu) for contenu in en_etat)
