@@ -24,7 +24,7 @@ import httpx
 from ag_ui_a2ui_toolkit import DEFAULT_DESIGN_GUIDELINES
 from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
-from deepagents.backends import CompositeBackend, FilesystemBackend, StoreBackend
+from deepagents.backends import CompositeBackend, StoreBackend
 from deepagents.middleware import FilesystemPermission, SkillsMiddleware
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -46,7 +46,13 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 
-from staport_ia.competences import OUTILS_PERMANENTS, charger, dossier_competences, resolveur
+from staport_ia.competences import (
+    ESPACE_COMPETENCES,
+    OUTILS_PERMANENTS,
+    charger,
+    resolveur,
+    semer_competences_memoire,
+)
 from staport_ia.contexte import ContexteErp
 from staport_ia.garde_sortie import garde_sortie
 from staport_ia.surfaces import SurfacesResultats
@@ -84,7 +90,7 @@ def backend_par_identite(utilisateur: str, store: BaseStore) -> CompositeBackend
     modèle : le même chemin chez deux utilisateurs désigne deux fichiers distincts (``StoreBackend`` avec fabrique
     d'espace de noms, documenté par Deep Agents)."""
     return CompositeBackend(
-        default=FilesystemBackend(root_dir=dossier_competences(), virtual_mode=True),
+        default=StoreBackend(store=store, namespace=lambda _rt: ESPACE_COMPETENCES),
         routes={ESPACE: StoreBackend(store=store, namespace=lambda _rt: (utilisateur, "espace"))},
     )
 
@@ -294,7 +300,9 @@ def creer_agent(
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
     conversation devenue longue (``SummarizationMiddleware``)."""
-    store = store or InMemoryStore()
+    if store is None:
+        store = InMemoryStore()
+        semer_competences_memoire(store)  # le service sème les fiches au démarrage (app.py)
     backend = backend_par_identite(utilisateur, store)
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]

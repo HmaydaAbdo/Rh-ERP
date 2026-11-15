@@ -11,10 +11,9 @@ from typing import Any
 import pytest
 from deepagents.backends import FilesystemBackend
 from deepagents.middleware import FilesystemMiddleware
-from doubles import INDICATEURS, appel, modele, outil
+from doubles import INDICATEURS, appel, modele, outil, store_avec_competences
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import StructuredTool
-from langgraph.store.memory import InMemoryStore
 
 from staport_ia import agent as module_agent
 from staport_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
@@ -195,7 +194,7 @@ def test_le_routage_n_a_aucun_plafond_de_domaines_et_ignore_une_question_vide() 
 
 def test_l_espace_de_fichiers_est_propre_a_l_identite() -> None:
     """Le même chemin chez deux utilisateurs désigne deux fichiers distincts ; les compétences restent communes."""
-    store = InMemoryStore()
+    store = store_avec_competences()
     alice = backend_par_identite("alice", store)
     bob = backend_par_identite("bob", store)
     chemin = f"{ESPACE}note.md"

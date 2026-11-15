@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, routeur_agui
+from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
 from staport_ia.memoire import ouvrir_memoire
 from staport_ia.modeles import Tache, modele
@@ -58,6 +59,7 @@ def cycle_ia(
         url = config.database_url.get_secret_value() if config.database_url else None
         async with httpx.AsyncClient(timeout=30.0) as client, ouvrir_memoire(url, config.conversation_jours) as memoire:
             app.state.http = client
+            await semer_competences(memoire.store)  # les fiches de compétences vivent dans le Store (KAN-259)
             app.state.memoire = memoire.checkpointer
             # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL en service).
             app.state.fabrique = fabrique or fabrique_reelle(config, memoire.store)

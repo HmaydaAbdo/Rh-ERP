@@ -44,6 +44,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 
 from staport_ia.app import fabrique_reelle
+from staport_ia.competences import semer_competences_memoire
 from staport_ia.config import Settings
 from staport_ia.criteres import (
     appels_hors_catalogue,
@@ -270,7 +271,9 @@ async def repondre(
     tours = [questions] if isinstance(questions, str) else questions
     # Même agent que le service : modèle principal, résumeur officiel et compétences épinglées par le routage.
     memoire = InMemorySaver() if len(tours) > 1 else None
-    agent = fabrique_reelle(config, InMemoryStore())(outils, memoire, "evaluation")
+    espaces = InMemoryStore()
+    semer_competences_memoire(espaces)
+    agent = fabrique_reelle(config, espaces)(outils, memoire, "evaluation")
     options: RunnableConfig = {"recursion_limit": 200}
     if memoire is not None:
         options["configurable"] = {"thread_id": uuid.uuid4().hex}

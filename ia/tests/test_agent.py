@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 import pytest
-from doubles import INDICATEURS, ModeleScripte, appel, modele, outil
+from doubles import INDICATEURS, ModeleScripte, appel, modele, outil, store_avec_competences
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langgraph.checkpoint.memory import InMemorySaver
@@ -287,7 +287,7 @@ _FIL: Any = {"configurable": {"thread_id": "t1"}}
 
 async def test_une_ecriture_dans_l_espace_attend_l_accord_puis_s_effectue_apres_approbation() -> None:
     """KAN-260 / KAN-267 : l'écriture sous /espace/ est interrompue ; rien n'est écrit avant l'accord."""
-    store = InMemoryStore()
+    store = store_avec_competences()
     chemin = "/espace/rapport.md"
     agent = _agent_ecrivain("rh", store, chemin)
 
@@ -306,7 +306,7 @@ async def test_une_ecriture_dans_l_espace_attend_l_accord_puis_s_effectue_apres_
 
 
 async def test_un_refus_de_l_utilisateur_n_ecrit_rien() -> None:
-    store = InMemoryStore()
+    store = store_avec_competences()
     agent = _agent_ecrivain("rh", store, "/espace/rapport.md")
     await agent.ainvoke(_DEMANDE, _FIL)
 
@@ -317,7 +317,7 @@ async def test_un_refus_de_l_utilisateur_n_ecrit_rien() -> None:
 
 
 async def test_une_ecriture_hors_de_l_espace_est_refusee_sans_demander_l_accord() -> None:
-    store = InMemoryStore()
+    store = store_avec_competences()
     agent = _agent_ecrivain("rh", store, "/paie/SKILL.md")
 
     etat = await agent.ainvoke(_DEMANDE, _FIL)
