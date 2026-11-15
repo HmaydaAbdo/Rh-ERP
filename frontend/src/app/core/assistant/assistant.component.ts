@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
+import { CarteOutilComponent } from './carte-outil.component';
 import { contexteEcran } from './ecran-assistant';
 import { ExportPaieAssistantComponent } from './export-paie-assistant.component';
 import { OUTIL_EXPORT_PAIE } from './export-paie-assistant';
@@ -56,6 +57,10 @@ export class AssistantComponent {
       args: z.record(z.string(), z.unknown()),
       component: ExportPaieAssistantComponent
     });
+
+    // Rendu universel (`*`) des consultations d'outils (KAN-87) : une carte au titre français, jamais le nom technique ;
+    // le rendu du classeur de paie, enregistré par son nom, garde la priorité.
+    registerRenderToolCall({ name: '*', args: z.record(z.string(), z.unknown()), component: CarteOutilComponent });
 
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.
     connectAgentContext(() => ({

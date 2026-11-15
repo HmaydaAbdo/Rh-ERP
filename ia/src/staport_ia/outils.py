@@ -70,6 +70,14 @@ async def outils_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.
     return await MCPAdapter(Client(transport, timeout=delai_secondes, mode="legacy")).list_tools()
 
 
+async def titres_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.0) -> list[tuple[str, str]]:
+    """Le nom et le titre français des outils MCP que le jeton agent peut appeler (KAN-87)."""
+    transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
+    async with Client(transport, timeout=delai_secondes, mode="legacy") as client:
+        outils = await client.list_tools()
+    return [(outil.name, outil.title or outil.name) for outil in outils]
+
+
 #: Ressource MCP du contexte du moment (date, dernier mois de paie), calculée par l'API selon les droits de l'appelant.
 URI_CONTEXTE = "erp://contexte"
 
