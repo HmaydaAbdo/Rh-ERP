@@ -224,8 +224,8 @@ def test_aucun_outil_metier_n_est_passe_directement_a_tools(monkeypatch: pytest.
     creer_agent(modele(AIMessage(content="Bonjour.")), outils)
 
     lies = {o.name for o in captures[0]["tools"]}
-    assert lies <= OUTILS_PERMANENTS
-    assert lies == {"systeme_identite", "generate_a2ui"}
+    assert lies <= OUTILS_PERMANENTS | {"poser_question"}  # la question est un outil de l'agent, pas un outil ERP
+    assert lies == {"systeme_identite", "generate_a2ui", "poser_question"}
     assert captures[0]["permissions"] == PERMISSIONS_FICHIERS
 
 

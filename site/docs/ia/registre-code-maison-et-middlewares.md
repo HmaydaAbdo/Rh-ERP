@@ -193,3 +193,14 @@ PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
   utilisateur, par un middleware `wrap_tool_call` (`ia/src/staport_ia/fichiers.py`) ; le refus arrive à l'exécution,
   après l'accord, avec son motif. Remplacer un fichier existant reste permis quand l'espace est plein.
 
+### Question de l'agent à l'utilisateur : interruption native (KAN-264)
+
+- **Avant** : `poser_question` était un outil déclaré par le navigateur (`registerHumanInTheLoop` de CopilotKit) ; la
+  réponse revenait comme message d'outil, sans point de reprise durable.
+- **Maintenant** : l'outil vit côté agent (`ia/src/staport_ia/question.py`) et appelle `interrupt()` de LangGraph, comme
+  l'accord avant écriture. Le run s'arrête avec un point de reprise dans le checkpointer PostgreSQL, et la réponse
+  revient par la reprise AG-UI. La valeur de l'interruption porte `type: "question"` ; l'interface (`injectInterrupt`)
+  distingue ainsi la question de l'accord d'écriture.
+- **Sécurité** : le service n'accepte plus un message d'outil comme dernier message d'un run ; seules la question de
+  l'utilisateur et la reprise d'interruption (vérifiée par le fil propre à l'utilisateur) sont admises. La réponse est
+  bornée à 500 caractères. Test de bout en bout par `/agui` (`ia/tests/test_agui.py`).

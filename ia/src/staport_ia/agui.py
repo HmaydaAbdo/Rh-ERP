@@ -16,7 +16,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, 
 from typing import Any, Protocol, cast
 
 import httpx
-from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, ToolMessage, UserMessage
+from ag_ui.core import BaseEvent, EventType, RunAgentInput, RunErrorEvent, RunStartedEvent, UserMessage
 from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
@@ -68,7 +68,7 @@ class AccesErp(Protocol):
 
 
 def texte_question(entree: RunAgentInput) -> str:
-    """Le texte de la dernière question de l'utilisateur (la réponse à ``poser_question`` n'est pas une question)."""
+    """Le texte de la dernière question de l'utilisateur (une reprise d'interruption n'apporte pas de question)."""
     for message in reversed(entree.messages):
         if isinstance(message, UserMessage):
             if isinstance(message.content, str):
@@ -88,13 +88,13 @@ def est_reprise(entree: RunAgentInput) -> bool:
 
 
 def verifier_question(entree: RunAgentInput) -> None:
-    """422 si le dernier message n'est ni une question de l'utilisateur ni sa réponse à l'agent (résultat de l'outil
-    ``poser_question``, exécuté dans le navigateur), ou s'il est vide ou trop long. Une reprise après interruption
-    n'apporte pas de nouvelle question : elle est vérifiée par le fil propre à l'utilisateur, jamais par son texte."""
+    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide ou trop long. La réponse à
+    une question de l'agent (``poser_question``) et l'accord avant écriture sont des reprises d'interruption : elles
+    n'apportent pas de nouvelle question et sont vérifiées par le fil propre à l'utilisateur, jamais par leur texte."""
     if est_reprise(entree):
         return
     dernier = entree.messages[-1] if entree.messages else None
-    if not isinstance(dernier, UserMessage | ToolMessage):
+    if not isinstance(dernier, UserMessage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Le dernier message doit venir de l'utilisateur.")
     if isinstance(dernier.content, str):
         texte = dernier.content

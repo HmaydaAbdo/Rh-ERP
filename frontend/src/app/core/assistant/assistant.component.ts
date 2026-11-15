@@ -2,14 +2,13 @@ import { FilAssistant } from './fil-assistant.service';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
+import { CopilotSidebar, connectAgentContext } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
 
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
 import { contexteEcran } from './ecran-assistant';
-import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtilisateurComponent } from './question-utilisateur.component';
 
 /**
  * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
@@ -48,14 +47,6 @@ export class AssistantComponent {
   );
 
   constructor() {
-    // L'agent interroge l'utilisateur quand la demande est ambiguë (outil du navigateur, comme AskUserQuestion de Claude).
-    registerHumanInTheLoop({
-      name: OUTIL_QUESTION,
-      description: DESCRIPTION_QUESTION,
-      parameters: PARAMETRES_QUESTION,
-      component: QuestionUtilisateurComponent
-    });
-
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.
     connectAgentContext(() => ({
       description: 'Écran ouvert par l’utilisateur dans Staport Intelligence : son domaine et ses filtres (JSON).',
