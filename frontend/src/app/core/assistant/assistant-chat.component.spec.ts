@@ -31,7 +31,7 @@ describe('AssistantChatComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AssistantChatComponent],
       providers: [
-        { provide: FilAssistant, useValue: { fil: signal('u1-test'), listeOuverte: signal(false), estUtilise: () => utilise, marquerUtilise, rafraichir } },
+        { provide: FilAssistant, useValue: { fil: signal('u1-test'), listeOuverte: signal(false), memoireOuverte: signal(false), estUtilise: () => utilise, marquerUtilise, rafraichir } },
         { provide: CopilotKit, useValue: { core: { connectAgent } } },
         { provide: CopilotkitAgentFactory, useValue: { createAgentStoreSignal: () => signal(magasin) } }
       ],

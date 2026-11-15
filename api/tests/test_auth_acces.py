@@ -551,6 +551,12 @@ def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_
     invalides = [{**ecriture, "chemin": "/etc/passwd"}, {**ecriture, "outil": "execute"}, {**ecriture, "taille": -1}]
     assert [plateforme.client.post(route, headers=_bearer(agent), json=e).status_code for e in invalides] == [400] * 3
     assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 1
+    # La mémoire longue (KAN-84) est journalisée de la même façon : chemin, taille et action, jamais le contenu.
+    memoire = {"chemin": "/memoire/AGENTS.md", "taille": 12, "outil": "memoire_modifier"}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=memoire).status_code == 204
+    hors_memoire = {**memoire, "chemin": "/autre/AGENTS.md"}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=hors_memoire).status_code == 400
+    assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 2
 
 
 def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive(

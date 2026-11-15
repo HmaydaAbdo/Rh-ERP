@@ -17,10 +17,12 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from deepagents.middleware.memory import MemoryState
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from langchain.agents.middleware import AgentMiddleware
 from langchain.tools.tool_node import ToolCallRequest
 from langchain_core.messages import ToolMessage
+from langgraph.runtime import Runtime
 from langgraph.store.base import BaseStore
 from langgraph.types import Command
 from pydantic import BaseModel
@@ -33,6 +35,9 @@ journal = logging.getLogger(__name__)
 #: Taille maximale d'un fichier écrit par l'agent (caractères) et nombre maximal de fichiers par utilisateur.
 TAILLE_MAX_FICHIER = 200_000
 FICHIERS_MAX = 50
+#: La mémoire longue est un seul fichier toujours chargé dans le prompt : elle reste courte (KAN-84).
+FICHIER_MEMOIRE = "/memoire/AGENTS.md"
+TAILLE_MAX_MEMOIRE = 4_000
 OUTILS_ECRITURE = frozenset({"write_file", "edit_file"})
 
 
@@ -49,6 +54,7 @@ class QuotaEspace(AgentMiddleware[Any, Any, Any]):
     def __init__(self, utilisateur: str) -> None:
         super().__init__()
         self._espace = (utilisateur, "espace")
+        self._memoire = (utilisateur, "memoire")
 
     async def awrap_tool_call(
         self,
@@ -59,10 +65,12 @@ class QuotaEspace(AgentMiddleware[Any, Any, Any]):
         if appel["name"] not in OUTILS_ECRITURE:
             return await handler(request)
         contenu = str(appel["args"].get("content") or appel["args"].get("new_string") or "")
+        chemin = str(appel["args"].get("file_path", ""))
+        if chemin.startswith("/memoire/"):
+            return await self._ecrire_memoire(request, handler, chemin, contenu)
         if len(contenu) > TAILLE_MAX_FICHIER:
             return _refus(appel, f"Fichier trop gros ({TAILLE_MAX_FICHIER} caractères au plus).")
         store: BaseStore | None = getattr(request.runtime, "store", None)
-        chemin = str(appel["args"].get("file_path", ""))
         if store is not None and chemin.startswith("/espace/"):
             existants = await store.asearch(self._espace, limit=FICHIERS_MAX + 1)
             cles = {item.key for item in existants}
@@ -72,6 +80,52 @@ class QuotaEspace(AgentMiddleware[Any, Any, Any]):
         if chemin.startswith("/espace/") and _reussie(resultat):
             await _signaler(chemin, len(contenu), appel["name"])
         return resultat
+
+    async def _ecrire_memoire(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
+        chemin: str,
+        contenu: str,
+    ) -> ToolMessage | Command[Any]:
+        """La mémoire longue : un seul fichier, court ; l'accord a déjà eu lieu (interruption avant l'outil)."""
+        appel = request.tool_call
+        if chemin != FICHIER_MEMOIRE:
+            return _refus(appel, f"La mémoire est le seul fichier {FICHIER_MEMOIRE}.")
+        total = len(contenu)
+        store: BaseStore | None = getattr(request.runtime, "store", None)
+        if appel["name"] == "edit_file" and store is not None:  # une modification s'ajoute à l'existant
+            existant = await store.aget(self._memoire, "/AGENTS.md")
+            total += len(str(existant.value.get("content", ""))) if existant else 0
+        if total > TAILLE_MAX_MEMOIRE:
+            return _refus(appel, f"Mémoire trop longue ({TAILLE_MAX_MEMOIRE} caractères au plus) : résume-la.")
+        resultat = await handler(request)
+        if _reussie(resultat):
+            await _signaler(chemin, len(contenu), appel["name"])
+        return resultat
+
+
+class MemoireFraiche(AgentMiddleware[MemoryState, Any, Any]):
+    """Relit la mémoire longue de l'utilisateur au début de chaque run (KAN-84, KAN-86).
+
+    Le ``MemoryMiddleware`` officiel de Deep Agents ne charge ``AGENTS.md`` qu'une fois par conversation et le garde
+    dans
+    l'état du fil : sans cette relecture, un « tout oublier » ou une correction du panneau ne s'appliquerait pas aux
+    conversations déjà commencées. L'état du fil n'est donc jamais la source de la mémoire : c'est le Store."""
+
+    state_schema = MemoryState
+
+    def __init__(self, utilisateur: str) -> None:
+        super().__init__()
+        self._memoire = (utilisateur, "memoire")
+
+    async def abefore_agent(self, state: MemoryState, runtime: Runtime[Any]) -> dict[str, Any] | None:
+        if runtime.store is None:
+            return None
+        element = await runtime.store.aget(self._memoire, "/AGENTS.md")
+        contenu = str(element.value.get("content", "")) if element else ""
+        voulu = {FICHIER_MEMOIRE: contenu} if contenu.strip() else {}
+        return None if state.get("memory_contents") == voulu else {"memory_contents": voulu}
 
 
 def _reussie(resultat: ToolMessage | Command[Any]) -> bool:
