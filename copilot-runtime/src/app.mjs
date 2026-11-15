@@ -4,8 +4,8 @@
 //
 // Sécurité par les crochets officiels du gestionnaire : `onRequest` authentifie chaque requête auprès de l'API
 // (`/auth/me`, droit IA_UTILISER) et répond 401 ou 403 ; `onBeforeHandler` ne sert que les routes de l'assistant et
-// réserve chaque fil à son propriétaire (table `thread_owners`, voir proprietaires.mjs). Sans CopilotKit Intelligence,
-// le runner SQLite garde les fils de tous les utilisateurs et rien d'autre ne les sépare.
+// réserve chaque fil à son propriétaire : `identifyUser` (officiel depuis le runtime 1.88) donne l'identité vérifiée, et
+// le `SqliteAgentRunner` enregistre le propriétaire du fil à son premier run puis refuse (403) tout autre utilisateur.
 import { HttpAgent } from '@ag-ui/client';
 import { EventType } from '@ag-ui/core';
 import { map } from 'rxjs';
@@ -13,7 +13,6 @@ import { CopilotRuntime } from '@copilotkit/runtime/v2';
 import { SqliteAgentRunner } from '@copilotkit/sqlite-runner';
 import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
-import { ouvrirProprietaires } from './proprietaires.mjs';
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, transcription, débogage) répondent 404. */
 const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop']);
@@ -38,8 +37,7 @@ const masquerSkills = (input, next) =>
  * @returns {{ app: import('express').Express, fermer: () => void }}
  */
 export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
-  const proprietaires = ouvrirProprietaires(cheminBase);
-
+  const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
     // et le service IA le fait valider par l'API.
@@ -50,11 +48,13 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
         headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
       }).use(masquerSkills)
     }),
+    // L'utilisateur vérifié par `onRequest` : chaque fil appartient à celui dont la requête l'a créé.
+    identifyUser: (request) => ({ id: request.headers.get(ENTETE_UTILISATEUR) ?? '' }),
     // Seul le jeton de l'utilisateur est transmis à l'agent (ni `x-*` du navigateur, ni l'en-tête interne).
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
     // Historique des conversations : runner SQLite officiel de CopilotKit (reprise d'un fil après rechargement ou redémarrage).
-    ...(cheminBase ? { runner: new SqliteAgentRunner({ dbPath: cheminBase }) } : {})
+    ...(runner ? { runner } : {})
   });
 
   const app = express();
@@ -73,22 +73,9 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
           entetes.set(ENTETE_UTILISATEUR, String(utilisateur));
           return new Request(request, { headers: entetes });
         },
-        onBeforeHandler: async ({ request, route }) => {
+        onBeforeHandler: ({ route }) => {
           if (!ROUTES_SERVIES.has(route.method)) {
             throw new Response(null, { status: 404 });
-          }
-          if (route.method === 'info' || route.method === 'agent/suggest') {
-            return;
-          }
-          const utilisateur = request.headers.get(ENTETE_UTILISATEUR);
-          const fil = route.threadId ?? (await request.clone().json().catch(() => ({}))).threadId;
-          if (!utilisateur || typeof fil !== 'string' || !fil.startsWith(`u${utilisateur}-`)) {
-            throw new Response(null, { status: 403 });
-          }
-          // Une conversation naît à son premier `run` ; `connect` et `stop` ne reprennent qu'un fil déjà possédé.
-          const autorise = route.method === 'agent/run' ? proprietaires.reserver(fil, utilisateur) : proprietaires.possede(fil, utilisateur);
-          if (!autorise) {
-            throw new Response(null, { status: 403 });
           }
         },
         onError: ({ error, route }) => {
@@ -97,7 +84,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
       }
     })
   );
-  return { app, fermer: () => proprietaires.fermer() };
+  return { app, fermer: () => runner?.db.close() };
 }
 
 /** L'identifiant de l'utilisateur, tel que l'API le lit dans son jeton ; 401 ou 403 sinon, sans détail. */

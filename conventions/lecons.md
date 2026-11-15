@@ -104,3 +104,9 @@ seule fois, ici. Format : constat, cause, règle.
 - `pygal.HorizontalBar` inverse les options : `show_y_labels=False` masque les **noms** (axe vertical), `show_x_labels=False` masque l'échelle des **valeurs**. Vérifié en rendu WeasyPrint (Docker), pas dans la documentation.
 - `print_values` dessine la valeur au centre de la barre, illisible sur une petite barre : la valeur exacte et le pourcentage sont écrits dans l'étiquette du nom.
 - Pygal n'a pas d'annotations : une façade `Any` (`rapport_graphique.py`) garde le typage strict ailleurs. Le rendu PDF se contrôle dans l'image Linux (Pango absent sous Windows).
+
+## 2026-11-15 — Relire la doc de la version installée avant de coder une protection (KAN-79)
+
+J'ai écrit une table de propriété des fils en suivant la doc indexée et le ticket (« `identifyUser` est réservé à Intelligence »), alors que le runtime 1.88 que je venais d'installer fournit la propriété des fils avec `identifyUser` et le `SqliteAgentRunner`. Ma table portait en plus le même nom (`thread_owners`) que celle du runner : elle aurait cassé le premier run en production, et les tests n'ouvraient pas de base fichier pour le voir.
+**À faire :** après chaque montée de version, lire les `.d.mts` et le code de la version installée (pas seulement la doc en ligne) avant d'écrire du code de sécurité, et tester avec le même stockage que la production (base fichier, pas mémoire).
+
