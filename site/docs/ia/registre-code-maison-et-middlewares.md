@@ -127,3 +127,29 @@ Le modèle ne voit du système de fichiers que `read_file` : les autres outils d
 Les permissions de fichiers (écriture refusée) restent un second rempart. Test : liste exacte des outils exposés dans
 `ia/tests/test_agent.py`.
 
+### Client MCP : `langchain.mcp` conservé, `langchain-mcp-adapters` écarté (KAN-256, 2026-11-15)
+
+| | `langchain.mcp` (`langchain[mcp]`, bêta) | `langchain-mcp-adapters` 0.3.2 |
+|---|---|---|
+| Statut | page officielle « MCP » de la documentation LangChain (connexions, authentification, outils) | dernière version du 2026-08-06 ; absent de la documentation actuelle |
+| Client | FastMCP (`fastmcp.Client`), `ClientGroup` pour plusieurs serveurs (outils préfixés `{serveur}_{outil}`) | SDK `mcp`, `MultiServerMCPClient` |
+| Authentification | `Client(url, auth=jeton)` (jeton porteur, OAuth 2.1, `httpx.Auth`) | en-têtes à la main |
+| Contenu structuré | `ToolMessage.artifact["structured_content"]` | artefact selon la version |
+| Question du serveur en cours d'appel | interruption LangGraph native (`elicitation`), reprise par `Command(resume=…)` | non |
+| Compatibilité avec nos versions | oui (`mcp` 2.3.0, `fastmcp` 4.1.6) | **non : exige `mcp<2.0.0`, nous avons `mcp` 2.3.0** |
+
+Décision : **garder `langchain.mcp`**. `langchain-mcp-adapters` ne s'installe pas avec `mcp` 2.x et n'apporte aucune
+capacité qui nous manque. Le risque de la bêta (API susceptible de changer) est couvert par les tests MCP et la
+veille de versions. Pistes ouvertes, chacune dans son ticket : passer l'authentification par `Client(url, auth=jeton)`
+au lieu de l'en-tête construit à la main, et vérifier le mode MCP `auto` maintenant que le serveur MCP est celui de
+l'API FastAPI (`mode="legacy"` datait de la compatibilité Spring) ; l'interruption d'élicitation sert la validation
+humaine (KAN-260, KAN-264).
+
+### ag-ui-langgraph : état amont (KAN-257, 2026-11-15)
+
+`ag-ui-langgraph` 0.0.47 est la dernière version publiée (2026-10-08), et la branche principale amont est aussi en
+0.0.47. L'issue [ag-ui-protocol/ag-ui#3343](https://github.com/ag-ui-protocol/ag-ui/issues/3343) (compétences épinglées
+envoyées au client comme messages utilisateur) est ouverte ; un contributeur a proposé le correctif, non fusionné.
+Le contournement par `FunctionMiddleware` (`copilot-runtime/src/serveur.mjs`) est donc **maintenu** ; à retirer à la
+sortie d'une version qui contient le correctif, à vérifier à chaque montée de version.
+
