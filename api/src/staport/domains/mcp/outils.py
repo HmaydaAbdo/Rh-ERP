@@ -1,9 +1,9 @@
 """Outils MCP des domaines déjà en Python : identité, paramètres, rôles, journal d'audit (KAN-216).
 
-Port des outils `systeme_identite`, `parametres_lire`, `roles_lister`, `audit_rechercher` et `audit_historique` du
-module `staport.rh.mcp` de Spring : mêmes noms, mêmes descriptions, mêmes clés de résultat. Tous sont en lecture seule
-et ne modifient rien. Chacun exige la permission de l'écran qu'il reflète, relue en base à chaque requête. Les outils
-des autres domaines arrivent avec leur domaine (KAN-49). La liste des comptes n'est volontairement pas exposée.
+Outils `systeme_identite`, `parametres_lire`, `roles_lister`, `audit_rechercher` et `audit_historique`.
+Tous sont en lecture seule et ne modifient rien. Chacun exige la permission de l'écran qu'il reflète, relue en
+base à chaque requête. Les outils des autres domaines arrivent avec leur domaine (KAN-49). La liste des comptes
+n'est volontairement pas exposée.
 """
 
 from collections.abc import Callable
@@ -45,7 +45,7 @@ from staport.domains.mcp.formats import (
 from staport.domains.mcp.telemetrie import outil
 
 LIGNES = 20
-LIGNES_DEFAUT = 10  # Spring : 20 au plus, 10 quand `limite` est absent (référentiels)
+LIGNES_DEFAUT = 10  # 20 au plus, 10 quand `limite` est absent (référentiels)
 VERSIONS = 10
 
 
@@ -72,7 +72,7 @@ class TriEquipe(StrEnum):
 
 
 class EntiteJournal(StrEnum):
-    """Types d'enregistrement que l'agent peut interroger dans le journal (mêmes que Spring)."""
+    """Types d'enregistrement que l'agent peut interroger dans le journal."""
 
     PAIE = "Paie"
     EMPLOYEE = "Employee"
@@ -513,7 +513,7 @@ def enregistrer(
     @outil("audit_historique", "AUDIT_READ", nombre_de_total)
     async def audit_historique(  # pyright: ignore[reportUnusedFunction]
         entite: Annotated[EntiteJournal, Field(description="Type de l'enregistrement.")],
-        id: Annotated[  # nom du paramètre exposé à l'agent, identique à celui de Spring
+        id: Annotated[  # nom du paramètre exposé à l'agent
             int,
             Field(
                 gt=0,

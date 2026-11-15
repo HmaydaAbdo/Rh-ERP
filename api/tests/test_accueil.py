@@ -1,4 +1,4 @@
-"""Accueil personnalisé, de bout en bout sur PostgreSQL réel (parité avec `AccueilService` et `AccueilController`)."""
+"""Accueil personnalisé, de bout en bout sur PostgreSQL réel."""
 
 import uuid
 from collections.abc import Callable

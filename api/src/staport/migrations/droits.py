@@ -1,4 +1,4 @@
-"""Droits du compte applicatif, recalculés après CHAQUE migration (équivalent de `afterMigrate.sql`, KAN-212).
+"""Droits du compte applicatif, recalculés après CHAQUE migration (KAN-212).
 
 Le propriétaire du schéma exécute les migrations ; l'application se connecte avec un compte distinct qui a :
 - SELECT, INSERT, UPDATE, DELETE sur les tables métier ;
@@ -7,13 +7,13 @@ Le propriétaire du schéma exécute les migrations ; l'application se connecte 
 Quand le compte applicatif EST le propriétaire (développement, CI), il n'y a rien à restreindre.
 
 Les noms et le mot de passe sont composés avec `psycopg.sql` (identifiants et littéraux échappés) : aucun secret
-n'est inséré par concaténation de texte, contrairement au substitut de variables de Flyway.
+n'est inséré par concaténation de texte.
 """
 
 from psycopg import sql
 from sqlalchemy import Connection, text
 
-TABLES_HISTORIQUE = ("alembic_version", "flyway_schema_history")
+TABLES_HISTORIQUE = ("alembic_version",)
 
 
 def _executer(connexion: Connection, requete: sql.Composable) -> None:

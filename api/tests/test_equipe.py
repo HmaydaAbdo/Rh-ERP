@@ -1,4 +1,4 @@
-"""Parité du référentiel equipe : normalisation, unicité, recherche et audit."""
+"""Référentiel équipe : normalisation, unicité, recherche et audit."""
 
 from typing import Any
 

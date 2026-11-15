@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked }
 import { CopilotChat, CopilotKit, injectAgentStore, injectChatConfiguration, provideCopilotChatConfiguration, provideCopilotChatLabels } from '@copilotkit/angular';
 
 import { MessageComponent } from '../../shared/ui/message/message.component';
+import { AccordInterruptionComponent } from './accord-interruption.component';
 import { FilAssistant } from './fil-assistant.service';
 
 
@@ -18,7 +19,7 @@ import { FilAssistant } from './fil-assistant.service';
 @Component({
   selector: 'app-assistant-chat',
   host: { class: 'flex h-full min-h-0 flex-col' },
-  imports: [CopilotChat, MessageComponent],
+  imports: [CopilotChat, MessageComponent, AccordInterruptionComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     provideCopilotChatConfiguration(),
@@ -48,6 +49,7 @@ import { FilAssistant } from './fil-assistant.service';
       <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
     }
     <copilot-chat />
+    <app-accord-interruption />
   `
 })
 export class AssistantChatComponent {

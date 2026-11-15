@@ -1,4 +1,4 @@
-"""Routes HTTP du domaine auth : mêmes chemins, statuts, cookies et permissions que Spring (21 routes)."""
+"""Routes HTTP du domaine auth : chemins, statuts, cookies et permissions (21 routes)."""
 
 from typing import Annotated
 
@@ -6,10 +6,11 @@ from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from staport.domains.auth.dependencies import Authentifie, Contexte, authentifie, exiger
-from staport.domains.auth.exceptions import RefreshTokenInvalide
+from staport.domains.auth.dependencies import Authentifie, Contexte, authentifie, exiger, jeton_bearer
+from staport.domains.auth.exceptions import JetonAgentRefuse, RefreshTokenInvalide
 from staport.domains.auth.schemas import (
     ConnexionReponse,
+    EcritureFichierAgentRequete,
     JetonAgentReponse,
     LoginRequete,
     OubliMotDePasseRequete,
@@ -31,6 +32,7 @@ from staport.domains.auth.securite import JetonAcces
 from staport.domains.auth.service_auth import Connexion
 from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
+from staport.domains.common.securite import ActionSecurite, EvenementSecurite
 from staport.platform.base_de_donnees import session_requete
 from staport.platform.erreurs import NonAuthentifie
 
@@ -160,6 +162,31 @@ async def jeton_agent(
 ) -> JSONResponse:
     jeton: JetonAgentReponse = await contexte.agent.emettre_jeton(session, acces.utilisateur_id)
     return JSONResponse(jeton.model_dump(by_alias=True), headers={"Cache-Control": "no-store"})
+
+
+@agent.post("/interne/ia/ecritures-fichier", status_code=status.HTTP_204_NO_CONTENT)
+async def ecriture_fichier_agent(
+    corps: EcritureFichierAgentRequete, requete: Request, session: Session, contexte: Contexte
+) -> Response:
+    """Journalise une écriture de fichier de l'assistant (KAN-268), appelée par le seul service IA avec le jeton agent
+    de l'utilisateur. Hors des chemins relayés par nginx ; un navigateur (en-tête `Origin`) est refusé."""
+    jeton = jeton_bearer(requete)
+    if "origin" in requete.headers or jeton is None:
+        raise JetonAgentRefuse
+    async with session.begin():
+        authentifie = await contexte.agent.authentifier(session, jeton)
+    if authentifie is None:
+        raise JetonAgentRefuse
+    identite, _ = authentifie
+    await contexte.audit.publier(
+        EvenementSecurite(
+            ActionSecurite.ECRITURE_FICHIER_AGENT,
+            identite.utilisateur_id,
+            identite.username,
+            details={"chemin": corps.chemin, "taille": corps.taille, "outil": corps.outil},
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- /users ---------------------------------------------------------------------------------------

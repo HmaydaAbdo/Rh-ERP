@@ -1,4 +1,4 @@
-"""Modèle de persistance du domaine parametre (Flyway V16 + V18 : colonne `version`)."""
+"""Modèle de persistance du domaine parametre (scripts V16 + V18 : colonne `version`)."""
 
 from sqlalchemy import BigInteger, Identity, String
 from sqlalchemy.orm import Mapped, mapped_column

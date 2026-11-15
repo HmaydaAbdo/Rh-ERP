@@ -27,11 +27,11 @@ sidebar_position: 13
 
 - **Une permission = une action sur un domaine** : `DOMAINE_ACTION`. Le catalogue est **fixe** (créé par
   migration) ; seule l'attribution aux rôles est administrable.
-- **Chaque endpoint** porte un `@PreAuthorize("hasAuthority('X')")` (sauf les endpoints publics d'`/auth`).
-  Un endpoint sans permission explicite est un défaut : `EndpointSecurityTest` le détecte.
+- **Chaque endpoint** déclare sa permission (`Depends(exiger('X'))`) (sauf les endpoints publics d'`/auth`).
+  Un endpoint sans permission explicite est un défaut : `test_auth_acces.py` le détecte.
 - **La suppression est une permission** (`*_DELETE`), jamais un rôle codé en dur.
 - **Refus individuel > rôles** : une permission refusée à un utilisateur l'est quels que soient ses rôles.
-- **Aucune règle ne s'appuie sur un nom de rôle**, sauf l'accès aux endpoints Actuator (`SYSTEM_ADMIN`) et la protection du
+- **Aucune règle ne s'appuie sur un nom de rôle**, sauf la protection du
   rôle `SYSTEM_ADMIN` contre la suppression.
 - **Chaque refus `403` est journalisé** (événement `ACCES_REFUSE`, voir [../audit/README.md](../audit/index.md)) : un écran ne
   doit jamais appeler une route que son utilisateur n'a pas le droit d'appeler.
@@ -111,7 +111,7 @@ D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans tou
 
 ## Matrice endpoint ↔ permission
 
-Table de référence de `EndpointSecurityTest` (`PERMISSIONS_ATTENDUES`) : toute modification doit être répercutée
+Table de référence de `test_auth_acces.py` (`PERMISSIONS_ATTENDUES`) : toute modification doit être répercutée
 dans ce test, dans ce tableau et dans le fichier du domaine.
 
 | Domaine | Méthode et route | Permission |
@@ -147,18 +147,18 @@ dans ce test, dans ce tableau et dans le fichier du domaine.
 | Audit | `POST /logs/search`, `GET /logs/{id}`, `GET /logs/{id}/details`, `GET /logs/historique/{entite}/{id}` | `AUDIT_READ` |
 | Auth publique | `POST /auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `GET /auth/password-policy` | Aucune |
 | Auth connecté | `GET /auth/me`, `POST /auth/logout` | Jeton valide |
-| Supervision | `GET /actuator/health` | Aucune |
-| | Swagger (`/swagger-ui/**`, `/v3/api-docs/**`) | Aucune **si la documentation est allumée** (développement) ; éteinte par défaut, ces routes exigent un jeton |
-| | Autres endpoints Actuator | `SYSTEM_ADMIN` |
+| Supervision | `GET /health` | Aucune |
+| | Documentation (`/docs`, `/openapi.json`) | Aucune **si la documentation est allumée** (développement) ; éteinte par défaut, ces routes exigent un jeton |
+| | `GET /metrics` | Interne : non relayé par nginx |
 
 ---
 
 ## Ajouter une permission ou un endpoint
 
-1. **Migration Flyway** qui insère la permission (code, description) et l'attribue aux rôles concernés
-   (voir `V9__seed_equipe_permissions.sql` pour un exemple).
-2. `@PreAuthorize("hasAuthority('…')")` sur chaque méthode du contrôleur.
-3. Ligne dans `PERMISSIONS_ATTENDUES` de `EndpointSecurityTest` (le test échoue sinon).
+1. **Révision Alembic** qui insère la permission (code, description) et l'attribue aux rôles concernés
+   (voir `V9__seed_equipe_permissions.sql` dans `api/src/staport/migrations/base_v44` pour un exemple).
+2. `dependencies=[Depends(exiger("…"))]` sur chaque route du routeur.
+3. Ligne dans `PERMISSIONS_ATTENDUES` de `test_auth_acces.py` (le test échoue sinon).
 4. Côté frontend : `permissionGuard` sur les routes, `canXxx()` sur les boutons, entrée dans `NAV_ITEMS` si
    c'est un écran.
 5. Mettre à jour le fichier du domaine, ce catalogue et la section « Dépendances entre permissions ».

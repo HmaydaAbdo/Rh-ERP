@@ -108,7 +108,7 @@ def signature_ligne(ligne: list[Any]) -> tuple[Any, ...]:
 def departs_et_retours(
     lignes: list[tuple[int, list[Any]]], employees: dict[str, Employee], numeros_en_erreur: set[int]
 ) -> tuple[list[PaieImportDepart], list[PaieImportRetour]]:
-    """STC et sorties du fichier, retours des inactifs présents, puis actifs absents du fichier (parité `examiner`)."""
+    """STC et sorties du fichier, retours des inactifs présents, puis actifs absents du fichier."""
     departs: list[PaieImportDepart] = []
     retours: list[PaieImportRetour] = []
     cins_du_fichier = {str(ligne[2]).strip().upper() for _, ligne in lignes if len(ligne) > 2 and ligne[2] is not None}
@@ -390,9 +390,7 @@ class ServiceImportPaie:
                         )
                     )
             if cin is None or cin.upper() not in employees:
-                if (
-                    not cin
-                ):  # un CIN renseigné mais inconnu n'est pas une erreur : il rejoint `cinInconnus` (comme Spring)
+                if not cin:  # un CIN renseigné mais inconnu n'est pas une erreur : il rejoint `cinInconnus`
                     erreurs.append(
                         PaieImportErreur(
                             numero_ligne=numero, cin=cin, nom_prenom=nom, champ="cin", valeur=cin, raison="CIN inconnu"
@@ -515,7 +513,7 @@ class ServiceImportPaie:
                     champs.append(
                         PaieImportChamp(
                             champ="salaire", base=str(employe.salaire), fichier=str(float(salaire_fichier))
-                        )  # Spring : Double.toString
+                        )  # représentation décimale la plus courte
                     )
                 if champs:
                     ecarts.append(

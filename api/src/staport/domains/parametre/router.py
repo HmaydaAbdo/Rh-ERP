@@ -1,4 +1,4 @@
-"""Routes HTTP du domaine parametre : mêmes chemins, statuts et permissions que Spring (2 routes)."""
+"""Routes HTTP du domaine parametre : chemins, statuts et permissions (2 routes)."""
 
 from typing import Annotated
 

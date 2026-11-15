@@ -21,5 +21,5 @@ Décisions d'architecture et de produit, numérotation d'origine conservée (les
 | [ADR 0012 — Coque et vue Tabulaire partagées par domaine](0012-coque-et-tabulaire-partages.md) | accepté par le propriétaire | 2026-10-23 |
 | [ADR 0014 — Les vues partagées suivent le parcours métier de chaque domaine](0014-vues-partagees-parcours-metier-configurables.md) | accepté | 2026-10-23 |
 | [ADR 0015 — AG-UI par l'intégration LangGraph officielle, encore en 0.0.x](0015-ag-ui-integration-langgraph-officielle.md) | accepté | 2026-10-25 |
-| [ADR 0016 — Migration du backend de Spring vers FastAPI (un seul conteneur Python avec l'IA)](0016-migration-backend-spring-vers-fastapi.md) | accepté le 2026-11-03 par le propriétair | 2026-11-02 |
+| [ADR 0016 — Backend Python FastAPI et service IA Python](0016-backend-python-fastapi.md) | accepté le 2026-11-03 par le propriétaire | 2026-11-02 |
 | [PV N°1 : cadrage et évolutions](pv-n1-cadrage.md) | projet à valider | 2026-10-22 |

@@ -61,6 +61,13 @@ module.exports = [
     changeOrigin: true,
     rewrite: (url) => url.replace(/^\/ia/, '')
   },
+  {
+    // Fichiers de l'espace de l'utilisateur (KAN-267) : même chemin qu'en production, servis par l'API (routeur IA).
+    context: ['/ia/fichiers'],
+    target,
+    changeOrigin: true,
+    rewrite: (url) => url.replace(/^\/ia/, '')
+  },
   relaisSatellite(
     'satellite',
     'https://ibasemaps-api.arcgis.com',

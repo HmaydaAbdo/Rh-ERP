@@ -1,4 +1,4 @@
-"""Messages de validation en français (parité de langue avec les contraintes Jakarta de Spring, ADR 0016 § 6).
+"""Messages de validation en français.
 
 Pydantic ne fournit que des messages anglais : chaque type d'erreur documenté (`ErrorDetails["type"]`) est traduit
 ici, avec ses paramètres (`ctx`). Un type inconnu retombe sur le message de Pydantic plutôt que de le masquer ; le test

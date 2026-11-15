@@ -135,7 +135,7 @@ ENTETES_IMPORT = ("Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chanti
 
 
 def _texte(valeur: Any) -> str | None:
-    """`DataFormatter.formatCellValue` : le texte affiché de la cellule, `None` si elle est vide ou blanche."""
+    """Le texte affiché de la cellule, `None` si elle est vide ou blanche."""
     if valeur is None or isinstance(valeur, bool):
         texte = None if valeur is None else str(valeur).upper()
     elif isinstance(valeur, float) and valeur.is_integer():
@@ -165,7 +165,7 @@ def _raison_ligne(
     nom: str | None, cin: str | None, naissance: date | None, embauche: date | None, fonction: str | None,
     chantier: str | None,
 ) -> str | None:  # fmt: skip
-    """`validerLigne` de Spring, dans le même ordre : champs, longueurs, date de naissance (les références ensuite)."""
+    """Validation d'une ligne d'import, dans cet ordre : champs, longueurs, date de naissance, puis références."""
     manquants = [
         libelle
         for libelle, valeur in (
@@ -217,7 +217,7 @@ class ServiceEmployee:
     async def _verifier_references(
         s: AsyncSession, fonction_id: int, chantier_id: int | None, equipe_id: int | None
     ) -> None:
-        """Mêmes contrôles et même ordre que les `resolve…Reference` de Spring (fonction, chantier, équipe)."""
+        """Résolution des références : fonction, chantier, équipe, dans cet ordre."""
         if await s.get(Fonction, fonction_id) is None:
             raise ReferenceInvalide("Fonction", fonction_id)
         if chantier_id is not None and await s.get(Chantier, chantier_id) is None:
@@ -318,7 +318,7 @@ class ServiceEmployee:
     async def regrouper(
         self, s: AsyncSession, c: EmployeeRecherche | None, dimension: DimensionEmployes
     ) -> list[EmployeeRegroupementReponse]:
-        """Parité `EmployeeAnalytiqueService.regrouper` : libellés lus en base, plus grand groupe d'abord."""
+        """Libellés lus en base, plus grand groupe d'abord."""
         async with s.begin():
             lignes = await repository.regrouper(s, c or EmployeeRecherche(), dimension)
         sans = "Sans chantier" if dimension is DimensionEmployes.CHANTIER else "Sans équipe"
@@ -428,7 +428,7 @@ class ServiceEmployee:
 
     @staticmethod
     def modele_import() -> BytesIO:
-        """Classeur vierge aux six en-têtes de l'import (parité `EmployeeImportService.genererModele`)."""
+        """Classeur vierge aux six en-têtes de l'import."""
         classeur = Workbook()
         feuille = cast(Worksheet, classeur.active)
         feuille.title = "Employés"

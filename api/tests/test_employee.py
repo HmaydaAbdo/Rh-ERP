@@ -85,7 +85,7 @@ def test_import_employee_fichier_illisible_ou_incomplet_est_un_400_avec_message(
     )
 
 
-def test_modele_import_employes_reprend_les_six_entetes_spring(plateforme: Plateforme, connecter: Any) -> None:
+def test_modele_import_employes_a_les_six_entetes(plateforme: Plateforme, connecter: Any) -> None:
     jeton = connecter(*ADMIN)["accessToken"]
     reponse = plateforme.client.get("/employees/import/modele", headers={"Authorization": f"Bearer {jeton}"})
 
@@ -98,7 +98,7 @@ def test_modele_import_employes_reprend_les_six_entetes_spring(plateforme: Plate
     ]
 
 
-def test_la_reponse_imbrique_fonction_chantier_et_equipe_comme_spring(plateforme: Plateforme, connecter: Any) -> None:
+def test_la_reponse_imbrique_fonction_chantier_et_equipe(plateforme: Plateforme, connecter: Any) -> None:
     """Angular lit `employee.fonction.id` : la réponse plate `fonctionId` casserait l'édition d'un employé."""
     entetes = _auth(connecter)
     fonction = plateforme.client.post("/functions", headers=entetes, json={"libelle": "Imbrique fonction"}).json()

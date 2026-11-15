@@ -1,4 +1,4 @@
-"""Historique des heures supplémentaires dans la table Envers existante ``heures_supp_aud``."""
+"""Historique des heures supplémentaires dans la table d'historique existante ``heures_supp_aud``."""
 
 from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Table
 
@@ -34,7 +34,7 @@ registre.enregistrer(
     EntiteAuditee(
         classe=HeureSupp,
         nom="HeureSupp",
-        nom_hibernate="staport.rh.heuresupp.entities.HeureSupp",
+        nom_stocke="staport.rh.heuresupp.entities.HeureSupp",
         table_aud=heures_supp_aud,
         champs=(
             ChampAudite("employee_id", "employee_id", "employee_id"),

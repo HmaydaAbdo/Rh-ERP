@@ -7,10 +7,12 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Authentifie, Contexte, exiger
+from staport.domains.auth.securite import JetonInvalide
 from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.common.schemas import Page
 from staport.platform.base_de_donnees import session_requete
 
+from .exceptions import ReferenceExportRefusee
 from .materiel import tableaux_materiel
 from .periode import PeriodePaie, afficher_periode, lire_periode
 from .repository import TRIS_PUBLICS
@@ -59,7 +61,7 @@ def _periode_import(
     periode_url: Annotated[str | None, Query(alias="periode")] = None,
     periode_formulaire: Annotated[str | None, Form(alias="periode")] = None,
 ) -> PeriodePaie:
-    """Mois d'un import, lu dans l'URL ou dans le formulaire comme `@RequestParam` de Spring."""
+    """Mois d'un import, lu dans l'URL ou dans le formulaire indifféremment."""
     brute = periode_url if periode_url is not None else periode_formulaire
     if brute is None:
         raise RequestValidationError(
@@ -144,6 +146,30 @@ async def effectifs(session: Session, contexte: Contexte, corps: PaieRecherche |
 @paies.get("/employes/{id}/parcours", dependencies=[Depends(exiger("PAIE_READ"))])
 async def parcours(id: int, session: Session, contexte: Contexte) -> PaieParcoursReponse:
     return await contexte.paies.parcours(session, id)
+
+
+@paies.get("/export/agent/{reference}", dependencies=[Depends(exiger("PAIE_EXPORT"))])
+async def exporter_prepare_par_agent(
+    reference: str, acces: Authentifie, session: Session, contexte: Contexte
+) -> StreamingResponse:
+    """Télécharge le classeur préparé par l'assistant (KAN-266) : la référence (5 minutes, RS256) doit avoir été émise
+    pour cet utilisateur ; la connexion et la permission d'export restent exigées. Les chantiers sont relus ici."""
+    try:
+        utilisateur_id, periode, chantier_ids = contexte.agent.lire_reference_export(reference)
+    except JetonInvalide:
+        raise ReferenceExportRefusee from None
+    if utilisateur_id != acces.utilisateur_id:
+        raise ReferenceExportRefusee
+    chantiers = await contexte.paies.chantiers_periode(
+        session, PaieRecherche(periode=periode, chantier_ids=chantier_ids)
+    )
+    requete = PaieExportRequete(periode=periode, chantiers=[c.code for c in chantiers])
+    contenu = await contexte.export_paie.exporter(session, requete)
+    return StreamingResponse(
+        contenu,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=Paie_Export_{afficher_periode(periode)}.xlsx"},
+    )
 
 
 @paies.post("/export", dependencies=[Depends(exiger("PAIE_EXPORT"))])

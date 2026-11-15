@@ -1,4 +1,4 @@
-"""Erreurs du domaine auth : statuts et messages identiques à `AuthExceptionHandler` de Spring."""
+"""Erreurs du domaine auth : statuts HTTP et messages français."""
 
 from http import HTTPStatus
 
@@ -108,7 +108,7 @@ class RoleProtege(ErreurMetier):
 
 
 class JetonAgentRefuse(ErreurMetier):
-    """`AccessDeniedException` de Spring : refus 403 du jeton agent (message générique du gestionnaire global)."""
+    """Refus 403 du jeton agent (message générique du gestionnaire global)."""
 
     statut = HTTPStatus.FORBIDDEN
 

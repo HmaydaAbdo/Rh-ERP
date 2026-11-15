@@ -73,7 +73,7 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | P/H | Nombre d'heures supplémentaires entier ; les saisies et imports sont arrondis selon `HALF_DOWN` (7,5 → 7 ; 7,51 → 8). Les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
 | S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi à l'entier** (pas de virgule : fraction > 0,5 on monte, < 0,5 on descend, exactement 0,5 on descend, soit `HALF_DOWN`). La valeur arrondie est celle qui est conservée avec l'import. |
-| Marqueur STC/sortie | Observation du bulletin de Paie de l'employé pour le même mois. Le domaine réutilise la règle Paie `ObservationStc.estStcOuSortie`. |
+| Marqueur STC/sortie | Observation du bulletin de Paie de l'employé pour le même mois. Le domaine réutilise la règle Paie `est_stc_ou_sortie`. |
 | Employé STC/sorti | « STC » et « sortie » sont traités de la même façon (le premier a quitté le poste avec démission, le second sans démission). Leurs heures supplémentaires sont **acceptées** (import, ajout, modification) : le Montant passe intégralement en STC (DH) et le Net à payer des heures est nul. Le **forfait** reste interdit. Le bulletin du mois doit exister, sinon la ligne est refusée. |
 | Forfait | Montant en DH saisi séparément des heures supplémentaires. Il peut concerner un employé absent du fichier d'heures, mais pas un employé marqué STC/sortie ce mois-là. |
 
@@ -114,26 +114,26 @@ Le fichier `ETAT_pointage_heure_sup.xlsx` a une feuille avec les colonnes attend
 
 ## IA et MCP
 
-L'assistant IA accède aux capacités publiées du domaine par MCP, derrière les façades métier Spring et les permissions
+L'assistant IA accède aux capacités publiées du domaine par MCP, derrière les façades métier et les permissions
 du domaine. Les outils décrivent chaque champ avec sa source, sa période, son unité et sa définition. Ils renvoient
-les montants calculés par Spring ; aucun outil ne donne accès aux repositories ou à du SQL générique.
+les montants calculés par le serveur ; aucun outil ne donne accès aux repositories ou à du SQL générique.
 
 Outils publiés : `heures_supp_periodes` (mois importés), `heures_supp_import_prerequis` (contrôle sans écriture du mois et du chantier),
 `heures_supp_indicateurs` (indicateurs et répartitions filtrables par chantier, équipe, fonction, CIN ou nom) et
-`heures_supp_rechercher` (lignes détaillées, pages accessibles sans plafond). Les montants viennent de Spring ; les répartitions
+`heures_supp_rechercher` (lignes détaillées, pages accessibles sans plafond). Les montants viennent du serveur ; les répartitions
 ne sont pas tronquées. Les trois outils de consultation exigent `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ` ; le précontrôle
 d'import exige `IA_UTILISER`, `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ`. Aucun outil MCP ne lit un classeur ni n'effectue
 une écriture. Le détail des cas d'usage et de la gouvernance est dans [docs/ia.md](../../ia/vue-d-ensemble.md).
 
 ## Scénarios couverts par les tests
 
-- `CalculHeuresSuppTest` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à l'entier (`HALF_DOWN`), STC et Net, tous entiers.
-- `LecteurFichierHeuresSuppTest` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
-- `HeuresSuppImportServiceTest` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, arrondi du S/H aux frontières, employé STC/sorti (heures acceptées, Montant en STC, Net à payer nul), forfait STC et doublon de forfait.
-- `EcouteurPaieHeuresSuppTest` : recalcul STC/forfait/net à la modification d'une paie et refus de suppression d'un bulletin lié.
-- `HeuresSuppServiceTest` : ajout et modification unitaires (bulletin absent, doublon, S/H arrondi, heures acceptées pour un bulletin STC/sorti, forfait STC refusé).
-- `HeuresSuppAnalytiqueServiceTest` : agrégats, groupes et périodes.
-- `EndpointSecurityTest`, `OpenApiContractTest` et `McpOutilsLectureIntegrationTest` : permissions, contrats HTTP/OpenAPI et outils MCP.
+- `test_heuresupp.py` : S/H journalier et mensuel arrondi à l'entier (frontières x,49 / x,50 / x,51, 0,5 exact vers le bas), Montant calculé sur le S/H arrondi et arrondi à l'entier (`HALF_DOWN`), STC et Net, tous entiers.
+- `test_heuresupp_import.py` : format du classeur, ligne zéro conservée, cellule HS vide, doublon CIN, valeurs négatives/précision et fichier invalide.
+- `test_heuresupp_import.py` : prérequis mois/chantier, analyse sans écriture, paie exigée par employé, snapshot, arrondi du S/H aux frontières, employé STC/sorti (heures acceptées, Montant en STC, Net à payer nul), forfait STC et doublon de forfait.
+- `test_heuresupp.py` : recalcul STC/forfait/net à la modification d'une paie et refus de suppression d'un bulletin lié.
+- `test_heuresupp.py` : ajout et modification unitaires (bulletin absent, doublon, S/H arrondi, heures acceptées pour un bulletin STC/sorti, forfait STC refusé).
+- `test_heuresupp.py` : agrégats, groupes et périodes.
+- `test_auth_acces.py`, `test_journalisation_et_documentation.py` et `test_mcp_outils_metier.py` : permissions, contrats HTTP/OpenAPI et outils MCP.
 - Tests Angular du module, du service, du wizard, de la liste et de la coque des vues : filtres, erreurs, contrôles de l'assistant et paramètres URL.
 - `frontend/e2e/full-stack.spec.ts` : création des données métier, prérequis, import Excel réel, recherche, agrégats et ouverture de la vue.
 
@@ -144,7 +144,7 @@ Décisions du propriétaire (KAN-169) :
 - **Bornes** : aucune borne métier sur les heures ni sur les forfaits (seules les limites techniques s'appliquent).
 - **Employé STC/sorti** : ses heures sont acceptées (voir ci-dessus) ; aucun contrôle de rattachement de l'employé au chantier choisi.
 - **Paie modifiée après l'import** : les lignes liées suivent le marqueur STC/sortie du bulletin
-  (`EcouteurPaieHeuresSupp`, dans la transaction de la paie). Si la paie devient STC/sortie, le Montant passe en
+  (écouteur `heuresupp/ecouteur.py`, dans la transaction de la paie). Si la paie devient STC/sortie, le Montant passe en
   STC (DH), le **forfait est annulé** (interdit en STC) et le Net à payer est recalculé ; si elle ne l'est plus,
   STC retombe à 0 et le Net à payer reprend le Montant. Salaire, S/H, heures et fonction de la ligne restent figés.
 - **Paie supprimée** (unitaire ou par groupe) : la suppression est **refusée** (409) tant qu'une ligne d'heures
@@ -161,7 +161,7 @@ les scénarios exécutables du README et les portes de couverture backend/fronte
 outils MCP sont décrits dans [docs/ia.md](../../ia/vue-d-ensemble.md) ; ne pas ajouter de calcul IA ni d'accès direct aux repositories.
 
 Le domaine identifie les employés par CIN, exige une paie du même mois, importe par chantier, conserve les taux calculés
-à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser `ObservationStc.estStcOuSortie`. Ses capacités IA passent par MCP, avec définitions
-et unités explicites ; Spring reste la source de tous les calculs.
+à l'import, et distingue Montant, STC (DH), Forfait et Net à payer. S/H est un entier de dirhams (arrondi HALF_DOWN, valeur stockée). Un employé dont le bulletin du mois est STC/sortie (même traitement) garde ses heures, dont le Montant passe en STC (DH) ; son forfait est interdit : réutiliser la règle STC/sortie de `paie/observation.py`. Ses capacités IA passent par MCP, avec définitions
+et unités explicites ; l'API reste la source de tous les calculs.
 
 Une ligne par employé, mois et chantier : toute création ou import qui la dupliquerait est refusé avec le message « Une ligne existe déjà pour cet employé, ce mois et ce chantier ». La recherche employé (champ unique) cherche chaque mot dans le nom, le prénom et le CIN, dans n'importe quel ordre.

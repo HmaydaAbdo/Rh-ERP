@@ -6,8 +6,8 @@ ses cas d'usage. Elle conserve ses API et services comme frontières métier. Le
 des adaptateurs vers les cas d'usage publics du domaine, jamais un accès parallèle aux repositories
 ou aux règles métier. L'exposition n'implique pas d'exposer toutes les opérations CRUD.
 
-Pour Staport Intelligence, les services métier Spring exposent leurs capacités au service IA Python par MCP ;
-aucun framework LLM Java n'est requis. Le catalogue, les versions retenues et l'ordre de
+Pour Staport Intelligence, l'API Python (FastAPI) expose ses capacités au service IA Python par MCP ;
+le serveur MCP est monté dans l'application. Le catalogue, les versions retenues et l'ordre de
 réalisation sont tenus dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md).
 
 ## Contrat des outils
@@ -66,7 +66,7 @@ catalogue publié et configuré. Elle ne change pas les permissions : le serveur
 selon l'identité et le périmètre effectifs.
 
 Le service IA utilise un client MCP et ses contrats JSON-RPC pour consommer les capacités
-Spring ; il ne recrée pas un client REST métier parallèle. Les API REST existantes restent les
+de l'API ; il ne recrée pas un client REST métier parallèle. Les API REST existantes restent les
 contrats de l'interface ordinaire. Un cache des schémas de découverte est borné, lié au serveur,
 à sa version de catalogue et au contexte d'autorisation applicable, puis invalidé lors d'un
 changement ; il ne met pas en cache les données métier et n'accorde aucun droit.
@@ -101,11 +101,9 @@ commun.
 
 ## Implémentation et version du protocole
 
-* Dans Staport Intelligence, placer les adaptateurs MCP au bord des domaines Spring, vers leurs façades publiques.
-  Choisir le SDK Java maintenu et son mode d'intégration seulement après vérification avec les
-  versions réelles du JDK et de Spring Boot. Pour Staport Intelligence, c'est le serveur MCP de Spring AI, outils
-  déclarés par annotations ; l'intégration n'ajoute au monolithe aucun client de modèle ni
-  LangChain4j. Le SDK retenu, ses versions et la révision négociée sont consignés dans
+* Dans Staport Intelligence, placer les adaptateurs MCP au bord des domaines, vers leurs façades publiques.
+  Pour Staport Intelligence, c'est le serveur FastMCP monté dans l'application FastAPI, outils
+  déclarés par décorateur ; l'intégration n'ajoute à l'API aucun client de modèle. Le SDK retenu, ses versions et la révision négociée sont consignés dans
   [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md).
 * Pour un serveur réseau, retenir le transport **Streamable HTTP** et enregistrer la révision MCP
   exacte, les SDK client/serveur et les capacités négociées. Le transport historique HTTP+SSE ne
@@ -143,7 +141,7 @@ Ne pas partager le `JWT_SECRET` du monolithe avec le service IA pour lui permett
 des jetons Staport Intelligence. Ne pas transmettre un jeton reçu à un service pour lequel il n'a pas été émis
 (token passthrough). Une délégation documentée utilise des credentials destinés à la ressource MCP,
 avec portée limitée et vérification de l'émetteur, de l'audience, de l'expiration et des droits
-effectifs. Pour Staport Intelligence, la cible décidée est un jeton délégué court, émis par Spring pour
+effectifs. Pour Staport Intelligence, la cible décidée est un jeton délégué court, émis par l'API pour
 l'utilisateur connecté, signé de façon asymétrique (clé publique publiée, par exemple JWKS),
 d'audience MCP et à scopes réduits ; son état d'implémentation est suivi dans `site/docs/ia`.
 
@@ -158,10 +156,10 @@ Staport Intelligence, elle est dans [`site/docs/ia`](../site/docs/ia/vue-d-ensem
 ses données, une description de vue validée par schéma (vue du domaine, filtres, période) que
 l'interface traduit en route connue ; cette description n'accorde aucun droit.
 
-Les permissions HTTP ne sont pas héritées automatiquement par une façade Java. Un adaptateur doit
+Les permissions HTTP ne sont pas héritées automatiquement par une façade de domaine. Un adaptateur doit
 réappliquer l'autorisation et les règles de divulgation métier effectivement nécessaires. Dans
-Staport Intelligence, notamment, un DTO Employé issu d'un service ne doit pas révéler un salaire à une identité
-sans `PAIE_READ` sous prétexte que le contrôleur REST masquait déjà ce champ. Les tests MCP couvrent
+Staport Intelligence, notamment, un schéma Employé issu d'un service ne doit pas révéler un salaire à une identité
+sans `PAIE_READ` sous prétexte que la route REST masquait déjà ce champ. Les tests MCP couvrent
 les mêmes refus et masquages que le parcours HTTP, y compris les appels directs aux outils.
 
 Un endpoint MCP accessible par réseau doit être protégé par authentification, autorisation et
@@ -223,5 +221,4 @@ documentation de plusieurs révisions ne se combine pas en un contrat implicite.
 * [MCP — transports, révision 2026-07-28 consultée](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
 * [MCP — autorisation](https://modelcontextprotocol.io/specification/latest/basic/authorization)
 * [MCP — pratiques de sécurité](https://modelcontextprotocol.io/specification/latest/basic/security_best_practices)
-* [SDK Java MCP](https://github.com/modelcontextprotocol/java-sdk)
 * [SDK Python MCP](https://github.com/modelcontextprotocol/python-sdk)

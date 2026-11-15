@@ -111,7 +111,7 @@ CHAMPS_RESTAURES = (
 
 
 def perimetre_groupe(criteres: PaieRecherche, nombre_confirme: int) -> dict[str, object]:
-    """Périmètre audité d'une suppression de groupe (clés de `PerimetreSuppressionGroupePaie`)."""
+    """Périmètre audité d'une suppression de groupe."""
     perimetre: dict[str, object] = {
         "periode": afficher_periode(criteres.periode) if criteres.periode is not None else None
     }
@@ -364,7 +364,7 @@ class ServicePaie:
     async def _verifier_references(
         self, s: AsyncSession, equipe_id: int | None, fonction_id: int, chantier_id: int
     ) -> None:
-        """Contrôles et messages de `resolve*Reference` de Spring (400 ; ordre équipe, fonction, chantier)."""
+        """Contrôles et messages de résolution des références (400 ; ordre équipe, fonction, chantier)."""
         if equipe_id is not None and not await repository.ids_existants(s, Equipe, {equipe_id}):
             raise ReferenceInvalide(f"Équipe introuvable avec l'id : {equipe_id}")
         if not await repository.ids_existants(s, Fonction, {fonction_id}):
@@ -503,7 +503,7 @@ class ServicePaie:
         self, s: AsyncSession, c: PaieRecherche, page: int, taille: int, tri: str, croissant: bool
     ) -> Page[PaieReponse]:
         """Recherche des bulletins triée sur `tri` (colonne du bulletin, ou `nom_prenom` de l'employé), départagée par
-        le nom puis l'identifiant pour un ordre stable d'une page à l'autre (`SensTri.sur` de Spring)."""
+        le nom puis l'identifiant pour un ordre stable d'une page à l'autre."""
         async with s.begin():
             rows, total = await repository.rechercher_tries(s, c, page, taille, tri, croissant)
             fiches = await repository.fiches(s, rows)
@@ -526,7 +526,7 @@ class ServicePaie:
         tri: TriRepartition | None,
         croissant: bool | None,
     ) -> PaieRepartitionReponse:
-        """Paie du mois par chantier, équipe ou fonction, triée (`PaieAnalytiqueService.repartir`)."""
+        """Paie du mois par chantier, équipe ou fonction, triée."""
         resultat = await self.analytique(s, criteres, parametres)
         groupes = _groupes_repartition(resultat, dimension)
         critere = tri or TriRepartition.MASSE
@@ -555,7 +555,7 @@ class ServicePaie:
         tri: TriComparaison,
         croissant: bool,
     ) -> PaieComparaisonReponse:
-        """Comparaison de deux mois, groupe par groupe (`PaieAnalytiqueService.comparer`). Les deux mois partagent le
+        """Comparaison de deux mois, groupe par groupe. Les deux mois partagent le
         périmètre : les bulletins sont lus une seule fois, puis analysés pour chaque mois."""
         if recent.periode is None:
             raise PeriodeInvalide("La période est obligatoire (format aaaa-MM, ex. 2026-08)")
@@ -601,7 +601,7 @@ class ServicePaie:
         return historique.tendances_effectifs(lignes, departs)
 
     async def parcours(self, s: AsyncSession, employee_id: int) -> PaieParcoursReponse:
-        """Parcours d'un employé tel que ses bulletins et ses départs le racontent (`PaieParcoursService`)."""
+        """Parcours d'un employé tel que ses bulletins et ses départs le racontent."""
         async with s.begin():
             if not await historique.employe_existe(s, employee_id):
                 raise EmployeeIntrouvable(employee_id)

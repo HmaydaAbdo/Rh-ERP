@@ -2,14 +2,16 @@ import { FilAssistant } from './fil-assistant.service';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { CopilotSidebar, connectAgentContext, registerHumanInTheLoop } from '@copilotkit/angular';
+import { CopilotSidebar, connectAgentContext, registerRenderToolCall } from '@copilotkit/angular';
 import { filter, map } from 'rxjs';
+import { z } from 'zod';
 
 import { ThemeService } from '../theme/theme.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 import { AssistantEnteteComponent } from './assistant-entete.component';
 import { contexteEcran } from './ecran-assistant';
-import { DESCRIPTION_QUESTION, OUTIL_QUESTION, PARAMETRES_QUESTION, QuestionUtilisateurComponent } from './question-utilisateur.component';
+import { ExportPaieAssistantComponent } from './export-paie-assistant.component';
+import { OUTIL_EXPORT_PAIE } from './export-paie-assistant';
 
 /**
  * Staport Intelligence : le panneau de CopilotKit, flottant au-dessus de l'écran à droite (il ne déplace ni ne réduit les vues), ouvert par `Ctrl K` (ou `⌘ K`) ou par son lanceur.
@@ -48,12 +50,11 @@ export class AssistantComponent {
   );
 
   constructor() {
-    // L'agent interroge l'utilisateur quand la demande est ambiguë (outil du navigateur, comme AskUserQuestion de Claude).
-    registerHumanInTheLoop({
-      name: OUTIL_QUESTION,
-      description: DESCRIPTION_QUESTION,
-      parameters: PARAMETRES_QUESTION,
-      component: QuestionUtilisateurComponent
+    // Le classeur de paie préparé par l'outil MCP s'affiche comme un bouton de téléchargement (KAN-266).
+    registerRenderToolCall({
+      name: OUTIL_EXPORT_PAIE,
+      args: z.record(z.string(), z.unknown()),
+      component: ExportPaieAssistantComponent
     });
 
     // L'écran ouvert accompagne chaque question : indice de confiance limitée, revérifié par le serveur.

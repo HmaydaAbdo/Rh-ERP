@@ -19,27 +19,27 @@ utilisés par les écrans de ce domaine. Les paramètres de fonctionnement ont l
 
 | | |
 |---|---|
-| Backend | `backend/src/main/java/staport/rh/auth/` |
+| Backend | `api/src/staport/domains/auth/` |
 | Frontend | `frontend/src/app/core/auth/` (connexion, session, guards) et `frontend/src/app/portail/admin/` (écrans Utilisateurs et Rôles) |
 | Tables | `utilisateur`, `role`, `permission`, `role_permission`, `utilisateur_role`, `utilisateur_permission_refusee`, `refresh_token`, `reset_password_token` |
 | Endpoints | `/auth/*`, `/users`, `/roles`, `/permissions` |
 
 ```text
 auth/
-├── config/AdminBootstrapRunner.java       ← création du premier administrateur au démarrage
-├── controller/ (AuthController, UserController, RoleController)
-├── dtos/ (request, response)
-├── entities/ (Utilisateur, Role, Permission, RefreshToken, ResetPasswordToken)
-├── exceptions/ (exceptions métier + AuthExceptionHandler)
-├── mail/EmailService.java                 ← envoi du lien de réinitialisation
-├── mappers/ (UserMapper, RoleMapper)
-├── repositories/
-├── security/
-│   ├── SecurityConfig.java                ← chaîne de sécurité, décodeur JWT, CORS, @EnableMethodSecurity
-│   ├── JwtService.java                    ← émission des jetons d'accès (HS256)
-│   ├── TokenHasher.java                   ← jetons opaques et hachage SHA-256
-│   └── EffectivePermissionResolver.java   ← permissions effectives d'un utilisateur
-└── services/ (AuthService, UserService, RoleService + interfaces IAuthService, IUserService, IRoleService)
+├── router.py            ← routes /auth, /users, /roles, /permissions
+├── schemas.py           ← requêtes et réponses Pydantic
+├── models.py            ← modèles SQLAlchemy (utilisateur, rôle, permission, jetons)
+├── exceptions.py        ← erreurs métier et statuts HTTP
+├── courriel.py          ← envoi du lien de réinitialisation
+├── mappage.py           ← conversion des modèles en réponses
+├── repository.py        ← requêtes `select()` explicites
+├── securite.py          ← hachage des mots de passe (Argon2), jetons opaques, clés et jetons JWT RS256
+├── dependencies.py      ← authentification et permissions effectives par route
+├── composition.py       ← contexte d'authentification partagé avec le serveur MCP
+├── parametres.py        ← paramètres du domaine (durées, verrouillage)
+├── service_auth.py      ← connexion, session, mot de passe oublié
+├── service_utilisateur.py, service_role.py, service_agent.py
+└── audit.py             ← déclaration de l'historique `*_aud`
 ```
 
 ---
@@ -55,7 +55,7 @@ auth/
 - Un refus individuel l'emporte toujours sur les rôles (« deny override »).
 - La suppression est une permission comme les autres (`*_DELETE`), jamais un rôle codé en dur.
 - Un rôle (ex. `SYSTEM_ADMIN`) est aussi transmis comme autorité dans le jeton, mais aucune règle métier ne
-  s'appuie sur un nom de rôle, à l'exception de l'accès aux endpoints Actuator.
+  s'appuie sur un nom de rôle, à l'exception de l'accès aux métriques.
 
 ### Rôles de départ (migrations V4 et V28)
 
@@ -70,11 +70,11 @@ Les permissions `EQUIPE_*` (migration V9) sont attribuées aux rôles qui portai
 
 ### Compte administrateur de départ
 
-Au démarrage, `AdminBootstrapRunner` crée un compte `SYSTEM_ADMIN` à partir de `ADMIN_USERNAME`,
+Au démarrage, l'application crée un compte `SYSTEM_ADMIN` à partir de `ADMIN_USERNAME`,
 `ADMIN_EMAIL` et `ADMIN_PASSWORD` **s'il n'existe aucun compte portant ce rôle**. Ensuite, la variable est
 sans effet : changer le mot de passe se fait depuis l'interface. Ne jamais laisser le mot de passe d'exemple
 (voir ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md))). La création est attribuée à « Système », d'origine `DEMARRAGE`, dans
-l'audit (`UserService.creerAdminInitial`, appelé seulement quand `adminExiste()` est faux : un redémarrage ne laisse aucune trace).
+l'audit (création appelée seulement quand aucun administrateur n'existe : un redémarrage ne laisse aucune trace).
 
 ---
 
@@ -153,7 +153,7 @@ chargée ; le serveur reste l'autorité et vérifie aussi la différence avec l'
 | Élément | Révocable avant expiration ? |
 |---|---|
 | Jeton d'accès | **Non** : valable jusqu'à son expiration (15 minutes par défaut, durée réglable), même si le compte est désactivé ou ses permissions modifiées |
-| Jeton de rafraîchissement | Oui : déconnexion, réinitialisation du mot de passe (par courriel **ou par un administrateur**), **désactivation du compte**, détection de vol — `AuthService.revoquerSessions` coupe toutes les sessions d'un compte |
+| Jeton de rafraîchissement | Oui : déconnexion, réinitialisation du mot de passe (par courriel **ou par un administrateur**), **désactivation du compte**, détection de vol — `service_auth.py` coupe toutes les sessions d'un compte |
 
 Exception : le **jeton agent** de l'assistant IA (voir « Jeton délégué de l'assistant IA ») ne porte aucune permission ; la
 route `/mcp` relit le compte et ses droits à chaque appel, donc une désactivation ou un retrait de droit s'y applique tout de suite.
@@ -177,7 +177,8 @@ le transmet au service IA, qui le présente à la route `/mcp`. Décision et arc
 | Cloisonnement | Refusé par toutes les routes REST ; le jeton d'accès REST est refusé par `/mcp` |
 | Contrôle à chaque appel MCP | Compte actif, identifiant cohérent avec `sub`, permissions effectives (refus individuels compris), `IA_UTILISER` et scope |
 | Clés publiques | `GET /.well-known/jwks.json` : clé courante et, pendant un changement, clé précédente |
-| Journal | `JETON_AGENT_EMIS` (identifiant `jti` et durée, jamais le jeton) et `JETON_AGENT_REFUSE` (motif) |
+| Journal | `JETON_AGENT_EMIS` (identifiant `jti` et durée, jamais le jeton) et `JETON_AGENT_REFUSE` (motif) ; `ECRITURE_FICHIER_AGENT` (chemin, taille, outil, jamais le contenu) |
+| Journal des écritures de fichier | `POST /interne/ia/ecritures-fichier` : appelée par le service IA avec le jeton agent après chaque écriture réussie sous `/espace/` (KAN-268). Route interne, absente de la liste blanche nginx, qui refuse l'en-tête `Origin` ; l'identité vient du jeton agent. Limite : un porteur de son propre jeton agent pourrait journaliser un faux enregistrement à son seul nom |
 
 **Changer de clé** : générer une nouvelle clé, placer l'ancienne clé publique (base64 d'un X.509 DER) dans
 `MCP_JWT_PREVIOUS_PUBLIC_KEY` et son identifiant dans `MCP_JWT_PREVIOUS_KEY_ID`, la nouvelle clé dans `MCP_JWT_PRIVATE_KEY`
@@ -240,7 +241,7 @@ un réessai. Après suppression du dernier rôle d'une page, la liste revient à
 refusée pour `SYSTEM_ADMIN` ; les liaisons sont en `ON DELETE RESTRICT`, la base confirme la règle. Un rôle supprimé retire
 ses permissions une à une : l'audit voit chaque retrait.
 
-**Le rôle `SYSTEM_ADMIN` est protégé** (`409`, `ProtectedRoleException`) : il ne peut être ni supprimé, ni **renommé** (l'amorçage du
+**Le rôle `SYSTEM_ADMIN` est protégé** (`409`, rôle protégé) : il ne peut être ni supprimé, ni **renommé** (l'amorçage du
 premier compte le cherche par son nom), ni **privé d'une permission** (il perdrait de quoi administrer les comptes, les rôles
 et l'audit). Seule sa description se modifie ; l'écran verrouille le nom et les cases à cocher (`protege` dans la réponse de l'API).
 Les nouvelles permissions lui sont attribuées par les migrations (voir `V12`, `V15`).
@@ -309,19 +310,19 @@ Détail des guards et du menu : ../frontend/README.md ([frontend/index](../../fr
   `http(s)` autorisées, sans wildcard ni chemin ; les credentials ne sont renvoyés que pour ces origines.
   Voir ../deployment.md ([exploitation/deploiement](../../exploitation/deploiement.md)) et ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md)).
 - Chemins publics : `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`,
-  `/actuator/health`, et Swagger **seulement en développement** (éteint par défaut, voir ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md))). Tout le reste exige un jeton valide.
+  `/health`, et Swagger **seulement en développement** (éteint par défaut, voir ../configuration.md ([exploitation/configuration](../../exploitation/configuration.md))). Tout le reste exige un jeton valide.
 
 ---
 
 ## Tests
 
-`EndpointSecurityTest` et `JwtSecurityChainTest` vérifient les permissions de tous les endpoints et la chaîne
-JWT complète (signature HS256, `iss`, `aud`, dates et claims requis) ; `JwtSigningKeyTest` vérifie la taille minimale du
-secret. `AuthServiceTest` et `VerrouillageConnexionIntegrationTest` couvrent la connexion, le blocage après échecs,
+`test_auth_acces.py` vérifient les permissions de tous les endpoints et la chaîne
+JWT complète (signature HS256, `iss`, `aud`, dates et claims requis) ; `test_auth_acces.py` vérifie la taille minimale du
+secret. `test_auth_session.py` couvrent la connexion, le blocage après échecs,
 la rotation, le vol de jeton, la révocation et la réinitialisation. Voir
 ../testing.md ([exploitation/tests](../../exploitation/tests.md)) et [../rbac/auth.md](droits.md).
 
-`AuthRequestValidationTest` couvre les tailles, la normalisation avant validation et les identifiants de
+`test_auth_acces.py` couvre les tailles, la normalisation avant validation et les identifiants de
 collections invalides. Les specs des listes et formulaires Utilisateurs/Rôles couvrent la saisie, les
 permissions, les erreurs et réessais, les réponses tardives, les enregistrements partiels et la pagination.
 
@@ -383,4 +384,4 @@ L'assistant RH agit **pour l'utilisateur connecté**, avec un jeton court RS256 
 Tester non authentifié, authentifié sans permission, permission effective, refus individuel,
 rotation/révocation de session et événements d'audit ; garder les tests JWT de chaîne complète.
 Les formulaires et listes vérifient aussi réponses tardives, erreur/réessai, sélection partielle,
-pagination et sauvegarde partielle des refus. `AuthRequestValidationTest` couvre les entrées HTTP.
+pagination et sauvegarde partielle des refus. `test_auth_acces.py` couvre les entrées HTTP.

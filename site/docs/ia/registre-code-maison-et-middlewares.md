@@ -4,7 +4,7 @@ sidebar_position: 6
 ---
 
 :::note Page reprise de l'ancien document IA
-Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions de Spring, de Java et des tâches T* décrivent l'état avant la bascule vers FastAPI : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
+Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions des tâches T* décrivent l'état au 2026-11-06 : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
 :::
 
 ## Décisions à prendre
@@ -36,14 +36,14 @@ reprenne là où il s'est arrêté.
 | T21 — Liste titrée des anciennes conversations | Aucune : fonction absente. Le fil est rejoué, mais l'utilisateur ne peut pas revenir à un ancien fil | `injectThreads` et `CopilotThreadsDrawer` de CopilotKit sur les routes locales de fils du runtime (`LocalThreadEndpointRunner`) ; contribuer ou étendre le runner SQLite officiel ; titre tiré de la première question ; sinon petit code **temporaire** avec date de retrait | ⬜ |
 | T22 — Vérificateur de chiffres | `verification.py` et `VerificateurChiffres` | **Décision du propriétaire (2026-10-27) appliquée en V1f après V1d** : suppression complète sans remplaçant maison. Les règles de réponse et les calculs relèvent des outils métier et des middlewares officiels ; le jeu de référence mesure l'exactitude | ✅ V1f |
 | T23 — Surfaces déterministes | `surfaces.py` : liste d'outil vers `DataTable`/`Chart`, enveloppe A2UI | Motif officiel à schéma fixe (`copilotkit.a2ui`) déjà utilisé ; évaluer MCP Apps (`@copilotkit/mcp-apps-renderer`, `@copilotkit/angular/mcp-apps`) pour que l'interface d'un outil vienne de son serveur MCP | ⬜ |
-| T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de Spring AI (`@McpPrompt`) lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
+| T24 — Contexte ERP | `contexte.py` : date, droits, dernier mois de paie | Invite ou ressource MCP de FastMCP lue par le client MCP, injectée par le décorateur officiel `dynamic_prompt` | ⬜ |
 | T25 — Mémoire des conversations | `memoire.py` : préfixe de fil par utilisateur, purge des conversations inactives | Isolation par espaces de noms du `Store` LangGraph ; expiration par une tâche `pg_cron` (extension PostgreSQL gratuite) ou par le TTL du `Store` PostgreSQL | ⬜ |
-| T26 — Échange de jeton | `outils.py` : `jeton_agent` appelle `/auth/jetons/agent` ; côté Java, émission par l'encodeur JWT | Échange de jetons OAuth2 (RFC 8693) de Spring Authorization Server et client OAuth2 Authlib | ⬜ |
+| T26 — Échange de jeton | `outils.py` : `jeton_agent` appelle `/auth/jetons/agent` ; côté API, émission par l'encodeur JWT | Échange de jetons OAuth2 (RFC 8693) et client OAuth2 Authlib | ⬜ |
 | T27 — Enveloppe du service IA | `agui.py` : authentification, validation de la question, flux SSE, erreurs sans détail | `add_langgraph_fastapi_endpoint` avec dépendances FastAPI ; outils par requête via les crochets dynamiques de LangChain | ⬜ |
 | T28 — Banc d'évaluation | `evaluation.py` : rejoueur et notation | `agentevals` et `openevals` sous pytest, sans LangSmith ; supprimer le rejoueur | ⬜ |
 | T29 — Scripts de la passerelle | `filtrer_config.py`, `enregistrer_cles.py`, `test_providers.py` | `include` de fichiers de configuration LiteLLM par fournisseur ; contrôles de santé et sondes natifs ; clés virtuelles par l'API gérée en base | ⬜ |
 | T30 — Composants d'interface | `DataTable`, `KpiGrid`, `Chart`, `QuestionUtilisateur`, `FilAssistant` | Tableau : AG Grid Community ou TanStack Table (licences libres) ; graphique : `ng2-charts` ; question : interruptions natives de CopilotKit | ⬜ |
-| T32 — Sélection d'outils juste-à-temps | **Fait (2026-11-03)** : une compétence `SKILL.md` par domaine dans `ia/src/staport_ia/competences/` (6 domaines, 7 outils au plus chacune, les 31 outils couverts une fois), `SkillsMiddleware(tools=résolveur)` sur le catalogue MCP de l'utilisateur, `routage.py` calculant `pinned_skills` hors modèle (embeddings MiniLM locaux), repli par lecture du `SKILL.md`, aucun plafond de domaines épinglés, évaluation `ia/evaluation/routage.json` (41 demandes, 39 couvertes, p50 5,9 ms) ; 22 définitions d'outils Spring complétées (cas de non-usage, limites) | Fonctions officielles de Deep Agents ≥ 0.7.23 ; seule pièce maison **déclarée** : la fonction de routage | Tests verts (66), ruff et pyright stricts verts ; **banc réel (2026-11-03, routage actif)** : 23/24, latence p50 8,25 s contre 9,09 s avant (sélecteur LLM), l'échec restant est un chemin valide différent du chemin attendu (`fonction_rechercher` au lieu de `employes_rechercher`) ; le p95 (68 s) vient des offres gratuites, pas du routage |
+| T32 — Sélection d'outils juste-à-temps | **Fait (2026-11-03)** : une compétence `SKILL.md` par domaine dans `ia/src/staport_ia/competences/` (6 domaines, 7 outils au plus chacune, les 31 outils couverts une fois), `SkillsMiddleware(tools=résolveur)` sur le catalogue MCP de l'utilisateur, `routage.py` calculant `pinned_skills` hors modèle (embeddings MiniLM locaux), repli par lecture du `SKILL.md`, aucun plafond de domaines épinglés, évaluation `ia/evaluation/routage.json` (41 demandes, 39 couvertes, p50 5,9 ms) ; 22 définitions d'outils complétées (cas de non-usage, limites) | Fonctions officielles de Deep Agents ≥ 0.7.23 ; seule pièce maison **déclarée** : la fonction de routage | Tests verts (66), ruff et pyright stricts verts ; **banc réel (2026-11-03, routage actif)** : 23/24, latence p50 8,25 s contre 9,09 s avant (sélecteur LLM), l'échec restant est un chemin valide différent du chemin attendu (`fonction_rechercher` au lieu de `employes_rechercher`) ; le p95 (68 s) vient des offres gratuites, pas du routage |
 | T33 (KAN-203) — Migration du service IA vers Deep Agents | **Fait (2026-11-03)** : `create_deep_agent` dans `agent.py` (middlewares de contexte, surfaces, plafonds, reprise et `CopilotKitMiddleware` reportés dans `middleware`), harnais limité à `read_file` et `write_todos`, sous-agent généraliste désactivé par profil d'harnais, `LLMToolSelectorMiddleware` retiré, image Docker avec modèle d'embeddings préchargé. Le groupe de passerelle `tool-selection` est retiré (configuration, clés virtuelles, tests de fumée, README) | Point d'entrée officiel documenté de Deep Agents (`create_deep_agent(model, tools, middleware, backend, ...)`) | Test de contrat vert ; écriture refusée par `FilesystemPermission` (test : aucun outil métier dans `tools=`, `write_file` refusé même lié) ; espace de fichiers par identité (`backend_par_identite`, isolation testée) ; **reste** : magasin PostgreSQL avec l'épopée d'écriture |
 | T31 — Contrôle d'accès du runtime | `serveur.mjs` : authentification par `/auth/me`, routes servies, fil réservé à son propriétaire (crochets officiels `onBeforeHandler`) | `identifyUser` est réservé à Intelligence ; chercher un équivalent gratuit ou un proxy d'authentification standard devant le runtime | ⬜ |
 
@@ -62,15 +62,33 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
 | `LLMToolSelectorMiddleware` | ✅ adopté et testé ; **retiré du chemin systématique le 2026-11-03** (il ajoute un appel de modèle) : le routage de base est l'épinglage de compétences hors modèle (T32) ; réactivable en second étage après évaluation chiffrée | T32 |
 | `CopilotKitMiddleware` (A2UI, outils du navigateur) | ✅ en place | — |
 | `ContextEditingMiddleware` (`ClearToolUsesEdit`) | ⬜ | M1 |
-| `ToolErrorMiddleware`, `ToolRetryMiddleware`, `ModelRetryMiddleware` | ⬜ | M1 |
+| `ToolErrorMiddleware`, `ToolRetryMiddleware` | ✅ en place, matrice des erreurs ci-dessous et testée | — |
+| `ModelRetryMiddleware` | ⛔ non repris (décision du 2026-11-01) : la reprise des modèles reste dans le routage LiteLLM, qui bascule sans rejouer (`num_retries: 0`), et le client n'en ajoute pas (`max_retries=0`) ; le budget de reprises est borné et testé (`ia/tests/test_agent.py`, KAN-33) | — |
 | `PIIMiddleware` (`RedactionRule`, `PIIDetectionError`) | ⬜ | M2 |
-| `ModelFallbackMiddleware`, `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
+| `ModelFallbackMiddleware` | ✅ en place, **inactif tant qu'aucun modèle de repli n'est configuré** (paramètre `repli` de `creer_agent`) ; panne simulée du principal rendue par le repli, testé (KAN-35). Choisir et brancher le modèle de repli du service reste une décision du propriétaire | — |
+| `ProviderToolSearchMiddleware`, `LLMToolEmulator` | ⬜ | M3 |
 | `HumanInTheLoopMiddleware` (`InterruptOnConfig`), interruptions LangGraph | ⬜ | M4 |
 | `FilesystemFileSearchMiddleware` | ⬜ | M5 |
 | `ShellToolMiddleware` (`DockerExecutionPolicy`) | ⬜, décision de sécurité | M6 |
 | Crochets `before_agent`, `after_agent`, `before_model`, `after_model`, `wrap_model_call`, `wrap_tool_call`, `dynamic_prompt` | utilisés par les middlewares ci-dessus ; `dynamic_prompt` remplace `contexte.py` | T24 |
 | LangGraph : checkpointer PostgreSQL | ✅ en place | — |
-| LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ⬜ | T25, J4 |
+| LangGraph : `Store` (mémoire longue, espaces de noms, expiration) | ✅ `AsyncPostgresStore` pour les fichiers d'espace par utilisateur (`/espace/`), expiration native `TTLConfig`, testé sur PostgreSQL réel (KAN-73) ; reste la purge et le préfixe de fil des conversations, écrits par nous | T25, J4 |
+
+### Matrice des erreurs d'outil (KAN-32)
+
+`ToolRetryMiddleware` ne rejoue que les coupures transitoires (`httpx.TransportError`, `TimeoutError`,
+`ConnectionError`) : deux reprises. Quelle que soit l'erreur, `ToolErrorMiddleware` la transforme en message d'erreur
+qui nomme le type de l'exception sans son texte (qui peut porter un détail interne) ; le run se poursuit et le modèle
+explique le manque sans inventer de valeur. Les interruptions LangGraph (question posée à l'utilisateur) remontent
+toujours : ce ne sont pas des pannes. Test : `MATRICE_ERREURS` dans `ia/tests/test_agent.py`.
+
+| Erreur de l'outil | Reprise | Ce que voit le modèle | Run |
+|---|---|---|---|
+| Erreur métier (400, `ValueError`) | non | erreur typée, sans message brut | continue |
+| Refus (401, 403) | non | erreur typée ; consigne 4 : dire que le droit manque, ne pas retenter | continue |
+| Panne serveur (500) | non | erreur typée | continue |
+| Délai dépassé, réseau coupé | 2 reprises | erreur typée si les reprises échouent | continue |
+| Interruption LangGraph | sans objet | question à l'utilisateur | en pause |
 
 ## Middlewares officiels d'AG-UI et d'A2UI : inventaire (2026-11-09)
 
@@ -97,6 +115,110 @@ Autres points non terminés, gardés ouverts :
 | Latence d'une réponse sous 30 s à tenir sur le jeu de référence | ⬜ |
 | Évaluation de l'agent étendue (cas complexes, tri, questions à l'utilisateur) | ⬜ |
 | Historique SQLite du runtime : pas d'expiration | ⬜ |
-| Lint : frontend à 0 avertissement (règles en `error`), Checkstyle Java et ESLint du runtime Node, branchés dans la CI | ✅ |
+| Lint : frontend à 0 avertissement (règles en `error`), Ruff, pyright et ESLint du runtime Node, branchés dans la CI | ✅ |
 | Écran d'accueil de l'assistant : CopilotKit le masque sur un fil fourni par l'application (fil repris) ; prévoir un accueil propre, avec les moyens officiels de la discussion | ⬜ |
 | Reprise du fil dans l'interface : lenteur ponctuelle vue au banc (réponse arrivée côté serveur mais affichée au rechargement) | ✅ Cause isolée et corrigée le 2026-11-02 (E5.6) : flux de run coupé côté client, le serveur garde la réponse ; rattachement par `connectAgent` |
+
+### Outils du harnais visibles par le modèle (KAN-258, KAN-260, KAN-267)
+
+Le modèle voit du système de fichiers `read_file` (lecture des `SKILL.md`), `write_file` et `edit_file` ; `ls`, `delete`,
+`glob`, `grep` et `execute` sont masqués par `HarnessProfile(excluded_tools=…)` dans `ia/src/staport_ia/agent.py`, la
+voie officielle de Deep Agents, qui remplace notre `FilesystemMiddleware(tools=["read_file"])`.
+
+Les permissions de fichiers (`FilesystemPermission`, la première règle qui correspond l'emporte) bornent l'écriture :
+sous `/espace/` (propre à l'identité de l'utilisateur, `StoreBackend` sur PostgreSQL), elle **attend l'accord de
+l'utilisateur** par une interruption LangGraph (`mode="interrupt"`, `HumanInTheLoopMiddleware` construit par Deep Agents ;
+reprise par `Command(resume={"decisions": [{"type": "approve"}]})` ou `"reject"`) ; ailleurs, elle est refusée sans
+question. Tests dans `ia/tests/test_agent.py` : accord, refus, isolation entre utilisateurs, refus hors de l'espace,
+liste exacte des outils exposés.
+
+### Client MCP : `langchain.mcp` conservé, `langchain-mcp-adapters` écarté (KAN-256, 2026-11-15)
+
+| | `langchain.mcp` (`langchain[mcp]`, bêta) | `langchain-mcp-adapters` 0.3.2 |
+|---|---|---|
+| Statut | page officielle « MCP » de la documentation LangChain (connexions, authentification, outils) | dernière version du 2026-08-06 ; absent de la documentation actuelle |
+| Client | FastMCP (`fastmcp.Client`), `ClientGroup` pour plusieurs serveurs (outils préfixés `{serveur}_{outil}`) | SDK `mcp`, `MultiServerMCPClient` |
+| Authentification | `Client(url, auth=jeton)` (jeton porteur, OAuth 2.1, `httpx.Auth`) | en-têtes à la main |
+| Contenu structuré | `ToolMessage.artifact["structured_content"]` | artefact selon la version |
+| Question du serveur en cours d'appel | interruption LangGraph native (`elicitation`), reprise par `Command(resume=…)` | non |
+| Compatibilité avec nos versions | oui (`mcp` 2.3.0, `fastmcp` 4.1.6) | **non : exige `mcp<2.0.0`, nous avons `mcp` 2.3.0** |
+
+Ce que chacun apporte, en clair :
+- `langchain-mcp-adapters` : le premier pont publié entre MCP et LangChain. Il fournit `MultiServerMCPClient` (plusieurs
+  serveurs dans un seul client), `load_mcp_tools` (outils depuis une session), des en-têtes à passer à la main
+  (`headers`, transports HTTP et SSE seulement) et l'option `handle_tool_errors` pour les erreurs d'exécution MCP.
+  Une session est ouverte par appel d'outil. Il s'appuie sur le SDK `mcp` 1.x.
+- `langchain.mcp` : le même rôle, intégré à LangChain et construit sur FastMCP. Il ajoute ce que nous utilisons ou
+  utiliserons : authentification déclarée (`auth=jeton`, OAuth 2.1, `httpx.Auth`), `ClientGroup` (une connexion et une
+  authentification par serveur, outils préfixés), contenu structuré dans `ToolMessage.artifact` (déjà lu par le rendu
+  des tableaux), outils réentrants, et surtout les questions du serveur en cours d'appel (élicitation) converties en
+  interruption LangGraph, qui s'additionne à l'accord de l'utilisateur avant écriture (KAN-260).
+
+Décision : **garder `langchain.mcp`**. `langchain-mcp-adapters` ne s'installe pas avec `mcp` 2.x et n'apporte aucune
+capacité qui nous manque. Le risque de la bêta (API susceptible de changer) est couvert par les tests MCP et la
+veille de versions. Pistes ouvertes, chacune dans son ticket : passer l'authentification par `Client(url, auth=jeton)`
+au lieu de l'en-tête construit à la main, et vérifier le mode MCP `auto` maintenant que le serveur MCP est celui de
+l'API FastAPI (`mode="legacy"` est un choix de transport du client FastMCP) ; l'interruption d'élicitation sert la validation
+humaine (KAN-260, KAN-264).
+
+### ag-ui-langgraph : état amont (KAN-257, 2026-11-15)
+
+`ag-ui-langgraph` 0.0.47 est la dernière version publiée (2026-10-08), et la branche principale amont est aussi en
+0.0.47. L'issue [ag-ui-protocol/ag-ui#3343](https://github.com/ag-ui-protocol/ag-ui/issues/3343) (compétences épinglées
+envoyées au client comme messages utilisateur) est ouverte ; un contributeur a proposé le correctif, non fusionné.
+Le contournement par `FunctionMiddleware` (`copilot-runtime/src/serveur.mjs`) est donc **maintenu** ; à retirer à la
+sortie d'une version qui contient le correctif, à vérifier à chaque montée de version.
+
+### Fiches de compétences dans le Store, sans accès disque (KAN-259, décision du propriétaire du 2026-11-15)
+
+Option 2 retenue : le modèle n'a **aucun accès au disque**. Les fiches `SKILL.md` du paquet sont semées dans le Store
+(espace de noms `("competences",)`, commun à tous) au démarrage du service (`semer_competences`, `app.py`) ; le
+`CompositeBackend` les sert par un `StoreBackend`, et l'espace de chaque utilisateur (`/espace/`) par un autre,
+propre à son identité. Le `FilesystemBackend` n'est plus utilisé par le service. L'écriture reste bornée par le profil
+d'harnais et les permissions (accord sous `/espace/`, refus ailleurs, donc aussi sur les fiches). Les fiches ne
+changent qu'avec une nouvelle version du service : le semis au démarrage les remplace. Test : lecture des fiches depuis
+PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
+
+### Fichiers de l'espace de l'utilisateur : écriture, téléchargement, bornes (KAN-267)
+
+- **Écriture** : `write_file` et `edit_file` sous `/espace/` seulement, avec l'accord de l'utilisateur (interruption
+  LangGraph, KAN-260) ; les fichiers sont dans le Store PostgreSQL, sous l'identité du jeton agent, et expirent par le
+  balayeur natif du Store.
+- **Reprise** : le service accepte un run de reprise (`RunAgentInput.resume` ou `forwardedProps.command.resume`) sans
+  nouvelle question ; l'état du fil (compétences épinglées) est conservé. Test de bout en bout par `/agui`.
+- **Téléchargement** : `GET /ia/fichiers` (liste) et `GET /ia/fichiers/espace/<chemin>` (nginx vers le routeur IA de
+  l'API). L'identité vient de l'échange du jeton de connexion ; le fichier d'un autre utilisateur est introuvable (404) ;
+  réponse en pièce jointe, `nosniff`, sans cache.
+- **Bornes** (écrites par nous, aucun framework ne les fournit) : 200 000 caractères par fichier et 50 fichiers par
+  utilisateur, par un middleware `wrap_tool_call` (`ia/src/staport_ia/fichiers.py`) ; le refus arrive à l'exécution,
+  après l'accord, avec son motif. Remplacer un fichier existant reste permis quand l'espace est plein.
+- **Audit** (KAN-268) : le même middleware signale chaque écriture réussie à l'API (`POST /interne/ia/ecritures-fichier`,
+  jeton agent) qui journalise `ECRITURE_FICHIER_AGENT` (chemin, taille, outil ; jamais le contenu). Le signaleur est une
+  `ContextVar` posée par le run (`agui.py`), donc jamais partagée entre utilisateurs ; une panne du signalement est
+  consignée côté serveur sans interrompre le run.
+
+### Question de l'agent à l'utilisateur : interruption native (KAN-264)
+
+- **Avant** : `poser_question` était un outil déclaré par le navigateur (`registerHumanInTheLoop` de CopilotKit) ; la
+  réponse revenait comme message d'outil, sans point de reprise durable.
+- **Maintenant** : l'outil vit côté agent (`ia/src/staport_ia/question.py`) et appelle `interrupt()` de LangGraph, comme
+  l'accord avant écriture. Le run s'arrête avec un point de reprise dans le checkpointer PostgreSQL, et la réponse
+  revient par la reprise AG-UI. La valeur de l'interruption porte `type: "question"` ; l'interface (`injectInterrupt`)
+  distingue ainsi la question de l'accord d'écriture.
+- **Sécurité** : le service n'accepte plus un message d'outil comme dernier message d'un run ; seules la question de
+  l'utilisateur et la reprise d'interruption (vérifiée par le fil propre à l'utilisateur) sont admises. La réponse est
+  bornée à 500 caractères. Test de bout en bout par `/agui` (`ia/tests/test_agui.py`).
+
+### Exports de l'ERP : référence signée, sans stockage (KAN-266)
+
+- **Outil MCP** `paie_export_preparer` (`PAIE_EXPORT` + `PAIE_READ`) : vérifie qu'il y a des bulletins, puis rend les
+  chantiers concernés et une **référence de téléchargement** : un JWT RS256 de 5 minutes (audience propre
+  `staport-intelligence-export`), lié à l'utilisateur, au mois et aux identifiants de chantier. Aucun chiffre ne passe par
+  le modèle.
+- **Téléchargement** : `GET /paie/export/agent/{reference}` exige la connexion REST de l'utilisateur et `PAIE_EXPORT`,
+  puis vérifie que la référence lui a été émise ; sinon 404 (expirée, altérée, autre utilisateur ou jeton d'un autre
+  usage, sans dire laquelle). Le classeur est généré à ce moment, par le service d'export existant ; rien n'est stocké.
+- **Interface** : `registerRenderToolCall` de CopilotKit dessine le résultat de l'outil comme un bouton « Télécharger » ;
+  la référence n'apparaît pas dans la discussion (la fiche de compétence demande au modèle de ne pas la recopier).
+- **Pas de `CompositeBackend` ici** : le classeur est binaire et généré à la demande ; l'espace de fichiers texte de
+  l'utilisateur (`/espace/`, KAN-267) garde son routage `CompositeBackend` + Store.

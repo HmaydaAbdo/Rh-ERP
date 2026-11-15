@@ -38,7 +38,7 @@ journal = logging.getLogger(__name__)
 
 DELAI_CONNEXION_ERP = 5.0
 DELAI_LECTURE_ERP = 30.0
-"""Délais de l'appel à l'ERP (ceux de l'ancien backend) : une erreur n'est jamais rejouée, la reprise est celle de la
+"""Délais de l'appel à l'ERP (30 s en lecture) : une erreur n'est jamais rejouée, la reprise est celle de la
 prochaine exécution planifiée ou d'un déclenchement manuel."""
 
 
@@ -61,7 +61,7 @@ _CARTE_INCOMPLETE = (
 
 
 def _coord(req: ChantierCreationRequete) -> tuple[str | None, Decimal | None, Decimal | None]:
-    """Règles de `LocalisationChantierService` (Spring), mêmes messages et même ordre de vérification."""
+    """Règles de localisation des chantiers : messages et ordre de vérification stables."""
     loc = req.localisation.strip() if req.localisation and req.localisation.strip() else None
     lat, lon = req.latitude, req.longitude
     if loc:

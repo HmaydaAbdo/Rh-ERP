@@ -1,8 +1,8 @@
-"""Configuration de l'application (KAN-212, ADR 0016 § 2 et conventions `backend-python/configuration`).
+"""Configuration de l'application (KAN-212 et conventions `backend-python/configuration`).
 
-Mêmes noms de variables d'environnement que le backend Spring (`application.yml`) : le `.env` et le compose de
-production ne changent pas. Aucune valeur par défaut pour un secret ni pour un paramètre qui change le comportement en
-production : une variable absente fait échouer le démarrage, jamais une valeur devinée.
+Variables d'environnement portées par le `.env` et le compose de production. Aucune valeur par défaut pour un
+secret ni pour un paramètre qui change le comportement en production : une variable absente fait échouer le
+démarrage, jamais une valeur devinée.
 """
 
 from functools import lru_cache

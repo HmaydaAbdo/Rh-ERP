@@ -1,4 +1,4 @@
-"""Exposition Prometheus (`GET /metrics`), parité avec `/actuator/prometheus` de l'ancien backend (KAN-163).
+"""Exposition Prometheus (`GET /metrics`) (KAN-163).
 
 Les mesures vivent dans des objets du domaine (`MetriquesAudit`, `MetriquesSynchronisation`) ; ce module ne fait que les
 traduire au format texte de Prometheus, avec la bibliothèque officielle `prometheus-client`. Le point de collecte n'est

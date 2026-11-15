@@ -4,7 +4,7 @@ from staport.platform.erreurs import ErreurMetier
 
 
 class HeuresSuppInvalide(ErreurMetier):
-    """Saisie refusée (HTTP 400, comme `HeuresSuppImportException`, utilisée aussi pour « introuvable »)."""
+    """Saisie refusée (HTTP 400, utilisée aussi pour « introuvable »)."""
 
 
 class HeuresSuppGroupeModifie(ErreurMetier):

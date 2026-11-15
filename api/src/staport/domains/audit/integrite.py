@@ -1,4 +1,4 @@
-"""Intégrité du journal (parité avec `VerificationIntegriteAudit`).
+"""Intégrité du journal.
 
 Au démarrage puis périodiquement :
 1. le compte applicatif ne doit pas pouvoir modifier une table d'audit (un audit réécrivable n'est pas opposable) ;

@@ -1,4 +1,4 @@
-"""Rapport PDF des heures supplémentaires (parité de `HeuresSuppExportPdfService`).
+"""Rapport PDF des heures supplémentaires.
 
 Mêmes filtres, même recherche et même tri que la vue Tabulaire, sur toutes les lignes du périmètre. Même police et même
 bandeau que le rapport de paie. Tout texte issu des données passe par `html.escape` : aucun HTML de donnée

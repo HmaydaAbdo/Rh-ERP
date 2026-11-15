@@ -190,7 +190,7 @@ Le métier reste dans l'API Python ; un service IA Python (LangGraph) consomme l
 et appelle les modèles par LiteLLM ; Angular dialogue avec lui par AG-UI, via le runtime Node CopilotKit. Les API REST et le kit
 Staport restent les interfaces des écrans. Les jetons délégués par audience, les périmètres de
 données par fiche de poste, la projection du salaire et l'audit de chaque outil sont des prérequis :
-les protections des contrôleurs REST ne sont pas héritées par un appel direct aux services. Le RAG
+les protections des routes REST ne sont pas héritées par un appel direct aux services. Le RAG
 ne recopie ni les employés ni la paie. Le serveur MCP et son interopérabilité (clients TypeScript et Python, jeton agent RS256) sont prouvés par
 `api/tests/test_mcp_clients_externes.py`.
 Décisions, feuille de route et état : [ia.md](../ia/pratiques-de-reference.md).

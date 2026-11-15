@@ -65,7 +65,8 @@ const LIBELLES_ACTIONS: Record<string, string> = {
   ACCES_REFUSE: 'Accès refusé',
   ACCES_ANONYME_REFUSE: 'Accès anonyme refusé',
   JETON_AGENT_EMIS: "Jeton de l'assistant IA émis",
-  JETON_AGENT_REFUSE: "Jeton de l'assistant IA refusé"
+  JETON_AGENT_REFUSE: "Jeton de l'assistant IA refusé",
+  ECRITURE_FICHIER_AGENT: "Fichier écrit par l'assistant IA dans l'espace de l'utilisateur"
 };
 
 export const ACTIONS_AUDIT: { code: string; libelle: string }[] = Object.entries(LIBELLES_ACTIONS).map(([code, libelle]) => ({

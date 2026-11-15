@@ -5,8 +5,8 @@ sidebar_position: 4
 
 # API, contrat OpenAPI et erreurs
 
-Le contrat consommé par le frontend ne change pas à la bascule : mêmes chemins, mêmes noms de champs, mêmes codes et même format d'erreur que Spring
-(ADR 0016, § 6). FastAPI génère OpenAPI à partir des routes et des modèles Pydantic.
+Le contrat consommé par le frontend est stable : chemins, noms de champs, codes et format d'erreur ne changent pas sans décision.
+FastAPI génère OpenAPI à partir des routes et des modèles Pydantic.
 
 ## Contrat
 
@@ -21,33 +21,31 @@ Le contrat consommé par le frontend ne change pas à la bascule : mêmes chemin
 
 ## Test de contrat
 
-Avant la bascule d'un domaine, un test compare le document OpenAPI produit par Spring et celui de FastAPI pour ce domaine (chemins, schémas, codes, sécurité).
-La CI valide la syntaxe OpenAPI et détecte les changements incompatibles. Le frontend ne doit rien remarquer.
+La CI valide la syntaxe OpenAPI et détecte les changements incompatibles : le frontend ne doit rien remarquer d'un changement de contrat.
 
 ## Erreurs
 
-* Format d'erreur identique à celui de Spring, produit par des gestionnaires enregistrés sur l'application (voir [architecture](./architecture.md)).
-  `RequestValidationError` (422 par défaut dans FastAPI) est remplacée si l'ancien contrat renvoyait un autre statut ou une autre structure.
+* Format d'erreur unique `{timestamp, status, error, message, path}`, produit par des gestionnaires enregistrés sur l'application (voir [architecture](./architecture.md)).
+  `RequestValidationError` (422 par défaut dans FastAPI) est remplacée pour renvoyer ce format d'erreur.
 * Les erreurs ne révèlent ni secret, ni donnée personnelle, ni chemin interne ; on n'expose pas `exc.errors()` brut sans filtrage.
 * Un conflit de version renvoie `409`, un accès refusé `403`, une absence d'authentification `401` (avec `WWW-Authenticate`), une ressource hors périmètre `404` ou `403`
-  selon la règle du domaine, conservée à l'identique.
+  selon la règle du domaine, stable.
 
 ## Exports PDF et Excel
 
-Le backend Java produit les PDF avec jsoup et openhtmltopdf (HTML → PDF, SVG par `openhtmltopdf-svg-support`) et les classeurs avec Apache POI (voir `docs/report/README.md`).
-Équivalents Python, lus dans leur documentation officielle :
+Le backend produit les PDF et les classeurs avec les composants suivants, lus dans leur documentation officielle (voir `site/docs/domaines/rapport/index.md`) :
 
 * **PDF : WeasyPrint** (HTML/CSS → PDF). `HTML(string=...).write_pdf()` renvoie les octets quand aucune cible n'est donnée ; `pdf_variant="pdf/a-3u"` produit du PDF/A si l'archivage
   l'exige. Le rendu est **bloquant** : appel dans `run_in_threadpool` ou route `def` (voir [architecture](./architecture.md)).
 * **Sécurité de WeasyPrint (documentée)** : avec du HTML ou du CSS non fiable, un PDF peut embarquer n'importe quel fichier accessible à l'utilisateur du processus. Règle : le HTML est
-  produit par nos gabarits, **toute valeur saisie est échappée** (la règle tirée de l'incident de l'ancien pipeline reste valable) et un `URLFetcher` personnalisé
+  produit par nos gabarits, **toute valeur saisie est échappée** (règle tirée d'un incident de production) et un `URLFetcher` personnalisé
   (`allowed_protocols`, aucune redirection, délai borné) refuse tout accès réseau ou fichier hors des ressources publiées. Les dépendances système (Pango) sont installées dans l'image
   du conteneur, non-root, et couvertes par un test de rendu au démarrage de la CI.
 * **Excel : openpyxl.** Gros exports : mode `write_only=True` (lignes ajoutées par `append()` seulement, mémoire bornée, classeur enregistrable **une seule fois**, volets figés avant les
   données) ; gros fichiers lus : `read_only=True` avec `close()` obligatoire. **Un fichier importé est non fiable** : installer `defusedxml` (openpyxl ne protège pas par défaut contre les
   bombes XML « billion laughs ») et borner taille et nombre de lignes. Les montants sont écrits depuis des `Decimal` avec un format de nombre explicite, jamais un `float` arrondi à l'affichage.
-* Pour chaque export migré, le test de parité compare le contenu (valeurs, colonnes, formats) à celui produit par Java ; le rendu visuel PDF (SVG, polices, pagination) fait l'objet d'une
-  revue visuelle validée par le propriétaire avant la bascule du domaine.
+* Pour chaque export, un test compare le contenu (valeurs, colonnes, formats) ; le rendu visuel PDF (SVG, polices, pagination) fait l'objet d'une
+  revue visuelle validée par le propriétaire.
 
 ## Documentation interactive
 

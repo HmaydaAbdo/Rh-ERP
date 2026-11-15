@@ -1,4 +1,4 @@
-"""Conventions d'architecture (équivalent de `ArchitectureConventionsTest` d'ArchUnit de l'ancien backend).
+"""Conventions d'architecture.
 
 Analyse statique des imports et du code de `staport.domains` : un test échoue au premier écart, avec la liste des
 fichiers. Les règles : un routeur n'atteint ni dépôt ni modèle de persistance ; un dépôt ne dépend ni d'un service ni

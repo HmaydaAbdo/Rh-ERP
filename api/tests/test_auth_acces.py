@@ -1,8 +1,6 @@
-"""Parité du domaine auth avec Spring (KAN-213) : chaîne de sécurité JWT, permissions par route, jeton agent, clés.
+"""Domaine auth (KAN-213) : chaîne de sécurité JWT, permissions par route, jeton agent, clés.
 
-Reprend `JwtSecurityChainTest`, `EndpointSecurityTest`, `SecurityConfigCorsTest`, `AgentSigningKeysTest`,
-`PolitiqueMotDePasseTest` et `EffectivePermissionResolverTest`, ainsi que la partie émission du jeton agent de
-`McpSecuriteIntegrationTest` (le serveur MCP lui-même relève de KAN-216).
+Couvre aussi l'émission du jeton agent (le serveur MCP lui-même relève de KAN-216).
 """
 
 # Le client de test de Starlette n'expose pas de types complets : cette règle n'est levée que pour ce fichier.
@@ -235,7 +233,7 @@ def test_le_rafraichissement_par_cookie_refuse_une_origine_non_autorisee_ou_abse
     sans_origine = plateforme.client.post("/auth/refresh")
     mauvaise = plateforme.client.post("/auth/refresh", headers={"Origin": "http://evil.example"})
     assert sans_origine.status_code == 401 and sans_origine.content == b""
-    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # `DefaultCorsProcessor` de Spring
+    assert mauvaise.status_code == 403 and mauvaise.text == "Invalid CORS request"  # refus CORS
 
 
 def test_le_rafraichissement_accepte_une_origine_autorisee_jusqu_a_la_resolution_du_controleur(
@@ -284,6 +282,7 @@ PUBLIQUES = {
     ("GET", "/auth/password-policy"),
     ("GET", "/.well-known/jwks.json"),
     ("GET", "/.well-known/oauth-protected-resource"),
+    ("POST", "/interne/ia/ecritures-fichier"),  # jeton agent, hors nginx (KAN-268)
 }
 AUTHENTIFIEES = {("POST", "/auth/logout"), ("GET", "/auth/me")}
 EXIGENCES: dict[tuple[str, str], set[str]] = {
@@ -356,6 +355,7 @@ EXIGENCES: dict[tuple[str, str], set[str]] = {
     ("POST", "/paie/effectifs"): {"PAIE_READ"},
     ("GET", "/paie/employes/{id}/parcours"): {"PAIE_READ"},
     ("POST", "/paie/export"): {"PAIE_EXPORT"},
+    ("GET", "/paie/export/agent/{reference}"): {"PAIE_EXPORT"},
     ("POST", "/paie/report/pdf"): {"PAIE_EXPORT"},
     ("GET", "/paie/import/modele"): {"PAIE_IMPORT"},
     ("POST", "/paie/import"): {"PAIE_IMPORT"},
@@ -405,7 +405,7 @@ def _routes(p: Plateforme) -> set[tuple[str, str]]:
 
 def test_les_routes_des_domaines_sont_decouvertes_et_chacune_declare_son_acces(plateforme: Plateforme) -> None:
     declarees = PUBLIQUES | AUTHENTIFIEES | set(EXIGENCES) | set(REQUIS_CUMULATIFS)
-    assert len(declarees) == 105
+    assert len(declarees) == 107
     assert _routes(plateforme) == declarees  # une route ajoutée sans exigence déclarée fait échouer ce test
 
 
@@ -486,6 +486,35 @@ def test_le_jeton_agent_porte_l_identite_seule_pendant_cinq_minutes(
     assert verifier_jeton_agent(cles, corps["jeton"]) == (identifiant, nom, "mcp:lecture")
     emis = plateforme.journal.de(nom, Action.JETON_AGENT_EMIS)[0]
     assert emis.details["jti"] == claims["jti"] and corps["jeton"] not in str(emis)
+
+
+def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_seulement(
+    plateforme: Plateforme, creer_utilisateur: Fabrique, connecter: Callable[[str, str], dict[str, Any]]
+) -> None:
+    """KAN-268 : chemin, taille et outil sont au journal, jamais le contenu ; un jeton REST, un navigateur (`Origin`),
+    un chemin hors de l'espace ou un outil inconnu sont refusés et n'écrivent rien."""
+    identifiant, mdp = creer_utilisateur("ecrivain", roles=("SYSTEM_ADMIN",))
+    with plateforme.moteur.connect() as c:
+        nom = c.execute(text("SELECT username FROM utilisateur WHERE id = :i"), {"i": identifiant}).scalar_one()
+    acces = connecter(nom, mdp)["accessToken"]
+    agent = plateforme.client.post("/auth/jetons/agent", headers=_bearer(acces)).json()["jeton"]
+    route = "/interne/ia/ecritures-fichier"
+    ecriture = {"chemin": "/espace/rapport.md", "taille": 42, "outil": "write_file", "contenu": "secret"}
+
+    assert plateforme.client.post(route, headers=_bearer(agent), json=ecriture).status_code == 204
+    ecrit = plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)
+    assert len(ecrit) == 1 and ecrit[0].details == {"chemin": "/espace/rapport.md", "taille": 42, "outil": "write_file"}
+    assert "secret" not in str(ecrit[0])
+
+    refus = [
+        plateforme.client.post(route, headers=_bearer(acces), json=ecriture),  # jeton REST : autre audience
+        plateforme.client.post(route, json=ecriture),  # sans jeton
+        plateforme.client.post(route, headers={**_bearer(agent), "Origin": "http://localhost:5002"}, json=ecriture),
+    ]
+    assert [r.status_code for r in refus] == [403, 403, 403]
+    invalides = [{**ecriture, "chemin": "/etc/passwd"}, {**ecriture, "outil": "execute"}, {**ecriture, "taille": -1}]
+    assert [plateforme.client.post(route, headers=_bearer(agent), json=e).status_code for e in invalides] == [400] * 3
+    assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 1
 
 
 def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive(

@@ -2,6 +2,7 @@ import { CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AgentStore, CopilotChat, CopilotChatConfiguration, CopilotKit, CopilotkitAgentFactory } from '@copilotkit/angular';
 
+import { AccordInterruptionComponent } from './accord-interruption.component';
 import { FilAssistant } from './fil-assistant.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 
@@ -36,7 +37,8 @@ describe('AssistantChatComponent', () => {
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     })
       .overrideComponent(AssistantChatComponent, {
-        remove: { imports: [CopilotChat] },
+        // L'accord d'écriture (injectInterrupt) a son propre spec ; ici seule la plomberie du fil et des erreurs compte.
+        remove: { imports: [CopilotChat, AccordInterruptionComponent] },
         add: { schemas: [CUSTOM_ELEMENTS_SCHEMA] }
       })
       .compileComponents();

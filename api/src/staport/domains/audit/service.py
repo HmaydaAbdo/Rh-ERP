@@ -1,5 +1,4 @@
-"""Seul point d'écriture du journal d'audit (parité avec `GenericAuditAspect`, `AuditJournalWriter` et
-`EcouteurEvenementsSecurite`).
+"""Seul point d'écriture du journal d'audit.
 
 Deux modes d'écriture (conventions/audit.md, « Transaction ») :
 - l'entrée d'une opération **réussie** est écrite dans la transaction métier, liée à sa révision : tout est validé ou

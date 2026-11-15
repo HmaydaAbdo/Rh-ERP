@@ -1,4 +1,4 @@
-"""Définitions déterministes des montants d'heures supplémentaires (parité de `CalculHeuresSupp`).
+"""Définitions déterministes des montants d'heures supplémentaires.
 
 Tout est arrondi à l'entier de dirham par la règle commune `arrondir_montant` (HALF_DOWN : exactement 0,5, on descend).
 """

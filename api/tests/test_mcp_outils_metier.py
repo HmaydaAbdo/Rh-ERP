@@ -1,5 +1,6 @@
-"""Outils MCP Employé, Paie, rapport, heures supplémentaires et accueil (KAN-216, parité `OutilsEmploye`, `OutilsPaie`,
-`OutilsHeuresSupp`, `OutilsAccueil` de Spring), par appels JSON-RPC sur `/mcp` avec un PostgreSQL réel.
+"""Outils MCP Employé, Paie, rapport, heures supplémentaires et accueil (KAN-216).
+
+Appels JSON-RPC sur `/mcp` avec un PostgreSQL réel.
 
 Jeu de données : trois mois de paie (2096-01, 2096-02, 2096-04), un départ en 2096-02 (STC), un en 2096-03 (absence), un
 sans motif en 2096-05 ; les périmètres de chaque test se limitent à ces chantiers et fonctions, pour ne dépendre
@@ -158,6 +159,7 @@ OUTILS_PORTES: dict[str, tuple[tuple[str, ...], dict[str, Any]]] = {
     "paie_qualite": (("PAIE_READ",), {"periode": S2}),
     "paie_bulletins_rechercher": (("PAIE_READ",), {"periode": S2}),
     "rapport_preparer": (("PAIE_EXPORT", "PAIE_READ"), {"periode": S2}),
+    "paie_export_preparer": (("PAIE_EXPORT", "PAIE_READ"), {"periode": S2}),
     "heures_supp_periodes": (("HEURES_SUP_READ", "PAIE_READ"), {}),
     "heures_supp_indicateurs": (("HEURES_SUP_READ", "PAIE_READ"), {"periode": S2}),
     "heures_supp_rechercher": (("HEURES_SUP_READ", "PAIE_READ"), {"periode": S2}),
@@ -168,11 +170,11 @@ OUTILS_PORTES: dict[str, tuple[tuple[str, ...], dict[str, Any]]] = {
 }
 
 
-def test_le_catalogue_compte_les_31_outils_de_spring_en_lecture_seule(
+def test_le_catalogue_compte_les_32_outils_en_lecture_seule(
     plateforme: Plateforme, admin: tuple[str, str, int]
 ) -> None:
     outils = {o["name"]: o for o in _rpc(plateforme, admin[0], "tools/list").json()["result"]["tools"]}
-    assert len(outils) == 31
+    assert len(outils) == 32
     assert set(OUTILS_PORTES) <= set(outils)
     for nom in OUTILS_PORTES:
         outil = outils[nom]
@@ -695,6 +697,48 @@ def test_le_rapport_est_prepare_sans_fichier_et_exige_l_export(
     vide = _donnees(_appel(plateforme, admin[0], "rapport_preparer", periode="2096-09", chantierIds=donnees.chantiers))
     assert vide["nombreChantiers"] == 0 and vide["chantiers"] == []
     assert _appel(plateforme, admin[0], "rapport_preparer", chantierIds=list(range(1, 52)))["isError"] is True
+
+
+def test_l_export_est_prepare_avec_une_reference_et_telecharge_par_son_seul_utilisateur(
+    plateforme: Plateforme,
+    donnees: Donnees,
+    creer_utilisateur: Fabrique,
+    connecter: Callable[[str, str], dict[str, Any]],
+) -> None:
+    """KAN-266 : l'outil ne rend aucun chiffre, seulement une référence liée à l'utilisateur ; le téléchargement exige
+    sa connexion REST, sa permission d'export et la même identité."""
+    proprio_id, proprio_mdp = creer_utilisateur("mcp-export", roles=("SYSTEM_ADMIN",))
+    autre_id, autre_mdp = creer_utilisateur("mcp-export-autre", roles=("SYSTEM_ADMIN",))
+    proprio, autre = _nom(plateforme, proprio_id), _nom(plateforme, autre_id)
+    jeton_agent = _jeton_agent(plateforme, connecter, proprio, proprio_mdp)
+
+    resultat = _donnees(
+        _appel(plateforme, jeton_agent, "paie_export_preparer", periode=S2, chantierIds=[donnees.chantiers[0]])
+    )
+    assert (resultat["periode"], resultat["nombreChantiers"]) == (S2, 1)
+    telechargement = resultat["telechargement"]
+    assert telechargement["nomFichier"] == "Paie_Export_2096-02.xlsx" and telechargement["expireDansSecondes"] == 300
+    assert "masse" not in str(resultat)  # aucun chiffre : la paie reste dans les outils de lecture
+
+    chemin = f"/paie/export/agent/{telechargement['reference']}"
+    en_tete = {"Authorization": f"Bearer {connecter(proprio, proprio_mdp)['accessToken']}"}
+    fichier = plateforme.client.get(chemin, headers=en_tete)
+    assert fichier.status_code == 200, fichier.text
+    assert fichier.headers["content-type"].startswith("application/vnd.openxmlformats")
+    assert fichier.content[:2] == b"PK"  # un classeur xlsx est une archive zip
+
+    assert plateforme.client.get(chemin).status_code == 401  # sans connexion
+    chez_autre = {"Authorization": f"Bearer {connecter(autre, autre_mdp)['accessToken']}"}
+    assert plateforme.client.get(chemin, headers=chez_autre).status_code == 404  # émise pour un autre utilisateur
+    assert plateforme.client.get(chemin + "x", headers=en_tete).status_code == 404  # référence altérée
+    assert plateforme.client.get(f"/paie/export/agent/{jeton_agent}", headers=en_tete).status_code == 404  # autre jeton
+
+
+def test_aucun_export_n_est_prepare_sans_bulletin(
+    plateforme: Plateforme, admin: tuple[str, str, int], donnees: Donnees
+) -> None:
+    resultat = _appel(plateforme, admin[0], "paie_export_preparer", periode="2096-09", chantierIds=donnees.chantiers)
+    assert resultat["isError"] is True and "rien à exporter" in resultat["content"][0]["text"]
 
 
 # --- Accueil ---------------------------------------------------------------------------------------

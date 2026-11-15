@@ -52,8 +52,8 @@ commentées séparément.
 
 ### Couche application
 
-**Migration FastAPI (KAN-224).** Les routes CRUD, recherche, statut, carte et synchronisation sont désormais exposées par
-`api/src/staport/domains/chantier/` dans l'application unique. Elles conservent les permissions `CHANTIER_READ`,
+Les routes CRUD, recherche, statut, carte et synchronisation sont exposées par
+`api/src/staport/domains/chantier/`. Elles exigent les permissions `CHANTIER_READ`,
 `CHANTIER_WRITE`, `CHANTIER_DELETE`, `CHANTIER_SYNC` et `CARTE_READ`; les écritures passent par l'audit Python. Les
 outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les champs rendus et ne modifient rien.
 
@@ -61,21 +61,21 @@ outils MCP de lecture `chantier_rechercher` et `chantier_fiche` bornent les cham
 
 - **Routes.** `router.py` (`/chantiers`, dont `POST /chantiers/sync`). Chaque route exige sa permission (`exiger(...)`) : `CHANTIER_READ` (lecture, recherche), `CHANTIER_WRITE` (création,
   modification, clôture, réouverture), `CHANTIER_DELETE`, `CHANTIER_SYNC`.
-- **Service.** `ChantierService`, exposé aux autres domaines par la façade `IChantierService` (`findById`, `search`,
+- **Service.** `ServiceChantier`, exposé aux autres domaines par la façade `api.py` du domaine (lecture par identifiant, recherche,
   `existsById`). À la création et à la modification il retire les espaces extérieurs du code, refuse un code déjà
-  pris sans tenir compte de la casse (`ChantierAlreadyExistsException`, en excluant le chantier courant) et compare la
+  pris sans tenir compte de la casse (`ChantierDejaExistant`, en excluant le chantier courant) et compare la
   version reçue à la version stockée à la modification.
 - **Statut.** L'interface dit « En cours » / « Clôturé » ; l'API et la base portent le booléen `actif`. Clôturer et
   rouvrir sont des modifications de `actif` (droit `CHANTIER_WRITE`) ; un chantier clôturé reste consultable et
   référencé par l'historique.
-- **Recherche.** `ChantierSpecification` : `code` et `designation` en « contient » sans casse (échappement des
+- **Recherche.** Critères de `ChantierRecherche` : `code` et `designation` en « contient » sans casse (échappement des
   caractères spéciaux), `actif` en égalité, `recherche` dans le code, le nom **ou** la désignation ; les filtres se
   combinent par ET.
 - **Suppression.** Refusée (`409`) tant qu'un employé (`employe.chantier_id`) ou un bulletin (`paie.chantier_id`)
   référence le chantier ; l'alternative est la clôture.
-- **Audit.** L'entité est `@Audited` (Envers) ; les écritures portent `@AuditableAction` (`CHANTIER_CREATION`,
-  `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`) ; chaque synchronisation est auditée par
-  `PerimetreSynchronisationChantier` (une entrée pour l'ensemble, une révision par chantier créé), la planifiée étant
+- **Audit.** L'entité est dans le registre d'audit ; les écritures déclarent leur action (`CHANTIER_CREATION`,
+  `CHANTIER_MODIFICATION`, `CHANTIER_SUPPRESSION`) ; chaque synchronisation est auditée
+  (`CHANTIER_SYNCHRONISATION` : une entrée pour l'ensemble, une révision par chantier créé), la planifiée étant
   attribuée à « Système » (origine `TACHE_PLANIFIEE`). Les lectures de l'assistant ont leurs propres entrées
   (`MCP_CHANTIER_*`).
 - **Synchronisation ERP** (`service.py`, `planification.py`, `metriques.py`). Appel HTTP à l'ERP (délais 5 s de connexion,
@@ -157,7 +157,7 @@ lien sortant vers Google Maps ; aucune donnée Employé, Paie ou autre domaine n
 
 ### Couche IA
 
-L'assistant RH n'accède à Chantier que par des **outils MCP de lecture** exposés par le backend (Spring AI) ; il n'écrit
+L'assistant RH n'accède à Chantier que par des **outils MCP de lecture** exposés par l'API ; il n'écrit
 rien (ni création, ni clôture, ni synchronisation), n'exécute aucun SQL et ne voit que ce que l'utilisateur connecté
 peut voir.
 
@@ -217,7 +217,7 @@ Index : `idx_chantier_actif` (statut), `idx_chantier_source_erp`.
   les nouveaux chantiers ERP restent sans nature et hors carte jusqu'à leur qualification ; la synchronisation
   n'invente et n'écrase jamais ces données.
 - **Position.** Saisir soit un lien `google.com/maps?q=latitude,longitude` (HTTPS ajouté s'il manque), ou
-  `https://www.google.com/maps/search/?api=1&query=latitude,longitude`, soit les deux coordonnées. Spring lit les
+  `https://www.google.com/maps/search/?api=1&query=latitude,longitude`, soit les deux coordonnées. Le serveur lit les
   paramètres de l'URI sans appel réseau. Le backend valide les bornes, conserve jusqu'à huit décimales et produit
   le lien Google Maps standard. Zéro est valide. Une paire incomplète, un lien sans point explicite ou des
   coordonnées en contradiction avec le lien sont refusés (`400`). Avec un lien court ou une adresse seule, saisir
@@ -272,7 +272,7 @@ conception du RBAC.
 | `PUT` | `/chantiers/{id}/statut` | Clôturer ou rouvrir en conservant la qualification | 200, 400, 404, 409 |
 | `GET` | `/chantiers/carte` | Projection des chantiers autorisés à l'affichage (`CARTE_READ`) | 200, 401, 403 |
 | `GET` | `/chantiers/{id}` | Consulter un chantier | 200, 404 |
-| `POST` | `/chantiers/search` | Rechercher (paginé, triable) — body `ChantierSearchCriteria` (`code`, `designation`, `actif`) | 200 |
+| `POST` | `/chantiers/search` | Rechercher (paginé, triable) — body `ChantierRecherche` (`code`, `designation`, `actif`) | 200 |
 | `DELETE` | `/chantiers/{id}` | Supprimer (bloqué si référencé par un employé) | 204, 404, 409 |
 | `POST` | `/chantiers/sync` | Déclencher une synchronisation ERP immédiate | 200 |
 
@@ -280,13 +280,13 @@ conception du RBAC.
 
 | Contrat | Champs (type) | Contraintes et sens |
 |---|---|---|
-| `ChantierCreateRequestDto` | `code: String`, `designation: String`, `nom: String?`, `nature: NatureChantier`, `afficherSurCarte: Boolean`, `localisation: String?`, `latitude: BigDecimal?`, `longitude: BigDecimal?` | Code requis (100), désignation requise (500), nom facultatif (255), nature et choix d'affichage requis ; lien (2048) ou paire de coordonnées ; bornes et huit décimales validées |
-| `ChantierUpdateRequestDto` | Champs de création + `version: Long`, `actif: Boolean` | Version et statut requis ; mêmes validations géographiques ; version périmée refusée (`409`) |
-| `ChantierSearchCriteria` | `code: String?`, `designation: String?`, `recherche: String?`, `actif: Boolean?` | Filtres facultatifs; 100 caractères maximum pour le code, 500 pour les deux textes. `code` et `designation` se combinent; `recherche` cherche dans code, nom ou désignation |
-| `ChantierResponseDto` | `id: Long`, `version: Long`, `code: String`, `designation: String?`, `nom: String?`, `sourceErp: boolean`, `actif: boolean`, `nature: NatureChantier?`, `localisation: String?`, `latitude: BigDecimal?`, `longitude: BigDecimal?`, `afficherSurCarte: boolean` | La nature peut être absente avant qualification manuelle ; la position n'est jamais inventée |
-| `ChantierStatutRequestDto` | `version: Long`, `actif: Boolean` | Deux champs requis ; aucune modification de qualification |
-| `ChantierCarteDto` | `id: Long`, `code: String`, `designation: String?`, `nom: String?`, `nature: NatureChantier`, `localisation: String`, `latitude: BigDecimal`, `longitude: BigDecimal` | Uniquement les chantiers autorisés à l'affichage ; aucune donnée de paie |
-| `PaieChantierOptionDto` | `id: Long`, `code: String`, `nom: String?`, `designation: String?`, `actif: boolean` | Option des filtres Paie du mois choisi : code et nom visibles, désignation en repli quand le nom manque |
+| `ChantierCreateRequestDto` | `code: texte`, `designation: texte`, `nom: texte?`, `nature: NatureChantier`, `afficherSurCarte: booléen`, `localisation: texte?`, `latitude: BigDecimal?`, `longitude: BigDecimal?` | Code requis (100), désignation requise (500), nom facultatif (255), nature et choix d'affichage requis ; lien (2048) ou paire de coordonnées ; bornes et huit décimales validées |
+| `ChantierUpdateRequestDto` | Champs de création + `version: entier`, `actif: booléen` | Version et statut requis ; mêmes validations géographiques ; version périmée refusée (`409`) |
+| `ChantierRecherche` | `code: texte?`, `designation: texte?`, `recherche: texte?`, `actif: booléen?` | Filtres facultatifs; 100 caractères maximum pour le code, 500 pour les deux textes. `code` et `designation` se combinent; `recherche` cherche dans code, nom ou désignation |
+| `ChantierResponseDto` | `id: entier`, `version: entier`, `code: texte`, `designation: texte?`, `nom: texte?`, `sourceErp: boolean`, `actif: boolean`, `nature: NatureChantier?`, `localisation: texte?`, `latitude: BigDecimal?`, `longitude: BigDecimal?`, `afficherSurCarte: boolean` | La nature peut être absente avant qualification manuelle ; la position n'est jamais inventée |
+| `ChantierStatutRequestDto` | `version: entier`, `actif: booléen` | Deux champs requis ; aucune modification de qualification |
+| `ChantierCarteDto` | `id: entier`, `code: texte`, `designation: texte?`, `nom: texte?`, `nature: NatureChantier`, `localisation: texte`, `latitude: BigDecimal`, `longitude: BigDecimal` | Uniquement les chantiers autorisés à l'affichage ; aucune donnée de paie |
+| `PaieChantierOptionDto` | `id: entier`, `code: texte`, `nom: texte?`, `designation: texte?`, `actif: boolean` | Option des filtres Paie du mois choisi : code et nom visibles, désignation en repli quand le nom manque |
 
 ### Permissions
 
@@ -443,12 +443,12 @@ Le suivi des évolutions est dans Jira (projet `KAN`) :
 
 | Règle | Vérification exécutable |
 |---|---|
-| Nature et choix d'affichage requis ; anciens chantiers sans nature hors carte | `ChantierLocalisationIntegrationTest`, `chantier-form.component.spec.ts` |
-| Lien avec ou sans HTTPS, paire seule, zéro, bornes et huit décimales | `LocalisationChantierServiceTest` |
-| Refus d'adresse seule, lien ambigu, mauvais hôte, paire incomplète ou contradictoire | `LocalisationChantierServiceTest`, contrat HTTP et formulaire |
-| Source cartographique sans paie et seulement avec `CARTE_READ` | `EndpointSecurityTest`, `ChantierLocalisationIntegrationTest` |
-| Retrait de la carte sans effacer la position ; statut sans perdre la qualification | `ChantierLocalisationIntegrationTest`, `chantier.service.spec.ts` |
-| Reprise auditée, sans changement de statut, rejouable sans réécriture et préservant une qualification manuelle | `ChantierLocalisationIntegrationTest` |
+| Nature et choix d'affichage requis ; anciens chantiers sans nature hors carte | `test_chantier_synchronisation.py`, `chantier-form.component.spec.ts` |
+| Lien avec ou sans HTTPS, paire seule, zéro, bornes et huit décimales | `test_chantier_synchronisation.py` |
+| Refus d'adresse seule, lien ambigu, mauvais hôte, paire incomplète ou contradictoire | `test_chantier_synchronisation.py`, contrat HTTP et formulaire |
+| Source cartographique sans paie et seulement avec `CARTE_READ` | `test_auth_acces.py`, `test_chantier_synchronisation.py` |
+| Retrait de la carte sans effacer la position ; statut sans perdre la qualification | `test_chantier_synchronisation.py`, `chantier.service.spec.ts` |
+| Reprise auditée, sans changement de statut, rejouable sans réécriture et préservant une qualification manuelle | `test_chantier_synchronisation.py` |
 | Marqueur au clavier, sites partagés, chargement vide/en erreur et nouvelle tentative | Specs de la carte et `chantier-localisation-full-stack.spec.ts` |
 | Création réelle, extraction, affichage, retrait ; téléphone/grand écran, clair/sombre, accessibilité | `e2e/chantier-localisation-full-stack.spec.ts` |
 
@@ -499,7 +499,7 @@ repérer la couche touchée et vérifier ses points de contrôle.
 
 Appliquer les règles du [README](index.md#règles-métier) : six natures, saisie manuelle obligatoire, anciens
 chantiers et créations ERP hors carte avant qualification, position explicite en WGS 84 à huit décimales maximum.
-Utiliser Spring pour lire les URI et MapLibre pour les marqueurs ; ne pas appeler de géocodage. La clôture/réouverture
+Lire les URI côté serveur et MapLibre pour les marqueurs ; ne pas appeler de géocodage. La clôture/réouverture
 conserve la qualification. Contrôler `chantier` et `chantier_aud`, l'idempotence de la reprise et `CARTE_READ`.
 
 ### Vérification

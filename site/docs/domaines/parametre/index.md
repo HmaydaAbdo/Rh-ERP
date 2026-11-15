@@ -19,7 +19,7 @@ vue Cartes ou vue Analytique propre.
 | `cle` | `varchar(100)` | Obligatoire et unique ; clé du catalogue fixe, non modifiable |
 | `valeur` | `varchar(255)` | Obligatoire ; texte validé et normalisé selon sa clé |
 
-Les métadonnées de saisie proviennent de `CleParametre`, pas de champs administrables. Une clé du
+Les métadonnées de saisie proviennent du catalogue (`catalogue.py`), pas de champs administrables. Une clé du
 catalogue absente de la base est une installation incomplète ; aucune valeur de repli ne masque ce cas.
 Le backend garde les valeurs en mémoire sur son instance et les invalide après validation de la transaction.
 
@@ -34,7 +34,7 @@ Le backend garde les valeurs en mémoire sur son instance et les invalide après
 | `paie.analytique.pas-tranche` | 500 DH | Pas et largeur minimale des tranches de répartition des salaires ; de 1 à 100 000 DH. |
 | `chantier.synchronisation.cron` | `0 0 23 * * *` | Expression cron à six champs, secondes comprises, lue en UTC ; planifie la synchronisation quotidienne à 23 h. Relue avant chaque exécution. |
 
-La définition complète (libellé, description, type et bornes) appartient à `CleParametre`. Une valeur entière est normalisée
+La définition complète (libellé, description, type et bornes) appartient au catalogue (`catalogue.py`). Une valeur entière est normalisée
 et bornée côté serveur. Une expression cron est validée par APScheduler (jours de semaine par noms `MON` à `SUN` ou `*`, jamais en chiffres). Une valeur invalide répond `400` et n'est pas enregistrée.
 
 La saisie entière utilise des chiffres décimaux et un signe éventuel. La notation exponentielle (`1e2`),
@@ -44,16 +44,16 @@ hexadécimale (`0x10`) ou une valeur composée seulement d'espaces est refusée,
 
 | DTO et champ | Type | Contraintes et description |
 |---|---|---|
-| `ParametreResponseDto.id` | `Long` | Identifiant du paramètre |
-| `version` | `Long` | Version courante à renvoyer lors de l'enregistrement |
-| `cle` | `String` | Clé connue du catalogue |
-| `libelle`, `description` | `String` | Nom et explication métier de la valeur |
+| `ParametreResponseDto.id` | `entier` | Identifiant du paramètre |
+| `version` | `entier` | Version courante à renvoyer lors de l'enregistrement |
+| `cle` | `texte` | Clé connue du catalogue |
+| `libelle`, `description` | `texte` | Nom et explication métier de la valeur |
 | `type` | `TypeParametre` | `ENTIER` ou `CRON` |
-| `unite` | `String` ou `null` | Minutes, heures, caractères ou DH ; absente pour un cron |
-| `minimum`, `maximum` | `Long` ou `null` | Bornes inclusives des entiers ; absentes pour un cron |
-| `valeur` | `String` | Valeur courante normalisée |
-| `ParametreUpdateRequestDto.version` | `Long` | Obligatoire ; version courante issue de la lecture |
-| `ParametreUpdateRequestDto.valeur` | `String` | Obligatoire, non blanche et au plus 255 caractères ; type et bornes vérifiés par le serveur |
+| `unite` | `texte` ou `null` | Minutes, heures, caractères ou DH ; absente pour un cron |
+| `minimum`, `maximum` | `entier` ou `null` | Bornes inclusives des entiers ; absentes pour un cron |
+| `valeur` | `texte` | Valeur courante normalisée |
+| `ParametreUpdateRequestDto.version` | `entier` | Obligatoire ; version courante issue de la lecture |
+| `ParametreUpdateRequestDto.valeur` | `texte` | Obligatoire, non blanche et au plus 255 caractères ; type et bornes vérifiés par le serveur |
 
 Le frontend utilise `number` pour les identifiants, la version et les bornes, et les mêmes noms de champs.
 Une modification retourne le DTO complet actualisé. Codes d'erreur : `400` pour une valeur invalide,
@@ -72,7 +72,7 @@ leur attribution reste ensuite administrable depuis l'écran Rôles.
 
 ## Audit et persistance
 
-`parametre` est audité par Envers. Chaque modification passe par `@AuditableAction` : valeur et révision sont atomiques et une
+`parametre` est historisé (`parametre_aud`). Chaque modification est une action auditée : valeur et révision sont atomiques et une
 entrée `PARAMETRE_MODIFICATION` est ajoutée au journal. La migration `V16__parametres_administrables.sql` crée la table et sa
 table `parametre_aud`, écrit la révision de migration et journalise les valeurs et permissions initiales. Le compte applicatif
 ne peut ni modifier ni supprimer l'historique.
@@ -94,18 +94,18 @@ sans effacer les saisies des autres paramètres. Le champ reçoit le focus quand
 
 | Scénario | Preuve exécutable |
 |---|---|
-| Type, bornes inclusives, normalisation et expression cron invalide | `CleParametreTest` |
-| Catalogue, modification lue aussitôt, validation refusée et trace d'audit | `ParametreServiceTest` |
+| Type, bornes inclusives, normalisation et expression cron invalide | `test_parametre.py` |
+| Catalogue, modification lue aussitôt, validation refusée et trace d'audit | `test_parametre.py` |
 | Lecture seule, chargement, erreur et réessai | `parametre-list.component.spec.ts` |
 | Entier hors bornes, notation refusée, valeur blanche et sauvegarde avec version | `parametre-item.component.spec.ts` |
-| Routes refusées sans permission et accessibles avec le droit requis | `EndpointSecurityTest` |
+| Routes refusées sans permission et accessibles avec le droit requis | `test_auth_acces.py` |
 
 Les durées et seuils sont ceux du catalogue présenté ci-dessus. Leur adaptation métier se fait par
 l'écran ; ajouter une nouvelle clé demande sa définition, sa valeur initiale et ses usages documentés.
 
 ## Couche IA
 
-L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de lecture (Spring AI), réservé à ceux qui voient l'écran Paramètres ; il ne les modifie jamais.
+L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de lecture, réservé à ceux qui voient l'écran Paramètres ; il ne les modifie jamais.
 
 | Outil | Ce qu'il fait | Permission | Audit |
 |---|---|---|---|
@@ -136,5 +136,5 @@ L'assistant RH peut lire les paramètres de fonctionnement par un outil MCP de l
 
 ### Vérification
 
-Exécuter `CleParametreTest`, `ParametreServiceTest`, les specs des paramètres et la sécurité des endpoints.
+Exécuter `test_parametre.py`, les specs des paramètres et la sécurité des endpoints.
 Vérifier lecture seule, erreur/réessai, valeur invalide, version périmée et consommateur du paramètre modifié.

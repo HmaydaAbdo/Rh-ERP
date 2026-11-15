@@ -24,7 +24,7 @@ alors qu’une origine CORS ne contient que le schéma, l’hôte et éventuelle
 Chaque environnement fournit `CORS_ALLOWED_ORIGINS`, une liste séparée par des virgules.
 Le backend la valide au démarrage et refuse les valeurs vides, les wildcards, les
 schémas autres que HTTP(S), les chemins et les informations d’identification URI.
-Spring Security applique la liste avec `allowedOrigins`; les credentials restent activés
+L'API applique la liste (middleware CORS et refus des origines inconnues) ; les credentials restent activés
 uniquement pour les origines déclarées.
 
 - développement : `http://localhost:4200` dans `backend/.env.example` ;
@@ -40,7 +40,7 @@ uniquement pour les origines déclarées.
 
 ## Preuves
 
-- `SecurityConfig` valide et applique les origines explicites.
-- `JwtSecurityChainTest` vérifie un pré-vol autorisé et un pré-vol refusé.
+- La configuration (`Configuration`, pydantic-settings) valide les origines explicites et le middleware CORS les applique.
+- `test_auth_acces.py` vérifie un pré-vol autorisé et un pré-vol refusé.
 - `docs/configuration.md`, `docs/deployment.md` et les exemples `.env` décrivent la source
   et le format de la configuration.

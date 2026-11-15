@@ -1,4 +1,4 @@
-"""Accueil personnalisé (parité de `AccueilService`) : le choix et l'ordre des indicateurs de chaque utilisateur."""
+"""Accueil personnalisé : le choix et l'ordre des indicateurs de chaque utilisateur."""
 
 from collections.abc import Awaitable, Callable
 

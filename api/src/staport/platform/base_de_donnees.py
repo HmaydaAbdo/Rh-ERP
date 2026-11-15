@@ -1,4 +1,4 @@
-"""Moteur et session SQLAlchemy asynchrones (KAN-212, ADR 0016 § 2).
+"""Moteur et session SQLAlchemy asynchrones (KAN-212).
 
 `expire_on_commit=False` (documenté par SQLAlchemy pour l'asynchrone : sans lui, lire un attribut après un commit
 déclencherait une E/S implicite impossible en `await`). Une opération métier = une transaction, ouverte par le service
@@ -38,8 +38,8 @@ async def session_requete(requete: Request) -> AsyncIterator[AsyncSession]:
 
 
 def version_suivante(version: int | None) -> int:
-    """Compteur de version comme Hibernate (@Version) : 0 à l'insertion, puis +1 à chaque modification.
+    """Compteur de version : 0 à l'insertion, puis +1 à chaque modification.
 
-    SQLAlchemy démarre à 1 par défaut (`(version or 0) + 1`) ; Spring renvoyait 0 à la création (KAN-226).
+    SQLAlchemy démarre à 1 par défaut (`(version or 0) + 1`) ; le contrat de l'API veut 0 à la création (KAN-226).
     """
     return 0 if version is None else version + 1

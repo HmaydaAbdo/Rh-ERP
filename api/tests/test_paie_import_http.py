@@ -1,8 +1,7 @@
 """Import de paie : contrat HTTP de l'assistant (fichier, période, corrections), refontes décidées par le propriétaire.
 
-Ces cas reprennent ceux du banc différentiel Spring/Python, supprimé (KAN-238) : chacun fixe un comportement
-volontairement différent de l'ancien backend (voir ``site/docs/migration/paie.md``). Seuls des fichiers sans fiche
-connue sont envoyés : l'analyse ne lit que la base et n'écrit rien.
+Ces cas fixent chacun un comportement décidé par le propriétaire (KAN-238, voir ``site/docs/domaines/paie``).
+Seuls des fichiers sans fiche connue sont envoyés : l'analyse ne lit que la base et n'écrit rien.
 """
 
 import json

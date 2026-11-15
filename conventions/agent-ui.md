@@ -7,7 +7,7 @@ serveur. Chaque application documente ses versions, son catalogue de composants,
 ses parcours dans le site de documentation (`site/docs/`).
 
 Pour Staport Intelligence, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
-capacités métier MCP côté Spring ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier
+capacités métier MCP côté API ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier
 parcours rend messages, sources et états avec les composants Staport et **pilote les vues partagées
 existantes** (voir « Pilotage des vues existantes »). A2UI, une mascotte Rive ou une vue immersive
 ne sont introduits qu'après un besoin mesuré que ce pilotage ne couvre pas.
@@ -50,7 +50,7 @@ son test, et aucune n'est remplacée par une autre :
 * **Fonctions de l'hôte** : liste blanche minimale ; chacune valide ses arguments, revérifie identité, permission et
   périmètre côté serveur, journalise l'appel dans l'audit, et ne renvoie que des données autorisées.
 * **Données** : seules les données nécessaires à la vue entrent dans le code généré, après les projections par champ de
-  Spring ; aucune donnée interdite à l'utilisateur, aucun secret, aucun jeton.
+  l'API ; aucune donnée interdite à l'utilisateur, aucun secret, aucun jeton.
 * **Jeu adverse** : cas d'injection directe et indirecte (champs de données piégés), d'exfiltration (lien, image, requête),
   d'usurpation d'écran (faux formulaire, faux bouton d'approbation) et de contournement de périmètre, rejoués à chaque
   changement de modèle, de prompt ou de bibliothèque.
@@ -135,7 +135,7 @@ client prédéfinies sans renderer A2UI. Les mises à jour d'état provenant du 
 données non fiables pour toute action ; aucun patch d'état ne modifie les droits de l'utilisateur.
 
 Le flux affiche des étapes publiques utiles (« Recherche des sources », « Lecture terminée »),
-des résultats et des demandes de confirmation. Il ne publie ni prompts internes ni exceptions Java
+des résultats et des demandes de confirmation. Il ne publie ni prompts internes ni exceptions
 brutes ; le raisonnement du modèle suit la règle 7 ci-dessus. Les erreurs présentées indiquent une correction possible sans
 révéler de contenu sensible.
 

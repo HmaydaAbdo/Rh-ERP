@@ -1,4 +1,4 @@
--- Schéma initial — reflète exactement les entités JPA du projet au 2026-09-22 (Function sans champ
+-- Schéma initial — reflète exactement les modèles du projet au 2026-09-22 (Function sans champ
 -- actif, Employee avec dates obligatoires, Paie avec salaireTotal dérivé mais toujours stocké).
 -- Ordre de création : référentiels sans dépendance (fonction, chantier) d'abord, puis employe
 -- (dépend des deux), puis paie (dépend des trois).
@@ -32,7 +32,7 @@ CREATE INDEX idx_chantier_source_erp ON chantier (source_erp);
 
 -- =========================================================================
 -- employe — fiche d'identité des employés (voir docs/employee/README.md).
--- statut : enum Java (ACTIF/INACTIF) persisté par nom (EnumType.STRING) — représenté ici par
+-- statut : énumération (ACTIF/INACTIF) persistée par son nom — représentée ici par
 -- varchar + CHECK plutôt qu'un type ENUM natif Postgres, pour rester extensible sans ALTER TYPE.
 -- =========================================================================
 CREATE TABLE employe (
@@ -58,8 +58,8 @@ CREATE INDEX idx_employe_date_embauche ON employe (date_embauche);
 -- =========================================================================
 -- paie — bulletins de paie mensuels (voir docs/paie/README.md).
 -- fonction/chantier/equipe sont un snapshot figé au mois du bulletin, jamais une référence vivante
--- à l'affectation courante de l'employé. periode : YearMonth Java stocké en entier aaaaMM (ex.
--- 202608), via YearMonthAttributeConverter. salaire_total : calculé côté serveur, jamais saisi,
+-- à l'affectation courante de l'employé. periode : mois stocké en entier aaaaMM (ex.
+-- 202608). salaire_total : calculé côté serveur, jamais saisi,
 -- mais toujours stocké (Paie.calculerSalaireTotal()).
 -- =========================================================================
 CREATE TABLE paie (

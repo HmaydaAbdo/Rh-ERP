@@ -31,5 +31,5 @@ async def jeton_agent(client: httpx.AsyncClient, api: str, jeton_connexion: str)
 async def outils_erp(url_mcp: str, jeton_agent: str, delai_secondes: float = 30.0) -> list[BaseTool]:
     """Le catalogue MCP de l'API ERP en outils LangChain ; le jeton agent n'est jamais journalisé ni conservé."""
     transport = StreamableHttpTransport(url_mcp, headers={"Authorization": f"Bearer {jeton_agent}"})
-    # Le mode MCP commun garde la compatibilité avec le backend Spring pendant la migration des domaines.
+    # Mode de transport MCP commun du client FastMCP.
     return await MCPAdapter(Client(transport, timeout=delai_secondes, mode="legacy")).list_tools()

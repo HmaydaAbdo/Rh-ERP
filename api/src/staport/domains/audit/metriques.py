@@ -1,4 +1,4 @@
-"""Compteurs de supervision de l'audit (parité avec `AuditMetrics`, à brancher sur l'export de métriques).
+"""Compteurs de supervision de l'audit.
 
 Un événement de sécurité non écrit ne bloque pas l'opération : il doit donc au moins déclencher une alerte.
 """

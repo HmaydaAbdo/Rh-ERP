@@ -6,7 +6,7 @@ cas d'usage, ses modèles, ses outils, ses données et ses décisions techniques
 ADR.
 
 Pour Staport Intelligence, les décisions, l'architecture, la feuille de route et l'état du chantier sont tenus
-dans un document unique, [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le métier reste dans Spring ; l'orchestration
+dans un document unique, [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le métier reste dans l'API Python ; l'orchestration
 IA est un service Python distinct. Ce document ne déclare aucun composant implémenté ni déployé ;
 l'état réel est celui de `site/docs/ia`.
 
@@ -168,15 +168,14 @@ Les procédures réutilisables entre applications ne doivent pas embarquer de r�
 un domaine. Le contexte présenté à l'agent et les sorties récupérées sont des données non fiables ;
 ils ne peuvent pas modifier les permissions, les instructions de sécurité ou les validations serveur.
 
-## Frontière entre métier Java et orchestration IA
+## Frontière entre métier et orchestration IA
 
-Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. Staport Intelligence conserve son
-monolithe modulaire Spring Boot, ses services, transactions, API REST, permissions et audits. Le
+Le framework d'un backend métier ne détermine pas celui de l'orchestrateur. Staport Intelligence porte son
+métier dans un monolithe modulaire FastAPI : services, transactions, API REST, permissions et audits. Le
 backend expose seulement des capacités métier ciblées par des adaptateurs MCP ; il n'héberge pas
-les appels de modèles ni les graphes d'agents. Dans Staport Intelligence (décision du 2026-10-26), le serveur MCP
-du backend utilise le module serveur MCP de **Spring AI** (outils déclarés par annotations) et le
-jeton agent est émis par **Spring Authorization Server** (échange de jetons OAuth2, RFC 8693) ; aucun
-client de modèle, ni LangChain4j, ni LangGraph4j n'entre dans le monolithe.
+les appels de modèles ni les graphes d'agents. Le serveur MCP du backend est un serveur **FastMCP** monté dans
+l'application (outils déclarés par décorateur) et le jeton agent est émis par l'API (JWT RS256 d'audience MCP) ;
+aucun client de modèle ni graphe d'agents n'entre dans le monolithe.
 
 L'orientation Staport Intelligence est un **service IA Python** distinct, avec **LangGraph** pour les workflows à
 état explicite et un point d'entrée **AG-UI** pour l'interface. Python est retenu parce que
@@ -207,10 +206,10 @@ Angular sont publiés en schéma JSON depuis Pydantic et validés des deux côt�
   accepte middlewares, checkpointer, `Store`, contexte d'exécution et sortie structurée), avec ses middlewares. On adopte le harnais
   tel que Deep Agents le propose (fichiers virtuels sur `StateBackend`, sous-agents, résumé) ; `FilesystemBackend` et
   `LocalShellBackend` ne sont jamais utilisés sur un serveur. Les appels de modèles restent probabilistes : valider les arguments et sorties par
-  schéma côté service IA, puis refaire les validations métier côté Spring. Une erreur retournée à
+  schéma côté service IA, puis refaire les validations métier côté API. Une erreur retournée à
   l'agent est structurée et minimisée ; elle n'expose ni stacktrace ni données interdites.
-* Le SDK et le transport MCP côté Java sont sélectionnés sur preuve de compatibilité avec le JDK
-  et Spring Boot réellement déclarés par le projet, sans ajouter de framework LLM au monolithe.
+* Le SDK et le transport MCP côté API sont sélectionnés sur preuve de compatibilité avec les versions
+  réellement déclarées par le projet, sans ajouter de framework LLM au monolithe.
 * Tout composant supplémentaire, notamment un second runtime IA, une file de messages ou un moteur
   de workflow, exige un besoin vérifié, un contrat authentifié et la décision d'architecture
   correspondante.
@@ -251,8 +250,8 @@ propriétaire avant d'écrire quoi que ce soit.
 | Confirmation humaine | `HumanInTheLoopMiddleware` et les interruptions LangGraph |
 | Modèles via la passerelle | Modèle de chat LangChain qui transmet le raisonnement (`ChatLiteLLM` de `langchain-litellm`) pointé sur LiteLLM |
 | Outils MCP côté agent | MCP intégré à LangChain (`langchain.mcp`, client FastMCP) ; `langchain-mcp-adapters` n'est plus maintenu |
-| Serveur MCP côté Spring | Module serveur MCP de Spring AI, outils déclarés par annotations |
-| Jeton délégué de l'agent | Spring Authorization Server, échange de jetons OAuth2 (RFC 8693) |
+| Serveur MCP côté API | FastMCP monté dans FastAPI, outils déclarés par décorateur |
+| Jeton délégué de l'agent | Jeton JWT RS256 émis par l'API (`POST /auth/jetons/agent`), d'audience MCP |
 | Garde-fous, budgets et limites par utilisateur | Fonctions natives de LiteLLM (détection d'injection, masquage par Presidio, budgets par utilisateur et par équipe) |
 | Conversations et mémoire durables | Checkpointer LangGraph PostgreSQL et `Store` LangGraph |
 | Traces, coûts, retours, versions de prompts | OpenTelemetry et Langfuse auto-hébergé |
@@ -271,7 +270,7 @@ cités par l'utilisateur sont toujours proposés lorsqu'ils sont présents dans 
 restent vérifiées par les API métier à chaque appel.
 
 Restent du code à nous, et seulement cela : les règles métier de l'ERP dans les API publiques de leurs domaines,
-l'appel d'échange de jeton vers Spring et le corps métier des outils MCP du backend (leur déclaration passe par Spring AI).
+l'appel d'échange de jeton vers l'API et le corps métier des outils MCP du backend (leur déclaration passe par FastMCP).
 Le service IA n'ajoute pas de vérificateur de réponse maison : les outils métier fournissent leurs valeurs calculées,
 les middlewares officiels assurent l'orchestration, et le jeu de référence mesure l'exactitude. Chaque morceau de code
 propre est justifié dans le document de référence de l'application par l'absence d'un composant officiel.
@@ -430,7 +429,7 @@ avant l'adoption.
 Un agent de domaine (« micro-agent ») possède un périmètre métier explicite et ne travaille que sur
 ses outils, ses skills (guide agent de `site/docs/domaines/<domaine>/`) et son contexte. Dans Staport Intelligence, sa définition reste
 dans le service IA, organisée par domaine ; les règles métier et les adaptateurs MCP restent
-dans leurs domaines Spring propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
+dans leurs domaines propriétaires. Il déclare son nom, sa mission, ses outils, son alias de
 modèle et son budget. Un besoin d'un autre domaine passe par une délégation explicite du superviseur
 ou un outil public autorisé, sans accès implicite à son contexte.
 
@@ -696,7 +695,7 @@ de ses relectures ; le repli lui laisse atteindre n'importe quel domaine. Aucune
 
 ### Espace de fichiers propre à l'identité
 
-Le backend de l'agent est un `CompositeBackend` (`backend_par_identite`) : les compétences en lecture seule, et sous `/espace/` un `StoreBackend` dont la fabrique d'espace de noms est `(identité, "espace")`, l'identité étant celle du jeton agent validé par Spring, jamais une valeur
+Le backend de l'agent est un `CompositeBackend` (`backend_par_identite`) : les compétences en lecture seule, et sous `/espace/` un `StoreBackend` dont la fabrique d'espace de noms est `(identité, "espace")`, l'identité étant celle du jeton agent validé par l'API, jamais une valeur
 du navigateur ou du modèle (le même chemin chez deux utilisateurs désigne deux fichiers distincts, testé). L'écriture reste refusée par les permissions tant que l'épopée d'écriture ne l'ouvre pas, domaine par domaine. Le magasin est en mémoire du processus aujourd'hui ; il passe à PostgreSQL avec cette épopée.
 
 ### Domaines, sous-agents et sous-graphes
@@ -717,7 +716,7 @@ La documentation officielle ne confirme pas tout ce que la formulation initiale 
 * « Hydratation automatique des pointeurs par Deep Agents » : le harnais fournit sous-agents, compétences à divulgation progressive, **outils de compétence protégés, épinglage**, outils MCP et profils
   d'harnais. L'hydratation « à la volée » est réalisée par ces fonctions ; ce qui reste à l'application est le choix des compétences à épingler (voir « Pièce maison déclarée »).
 * « Bac à sable qui évolue » : réalisé par l'état de l'agent et le système de fichiers virtuel du harnais ; aucun mécanisme implicite n'est présumé.
-* « Schémas Zod » : l'équivalent Python est Pydantic / JSON Schema. Le service IA est en Python ; le serveur MCP d'ERP est celui du monolithe (Spring AI aujourd'hui, SDK Python MCP après la bascule, voir l'ADR 0016).
+* « Schémas Zod » : l'équivalent Python est Pydantic / JSON Schema. Le service IA est en Python ; le serveur MCP d'ERP est celui du monolithe (FastMCP, voir l'ADR 0016).
 * `LLMToolSelectorMiddleware` : documenté, mais il **demande à un modèle** de choisir les outils (appel supplémentaire). Il est retiré du chemin systématique et remplacé par les outils de compétence ;
   il n'est réactivé que si l'évaluation chiffrée montre un gain sur les demandes ambiguës sans dépasser le budget de latence.
 * `ProviderToolSearchMiddleware` : voir le tableau ci-dessus, incompatible avec le pool multi-fournisseurs gratuit.
@@ -925,7 +924,7 @@ Un domaine n'est livré à l'agent qu'après ces étapes, qui reprennent les dé
    paie non importé). Un paramètre de recherche précise ce qu'il accepte (nom complet ou partiel).
 2. **Cas dans le jeu avant livraison.** Au moins : une réponse simple, une question multi-domaines, un suivi
    multi-tours, un homonyme, une donnée absente, un refus de droits, une injection dans la question. Les
-   marqueurs de valeurs sont fournis par `EvaluationAgentIaTest` (données synthétiques).
+   marqueurs de valeurs sont fournis par `ia/tests/test_evaluation.py` (données synthétiques).
 3. **Mesure sur 3 essais.** Rapport lu entier : taux, pass^3, sécurité, fondement, efficacité. Les cas
    instables ou refusés sont lus dans leurs traces ; la correction vise l'outil, la description ou le
    contrôle déterministe avant le prompt.

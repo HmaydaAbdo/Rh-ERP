@@ -1,4 +1,4 @@
-"""Historique des bulletins dans la table Envers existante ``paie_aud``."""
+"""Historique des bulletins dans la table d'historique existante ``paie_aud``."""
 
 from sqlalchemy import BigInteger, Column, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Table
 
@@ -33,7 +33,7 @@ registre.enregistrer(
     EntiteAuditee(
         classe=Paie,
         nom="Paie",
-        nom_hibernate="staport.rh.paie.entities.Paie",
+        nom_stocke="staport.rh.paie.entities.Paie",
         table_aud=paie_aud,
         champs=tuple(
             ChampAudite(c, c, c)

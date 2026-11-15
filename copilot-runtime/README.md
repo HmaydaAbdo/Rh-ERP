@@ -4,7 +4,7 @@ Le runtime CopilotKit officiel (`@copilotkit/runtime`), placé entre Angular et 
 Il ne contient aucune logique métier à nous :
 
 - il relaie l'agent AG-UI du service IA (`IA_AGUI_URL`) avec le jeton de l'utilisateur, recréé à chaque requête par
-  la fabrique d'agents officielle ; le service IA fait valider ce jeton par Spring ;
+  la fabrique d'agents officielle ; le service IA fait valider ce jeton par l'API ;
 - il applique le middleware A2UI officiel (`a2ui: { injectA2UITool: true }`) : le service IA offre alors l'outil
   `generate_a2ui`, et le flux de cet outil devient une surface affichée par CopilotKit Angular ;
 - il refuse d'emblée une requête sans jeton `Bearer`.

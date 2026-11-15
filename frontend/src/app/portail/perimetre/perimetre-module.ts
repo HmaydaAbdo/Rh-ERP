@@ -74,7 +74,7 @@ export interface ModulePerimetre {
   critereEmployes(params: ParamMap, portee: Portee): EmployeeSearchCriteria;
   /** Critères Paie : le périmètre et le mois (`null` = tous les mois), plus les filtres propres au module qui s'appliquent aux bulletins (nom, CIN…). */
   criterePaie(params: ParamMap, portee: Portee, periode: string | null): PaieSearchCriteria;
-  /** Critères Heures supplémentaires : les trois dimensions et les filtres de domaine sont évalués côté Spring. */
+  /** Critères Heures supplémentaires : les trois dimensions et les filtres de domaine sont évalués côté serveur. */
   critereHeuresSupp?(params: ParamMap, portee: Portee, periode: string | null): HeuresSuppSearchCriteria;
   catalogue?: CatalogueModule;
   /** Phrase affichée sous les mouvements de la paie quand des filtres propres au module ne s'y appliquent pas (nom, CIN, statut). */

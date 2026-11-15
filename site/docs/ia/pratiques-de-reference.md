@@ -4,7 +4,7 @@ sidebar_position: 8
 ---
 
 :::note Page reprise de l'ancien document IA
-Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions de Spring, de Java et des tâches T* décrivent l'état avant la bascule vers FastAPI : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
+Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions des tâches T* décrivent l'état au 2026-11-06 : la source de vérité du suivi est Jira (projet `KAN`) et celle du comportement est le code. À actualiser épopée par épopée.
 :::
 
 ## 10. Pratiques de référence : état réel
@@ -18,7 +18,7 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Identifiants, noms et dates vérifiés ; période, périmètre et définition affichés | Partiel : nombres et périodes vérifiés ; `paie_mouvements` rend ses définitions, l'écart net et les « plus payés » ; identifiants et noms pas encore vérifiés | T2.7 |
 | Réponse directe aux messages simples | Provisoire : tri par mots-clés dans un nœud du graphe (2 à 17 ms), à remplacer par la décision du modèle (règle « frameworks d'abord ») | T10 |
 | Raisonnement et plan visibles, texte en flux | Absent : étapes du graphe affichées, texte d'un bloc après vérification | T10 à T12 |
-| Code IA maison | Présent : graphe, tri, ciblage, client de modèle, client MCP, frontière AG-UI, rejoueur d'évaluation, interface Angular, scripts LiteLLM, outils MCP et jeton agent côté Java | T10 à T20 (service IA : graphe, tri, ciblage et clients maison déjà retirés) |
+| Code IA maison | Présent : graphe, tri, ciblage, client de modèle, client MCP, frontière AG-UI, rejoueur d'évaluation, interface Angular, scripts LiteLLM, outils MCP et jeton agent côté API | T10 à T20 (service IA : graphe, tri, ciblage et clients maison déjà retirés) |
 | Permissions revérifiées à chaque appel d'outil ; jeton délégué court ; audit par outil | En place | T4, T5 |
 | Périmètre de données par fiche de poste | Absent : l'accès est réservé à `SYSTEM_ADMIN` | T2.1 à T2.3 |
 | Injection directe et indirecte (champs de données piégés), exfiltration | Non testées ; seuls les refus de droits le sont | T2.6 |
@@ -26,7 +26,7 @@ test ou une mesure ; la règle de chaque ligne est dans les conventions.
 | Plafonds par run | Middlewares officiels : 8 appels de modèle et 8 appels d'outils par run ; aucun plafond applicatif de génération de tokens. Délai de modèle configurable (`IA_LLM_TIMEOUT_SECONDS`, 120 s par défaut). Durée et tokens totaux du run non plafonnés côté service. | T2.5 |
 | Quotas par utilisateur et budgets par poste | Absent : limite de 20 questions par minute au proxy, 60 requêtes par minute pour la clé Staport Intelligence | T2.5 |
 | Contenu des messages non conservé par la passerelle | Non réglé explicitement ; journaux de dépense gardés 30 jours | T2.8 |
-| Contrat de vue unique entre Spring, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
+| Contrat de vue unique entre l'API, service IA et Angular | Absent : deux listes écrites à la main | T2.9 |
 | Conversations multi-tours, isolation, suppression | Absent : chaque question est traitée seule, l'historique ne vit que dans le navigateur | T3.2 |
 | Contexte d'écran | Absent | T3.3 |
 | Traces OpenTelemetry, outil d'observation, alertes | Absent : journaux JSON et corrélation seulement | T3.4 |

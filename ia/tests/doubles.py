@@ -12,9 +12,11 @@ from langchain_core.language_models.fake_chat_models import FakeMessagesListChat
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.store.memory import InMemoryStore
 from pydantic import Field
 
 from staport_ia.agent import PROFIL_HARNAIS
+from staport_ia.competences import semer_competences_memoire
 
 # Le profil d'harnais de l'ERP (agent.py) s'applique au fournisseur du faux modèle comme à celui de ChatLiteLLM.
 register_harness_profile("modelescripte", PROFIL_HARNAIS)
@@ -61,6 +63,13 @@ class ModeleScripte(FakeMessagesListChatModel):
         )
 
 
+def store_avec_competences() -> InMemoryStore:
+    """Un Store en mémoire où les fiches de compétences sont déjà semées, comme le service le fait au démarrage."""
+    store = InMemoryStore()
+    semer_competences_memoire(store)
+    return store
+
+
 def modele(*reponses: BaseMessage) -> ModeleScripte:
     return ModeleScripte(responses=list(reponses))
 
@@ -70,7 +79,7 @@ def appel(nom: str, identifiant: str = "a1", **arguments: Any) -> AIMessage:
 
 
 def outil(nom: str, donnees: dict[str, Any] | Callable[..., Any], appels: list[str] | None = None) -> BaseTool:
-    """Un outil LangChain qui rend ``donnees`` en JSON, comme un outil MCP de Spring ; ``appels`` note chaque appel."""
+    """Un outil LangChain qui rend ``donnees`` en JSON, comme un outil MCP de l'API ; ``appels`` note chaque appel."""
 
     def executer(**arguments: Any) -> tuple[str, dict[str, Any]]:
         if appels is not None:

@@ -1,4 +1,4 @@
-"""Registre des entités auditées (remplace `@Audited` / `@NotAudited` d'Envers).
+"""Registre des entités auditées.
 
 Un domaine déclare, pour chacune de ses entités historisées, la table `<table>_aud` et les champs à conserver. Un
 champ absent de la déclaration n'est **jamais** historisé (le hash du mot de passe, par exemple). Les noms de champs
@@ -13,7 +13,7 @@ from sqlalchemy import Table
 @dataclass(frozen=True)
 class ChampAudite:
     nom: str
-    """Nom affiché dans l'historique (camelCase, comme les propriétés Java)."""
+    """Nom affiché dans l'historique (camelCase)."""
     attribut: str
     colonne: str
     """Colonne de la table `_aud`."""
@@ -48,8 +48,8 @@ class EntiteAuditee:
     classe: type
     nom: str
     """Nom d'entité de l'URL d'historique (`/logs/historique/{nom}/{id}`), insensible à la casse."""
-    nom_hibernate: str
-    """Nom enregistré dans `audit_revision_entite` : celui qu'écrivait Spring, pour garder un historique continu."""
+    nom_stocke: str
+    """Nom enregistré dans `audit_revision_entite` : stable d'une version à l'autre (historique continu)."""
     table_aud: Table
     champs: tuple[ChampAudite, ...]
     relations: tuple[RelationAuditee, ...] = ()
@@ -69,8 +69,8 @@ class RegistreAudit:
     def par_nom(self, nom: str) -> EntiteAuditee | None:
         return next((e for e in self._entites.values() if e.nom.lower() == nom.lower()), None)
 
-    def par_nom_hibernate(self, nom: str) -> EntiteAuditee | None:
-        return next((e for e in self._entites.values() if e.nom_hibernate == nom), None)
+    def par_nom_stocke(self, nom: str) -> EntiteAuditee | None:
+        return next((e for e in self._entites.values() if e.nom_stocke == nom), None)
 
     def toutes(self) -> list[EntiteAuditee]:
         return list(self._entites.values())

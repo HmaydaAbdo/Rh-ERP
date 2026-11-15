@@ -1,4 +1,4 @@
-"""Mesures de la synchronisation des chantiers (parité avec `ChantierSyncMetrics`, série `rh.chantier.sync.*`).
+"""Mesures de la synchronisation des chantiers.
 
 Valeurs en mémoire, lues par le collecteur Prometheus de `staport.platform.metriques`. Aucune dimension : un seul
 traitement.
