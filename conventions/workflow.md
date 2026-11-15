@@ -67,6 +67,9 @@ sont les seules sources de suivi : aucun fichier markdown d'avancement ni de han
   connecteurs adaptés avant de demander une information qu'ils peuvent fournir ; les outils de
   navigateur servent à observer et vérifier le rendu réel. L'installation d'un outil supplémentaire
   doit répondre à un besoin concret et respecter les contraintes de coût approuvées.
+  Le greffon metaswarm est installé pour tout le compte : appliquer [`metaswarm.md`](metaswarm.md) (Jira seule source de
+  suivi, jamais `/setup` ni BEADS ici, portes de revue sur demande du propriétaire, valider soi-même, revue adverse
+  avant la PR).
 
 ## 3. Implémenter et vérifier
 
