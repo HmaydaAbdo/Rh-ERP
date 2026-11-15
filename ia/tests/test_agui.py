@@ -7,7 +7,7 @@ from typing import Any, cast
 import httpx
 import pytest
 from ag_ui.core import EventType
-from doubles import INDICATEURS, ModeleScripte, appel, modele, outil, store_avec_competences
+from doubles import INDICATEURS, ModeleScripte, appel, memoire_processus, modele, outil, store_avec_competences
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool, StructuredTool
@@ -15,7 +15,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.memory import InMemoryStore
 
 from staport_ia.agent import SYSTEME, creer_agent
-from staport_ia.agui import FabriqueAgent
+from staport_ia.agui import FabriqueAgent, demander_arret
 from staport_ia.app import creer_app
 from staport_ia.config import Settings
 from staport_ia.fichiers import FICHIERS_MAX, TAILLE_MAX_FICHIER
@@ -85,7 +85,9 @@ def _poster(
 ):
     entetes = {"Accept": "text/event-stream"} | ({"Authorization": f"Bearer {jeton}"} if jeton else {})
     with TestClient(
-        creer_app(_settings(enabled), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie)
+        creer_app(
+            _settings(enabled), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie, memoire=memoire_processus
+        )
     ) as client:
         return client.post("/agui", json=corps, headers=entetes)
 
@@ -249,7 +251,9 @@ def _app_ecrivain(faux: ModeleScripte, store: InMemoryStore, acces: AccesSimule)
     def fabriquer(outils: Sequence[BaseTool], checkpointer: BaseCheckpointSaver[Any] | None, utilisateur: str) -> Any:
         return creer_agent(faux, outils, checkpointer=checkpointer, utilisateur=utilisateur, store=store)
 
-    return TestClient(creer_app(_settings(), fabrique=fabriquer, acces=acces, routage=_routage_paie))
+    return TestClient(
+        creer_app(_settings(), fabrique=fabriquer, acces=acces, routage=_routage_paie, memoire=memoire_processus)
+    )
 
 
 def test_une_ecriture_dans_l_espace_s_interrompt_dans_le_flux_puis_reprend_apres_l_accord() -> None:
@@ -332,3 +336,29 @@ def test_une_ecriture_au_dela_du_quota_de_fichiers_est_refusee_avec_son_motif() 
 
 def test_remplacer_un_fichier_existant_reste_permis_quand_l_espace_est_plein() -> None:
     assert "plein" not in _ecrire_apres_accord("/espace/f0.md", "nouveau contenu", remplir=FICHIERS_MAX)
+
+
+def test_un_arret_du_service_termine_l_etape_puis_la_conversation_reprend() -> None:
+    """KAN-39 : à SIGTERM, le run termine son étape (l'outil), s'arrête proprement avec un message dédié, et la même
+    conversation reprend ensuite jusqu'à sa réponse (doc LangGraph, « Graceful shutdown »)."""
+
+    def indicateurs_pendant_l_arret(**_: Any) -> dict[str, Any]:
+        assert demander_arret("sigterm") == 1  # le signal arrive pendant l'exécution de l'outil
+        return INDICATEURS
+
+    faux = modele(
+        appel("paie_indicateurs"),
+        AIMessage(content=REPONSE),
+    )
+    acces = AccesSimule([outil("paie_indicateurs", indicateurs_pendant_l_arret)])
+    entetes = {"Accept": "text/event-stream", "Authorization": "Bearer c"}
+    with TestClient(
+        creer_app(_settings(), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie, memoire=memoire_processus)
+    ) as client:
+        arret = _lire(client.post("/agui", json=_corps(), headers=entetes).text)
+        reprise = _lire(client.post("/agui", json=_corps(), headers=entetes).text)
+
+    erreur = next(e for e in arret if e["type"] == EventType.RUN_ERROR)
+    assert erreur["code"] == "SERVICE_REDEMARRE" and "AB123456" not in json.dumps(arret)
+    assert reprise[-1]["type"] == EventType.RUN_FINISHED and EventType.RUN_ERROR not in [e["type"] for e in reprise]
+    assert "".join(e["delta"] for e in reprise if e["type"] == "TEXT_MESSAGE_CONTENT") == REPONSE

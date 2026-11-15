@@ -696,7 +696,7 @@ de ses relectures ; le repli lui laisse atteindre n'importe quel domaine. Aucune
 ### Espace de fichiers propre à l'identité
 
 Le backend de l'agent est un `CompositeBackend` (`backend_par_identite`) : les compétences en lecture seule, et sous `/espace/` un `StoreBackend` dont la fabrique d'espace de noms est `(identité, "espace")`, l'identité étant celle du jeton agent validé par l'API, jamais une valeur
-du navigateur ou du modèle (le même chemin chez deux utilisateurs désigne deux fichiers distincts, testé). L'écriture reste refusée par les permissions tant que l'épopée d'écriture ne l'ouvre pas, domaine par domaine. Le magasin est en mémoire du processus aujourd'hui ; il passe à PostgreSQL avec cette épopée.
+du navigateur ou du modèle (le même chemin chez deux utilisateurs désigne deux fichiers distincts, testé). L'écriture reste refusée par les permissions tant que l'épopée d'écriture ne l'ouvre pas, domaine par domaine. Le magasin est dans PostgreSQL (KAN-73).
 
 ### Domaines, sous-agents et sous-graphes
 

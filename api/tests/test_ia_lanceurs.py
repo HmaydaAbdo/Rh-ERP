@@ -33,6 +33,7 @@ import psutil
 import pytest
 from conftest import Plateforme
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from test_mcp_clients_externes import serveur_loopback  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -137,19 +138,35 @@ def _jeton(
     return p.contexte.emetteur.emettre_acces(identifiant, nom, permis, set(), duree), nom
 
 
+@pytest.fixture
+def base_ia(creer_base: Callable[[str], str]) -> str:
+    """Une base vierge pour le service IA (URL au format psycopg), comme `ia-db` en production."""
+    url = make_url(creer_base(f"ia_{uuid.uuid4().hex[:12]}"))
+    return url.set(drivername="postgresql").render_as_string(hide_password=False)
+
+
 @contextmanager
-def _service_ia(api: str, port: int, journal: Path) -> Generator[subprocess.Popen[bytes]]:
+def _service_ia(api: str, port: int, journal: Path, base_ia: str) -> Generator[subprocess.Popen[bytes]]:
     SORTIE.mkdir(parents=True, exist_ok=True)
     env = {
         **os.environ,
         "IA_ENABLED": "true",
         "IA_ERP_API_URL": api,
+        # La base de l'IA est obligatoire, comme en production (KAN-39) : aucun repli sur la mémoire du processus.
+        "IA_DATABASE_URL": base_ia,
         # Valeurs inoffensives quand aucune passerelle n'est fournie (test de fumée : aucun modèle n'est appelé).
         "IA_LITELLM_BASE_URL": os.environ.get("IA_LITELLM_BASE_URL", "http://127.0.0.1:9/v1"),
         "IA_LITELLM_API_KEY": os.environ.get("IA_LITELLM_API_KEY", "sk-test-cle"),
     }
-    commande = [str(UV), "run", "--locked", "uvicorn", "--factory", "staport_ia.app:creer_app"]
-    commande += ["--host", "127.0.0.1", "--port", str(port)]
+    # psycopg asynchrone (base de l'IA, obligatoire) refuse la boucle Proactor de Windows : `asyncio.run` avec la boucle
+    # à sélecteur, celle de Linux, comme dans le conteneur.
+    amorce = (
+        "import asyncio, uvicorn\n"
+        "from staport_ia.app import creer_app\n"
+        f"serveur = uvicorn.Server(uvicorn.Config(creer_app(), host='127.0.0.1', port={port}, access_log=False))\n"
+        "asyncio.run(serveur.serve(), loop_factory=asyncio.SelectorEventLoop)\n"
+    )
+    commande = [str(UV), "run", "--locked", "python", "-c", amorce]
     with journal.open("wb") as sortie:
         # Commande fixe (uv) lancée avec des arguments littéraux et des ports locaux : aucune entrée non fiable.
         service = subprocess.Popen(commande, cwd=SERVICE_IA, env=env, stdout=sortie, stderr=subprocess.STDOUT)  # noqa: S603
@@ -187,11 +204,14 @@ def _attendre(url: str, service: subprocess.Popen[bytes], journal: Path, delai: 
 
 
 def test_le_service_ia_demarre_contre_l_api_python_et_refuse_un_appel_sans_jeton(
-    plateforme: Plateforme, serveur_loopback: str, creer_utilisateur: Callable[..., tuple[int, str]]
+    plateforme: Plateforme,
+    serveur_loopback: str,
+    creer_utilisateur: Callable[..., tuple[int, str]],
+    base_ia: str,
 ) -> None:
     port = _port_libre()
     journal = SORTIE / "ia-fumee.txt"
-    with _service_ia(serveur_loopback, port, journal) as service:
+    with _service_ia(serveur_loopback, port, journal, base_ia) as service:
         racine = f"http://127.0.0.1:{port}"
         _attendre(f"{racine}/health", service, journal)
         assert httpx.get(f"{racine}/health").json()["status"] == "UP"
@@ -214,7 +234,10 @@ def test_le_service_ia_demarre_contre_l_api_python_et_refuse_un_appel_sans_jeton
 
 
 def test_le_client_ag_ui_officiel_obtient_une_reponse_verifiee(
-    plateforme: Plateforme, serveur_loopback: str, creer_utilisateur: Callable[..., tuple[int, str]]
+    plateforme: Plateforme,
+    serveur_loopback: str,
+    creer_utilisateur: Callable[..., tuple[int, str]],
+    base_ia: str,
 ) -> None:
     _opt_in("IA_AGUI")
     if shutil.which("node") is None or shutil.which("npm") is None:
@@ -228,7 +251,7 @@ def test_le_client_ag_ui_officiel_obtient_une_reponse_verifiee(
     journal_ia, journal_client = SORTIE / "agui-service.txt", SORTIE / "agui-client.txt"
     if not (CLIENT_AGUI / "node_modules").exists():
         subprocess.run(["npm", "ci", "--ignore-scripts"], cwd=CLIENT_AGUI, check=True, timeout=600)  # noqa: S607
-    with _service_ia(serveur_loopback, port, journal_ia) as service:
+    with _service_ia(serveur_loopback, port, journal_ia, base_ia) as service:
         _attendre(f"http://127.0.0.1:{port}/health/ready", service, journal_ia)
         env = {
             **os.environ,
@@ -253,7 +276,9 @@ def test_le_client_ag_ui_officiel_obtient_une_reponse_verifiee(
 
 
 def test_l_agent_est_evalue_sur_le_jeu_de_reference(
-    plateforme: Plateforme, serveur_loopback: str, creer_utilisateur: Callable[..., tuple[int, str]]
+    plateforme: Plateforme,
+    serveur_loopback: str,
+    creer_utilisateur: Callable[..., tuple[int, str]],
 ) -> None:
     """Mesure sans seuil tant que le propriétaire n'en a pas fixé un ; rapport : `api/target/evaluation-ia.json`."""
     _opt_in("IA_EVALUATION")
@@ -328,7 +353,10 @@ def test_l_agent_est_evalue_sur_le_jeu_de_reference(
 
 
 def test_le_banc_de_demonstration_reste_ouvert_pour_le_navigateur(
-    plateforme: Plateforme, serveur_loopback: str, creer_utilisateur: Callable[..., tuple[int, str]]
+    plateforme: Plateforme,
+    serveur_loopback: str,
+    creer_utilisateur: Callable[..., tuple[int, str]],
+    base_ia: str,
 ) -> None:
     """Données fictives, compte de test et service IA laissés en marche ; `api/target/banc-assistant.json` donne les
     adresses. S'arrête quand `api/target/banc-assistant.stop` apparaît, ou après 45 minutes. Aucune donnée réelle."""
@@ -346,7 +374,7 @@ def test_le_banc_de_demonstration_reste_ouvert_pour_le_navigateur(
     port = int(os.environ.get("IA_BANC_PORT", "5103"))
     arret, journal = SORTIE / "banc-assistant.stop", SORTIE / "banc-assistant-ia.txt"
     arret.unlink(missing_ok=True)
-    with _service_ia(serveur_loopback, port, journal) as service:
+    with _service_ia(serveur_loopback, port, journal, base_ia) as service:
         banc = {
             "backend": serveur_loopback,
             "ia": f"http://127.0.0.1:{port}",

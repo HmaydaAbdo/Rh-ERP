@@ -7,8 +7,9 @@ Le checkpointer officiel de LangGraph pour PostgreSQL (``AsyncPostgresSaver``) g
 dans une base dédiée à l'IA (service ``ia-db``, aucune donnée du reste de l'ERP) : une question posée après un
 redémarrage, ou le lendemain, retrouve son fil. Le ``Store`` officiel (``AsyncPostgresStore``) garde dans la même base
 les fichiers de l'espace de chaque utilisateur (``/espace/``), avec l'expiration native (``TTLConfig``) : ils survivent
-à un redémarrage et sont partagés entre instances. Sans ``IA_DATABASE_URL`` (tests, développement), la mémoire reste
-celle du processus (``InMemorySaver`` et ``InMemoryStore``).
+à un redémarrage et sont partagés entre instances. La base est obligatoire, en local comme en production : aucun
+repli sur la mémoire du processus dans le service (il masquerait une panne de configuration, KAN-39) ; seuls les tests
+rapides y recourent, par injection (``tests/doubles.py``).
 
 Deux règles à nous, parce qu'aucun framework ne les fournit :
 - l'identifiant de conversation envoyé par le navigateur n'est jamais pris tel quel : il est préfixé par l'identité de
@@ -26,10 +27,8 @@ from contextlib import asynccontextmanager
 from typing import Any, NamedTuple
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.base import BaseStore, TTLConfig
-from langgraph.store.memory import InMemoryStore
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg import AsyncConnection
 from psycopg.rows import DictRow, dict_row
@@ -97,11 +96,8 @@ async def _purge_reguliere(
 
 
 @asynccontextmanager
-async def ouvrir_memoire(url: str | None, jours: int = JOURS_PAR_DEFAUT) -> AsyncGenerator[Memoire]:
-    """La mémoire pour la vie du service : PostgreSQL si ``url``, sinon celle du processus."""
-    if not url:
-        yield Memoire(InMemorySaver(), InMemoryStore())
-        return
+async def ouvrir_memoire(url: str, jours: int = JOURS_PAR_DEFAUT) -> AsyncGenerator[Memoire]:
+    """La mémoire pour la vie du service : PostgreSQL, obligatoire (``IA_DATABASE_URL``)."""
     async with AsyncConnectionPool[AsyncConnection[DictRow]](
         url,
         min_size=1,

@@ -222,3 +222,34 @@ PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
   la référence n'apparaît pas dans la discussion (la fiche de compétence demande au modèle de ne pas la recopier).
 - **Pas de `CompositeBackend` ici** : le classeur est binaire et généré à la demande ; l'espace de fichiers texte de
   l'utilisateur (`/espace/`, KAN-267) garde son routage `CompositeBackend` + Store.
+
+### Exécution durable : base obligatoire, arrêt en douceur, durabilité (KAN-39)
+
+Source : doc LangGraph « Fault tolerance » (retries, timeouts, error handling, graceful shutdown) et « Durability modes »
+(`langgraph` 1.2.22, la dernière version stable).
+
+- **Base de l'IA obligatoire** : sans `IA_DATABASE_URL`, le service IA activé refuse de démarrer (`RuntimeError` explicite),
+  en local comme en production. Plus aucun repli sur `InMemorySaver` ni `InMemoryStore` dans le service : il masquait une
+  panne de configuration et perdait conversations et fichiers au redémarrage. Les tests rapides reçoivent leur mémoire par
+  injection (`creer_app(..., memoire=...)`, `ia/tests/doubles.py`) ; les tests de l'API et du lanceur ouvrent une base
+  PostgreSQL vierge, comme `ia-db`. Le service désactivé (`IA_ENABLED=false`) n'ouvre aucune base.
+- **Arrêt en douceur** (`RunControl`, doc « Graceful shutdown ») : à SIGTERM (`docker compose up -d` après un `pull`), chaque
+  run en cours termine son étape, enregistre un point de reprise et s'arrête (`GraphDrained`) ; le navigateur reçoit
+  `RUN_ERROR` avec le code `SERVICE_REDEMARRE` et un message qui invite à renvoyer le message ; la conversation reprend avec
+  le même fil. Le gestionnaire SIGTERM est chaîné à celui d'uvicorn (`app.py`), pas substitué. Délais : `stop_grace_period:
+  60s` (Compose) et `--timeout-graceful-shutdown 45` (uvicorn).
+- **Durabilité `sync`** (doc « Durability modes ») : chaque point de reprise est écrit avant l'étape suivante, donc un run
+  repris après un arrêt ou une panne repart de la dernière étape terminée. Coût : une écriture PostgreSQL par étape,
+  négligeable devant un appel de modèle.
+- **Écart au 0 % de code maison** : l'intégration `ag-ui-langgraph` 0.0.47 (dernière version) appelle `astream_events` sans
+  `control` ni `durability`. `AgentAGUI` (`agui.py`) est une sous-classe de `LangGraphAGUIAgent` qui ajoute ces deux
+  arguments au point d'extension `get_stream_kwargs` (une ligne). À retirer quand l'intégration les prendra en charge.
+- **Délais, reprises et gestionnaire d'erreur par nœud : non applicables** (décision documentée). `retry_policy`,
+  `TimeoutPolicy` et `error_handler` se règlent sur les nœuds ou par `set_node_defaults` d'un `StateGraph` que nous
+  construisons ; le graphe de l'agent est construit par Deep Agents et `create_agent`, qui ne les exposent pas. Les mêmes
+  protections existent au niveau du modèle et des outils, avec les composants officiels : `ModelFallbackMiddleware`
+  (KAN-35), plafonds d'appels (KAN-33), erreurs d'outil rendues au modèle sans détail (KAN-32), délai du modèle porté par
+  LiteLLM.
+- **Preuve** (PostgreSQL réel, `ia/tests/test_memoire.py`) : un run arrêté pendant l'étape des outils, un « redémarrage »
+  (nouvelle connexion, nouvel agent), une reprise avec le même fil jusqu'à la réponse, sans rejouer l'étape terminée.
+  Test de bout en bout par `/agui` dans `ia/tests/test_agui.py`.

@@ -4,7 +4,8 @@
 """Doubles partagés des tests : le faux modèle de chat de LangChain et de vrais outils LangChain, sans réseau."""
 
 import json
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
+from contextlib import asynccontextmanager
 from typing import Any, cast
 
 from deepagents import register_harness_profile
@@ -12,11 +13,13 @@ from langchain_core.language_models.fake_chat_models import FakeMessagesListChat
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import BaseTool, StructuredTool
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from pydantic import Field
 
 from staport_ia.agent import PROFIL_HARNAIS
 from staport_ia.competences import semer_competences_memoire
+from staport_ia.memoire import Memoire
 
 # Le profil d'harnais de l'ERP (agent.py) s'applique au fournisseur du faux modèle comme à celui de ChatLiteLLM.
 register_harness_profile("modelescripte", PROFIL_HARNAIS)
@@ -103,3 +106,9 @@ def _nom(outil_lie: Any) -> str:
         fonction = cast(dict[str, Any], definition.get("function") or {})
         return str(definition.get("name") or fonction.get("name"))
     return str(getattr(outil_lie, "name", outil_lie))
+
+
+@asynccontextmanager
+async def memoire_processus() -> AsyncGenerator[Memoire]:
+    """Mémoire d'un test rapide, injectée dans ``creer_app`` : le service, lui, exige toujours PostgreSQL (KAN-39)."""
+    yield Memoire(InMemorySaver(), InMemoryStore())
