@@ -57,7 +57,7 @@ point d'extension, source officielle) avant le code. Le registre est mis à jour
 | Protocole agent ↔ interface | AG-UI via `LangGraphAGUIAgent` | filtres de sortie de `agui.py` (événements RAW, erreur générique) |
 | Passerelle de modèles | LiteLLM | configuration |
 | Outils métier exposés à l'agent | serveur FastMCP (API), client MCP LangChain | définitions d'outils (métier) |
-| Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | rejoueur et critères déterministes de `evaluation.py` (dette déclarée, KAN-208 puis E10) |
+| Évaluation de l'agent | `openevals` (juge : `create_async_llm_as_judge`, fait), `agentevals` | critères métier déterministes de `evaluation.py` (formats français, aucun équivalent officiel) ; lanceur remplacé par pytest (KAN-76) |
 | Traces et métriques | OpenTelemetry, Phoenix | configuration |
 | Droits, périmètre, audit | dépendances d'authentification FastAPI, décorateur d'action auditée | règles métier (permanentes) |
 | Schéma de base de données | Alembic | aucune |

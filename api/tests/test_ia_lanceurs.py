@@ -331,11 +331,10 @@ def test_l_agent_est_evalue_sur_le_jeu_de_reference(
     SORTIE.mkdir(parents=True, exist_ok=True)
     rapport, journal = SORTIE / "evaluation-ia.json", SORTIE / "evaluation-ia.txt"
     rapport.unlink(missing_ok=True)
-    commande = [str(UV), "run", "--locked", "python", "-m", "staport_ia.evaluation", "--rapport", str(rapport)]
-    commande += ["--repetitions", os.environ.get("IA_EVALUATION_REPETITIONS", "1")]
-    commande += ["--concurrence", os.environ.get("IA_EVALUATION_CONCURRENCE", "2")]
+    # Le jeu de référence est rejoué par pytest (KAN-76) : un cas = un test, `-k` en rejoue quelques-uns.
+    commande = [str(UV), "run", "--locked", "pytest", "tests/test_banc_evaluation.py", "-v", "-p", "no:cacheprovider"]
     if os.environ.get("IA_EVALUATION_CAS"):  # rejoue seulement ces cas (diagnostic)
-        commande += ["--cas", os.environ["IA_EVALUATION_CAS"]]
+        commande += ["-k", " or ".join(os.environ["IA_EVALUATION_CAS"].split(","))]
     env = {
         **os.environ,
         "EVAL_API_URL": serveur_loopback,
@@ -343,12 +342,15 @@ def test_l_agent_est_evalue_sur_le_jeu_de_reference(
         "EVAL_JETON_COMPLET": complet,
         "EVAL_JETON_RESTREINT": restreint,
         "EVAL_DONNEES": json.dumps(donnees),
+        "EVAL_RAPPORT": str(rapport),
+        "IA_EVALUATION_REPETITIONS": os.environ.get("IA_EVALUATION_REPETITIONS", "1"),
     }
     with journal.open("wb") as sortie:
         resultat = subprocess.run(  # noqa: S603
             commande, cwd=SERVICE_IA, env=env, stdout=sortie, stderr=subprocess.STDOUT, timeout=150 * 60, check=False
         )
-    assert resultat.returncode == 0, journal.read_text(errors="replace")
+    # 0 : tous les cas réussissent ; 1 : certains échouent (mesuré dans le rapport) ; au-delà : le banc a planté.
+    assert resultat.returncode in (0, 1), journal.read_text(errors="replace")
     assert rapport.exists()
 
 
