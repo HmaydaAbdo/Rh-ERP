@@ -116,6 +116,10 @@ Grilles de cartes `auto-fit` à partir de 20 rem. Contrôles de 40 px (44 px au 
 
 Surtout plat : la profondeur vient des bordures franches et des surfaces, pas des ombres. Trois ombres (`--shadow-sm|md|lg`),
 réservées aux couches flottantes (panneau de navigation, listes déroulantes, dialogues). Aucun verre dépoli, aucun halo.
+**Exception bornée : l'espace Staport Intelligence** (KAN-102, direction de KAN-185 limitée à cet espace, décision du propriétaire du
+2026-11-16) : verre mat, aurore saphir, halo de la saisie et animations décoratives (éteintes si l'utilisateur demande moins de mouvement),
+portés par des jetons locaux `--ia-*` dans `styles/_assistant.scss`. Le reste de l'application garde la règle ci-dessus tant que KAN-185 n'est
+pas tranché.
 
 ## Shapes
 
