@@ -14,7 +14,11 @@ function obligatoire(nom) {
 const { app, purger } = creerApp({
   urlAgent: obligatoire('IA_AGUI_URL'),
   urlApi: obligatoire('ERP_API_URL').replace(/\/$/, ''),
-  cheminBase: process.env.THREADS_DB_PATH
+  cheminBase: process.env.THREADS_DB_PATH,
+  // Dictée (KAN-93) : Whisper local compatible OpenAI ; absent, le micro n'est pas proposé.
+  stt: process.env.STT_URL
+    ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-small', langue: process.env.STT_LANGUE ?? 'fr' }
+    : undefined
 });
 // Expiration des conversations inactives (KAN-82), au démarrage puis chaque jour ; même durée que la mémoire du service IA.
 const joursConservation = Number(process.env.CONVERSATION_JOURS ?? 30);

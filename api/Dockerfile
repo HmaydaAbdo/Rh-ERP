@@ -23,8 +23,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 api && useradd --system --uid 10001 --gid api --no-create-home api
 COPY --from=build --chown=root:root /app/api/.venv /app/api/.venv
-# Étape de migration du déploiement : `alembic upgrade head` avec le compte propriétaire (jamais dans le lifespan).
+# Migration au démarrage : l'entrée de l'image lance `alembic upgrade head` avec le compte propriétaire, puis retire ses
+# identifiants de l'environnement avant le serveur (jamais dans le lifespan).
 COPY --chown=root:root api/alembic.ini /app/alembic.ini
+COPY --chmod=0755 --chown=root:root api/entrypoint.sh /usr/local/bin/staport-intelligence-api-entrypoint
 WORKDIR /app
 ENV PATH="/app/api/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/tmp MPLCONFIGDIR=/tmp/matplotlib
 # Traces OpenTelemetry (site/docs/ia, T18) : auto-instrumentation FastAPI et spans d'outils MCP.
@@ -38,5 +40,6 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4)"]
 # L'adresse IP du client (audit) vient de `X-Forwarded-For`, posé par nginx et honoré des seuls proxys internes (réseaux
 # privés de Docker et boucle locale) : réglage `--forwarded-allow-ips` d'uvicorn.
-ENTRYPOINT ["opentelemetry-instrument", "uvicorn", "staport.main:application", "--factory", "--host", "0.0.0.0", "--port", "8080", \
+ENTRYPOINT ["/usr/local/bin/staport-intelligence-api-entrypoint"]
+CMD ["opentelemetry-instrument", "uvicorn", "staport.main:application", "--factory", "--host", "0.0.0.0", "--port", "8080", \
   "--timeout-graceful-shutdown", "45", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"]

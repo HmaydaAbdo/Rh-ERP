@@ -37,68 +37,10 @@
   font-family: var(--font-sans);
 }
 
-// Panneau de l'assistant : une carte flottante au-dessus de l'écran, à droite. Elle ne déplace ni ne réduit les vues ; le
-// voile de la bibliothèque (mode modal) est neutralisé pour que l'écran reste utilisable pendant la discussion. La
-// bibliothèque fixe ses couleurs dans ses propres styles : on les ramène aux jetons (sélecteurs plus spécifiques, car ses
-// styles de composant sont injectés après les nôtres).
-html .copilot-sidebar-host .copilot-sidebar-backdrop {
-  background: transparent;
-  pointer-events: none;
-}
-
-html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
-  top: var(--space-sm-md);
-  inset-inline-end: var(--space-sm-md);
-  inset-inline-start: auto;
-  bottom: var(--space-sm-md);
-  width: min(var(--copilot-sidebar-width, 27.5rem), calc(100vw - 2 * var(--space-sm-md)));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-lg);
-
-  .copilot-sidebar-header {
-    min-height: 4rem;
-    padding: var(--space-sm) var(--space-sm-md);
-    border-bottom: 1px solid var(--color-border);
-    background: transparent;
-
-    button {
-      display: grid;
-      place-items: center;
-      width: 2rem;
-      height: 2rem;
-      border-radius: var(--radius-pill);
-      color: var(--color-text-muted);
-      font-size: 1.25rem;
-      line-height: 1;
-      transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
-
-      &:hover {
-        background: var(--color-surface-alt);
-        color: var(--color-text);
-      }
-    }
-  }
-
-  @media (max-width: 47.999rem) {
-    inset: 0;
-    width: 100%;
-    border: 0;
-    border-radius: 0;
-  }
-}
-
-.copilot-sidebar-host .copilot-sidebar-toggle {
-  background: var(--assistant-accent);
-  color: var(--assistant-accent-contrast);
-}
-
 // Le texte des réponses (typographie `prose` de la bibliothèque) suit les jetons : son mode sombre dépend d'une classe `dark`
 // que l'application n'utilise pas (le thème est `data-theme` sur <html>).
 [data-copilotkit] [class*='prose'],
-.copilot-sidebar-host [class*='prose'] {
+.espace-assistant-discussion [class*='prose'] {
   --tw-prose-body: var(--color-text);
   --tw-prose-headings: var(--color-text);
   --tw-prose-lead: var(--color-text-muted);
@@ -117,13 +59,8 @@ html .copilot-sidebar-host .copilot-sidebar-window.copilotKitSidebar {
   --tw-prose-td-borders: var(--color-border);
 }
 
-// Ouverte, la barre a sa propre croix dans l'en-tête : le lanceur flottant ne recouvre pas la saisie.
-.copilot-sidebar-host .copilot-sidebar-toggle[aria-expanded='true'] {
-  display: none;
-}
-
 // --- Finitions de la discussion (classes stables des composants CopilotKit) ---
-html .copilot-sidebar-host .copilot-sidebar-window {
+html .espace-assistant-discussion {
   // Accueil : une invitation sobre, pas un titre d'affiche.
   h1 {
     max-width: 22rem;

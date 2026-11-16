@@ -39,6 +39,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Un compte et une base par service, créés par l'entrée de l'image (database/entrypoint.sh), idempotent : traces
+      # Phoenix, clés et budgets LiteLLM, conversations de l'assistant. Chaque compte ne se connecte qu'à sa base.
+      PHOENIX_DB_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
+      LITELLM_DB_PASSWORD: ${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire (voir .env.example)}
+      IA_DB_PASSWORD: ${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}
     volumes:
       # Persistance des données — voir site/docs/exploitation/deploiement.md pour la stratégie de backup (distincte
       # de ce volume, qui ne protège que contre l'arrêt/la recréation du conteneur, pas contre la
@@ -48,15 +53,16 @@ services:
       - postgres_data_v18:/var/lib/postgresql
     networks:
       - db-net
-      - phoenix-db-net
+      - bases-net
     ports:
       # Lié à 127.0.0.1 uniquement : accessible pour l'administration/le backup depuis le serveur
       # lui-même, jamais depuis l'extérieur (conventions/security.md — Postgres n'est jamais
       # exposé à Internet).
       - "127.0.0.1:${POSTGRES_PORT}:5432"
     healthcheck:
-      # TCP uniquement : le socket d'initdb devient prêt avant le serveur final, puis s'arrête.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # TCP uniquement : le socket d'initdb devient prêt avant le serveur final, puis s'arrête. Sain seulement une fois les
+      # trois bases de service créées.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB} && PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DB} -tAc \"SELECT count(*) FROM pg_database WHERE datname IN ('phoenix','litellm','ia')\" | grep -qx 3"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -80,6 +86,8 @@ services:
       BACKUP_DIR: /backups
       # Base des traces Phoenix : sauvegardée dans la même archive chiffrée que la base de l'ERP.
       PHOENIX_DB: phoenix
+      LITELLM_DB: litellm
+      IA_DB: ia
     volumes:
       - type: bind
         source: ./backups
@@ -123,32 +131,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # Une seule exécution, avec le propriétaire du schéma ; le serveur API ne reçoit pas ses identifiants.
-  api-migrate:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
-    restart: "no"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    entrypoint: ["python", "-m", "staport.migrations.deploiement"]
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB}
-      DB_MIGRATION_USER: ${POSTGRES_USER}
-      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
-      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
-      PGAUDIT_ENABLED: "true"
-    read_only: true
-    cap_drop: ["ALL"]
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-    networks:
-      - db-net
-
   api:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -157,12 +139,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      api-migrate:
-        condition: service_completed_successfully
       phoenix:
         condition: service_healthy
         required: false
     environment:
+      # Migrations Alembic au démarrage (api/entrypoint.sh) avec le propriétaire du schéma ; ces deux identifiants sont retirés
+      # de l'environnement du serveur avant son lancement.
+      DB_MIGRATION_USER: ${POSTGRES_USER}
+      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
+      PGAUDIT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
@@ -262,55 +247,17 @@ services:
   # --- IA (voir site/docs/ia) ---------------------------------------------------------------------
   # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
   # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.
-  litellm-db:
-    # Même image PostgreSQL que l'ERP, instance et volume séparés : clés virtuelles, budgets et
-    # journaux de dépense de LiteLLM uniquement, aucune donnée métier.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: litellm
-      POSTGRES_USER: litellm
-      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}
-    volumes:
-      - litellm_db_data:/var/lib/postgresql
-    networks:
-      - ia-db-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U litellm -d litellm"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  ia-db:
-    # Conversations de l'assistant (checkpointer PostgreSQL de LangGraph, site/docs/ia T19) : instance et volume
-    # séparés de l'ERP et de LiteLLM, joignable par le seul service IA, purgée après IA_CONVERSATION_JOURS jours.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ia
-      POSTGRES_USER: ia
-      POSTGRES_PASSWORD: ${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}
-    volumes:
-      - ia_db_data:/var/lib/postgresql
-    networks:
-      - memoire-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ia -d ia"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   litellm:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
-      litellm-db:
+      postgres:
         condition: service_healthy
     environment:
       # Sans clé master, sel ou base, l'image refuse de démarrer (litellm/entrypoint.sh).
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?LITELLM_SALT_KEY est obligatoire}
-      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}@litellm-db:5432/litellm
+      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?LITELLM_DB_PASSWORD est obligatoire}@postgres:5432/litellm
       # Une clé vide écarte ses modèles du routage (sondes natives de LiteLLM, litellm/litellm_config.yaml) : LiteLLM ne
       # bascule pas sur une 401, la question échouerait au lieu de passer au modèle suivant du même groupe.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -323,36 +270,17 @@ services:
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
       LLM7_API_KEY: ${LLM7_API_KEY:-}
       COHERE_API_KEY: ${COHERE_API_KEY:-}
+      # Clés virtuelles enregistrées par l'entrée de l'image dès que la passerelle répond (litellm/entrypoint.sh).
+      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire}
+      LITELLM_TEST_API_KEY: ${LITELLM_TEST_API_KEY:-}
     security_opt:
       - no-new-privileges:true
     networks:
-      - ia-db-net
+      - bases-net
       - ia-net
     ports:
       # Loopback uniquement : administration et tests depuis le serveur, jamais exposé à Internet.
       - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
-
-  litellm-cles:
-    # Tâche ponctuelle : enregistre les clés virtuelles du .env dans une base LiteLLM neuve (litellm/enregistrer_cles.py),
-    # puis s'arrête. Les groupes autorisés des clés connues sont synchronisés ; `up -d` suffit, sans script à lancer à la main.
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-litellm:${LITELLM_IMAGE_TAG:-latest}
-    restart: "no"
-    depends_on:
-      litellm:
-        condition: service_healthy
-    entrypoint: ["python3", "/usr/local/bin/staport-intelligence-enregistrer-cles"]
-    command: []
-    environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY est obligatoire}
-      LITELLM_GATEWAY_URL: http://litellm:4000/v1/chat/completions
-      IA_LITELLM_API_KEY: ${IA_LITELLM_API_KEY:?IA_LITELLM_API_KEY est obligatoire}
-      LITELLM_TEST_API_KEY: ${LITELLM_TEST_API_KEY:-}
-    read_only: true
-    cap_drop: ["ALL"]
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - ia-net
 
   ia:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-ia:${IA_IMAGE_TAG:-latest}
@@ -360,9 +288,9 @@ services:
     # Arrêt en douceur (KAN-39) : le run en cours termine son étape et enregistre son point de reprise.
     stop_grace_period: 60s
     depends_on:
-      litellm-cles:
-        condition: service_completed_successfully
-      ia-db:
+      litellm:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       # Traces : attendre que Phoenix réponde évite de perdre les premiers lots ; facultatif (required: false), l'ERP
       # démarre même si l'observabilité est en panne.
@@ -370,13 +298,17 @@ services:
         condition: service_healthy
         required: false
     environment:
-      # Conversations durables : base dédiée (ia-db) ; une conversation inactive est supprimée après ce nombre de jours.
-      IA_DATABASE_URL: postgresql://ia:${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}@ia-db:5432/ia
+      # Conversations durables : base `ia` du PostgreSQL de l'ERP ; une conversation inactive est supprimée après ce nombre de jours.
+      IA_DATABASE_URL: postgresql://ia:${IA_DB_PASSWORD:?IA_DB_PASSWORD est obligatoire (voir .env.example)}@postgres:5432/ia
       IA_CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Second filet (KAN-265) : groupe LiteLLM essayé si le modèle principal échoue ; vide = aucun repli.
       IA_LLM_REPLI: ${IA_LLM_REPLI:-medium}
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
+      # Pièces jointes (KAN-93) : activées ; chaque fichier est contrôlé (type réel) puis analysé par ClamAV. Sans antivirus
+      # joignable, aucun fichier n'est accepté. IA_PIECES_JOINTES=false les coupe.
+      IA_PIECES_JOINTES: ${IA_PIECES_JOINTES:-true}
+      IA_ANTIVIRUS_HOTE: antivirus
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
@@ -404,7 +336,8 @@ services:
       - ia-net
       - runtime-net
       - trace-net
-      - memoire-net
+      - bases-net
+      - av-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -423,6 +356,10 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Dictée (KAN-93) : Whisper local sur CPU (service stt), API compatible OpenAI ; l'audio ne quitte pas les serveurs.
+      # Vider STT_URL retire le micro de la discussion.
+      STT_URL: ${STT_URL-http://stt:8000}
+      STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-small}
       # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
       CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
@@ -446,37 +383,54 @@ services:
       - assistant-net
       - trace-net
       - runtime-auth-net
+      - stt-net
     # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
 
-  # Crée une fois, de façon idempotente, le compte et la base `phoenix` dans le PostgreSQL de l'ERP (installation neuve ou
-  # existante), puis s'arrête. Phoenix y écrit ses traces : la sauvegarde chiffrée quotidienne les couvre avec la base.
-  phoenix-db-init:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
-    restart: "no"
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # Antivirus des pièces jointes (KAN-93) : ClamAV (clamd), joignable par le seul service IA, qui lui envoie chaque fichier
+  # joint (INSTREAM) avant tout modèle. Les signatures se mettent à jour seules (freshclam) ; le premier démarrage les
+  # télécharge (quelques minutes, ~1 Go de RAM). Pas encore prêt, il fait refuser les pièces jointes (échec fermé).
+  antivirus:
+    image: clamav/clamav:${CLAMAV_IMAGE_TAG:-1.5.4}
+    restart: unless-stopped
     environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PHOENIX_DB_PASSWORD: ${PHOENIX_DB_PASSWORD:?PHOENIX_DB_PASSWORD est obligatoire (voir .env.example)}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -eu
-        psql -v ON_ERROR_STOP=1 -v mdp="$$PHOENIX_DB_PASSWORD" <<'SQL'
-        SELECT format('CREATE ROLE phoenix LOGIN PASSWORD %L', :'mdp')
-        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'phoenix') \gexec
-        SELECT format('ALTER ROLE phoenix PASSWORD %L', :'mdp') \gexec
-        SELECT 'CREATE DATABASE phoenix OWNER phoenix'
-        WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'phoenix') \gexec
-        SQL
+      CLAMAV_NO_MILTERD: "true"
+    volumes:
+      - antivirus_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    security_opt:
+      - no-new-privileges:true
     networks:
-      - db-net
+      - av-net
+
+  # Transcription vocale locale (KAN-93) : Speaches (faster-whisper, API compatible OpenAI), sur CPU, gratuit, sans
+  # compte ni envoi d'audio à un tiers. Joignable par le seul runtime CopilotKit. Le modèle est téléchargé une fois (cache
+  # dans le volume stt_models) ; seul ce service sort vers Hugging Face pour cela.
+  stt:
+    image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
+    restart: unless-stopped
+    environment:
+      PRELOAD_MODELS: '["${STT_MODELE:-Systran/faster-whisper-small}"]'
+      WHISPER__INFERENCE_DEVICE: cpu
+    volumes:
+      - stt_models:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - stt-net
 
   # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (site/docs/ia, T18). Un seul conteneur, traces
   # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
@@ -484,8 +438,8 @@ services:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-phoenix:${PHOENIX_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
-      phoenix-db-init:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     environment:
       PHOENIX_POSTGRES_HOST: postgres
       PHOENIX_POSTGRES_PORT: "5432"
@@ -505,16 +459,16 @@ services:
       - /tmp
     networks:
       - trace-net
-      - phoenix-db-net
+      - bases-net
     ports:
       - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
 
 volumes:
   postgres_data_v18:
-  litellm_db_data:
-  ia_db_data:
   runtime_data:
   phoenix_data:
+  stt_models:
+  antivirus_db:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -522,10 +476,6 @@ networks:
   db-net:
   # backend <-> frontend (proxy_pass de nginx inner vers le backend, voir frontend/nginx.conf).
   web-net:
-  # litellm et sa base, isolés du reste.
-  ia-db-net:
-  # service IA et sa base de conversations, seuls.
-  memoire-net:
   # ia, litellm et le backend (route /mcp).
   ia-net:
   # frontend (nginx) et runtime CopilotKit seulement : le navigateur atteint l'assistant, jamais le service IA ni LiteLLM.
@@ -534,7 +484,11 @@ networks:
   runtime-net:
   # Runtime CopilotKit et backend seuls : le runtime y authentifie chaque requête de l'assistant (/auth/me).
   runtime-auth-net:
+  # Pièces jointes (KAN-93) : service IA et antivirus seulement.
+  av-net:
+  # Dictée (KAN-93) : runtime CopilotKit et service de transcription seulement.
+  stt-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
   trace-net:
-  # Phoenix et le PostgreSQL de l'ERP (base `phoenix`) seulement.
-  phoenix-db-net:
+  # PostgreSQL de l'ERP et ses trois clients de service (Phoenix, LiteLLM, IA), chacun limité à sa base par son compte.
+  bases-net:

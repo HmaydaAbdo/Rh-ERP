@@ -19,6 +19,13 @@ describe('routes principales', () => {
     }
   });
 
+  it('réserve l’espace Staport Intelligence au droit IA_UTILISER', () => {
+    const espace = routeByPath.get('assistant');
+
+    expect(espace?.canActivate).toContain(permissionGuard);
+    expect(espace?.data).toEqual({ permission: 'IA_UTILISER' });
+  });
+
   it('réserve la carte à la permission CARTE_READ, distincte de celle des chantiers', () => {
     const carte = routeByPath.get('carte');
 

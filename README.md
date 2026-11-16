@@ -77,7 +77,7 @@ docker compose up -d   # toute la pile : ERP, sauvegarde, rétention pgAudit, Li
 ```
 
 Aucun profil Compose n'est à passer : tous les services démarrent par défaut. Les clés virtuelles LiteLLM du `.env`
-sont enregistrées toutes seules au démarrage (service ponctuel `litellm-cles`) ; `IA_ENABLED=false` ou
+sont enregistrées toutes seules au démarrage (par le conteneur `litellm` lui-même) ; `IA_ENABLED=false` ou
 `MCP_ENABLED=false` coupe l'assistant sans arrêter l'ERP.
 
 Sans image déjà publiée sur Docker Hub (ex. avant le premier run de la CI, ou pour tester la stack

@@ -10,13 +10,15 @@ import { HttpAgent } from '@ag-ui/client';
 import { EventType } from '@ag-ui/core';
 import { map } from 'rxjs';
 import { CopilotRuntime } from '@copilotkit/runtime/v2';
+import { TranscriptionServiceOpenAI } from '@copilotkit/voice';
 import { SqliteAgentRunner } from '@copilotkit/sqlite-runner';
 import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
+import OpenAI from 'openai';
 import { creerConversations } from './conversations.mjs';
 
-/** Routes servies ; toutes les autres (fils, mémoires, inspecteur, transcription, débogage) répondent 404. */
-const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop']);
+/** Routes servies ; toutes les autres (fils, mémoires, inspecteur, débogage) répondent 404. `transcribe` (dictée, KAN-93) n'existe que si un service de transcription est configuré. */
+const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop', 'transcribe']);
 /** En-tête interne posé par `onRequest` (toute valeur reçue du réseau est écrasée) : l'identifiant vérifié. */
 const ENTETE_UTILISATEUR = 'x-staport-utilisateur-verifie';
 
@@ -34,10 +36,10 @@ const masquerSkills = (input, next) =>
   );
 
 /**
- * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'> }} options
+ * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string } }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
-export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
+export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt }) {
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
@@ -54,6 +56,17 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
     // Seul le jeton de l'utilisateur est transmis à l'agent (ni `x-*` du navigateur, ni l'en-tête interne).
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
+    // Dictée (KAN-93) : le service de transcription officiel de CopilotKit (API compatible OpenAI) pointé sur un Whisper
+    // local sur CPU ; sans `stt`, le runtime annonce la capacité désactivée et la discussion n'affiche pas le micro.
+    ...(stt
+      ? {
+          transcriptionService: new TranscriptionServiceOpenAI({
+            openai: new OpenAI({ baseURL: `${stt.url}/v1`, apiKey: 'service-local' }),
+            model: stt.modele,
+            ...(stt.langue ? { language: stt.langue } : {})
+          })
+        }
+      : {}),
     // Historique des conversations : runner SQLite officiel de CopilotKit (reprise d'un fil après rechargement ou redémarrage).
     ...(runner ? { runner } : {})
   });
@@ -65,6 +78,18 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console }) {
   if (conversations) {
     app.use('/copilotkit/conversations', conversations.routeur);
   }
+  // Capacités du service IA (KAN-93) : le navigateur n'atteint pas le service IA ; le runtime, déjà authentifié auprès de
+  // l'API, relaie la réponse du service (pièces jointes ouvertes seulement si l'antivirus est joignable).
+  app.get('/copilotkit/capacites', async (requete, reponse) => {
+    try {
+      const autorisation = requete.headers.authorization ?? '';
+      await authentifier(autorisation, urlApi);
+      const relais = await fetch(new URL('/capacites', urlAgent), { headers: { authorization: autorisation }, signal: AbortSignal.timeout(10_000) });
+      reponse.status(relais.status).type('application/json').send(await relais.text());
+    } catch (panne) {
+      reponse.status(panne instanceof Response ? panne.status : 502).end();
+    }
+  });
   app.use(
     createCopilotExpressHandler({
       runtime,

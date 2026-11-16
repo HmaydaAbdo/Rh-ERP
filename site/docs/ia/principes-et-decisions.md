@@ -86,12 +86,12 @@ Rien de ceci n'est adopté ni planifié ; cette liste évite de le reproposer :
 | Q3 | Services payants ou hébergés **exclus définitivement** (§ 1, « Fonctions exclues »). |
 | Q4 | **Aucune écriture** pour l'instant : l'assistant reste en lecture seule jusqu'après le pilote réel ; E13 reste préparée et inactive. |
 | Q5 | Masquage **uniquement sous contrôle du backend** (E7) ; `PIIMiddleware` reporté (E16.9b) ; données RH réelles **autorisées** vers les modèles externes de la passerelle, le backend décidant de ce qui sort ; mémoire longue = **préférences et faits métier**, avec consentement, consultation, correction, oubli, expiration (E11.3). |
-| Q6 | État partagé : **filtres de vue pilotés par l'agent**, ajustables par l'utilisateur (E12.4). |
+| Q6 | État partagé (E12.4) — **révisé le 2026-11-15** : l'agent ne pilote **jamais** les vues ni leurs filtres ; seul l'utilisateur manipule les écrans, l'agent ne fait que converser. Le sens écran → agent existe déjà en lecture seule (contexte d'écran, KAN-83) ; le bouton « Ouvrir la vue » (KAN-89) reste un geste de l'utilisateur. Décision initiale (filtres pilotés par l'agent) abandonnée. |
 | Q7 | Interface générative ouverte **autorisée** (E12.9, `conventions/agent-ui.md`) ; MCP Apps abandonné ; WebMCP non adopté pour l'instant ; exécution de code : **QuickJS, puis conteneur Docker jetable** (E15.7). |
 | Q8 | Latence **p95 ≤ 30 s** ; jeu de référence d'environ **200 cas** ; retard de version toléré **30 jours** ; conservation des conversations **90 jours** ; traces Phoenix **sans limite**, contenus en clair, supprimées seulement par le propriétaire (décision du 2026-11-04) ; **aucun plafond** appliqué par nous (E6.9). |
 | Q9 | Jeu adverse avec **PyRIT** (Microsoft), documentation lue avant adoption, complété par des cas propres à l'ERP (E9.5). |
 | Q10 | Liste des conversations par une **table de fils tenue par l'ERP** (E10.10). |
-| Q11 | Pièces jointes **plus tard, cadrées** (E12.7) ; voix **en fin de parcours** (E16.8). |
+| Q11 | Pièces jointes et voix (E12.7) — **révisé le 2026-11-16** : cadre écrit et livré, **activés par défaut** avec antivirus ClamAV et contrôle du contenu réel ([page](pieces-jointes-et-voix.md)) ; dictée par un Whisper **local sur CPU** (gratuit, audio gardé sur les serveurs), pas de service en ligne sans accord CNDP. |
 | Q12 | **Tous** les corpus (aide métier de l'ERP, textes réglementaires, procédures internes) ; **tout le RAG est isolé dans E11**. |
 | Q13 | Compétences : **contenu séparé** (les `SKILL.md` du dépôt restent pour les développeurs ; l'agent a les siennes, E15.4). |
 | Q14 | Tables du point de reprise : **`setup()` officiel de LangGraph** au démarrage (E6.8). |

@@ -6,7 +6,7 @@ FROM ghcr.io/berriai/litellm:v1.109.1@sha256:11175975a3093e05e92faee2fe2fe3412a3
 # Configuration intégrée à l'image (aucun secret : uniquement des références os.environ/…).
 COPY --chmod=0444 litellm_config.yaml /app/config.yaml
 COPY --chmod=0555 entrypoint.sh /usr/local/bin/staport-intelligence-litellm-entrypoint
-# Lancé par le service Compose litellm-cles : enregistre les clés virtuelles du .env (idempotent).
+# Lancé en arrière-plan par l'entrée de l'image dès que la passerelle répond : enregistre les clés virtuelles du .env (idempotent).
 COPY --chmod=0444 enregistrer_cles.py /usr/local/bin/staport-intelligence-enregistrer-cles
 
 EXPOSE 4000

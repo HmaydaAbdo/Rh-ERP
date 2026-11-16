@@ -60,7 +60,7 @@ est structurant, un ADR.
   de `api/src/staport/migrations/base_v44` ; une base déjà migrée ne les rejoue pas.
 - Les révisions sont écrites à la main en SQL explicite (`op.execute`) pour garder les contraintes `CHECK`, les index et les
   règles de `conventions/database.md` ; l'autogénération sert de contrôle de dérive, pas de source de vérité.
-- Exécution : étape de déploiement dédiée (`api-migrate`) avant le démarrage de l'application, jamais dans sa durée de vie.
+- Exécution (décision du propriétaire, 2026-11-16, comme Flyway dans Spring Boot) : le conteneur `api` migre lui-même au démarrage, par l'entrée de l'image (`api/entrypoint.sh`), avant de lancer le serveur ; jamais dans la durée de vie de l'application. Les identifiants du propriétaire du schéma sont retirés de l'environnement avant le serveur. Plus de conteneur `api-migrate`.
 
 ### 4. Authentification et autorisation
 

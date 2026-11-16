@@ -70,7 +70,7 @@ seule fois, ici. Format : constat, cause, règle.
 | Une URL PostgreSQL construite par interpolation échouait avec un caractère réservé dans le mot de passe. | Construire un objet `URL.create` SQLAlchemy avec les champs séparés et le transmettre au moteur ; tester des secrets contenant `@`, `/`, `:` et `%`. Source : https://docs.sqlalchemy.org/en/21/core/engines.html#creating-urls-programmatically. |
 | Le banc déclarait inventées les secondes d'un horodatage ISO parce que la source contenait aussi des fractions de seconde. | Analyser les horodatages JSON avec `datetime.fromisoformat` et tester séparément une décimale métier qui ne doit pas être assimilée à une heure : https://docs.python.org/3/library/datetime.html#datetime.datetime.fromisoformat. |
 | Deux exports `pg_dump` de données inchangées avaient des empreintes différentes à cause de leur clé `\restrict` aléatoire. | Pour comparer des dumps en lecture seule, fixer `--restrict-key` avec une valeur de test puis calculer l'empreinte ; ne jamais fixer cette clé pour une sauvegarde destinée à être restaurée. Source : https://www.postgresql.org/docs/18/app-pgdump.html. |
-| Au premier démarrage PostgreSQL, `pg_isready` par socket a déclaré le service sain pendant le serveur temporaire d'`initdb`, juste avant son arrêt ; `phoenix-db-init` a reçu `connection refused` en TCP. | Le healthcheck Compose de PostgreSQL teste explicitement `-h 127.0.0.1` : il ne passe qu'après le démarrage TCP du serveur final. |
+| Au premier démarrage PostgreSQL, `pg_isready` par socket a déclaré le service sain pendant le serveur temporaire d'`initdb`, juste avant son arrêt ; le job d'initialisation des bases a reçu `connection refused` en TCP. | Le healthcheck Compose de PostgreSQL teste explicitement `-h 127.0.0.1` : il ne passe qu'après le démarrage TCP du serveur final. |
 | Importer le module IA à l'import de l'API chargeait le `.env` local par effet de bord d'une dépendance IA et modifiait des paramètres de configuration API. | Charger les modules IA uniquement à l'activation explicite dans la fabrique de l'application API ; vérifier qu'un simple import ne modifie pas l'environnement. |
 | L'image API a copié le venv `uv` construit sous `/app/api/.venv` vers `/app/.venv` : les scripts gardaient le shebang du chemin initial et ne démarraient plus. | Garder le même chemin absolu du venv entre les étapes de build et d'exécution, puis exécuter réellement l'`ENTRYPOINT` dans l'image avant de déclarer sa construction prouvée. |
 | Sur une base LiteLLM neuve, les 224 migrations Prisma ont pris près de quatre minutes ; le healthcheck de l'image a épuisé sa période de démarrage de 90 secondes et Compose a déclaré le service malsain juste avant qu'il soit prêt. | Dimensionner `HEALTHCHECK --start-period` sur un premier démarrage réellement mesuré, avec marge ; retester le parcours Compose sur volume neuf. |
@@ -119,3 +119,20 @@ Le script `filtrer_config.py` contournait le fait que LiteLLM ne bascule pas sur
 
 Le `MemoryMiddleware` officiel de Deep Agents charge `AGENTS.md` une seule fois par conversation et le garde dans l'état du fil. Un « tout oublier » aurait donc laissé la mémoire visible dans toutes les conversations déjà commencées : un oubli qui n'oublie pas. Le test d'une seule conversation ne l'aurait pas montré ; il a fallu un test sur trois tours d'un même fil (correction, puis oubli entre deux tours).
 **À faire :** pour toute donnée copiée dans l'état d'un fil (mémoire, droits, contexte), se demander qui la met à jour quand sa source change ; tester le changement de la source entre deux tours d'un même fil, pas seulement au premier tour.
+
+## 2026-11-16 — Un fichier joint se vérifie à trois niveaux, et un contrôle indisponible refuse (KAN-93)
+
+Le type annoncé par le navigateur et le filtre `accept` de la discussion ne protègent de rien : le serveur doit revérifier la déclaration (types, taille, données en ligne), le contenu réel (signature des octets, UTF-8 pour le texte) et l'antivirus, et refuser quand l'antivirus est injoignable ou pas encore prêt (échec fermé). Le protocole AG-UI renvoie tout l'historique à chaque question : sans cache par empreinte, chaque tour réanalyserait chaque fichier. Les tests ont été écrits avec de vrais octets (en-têtes PNG, PDF) et non des zéros, qui n'auraient pas passé le contrôle du contenu.
+
+**À faire :** pour toute nouvelle entrée de fichier, écrire d'abord les tests de déguisement (PDF annoncé en image, exécutable annoncé en texte) et d'antivirus indisponible ; garder le test contre un vrai démon, ignoré sans variable d'environnement, pour le prouver sur la pile réelle.
+
+## 2026-11-16 — Barres obliques inverses doublées dans les scripts du terminal (outillage)
+
+Dans un script Python passé par l'outil Bash, `\x00` ou `\n` arrive au script comme `\x00` ou un saut de ligne réels : les littéraux d'octets d'un fichier de test se sont retrouvés avec de vrais caractères de contrôle et un octet nul, et le fichier ne se compilait plus. **À faire :** écrire les fichiers contenant des échappements avec l'outil d'écriture (Write), ou construire le caractère avec `chr(92)` ; vérifier avec `python -m pytest --collect-only` avant d'enchaîner les corrections.
+
+## 2026-11-16 — Un conteneur ponctuel par besoin d'initialisation (déploiement)
+
+Trois conteneurs ponctuels (`phoenix-db-init`, `litellm-cles`) et deux instances PostgreSQL de plus (`litellm-db`, `ia-db`) alourdissaient la pile
+d'un déploiement client. **À faire :** initialiser dans le conteneur qui détient déjà le droit nécessaire : l'entrée de l'image
+PostgreSQL crée les comptes et bases de service (idempotent, `CONNECT` retiré à `PUBLIC`), l'entrée de l'image LiteLLM enregistre
+ses clés ; l'API migre elle-même au démarrage (`api/entrypoint.sh`), comme Flyway dans Spring Boot, et retire les identifiants propriétaire de l'environnement avant le serveur. Plus aucun conteneur ponctuel.

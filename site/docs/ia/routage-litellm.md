@@ -35,7 +35,7 @@ Les métadonnées conservent les tags pour l'observabilité. L'appartenance aux 
 Le garde-fou `litellm_content_filter` reste actif avant les appels. Aucun patch du framework, hook de réparation ou routeur maison.
 Le raccordement LangChain construit le nom de groupe depuis la capacité existante `Tache`.
 La clé applicative reçoit la liste explicite des cinq groupes de production ; les groupes eval et test restent exclus par les permissions de modèles LiteLLM.
-Le service Compose `litellm-cles` doit synchroniser les permissions des clés déjà enregistrées, sans changer leur valeur.
+Le conteneur `litellm` (entrée de l'image) doit synchroniser les permissions des clés déjà enregistrées, sans changer leur valeur.
 
 ## Lot adopté
 
@@ -53,4 +53,4 @@ Pas de push ni CI dans ce lot sans demande explicite. Heures supplémentaires ex
 
 Validation locale du 2026-10-28 : 11 tests IA ciblés réussis ; les cinq groupes répondent dans leur pool, OCR réel compris. Un ciblage individuel Groq20 réussit ; trois refus 403 confirment l’exclusion eval/test/selftest de la clé applicative. Une injection est bloquée en 400 ; la sonde de bascule et une bascule réelle du groupe complex réussissent. Un appel autorisé avec la clé applicative réussit. La resynchronisation des clés est idempotente. Ruff ciblé, compilation Python des scripts et validation Compose passent. V1c reste ouverte pour les évaluations métier, p95 et T20.
 
-Les images locales LiteLLM et IA ont été reconstruites ; les services `litellm`, `ia` et `ia-db` sont sains. Aucune publication ni CI lancée.
+Les images locales LiteLLM et IA ont été reconstruites ; les services `litellm` et `ia` sont sains. Aucune publication ni CI lancée.
