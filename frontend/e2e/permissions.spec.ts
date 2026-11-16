@@ -40,6 +40,15 @@ test.describe('Permissions', () => {
     await expect(page).toHaveURL(/\/acces-refuse$/);
   });
 
+  test('affiche une page claire pour une adresse inconnue au lieu d’un écran vide', async ({ page }) => {
+    await mockApi(page, { username: 'lecteur', permissions: ['FUNCTION_READ'] }, { 'POST /functions/search': () => FONCTIONS });
+    await page.goto('/employes');
+
+    await expect(page.getByRole('heading', { name: 'Page introuvable' })).toBeVisible();
+    await page.getByRole('link', { name: "Retour à l'accueil" }).click();
+    await expect(page.getByRole('heading', { name: 'Page introuvable' })).toHaveCount(0);
+  });
+
   test('ne propose dans le menu que les écrans autorisés', async ({ page }) => {
     await mockApi(page, { username: 'lecteur', permissions: ['FUNCTION_READ', 'EQUIPE_READ'] }, { 'POST /functions/search': () => FONCTIONS });
     await page.goto('/functions');
