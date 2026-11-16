@@ -1,4 +1,3 @@
-import { TypeSalaire } from '../../employee/models/employee.model';
 
 export interface PaieEmployeeSummary {
   id: number;
@@ -250,7 +249,6 @@ export interface PaieImportErreur {
   employeId?: number | null;
   /** Ancien salaire de la fiche, affiché avec l'avertissement `SALAIRE_DIFFERENT`. */
   salaireActuel?: string | null;
-  typeSalairePropose?: TypeSalaire | null;
 }
 
 /** Un CIN sans fiche : à créer depuis l'assistant, ou à corriger dans le fichier. */
@@ -267,14 +265,13 @@ export interface PaieImportCinInconnu {
 /** Codes des champs comparés entre la fiche et le fichier. */
 export type PaieImportChamp = 'nomPrenom' | 'fonction' | 'chantier' | 'equipe' | 'salaire';
 
-/** Une fiche qui ne dit pas la même chose que sa ligne ; `typeSalaire` est le type actuel de la fiche. */
+/** Une fiche qui ne dit pas la même chose que sa ligne  ; le type de salaire se déduit du montant, il n'est jamais choisi. */
 export interface PaieImportEcart {
   employeId: number;
   numeroLigne: number;
   cin: string;
   nomPrenom: string;
   champs: { champ: PaieImportChamp; base: string | null; fichier: string | null }[];
-  typeSalaire: TypeSalaire | null;
 }
 
 /** Un départ proposé : STC ou sortie du fichier (`motif` « STC » / « Sortie »), ou actif absent du fichier (`motif` null). */
@@ -334,8 +331,8 @@ export interface PaieImportControlePeriode {
 
 /** Corrections des fiches depuis l'assistant (POST /paie/import/corrections). */
 export interface PaieImportCorrections {
-  aligner: { employeId: number; typeSalaire: TypeSalaire | null }[];
-  creer: { numeroLigne: number; dateNaissance: string; dateEmbauche: string; typeSalaire: TypeSalaire }[];
+  aligner: { employeId: number }[];
+  creer: { numeroLigne: number; dateNaissance: string; dateEmbauche: string }[];
 }
 
 /** Bilan d'un import réussi (POST /paie/import). */

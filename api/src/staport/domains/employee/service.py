@@ -241,7 +241,6 @@ class ServiceEmployee:
                 chantier_id=r.chantier_id,
                 equipe_id=r.equipe_id,
                 salaire=r.salaire if voit_paie else None,
-                type_salaire=r.type_salaire if voit_paie else None,
             )
             s.add(x)
             await s.flush()
@@ -271,7 +270,7 @@ class ServiceEmployee:
             )
             x.chantier_id, x.equipe_id = (r.chantier_id, r.equipe_id) if r.statut.value == "ACTIF" else (None, None)
             if voit_paie:
-                x.salaire, x.type_salaire = r.salaire, r.type_salaire
+                x.salaire = r.salaire  # le type de salaire se déduit du montant (modèle Employee)
             await s.flush()
             return await reponse(s, x)
 

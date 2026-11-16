@@ -93,8 +93,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     fonctionId: fonction.id,
     chantierId: chantier.id,
     equipeId: equipeHistorique.id,
-    salaire: null,
-    typeSalaire: null
+    salaire: null
   });
 
   const maintenant = new Date();
@@ -108,7 +107,7 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
   const fonctionHs = await api<{ id: number }>(page, adminToken, 'POST', '/functions', { libelle: fonctionLibelleHs });
   const employeHs = await api<{ id: number }>(page, adminToken, 'POST', '/employees', {
     nomPrenom: 'Alaoui Salma', cin: cinHs, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
-    fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id, salaire: 4000, typeSalaire: 'MENSUEL'
+    fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id, salaire: 4000
   });
   await api(page, adminToken, 'POST', '/paie', {
     employeeId: employeHs.id, periode: moisCourant, fonctionId: fonctionHs.id, chantierId: chantierHeuresSupp.id, equipeId: equipeHeuresSupp.id,
@@ -176,7 +175,6 @@ test('parcourt les domaines et vérifie les indicateurs Équipe avec et sans acc
     chantierId: ficheEmployee.chantier.id,
     equipeId: equipe.id,
     salaire: null,
-    typeSalaire: null,
     statut: ficheEmployee.statut
   });
 

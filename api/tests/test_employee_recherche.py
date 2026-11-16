@@ -108,8 +108,6 @@ def test_la_zone_unique_cherche_le_nom_ou_le_cin_dans_n_importe_quel_ordre(jeu: 
 def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
     base = jeu["corps"]("Invalide", f"CIN-INV-{uuid.uuid4().hex[:6]}", None)
     for variante in (
-        {"salaire": 4000},  # salaire sans type
-        {"typeSalaire": "MENSUEL"},  # type sans salaire
         {"dateNaissance": "2999-01-01"},  # naissance future
     ):
         reponse = jeu["client"].post("/employees", headers=jeu["entetes"], json={**base, **variante})
@@ -120,6 +118,30 @@ def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
     actif_sans_chantier = {**modification, "statut": "ACTIF", "chantierId": None}
     reponse = jeu["client"].put(f"/employees/{jeu['avec']['id']}", headers=jeu["entetes"], json=actif_sans_chantier)
     assert reponse.status_code == 400, reponse.text
+
+
+@pytest.mark.parametrize(
+    ("salaire", "type_attendu"),
+    [
+        (5500, "MENSUEL"),
+        (4000, "MENSUEL"),
+        (501, "MENSUEL"),
+        (500, "JOURNALIER"),
+        (150, "JOURNALIER"),
+        (0, "JOURNALIER"),
+    ],
+)
+def test_le_type_de_salaire_se_deduit_du_montant_et_n_est_jamais_saisi(
+    jeu: dict[str, Any], salaire: int, type_attendu: str
+) -> None:
+    base = jeu["corps"]("Deduit", f"CIN-TYP-{uuid.uuid4().hex[:6]}", None)
+    # Un type envoyé par un client (ici faux) est ignoré : le montant décide.
+    faux = "JOURNALIER" if type_attendu == "MENSUEL" else "MENSUEL"
+    reponse = jeu["client"].post(
+        "/employees", headers=jeu["entetes"], json={**base, "salaire": salaire, "typeSalaire": faux}
+    )
+    assert reponse.status_code == 201, reponse.text
+    assert reponse.json()["typeSalaire"] == type_attendu
 
 
 def test_references_inconnues_et_doublon_de_cin_refuses(jeu: dict[str, Any]) -> None:

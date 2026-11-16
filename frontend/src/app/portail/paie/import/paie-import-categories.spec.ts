@@ -7,8 +7,7 @@ function ecart(employeId: number, ...champs: PaieImportEcart['champs'][number]['
     numeroLigne: employeId,
     cin: `C${employeId}`,
     nomPrenom: `N${employeId}`,
-    champs: champs.map((champ) => ({ champ, base: 'a', fichier: 'b' })),
-    typeSalaire: null
+    champs: champs.map((champ) => ({ champ, base: 'a', fichier: 'b' }))
   };
 }
 

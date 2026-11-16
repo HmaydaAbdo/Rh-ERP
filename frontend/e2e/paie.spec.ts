@@ -231,7 +231,7 @@ test.describe('Paie', () => {
 
   test('importe la paie du mois écoulé : met une fiche à jour, confirme les départs, puis importe', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-08T09:00:00')); // le mois proposé est le mois civil précédent : septembre
-    const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim', typeSalaire: 'MENSUEL',
+    const ecart = { employeId: 4, numeroLigne: 4, cin: 'AB1234', nomPrenom: 'ALAMI Karim',
       champs: [{ champ: 'chantier', base: 'C059', fichier: 'C168' }] };
     const analyse = { periode: '2026-09', totalLignes: 1, erreurs: [], avertissements: [], chantiersClotures: [], cinInconnus: [], ecarts: [ecart],
       departs: [{ employeId: 7, cin: 'CD5678', nomPrenom: 'BENNANI Omar', motif: null }], retours: [], controlesPeriode: [], blocagesPeriode: [], pret: false };
@@ -262,7 +262,7 @@ test.describe('Paie', () => {
     await dialogue.getByRole('button', { name: 'Importer la paie' }).click();
 
     await expect(dialogue.getByText('Paie de septembre 2026 importée')).toBeVisible();
-    expect(String(mock.bodies['POST /paie/import/corrections']?.[0])).toContain('{"aligner":[{"employeId":4,"typeSalaire":null}],"creer":[]}');
+    expect(String(mock.bodies['POST /paie/import/corrections']?.[0])).toContain('{"aligner":[{"employeId":4}],"creer":[]}');
     expect(String(mock.bodies['POST /paie/import']?.[0])).toContain('{"departs":[{"employeId":7,"motif":"Démission","sansMotif":false}]}');
   });
 
