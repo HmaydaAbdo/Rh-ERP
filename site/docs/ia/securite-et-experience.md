@@ -76,15 +76,25 @@ tous rendus par des composants Staport du catalogue versionné — avec transiti
 à la vue classique en un clic. Clavier, lecteur d'écran, mobile et `prefers-reduced-motion` sont
 pris en charge ; chaque surface a un repli texte.
 
-**Mascotte.** Un personnage Rive vivant, présent dans le panneau et dans l'Espace IA :
+**Pas de mascotte.** Décision du propriétaire du 2026-11-16 (KAN-100 abandonné) : aucun personnage animé, aucun Rive,
+aucun événement dédié. Le retour visuel pendant le travail de l'agent est celui de CopilotKit (raisonnement et appels d'outils).
 
-- il **écoute** pendant la saisie, **réfléchit** pendant le raisonnement, **cherche** pendant un
-  appel d'outil, **trouve** à l'arrivée du résultat, **demande** lors d'une confirmation et
-  **s'excuse** sur un refus ou une erreur ;
-- il **désigne** le composant dont parle la réponse (cible `surfaceId/componentId`), suit le
-  pointeur du regard et a des animations de repos ;
-- il est piloté par l'événement AG-UI `com.staport.mascot.state.v1` décrit dans
-  agent-ui (`conventions/agent-ui.md`), jamais directement par le modèle ;
-- avec la voix (J9), il parle avec synchronisation labiale et sous-titres ;
-- l'utilisateur peut le masquer ; une image fixe remplace l'animation si Rive est indisponible ou
-  si le mouvement réduit est demandé.
+## Accessibilité et appareils : preuves (KAN-99)
+
+Suite Playwright `frontend/e2e/assistant-accessibilite.spec.ts` (axe-core, WCAG 2.2 AA) :
+
+| Exigence | Preuve |
+|---|---|
+| Clavier | Ctrl K ouvre l'espace avec la saisie au focus ; Tab avance toujours vers un autre contrôle (aucun piège) ; Ctrl K ramène à l'écran |
+| Lecteur d'écran | Région nommée « Staport Intelligence », aucun bouton, lien ou champ sans nom accessible |
+| Thèmes | Aucune violation axe en clair et en sombre |
+| Mouvement réduit | Aucune transition ni animation de plus de 0,1 s sous `prefers-reduced-motion` |
+| Téléphone et zoom | 390 px : aucune violation, cibles d'au moins 24 px ; 320 px (zoom 400 %) : aucun défilement horizontal |
+| Repli texte | Une surface A2UI inconnue n'empêche pas la réponse écrite ni ne lève d'erreur de page |
+| Service indisponible | Message en français, application restée utilisable |
+| Annulation d'un run | Test du runtime (`copilot-runtime/test/app.test.mjs`) : l'arrêt officiel `/agent/:id/stop/:threadId` est réservé au propriétaire du fil |
+
+**Lacunes de la bibliothèque (CopilotKit Angular 0.6.0), sans contournement maison** : le bouton d'envoi porte un nom
+accessible anglais (« Send message ») sans clé de libellé, et la saisie n'offre pas de bouton d'arrêt. Le slot `sendButton`
+n'est joignable depuis `copilot-chat` qu'en remplaçant toute la saisie, ce qui serait une copie maison ; la correction
+attend une clé de libellé ou un slot exposé par `copilot-chat` (suivi KAN-270, déclencheur « slots »).

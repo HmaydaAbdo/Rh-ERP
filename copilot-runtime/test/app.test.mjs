@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, before, describe, test } from 'node:test';
+import { after, before, beforeEach, describe, test } from 'node:test';
 import Database from 'better-sqlite3';
 import { creerApp } from '../src/app.mjs';
 
@@ -26,20 +26,44 @@ let fermer;
 let purger;
 const suppressionsIa = [];
 let panneIa = false;
+// Réponse simulée de `/capacites` du service IA et dernier jeton reçu (capacités déclarées dans /info, KAN-270).
+let piecesJointesIa = true;
+let derniereAutorisationCapacites;
 // Exécutions du service IA (un POST = un run de l'agent) et lenteur du flux simulé, pour la reprise d'un flux coupé (KAN-85).
 let executionsIa = 0;
 let lenteurIaMs = 0;
+// Politique des vues libres que l'API simulée renvoie (KAN-281, KAN-282) : interrupteur et bornes lus dans Paramètres.
+const POLITIQUE_DEPART = { actives: true, tailleMaxOctets: 204800, dureeMaxSecondes: 15, parReponse: 10, parMinute: 60 };
+let politiqueVuesLibres = { ...POLITIQUE_DEPART };
+// Journal d'audit des ouvertures (KAN-283) : ce que l'API simulée a reçu, et sa panne éventuelle.
+const ouverturesAuditees = [];
+let panneAudit = false;
 
 before(async () => {
   api = createServer((requete, reponse) => {
     const utilisateur = UTILISATEURS[(requete.headers.authorization ?? '').replace('Bearer ', '')];
+    if (requete.url === '/parametres/vues-libres/ouvertures' && requete.method === 'POST') {
+      let corps = '';
+      requete.on('data', (morceau) => (corps += morceau));
+      requete.on('end', () => {
+        if (utilisateur && !panneAudit) {
+          ouverturesAuditees.push(JSON.parse(corps));
+        }
+        reponse.writeHead(!utilisateur ? 401 : panneAudit ? 500 : 204).end();
+      });
+      return;
+    }
+    if (requete.url === '/parametres/vues-libres') {
+      return reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ? politiqueVuesLibres : {}));
+    }
     reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ?? {}));
   });
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
   // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
   agent = createServer((requete, reponse) => {
     if (requete.url === '/capacites') {
-      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: true, recu: requete.headers.authorization }));
+      derniereAutorisationCapacites = requete.headers.authorization;
+      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: piecesJointesIa }));
     }
     if (requete.method === 'DELETE') {
       suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
@@ -321,13 +345,47 @@ describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agen
   });
 });
 
-describe('capacités du service IA (KAN-93)', () => {
-  test('exigent une authentification puis relaient la réponse du service IA avec le jeton de l’utilisateur', async () => {
-    assert.equal((await appeler('/capacites')).status, 401);
-    assert.equal((await appeler('/capacites', { jeton: 'jeton-sans-droit' })).status, 403);
-    const reponse = await appeler('/capacites', { jeton: 'jeton-1' });
+describe('annulation d’un run (KAN-99) : l’arrêt est réservé au propriétaire du fil', () => {
+  test('arrêter un run en cours le coupe avant sa réponse ; un autre utilisateur ne peut pas l’arrêter', async () => {
+    const fil = 'u1-annule';
+    lenteurIaMs = 1500;
+    try {
+      const run = fetch(`${base}/agent/default/run`, {
+        method: 'POST',
+        headers: { authorization: 'Bearer jeton-1', 'content-type': 'application/json' },
+        body: JSON.stringify(corpsRun(fil)),
+        signal: AbortSignal.timeout(10_000)
+      }).then((reponse) => reponse.text()).catch(() => '');
+      await new Promise((ok) => setTimeout(ok, 300));
+
+      const intrus = await appeler(`/agent/default/stop/${fil}`, { jeton: 'jeton-2', corps: {} });
+      // Comportement officiel : pour un fil qui n'est pas le sien, « aucun run actif » (sans révéler que le fil existe).
+      assert.equal(JSON.parse(intrus.texte).stopped, false, 'un autre utilisateur ne peut pas arrêter le fil');
+      const arret = await appeler(`/agent/default/stop/${fil}`, { jeton: 'jeton-1', corps: {} });
+      assert.equal(JSON.parse(arret.texte).stopped, true);
+      assert.ok(!(await run).includes(SECRET), 'la réponse n’arrive pas : le run a été coupé');
+    } finally {
+      lenteurIaMs = 0;
+    }
+  });
+});
+
+describe('capacités du service IA (KAN-93, KAN-270)', () => {
+  test('sont déclarées dans /info (AG-UI) avec le jeton de l’utilisateur : pièces jointes ouvertes si le service les accepte', async () => {
+    const reponse = await appeler('/info', { jeton: 'jeton-1' });
+
     assert.equal(reponse.status, 200);
-    assert.deepEqual(JSON.parse(reponse.texte), { piecesJointes: true, recu: 'Bearer jeton-1' });
+    assert.deepEqual(JSON.parse(reponse.texte).agents.default.capabilities, { multimodal: { input: { image: true, pdf: true, file: true } } });
+    assert.equal(derniereAutorisationCapacites, 'Bearer jeton-1');
+  });
+
+  test('restent vides quand le service IA les refuse ou tombe : les pièces jointes restent fermées', async () => {
+    piecesJointesIa = false;
+    try {
+      assert.deepEqual(JSON.parse((await appeler('/info', { jeton: 'jeton-1' })).texte).agents.default.capabilities, {});
+    } finally {
+      piecesJointesIa = true;
+    }
   });
 });
 
@@ -399,10 +457,20 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
   });
 });
 
-describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware officiel quand elles sont activées', () => {
+describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées par l’interrupteur', () => {
   const DOCUMENT = '<html><body><p>Vue de test</p></body></html>';
   let agentOutil;
   let serveurs = [];
+  // Ce que l'agent simulé fait à chaque run : nombre d'appels de l'outil et octets de remplissage de leur HTML.
+  let appels = 1;
+  let rembourrage = 0;
+  beforeEach(() => {
+    appels = 1;
+    rembourrage = 0;
+    politiqueVuesLibres = { ...POLITIQUE_DEPART };
+    panneAudit = false;
+    ouverturesAuditees.length = 0;
+  });
 
   const demarrer = async (vuesLibres) => {
     const app = creerApp({
@@ -424,14 +492,13 @@ describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware
       requete.on('data', (morceau) => (corps += morceau));
       requete.on('end', () => {
         const { threadId, runId } = JSON.parse(corps);
-        const arguments_ = JSON.stringify({ initialHeight: 120, placeholderMessages: ['Préparation…'], css: 'p{color:#222}', html: [DOCUMENT], jsFunctions: '', jsExpressions: [] });
-        const evenements = [
-          { type: 'RUN_STARTED', threadId, runId },
-          { type: 'TOOL_CALL_START', toolCallId: 't1', toolCallName: 'generateSandboxedUi', parentMessageId: 'm1' },
-          { type: 'TOOL_CALL_ARGS', toolCallId: 't1', delta: arguments_ },
-          { type: 'TOOL_CALL_END', toolCallId: 't1' },
-          { type: 'RUN_FINISHED', threadId, runId }
-        ];
+        const arguments_ = JSON.stringify({ initialHeight: 120, placeholderMessages: ['Préparation…'], css: 'p{color:#222}', html: [DOCUMENT + '<!--' + 'x'.repeat(rembourrage) + '-->'], jsFunctions: '', jsExpressions: [] });
+        const appelsOutil = Array.from({ length: appels }, (_, i) => [
+          { type: 'TOOL_CALL_START', toolCallId: `t${i + 1}`, toolCallName: 'generateSandboxedUi', parentMessageId: 'm1' },
+          { type: 'TOOL_CALL_ARGS', toolCallId: `t${i + 1}`, delta: arguments_ },
+          { type: 'TOOL_CALL_END', toolCallId: `t${i + 1}` }
+        ]).flat();
+        const evenements = [{ type: 'RUN_STARTED', threadId, runId }, ...appelsOutil, { type: 'RUN_FINISHED', threadId, runId }];
         reponse.writeHead(200, { 'content-type': 'text/event-stream' });
         evenements.forEach((evenement) => reponse.write(`data: ${JSON.stringify(evenement)}\n\n`));
         reponse.end();
@@ -460,7 +527,7 @@ describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware
     return reponse.text();
   };
 
-  test('coupées par défaut : aucun événement de vue libre', async () => {
+  test('interrupteur éteint (VUES_LIBRES=false) : aucun événement de vue libre', async () => {
     const flux = await lancer(await demarrer(false));
 
     assert.ok(!flux.includes('open-generative-ui'));
@@ -471,5 +538,81 @@ describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware
 
     assert.ok(flux.includes('open-generative-ui'), flux.slice(0, 800));
     assert.ok(flux.includes('Vue de test'));
+  });
+
+  const vues = (flux) => (flux.match(/open-generative-ui/g) ?? []).length;
+
+  test('arrêt à chaud (KAN-281) : l\'interrupteur de Paramètres coupe les vues à la question suivante, sans redéploiement', async () => {
+    const racine = await demarrer(true);
+    assert.ok(vues(await lancer(racine)) > 0);
+
+    politiqueVuesLibres.actives = false;
+    const f = await lancer(racine);
+    assert.equal(vues(f), 0);
+
+    politiqueVuesLibres.actives = true;
+    assert.ok(vues(await lancer(racine)) > 0);
+  });
+
+  test('une politique illisible ferme les vues (échec fermé)', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres = undefined;
+
+    assert.equal(vues(await lancer(racine)), 0);
+  });
+
+  test('taille (KAN-282) : un code trop gros est refusé sans qu\'un seul morceau parte au navigateur', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.tailleMaxOctets = 2_000;
+    rembourrage = 5_000;
+    const flux = await lancer(racine);
+
+    assert.equal(vues(flux), 0);
+    assert.ok(!flux.includes('Vue de test'), 'aucun morceau du code ne part');
+    assert.ok(flux.includes('RUN_FINISHED'), flux.slice(-600));
+  });
+
+  test('nombre par réponse (KAN-282) : au-delà de la limite, les vues en trop sont retirées', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.parReponse = 2;
+    appels = 5;
+    const flux = await lancer(racine);
+
+    assert.ok(vues(flux) > 0);
+    assert.ok(flux.includes('"messageId":"t2-activity"'), 'les deux premières vues passent');
+    assert.ok(!flux.includes('"messageId":"t3-activity"'), 'la troisième vue est retirée');
+  });
+
+  test('audit (KAN-283) : chaque vue admise est inscrite avec son fil et sa taille, jamais son contenu', async () => {
+    const flux = await lancer(await demarrer(true));
+
+    assert.ok(vues(flux) > 0);
+    assert.equal(ouverturesAuditees.length, 1);
+    assert.match(ouverturesAuditees[0].fil, /^vue-/);
+    assert.ok(ouverturesAuditees[0].octets > 0);
+    assert.ok(!JSON.stringify(ouverturesAuditees[0]).includes('Vue de test'), 'le contenu n’est pas journalisé');
+  });
+
+  test('audit (KAN-283) : une vue refusée n’est pas inscrite, et si l’inscription échoue la vue n’est pas montrée', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.tailleMaxOctets = 2_000;
+    rembourrage = 5_000;
+    await lancer(racine);
+    assert.equal(ouverturesAuditees.length, 0);
+
+    politiqueVuesLibres.tailleMaxOctets = 204800;
+    rembourrage = 0;
+    panneAudit = true;
+    const flux = await lancer(racine);
+    assert.equal(vues(flux), 0);
+    assert.ok(!flux.includes('Vue de test'));
+  });
+
+  test('fréquence par minute (KAN-282) : la limite est par utilisateur', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.parMinute = 1;
+
+    assert.ok(vues(await lancer(racine)) > 0);
+    assert.equal(vues(await lancer(racine)), 0, 'la deuxième vue de la minute est refusée');
   });
 });

@@ -567,6 +567,9 @@ contournement trouvé devient un cas de régression avant sa correction.
   prompt) ; les sorties structurées sont validées par schéma avant usage ; une sortie invalide est un
   échec explicite, pas une réponse partielle silencieuse. Les entrées hors sujet ou abusives reçoivent
   un refus poli ; le contenu offensant visant une personne n'est ni produit ni relayé.
+  Un refus du garde-fou de LiteLLM (« Content blocked ») n'est pas une panne : le service émet un `RUN_ERROR` de code
+  `DEMANDE_BLOQUEE` au message explicite, retire la question refusée du fil (`RemoveMessage`, sinon chaque message suivant
+  serait refusé) et l'interface affiche ce message au lieu de « réessayez ».
 * **Cycle de vie des modèles.** Les modèles servis sont identifiés par une version exacte lorsque le
   fournisseur en publie une. Un changement de modèle, de prompt ou de graphe passe par le jeu de
   référence, puis par une période de comparaison (même trafic en ombre ou part réduite du trafic)
@@ -875,7 +878,7 @@ leurs règles métier et ne pourra pas élargir les permissions de l'utilisateur
 indicateurs resteront détenus par leurs domaines ; tout corpus partagé devra préserver les droits et
 la provenance des sources.
 
-Pour les événements vers l'interface, les surfaces génératives et la mascotte, appliquer
+Pour les événements vers l'interface, et les surfaces génératives, appliquer
 [`agent-ui.md`](agent-ui.md). Cette convention ne remplace pas les contrôles d'identité, de permission et d'audit
 définis ici, dans `security.md`, `audit.md` et `mcp.md`.
 

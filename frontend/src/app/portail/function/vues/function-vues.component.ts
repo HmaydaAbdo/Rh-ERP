@@ -1,11 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { registerFrontendTool } from '@copilotkit/angular';
+
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { FunctionActionsComponent } from '../actions/function-actions.component';
 import { AUCUN_FILTRE_FUNCTION, FunctionFiltres, lireFiltresFunction, versParametresFunction } from '../filtres/function-filtres';
 import { FunctionFiltresComponent } from '../filtres/function-filtres.component';
+import { outilFiltresFonctions } from '../filtres/function-outils-assistant';
 
 /** Les trois vues des fonctions, dans l'ordre des onglets (voir `function.routes.ts`). */
 const CONFIGURATION_FUNCTION: CollectionShellConfig = {
@@ -43,9 +47,14 @@ export class FunctionVuesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltresFunction(params)));
+    // L'agent peut régler les filtres de cette page (outil côté navigateur, retiré avec la page) ; réservé au droit IA.
+    if (this.auth.hasPermission('IA_UTILISER')) {
+      registerFrontendTool(outilFiltresFonctions((filtres) => this.appliquer(filtres)));
+    }
   }
 
   protected appliquer(filtres: FunctionFiltres): void {

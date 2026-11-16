@@ -108,5 +108,12 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [authGuard],
     loadChildren: () => import('./portail/admin/admin.routes').then((m) => m.ADMIN_ROUTES)
+  },
+  // Dernière route : une adresse inconnue affiche une page claire (derrière la connexion, comme les écrans) au lieu d'un écran vide.
+  {
+    path: '**',
+    title: 'Page introuvable',
+    canActivate: [authGuard],
+    loadComponent: () => import('./core/not-found/page-introuvable.component').then((m) => m.PageIntrouvableComponent)
   }
 ];
