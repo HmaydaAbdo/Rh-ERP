@@ -242,6 +242,21 @@ def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
     return prompt_capacites
 
 
+def _avec_requis_a_la_racine(composants: dict[str, Any]) -> dict[str, Any]:
+    """Remonte à la racine de chaque composant les propriétés obligatoires déclarées dans ses ``allOf`` (KAN-96).
+
+    Le catalogue de base A2UI les range dans ``allOf`` (composant commun, puis propriétés propres) ; le validateur
+    officiel de la boucle de reprise ne lit que ``required`` à la racine et laissait passer un ``Text`` sans texte. Le
+    fichier de la spécification n'est pas modifié : seule la copie donnée à la validation est aplatie."""
+    aplatis: dict[str, Any] = {}
+    for nom, schema in composants.items():
+        requis: list[str] = list(schema.get("required", []))
+        for partie in schema.get("allOf", []):
+            requis.extend(r for r in partie.get("required", []) if r not in requis)
+        aplatis[nom] = {**schema, "required": requis} if requis else schema
+    return aplatis
+
+
 def _parametres_a2ui() -> dict[str, Any]:
     """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
     copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) complété des composants de l'ERP
@@ -250,7 +265,7 @@ def _parametres_a2ui() -> dict[str, Any]:
     paquet = resources.files("staport_ia")
     catalogue = json.loads(paquet.joinpath("catalogue_a2ui_base.json").read_text(encoding="utf-8"))
     erp = json.loads(paquet.joinpath("catalogue_a2ui_erp.json").read_text(encoding="utf-8"))
-    composants = {**catalogue["components"], **erp["components"]}
+    composants = _avec_requis_a_la_racine({**catalogue["components"], **erp["components"]})
     return {
         "catalog": {"components": composants},
         # Reprise (KAN-96) : un essai invalide est renvoyé au sous-agent avec ses erreurs, au plus trois essais en tout.

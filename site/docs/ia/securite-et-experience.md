@@ -43,10 +43,16 @@ enfant ou liaison introuvable), les erreurs sont renvoyées au sous-agent, **tro
 une surface valide est peinte. Après trois échecs, aucune surface n'est livrée (`a2ui_recovery_exhausted`) : la réponse reste le texte
 de l'agent, puis le repli lisible de l'interface (E1.10) couvre une erreur de rendu. Côté navigateur, la reprise n'est montrée qu'après
 2 s ou 2 essais et ses diagnostics restent cachés. Preuves : `ia/tests/test_surfaces_reprise.py` (surface valide, reprise puis succès,
-propriété manquante, épuisement). **Limites connues** : le validateur officiel lit les propriétés obligatoires à la racine d'un
-composant, pas dans `allOf` (cas des composants du catalogue de base, comme `Text`) ; et les trois messages de reprise du composant
-de la bibliothèque (« Building interface », « Retrying generation… », « Couldn't generate the UI ») sont en anglais, sans point de
-personnalisation officiel (le composant est câblé dans le rendu de l'activité).
+propriété manquante, propriété du catalogue de base manquante, épuisement). **Deux contournements** (décision du propriétaire, 2026-11-16) :
+1. Le validateur officiel ne lit les propriétés obligatoires qu'à la racine d'un composant, pas dans `allOf` (composants du
+   catalogue de base, comme `Text`) : `_avec_requis_a_la_racine` (`agent.py`) les remonte dans la copie du catalogue donnée à la validation ; le
+   fichier de la spécification reste intact.
+2. Les messages de reprise du composant de la bibliothèque sont en anglais (« Building interface », « Retrying generation… »,
+   « Couldn't generate the UI ») et non personnalisables : `surface-a2ui-francais.component.ts` prend la place du rendu de l'activité
+   `a2ui-surface` par `renderActivityMessages` (point d'extension officiel), affiche construction, reprise et échec en français sans
+   détail technique, et délègue la surface elle-même au composant officiel. Preuves : tests unitaires de ce rendu et parcours
+   de bout en bout de la surface composée. La demande d'une option de libellés a été transmise à CopilotKit (2026-11-16) ; à retirer
+   quand elle existera.
 **Vues pilotées retirées** (décision du propriétaire du 2026-10-26) : l'assistant n'ouvre plus les écrans de l'ERP.
 Les outils de l'API décrivent toujours la vue correspondante (`VueProposeeDto`), réutilisable si un lien est un jour
 proposé.

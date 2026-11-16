@@ -2,6 +2,7 @@ import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DOCUMENT, EnvironmentInjector, createEnvironmentInjector, inject } from '@angular/core';
 import {
   COPILOT_KIT_CONFIG,
+  anyActivityContentSchema,
   CopilotKit,
   CopilotkitAgentFactory,
   CopilotkitThreadsFactory,
@@ -14,6 +15,7 @@ import { AuthService } from '../auth/services/auth.service';
 import { AssistantComponent } from './assistant.component';
 import { FilAssistant } from './fil-assistant.service';
 import { catalogueErp } from './catalogue/catalogue-erp';
+import { SurfaceA2uiFrancaisComponent } from './surface-a2ui-francais.component';
 import { chargeurVuesLibres } from './vues-libres';
 
 /**
@@ -73,6 +75,9 @@ export class AssistantRacineComponent {
       },
       // Vues libres (KAN-95) : pas d'`openGenerativeUI` ici, donc ni outil ni rendu tant que le runtime ne les annonce pas
       // (VUES_LIBRES, coupé par défaut) ; le moteur n'a de toute façon aucune fonction de l'hôte (vues-libres.ts).
+      // Rendu des surfaces A2UI en français (messages de construction, de reprise et d'échec) : point d'extension officiel,
+      // le composant de la bibliothèque est réutilisé pour la surface elle-même (surface-a2ui-francais.component.ts).
+      renderActivityMessages: [{ activityType: 'a2ui-surface', content: anyActivityContentSchema, component: SurfaceA2uiFrancaisComponent }],
       // Pas de consultations d'outils en brut (nom technique, statut en anglais) : le raisonnement replié dit déjà ce que
       // fait l'agent (comportement par défaut de la bibliothèque).
       defaultToolRendering: false,
