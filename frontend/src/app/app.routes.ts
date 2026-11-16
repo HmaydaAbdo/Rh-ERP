@@ -62,6 +62,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () => import('./portail/chantier/chantier.routes').then((m) => m.CHANTIER_ROUTES)
   },
+  // Espace Staport Intelligence (KAN-91) : l'univers dédié à l'IA, rendu plein écran par l'assistant (chargé à la demande)
+  // au-dessus de la coque ; la route ne porte que l'adresse, le titre et le droit.
+  { path: 'assistant', title: 'Staport Intelligence', canActivate: [permissionGuard], data: { permission: 'IA_UTILISER' }, children: [] },
   {
     // Droit propre à la carte (CARTE_READ), distinct de CHANTIER_READ ; route de premier niveau pour que le menu « Chantiers »
     // ne soit pas surligné en même temps que « Carte ».

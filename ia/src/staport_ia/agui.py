@@ -31,7 +31,8 @@ from langgraph.types import Durability
 
 from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
-from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp
+from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp, titres_erp
+from staport_ia.pieces_jointes import Analyseur, FichiersVerifies, verifier_pieces_jointes
 
 journal = logging.getLogger(__name__)
 
@@ -108,6 +109,8 @@ class AccesErp(Protocol):
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]: ...
 
     async def contexte(self, jeton_agent: str) -> str: ...
+
+    async def titres(self, jeton_agent: str) -> Sequence[tuple[str, str]]: ...
 
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None: ...
 
@@ -227,6 +230,9 @@ class AccesHttp:
     async def contexte(self, jeton_agent: str) -> str:
         return await contexte_erp(f"{self._api}/mcp", jeton_agent)
 
+    async def titres(self, jeton_agent: str) -> Sequence[tuple[str, str]]:
+        return await titres_erp(f"{self._api}/mcp", jeton_agent)
+
     async def signaler_ecriture(self, jeton_agent: str, chemin: str, taille: int, outil: str) -> None:
         reponse = await self._client.post(
             f"{self._api}/interne/ia/ecritures-fichier",
@@ -242,8 +248,11 @@ def routeur_agui(
     actif: Callable[[], bool],
     memoire: Callable[[], BaseCheckpointSaver[Any]] | None = None,
     routage: Callable[[], Routage] | None = None,
+    pieces_jointes: Callable[[], bool] = lambda: False,
+    analyseur: Callable[[], Analyseur | None] = lambda: None,
 ) -> APIRouter:
     routeur = APIRouter()
+    verifies = FichiersVerifies()
 
     @routeur.post("/agui")
     async def executer(entree: RunAgentInput, requete: Request) -> StreamingResponse:  # pyright: ignore[reportUnusedFunction]
@@ -253,6 +262,7 @@ def routeur_agui(
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         verifier_question(entree)
+        await verifier_pieces_jointes(entree.messages, pieces_jointes(), analyseur(), verifies)
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)

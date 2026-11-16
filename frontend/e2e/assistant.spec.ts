@@ -89,6 +89,10 @@ function flux(): string {
 /** Le runtime CopilotKit simulé : suggestions sans état et authentifiées, runs de l'agent, A2UI et autorisations. */
 async function simulerRuntime(page: Page): Promise<{ autorisations: string[]; fils: string[]; connexions: string[]; autorisationsSuggestions: string[] }> {
   const vu = { autorisations: [] as string[], fils: [] as string[], connexions: [] as string[], autorisationsSuggestions: [] as string[] };
+  // Titres français des outils (KAN-87) : lus du serveur MCP par le service IA, suivant les droits de l'utilisateur.
+  await page.route('**/ia/outils', (route) =>
+    route.fulfill({ json: [{ name: 'paie_indicateurs', title: 'Indicateurs de paie d’un mois', domain: 'Paie' }] })
+  );
   await page.route('**/ia/copilotkit/**', async (route) => {
     const url = route.request().url();
     if (url.endsWith('/info')) {
@@ -137,7 +141,7 @@ test.describe('Staport Intelligence', () => {
     expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
 
     await page.keyboard.press('Control+k');
-    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const assistant = page.getByRole('region', { name: 'Staport Intelligence' });
     const question = assistant.getByPlaceholder('Posez votre question…');
     // Fil neuf : l'accueil de CopilotKit est visible (E1.6), puis laisse la place à la conversation.
     await expect(assistant.getByTestId('copilot-welcome-screen')).toBeVisible();
@@ -170,7 +174,7 @@ test.describe('Staport Intelligence', () => {
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
 
     await page.keyboard.press('Control+k');
-    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const assistant = page.getByRole('region', { name: 'Staport Intelligence' });
     await expect(assistant.getByTestId('copilot-welcome-screen')).toBeVisible();
     expect(runtime.connexions).toEqual([]);
 
@@ -180,9 +184,9 @@ test.describe('Staport Intelligence', () => {
     await expect(assistant.getByText('La masse salariale de 2026-08 est de 4 800 MAD.')).toBeVisible();
     expect(runtime.connexions).toEqual([]);
 
+    // L'espace est une page : le rechargement revient dans l'espace, sur le même fil.
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible({ timeout: 30_000 });
-    await page.keyboard.press('Control+k');
+    await expect(page.getByRole('region', { name: 'Staport Intelligence' })).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => runtime.connexions.length, { timeout: 20_000 }).toBeGreaterThan(0);
     expect(new Set(runtime.connexions)).toEqual(new Set(runtime.fils));
   });
@@ -213,7 +217,7 @@ test.describe('Staport Intelligence', () => {
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
 
     await page.keyboard.press('Control+k');
-    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const assistant = page.getByRole('region', { name: 'Staport Intelligence' });
     const question = assistant.getByPlaceholder('Posez votre question…');
     await question.fill('Quelle est la masse salariale de 2026-08 ?');
     await question.press('Enter');
@@ -230,7 +234,7 @@ test.describe('Staport Intelligence', () => {
 
     await page.keyboard.press('Control+k');
     // Panneau flottant au-dessus de l'écran (mode overlay de CopilotKit) : une fenêtre de dialogue, la vue garde sa place.
-    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const assistant = page.getByRole('region', { name: 'Staport Intelligence' });
     // Le fil de l'utilisateur est fourni par l'application (repris au rechargement) : CopilotKit propose des questions
     // dynamiques à partir du contexte courant et des capacités accessibles.
     await expect(assistant.getByRole('button', { name: 'Masse salariale' })).toBeVisible();
@@ -245,6 +249,12 @@ test.describe('Staport Intelligence', () => {
     await expect(assistant.getByRole('heading', { name: 'Chantiers' })).toBeVisible();
     await expect(assistant.getByRole('gridcell', { name: 'C168', exact: true })).toBeVisible();
     await expect(assistant.getByRole('heading', { name: 'Masse par chantier' })).toBeVisible();
+    // Le raisonnement s'affiche dans la carte de Staport, en français (KAN-88), et non avec le libellé anglais d'origine.
+    await expect(assistant.getByText(/Réflexion (en cours|de )/)).toBeVisible();
+    await expect(assistant.getByText(/Thinking|Thought for/)).toHaveCount(0);
+    // La consultation s'affiche en carte au titre français (KAN-87), jamais avec le nom technique de l'outil.
+    await expect(assistant.getByText('Indicateurs de paie d’un mois')).toBeVisible();
+    await expect(assistant.getByText('Consultation terminée')).toBeAttached();
     // Pas de consultation d'outil en brut (nom technique) dans la discussion.
     await expect(assistant.getByText('paie_indicateurs')).toHaveCount(0);
     expect(runtime.autorisations).toEqual(['Bearer jeton-test']);
@@ -262,12 +272,60 @@ test.describe('Staport Intelligence', () => {
 
     await page.keyboard.press('Control+k');
     // Sur téléphone la barre devient une fenêtre modale.
-    const assistant = page.getByRole('dialog', { name: 'Staport Intelligence' });
+    const assistant = page.getByRole('region', { name: 'Staport Intelligence' });
     await expect(assistant.getByPlaceholder('Posez votre question…')).toBeVisible();
     const largeur = await assistant.evaluate((e) => e.getBoundingClientRect().width);
     expect(largeur).toBe(390);
     const debordement = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(debordement).toBeLessThanOrEqual(0);
+  });
+
+  test('l’icône de l’assistant ouvre l’espace IA plein écran avec ses conversations, et « Retour » ramène à l’écran', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    await page.route('**/ia/copilotkit/conversations', (route) =>
+      route.fulfill({ json: [{ id: 'u1-a', title: 'Masse salariale d’août', createdAt: 1, updatedAt: 2 }] })
+    );
+    await page.goto('/paie');
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ouvrir Staport Intelligence' }).click();
+    await expect(page).toHaveURL(/\/assistant$/);
+    const espace = page.getByRole('region', { name: 'Staport Intelligence' });
+    await expect(espace.getByRole('list', { name: 'Conversations' }).getByText('Masse salariale d’août')).toBeVisible();
+    await expect(espace.getByPlaceholder('Posez votre question…')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ouvrir Staport Intelligence' })).toHaveCount(0);
+
+    await espace.getByRole('button', { name: 'Retour à l’application' }).click();
+    await expect(page).toHaveURL(/\/paie$/);
+    await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
+  });
+
+  test('propose les pièces jointes et la dictée seulement quand le serveur les active (KAN-93)', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    const info = (audio: boolean) => ({
+      version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', suggestions: true, a2uiEnabled: true,
+      a2ui: { enabled: true }, audioFileTranscriptionEnabled: audio
+    });
+
+    // Tout est fermé par défaut : ni bouton de fichier, ni micro.
+    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: false } }));
+    await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(false) }));
+    await page.goto('/assistant');
+    const espace = page.getByRole('region', { name: 'Staport Intelligence' });
+    await expect(espace.getByPlaceholder('Posez votre question…')).toBeVisible();
+    await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toHaveCount(0);
+    await expect(espace.getByRole('button', { name: 'Dicter' })).toHaveCount(0);
+
+    // Activés côté serveur : le bouton « Ajouter un fichier » et le micro apparaissent.
+    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: true } }));
+    await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(true) }));
+    await page.reload();
+    await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toBeVisible();
+    await expect(espace.getByRole('button', { name: 'Dicter' })).toBeVisible();
+    const accessibilite = await new AxeBuilder({ page }).include('app-assistant').analyze();
+    expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
   });
 
   test('n’apparaît pas sans le droit IA_UTILISER', async ({ page }) => {

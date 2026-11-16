@@ -309,8 +309,8 @@ téléphone et sans masquer une action métier en cours. La maquette, les règle
 parcours sont validés avant réalisation. Les citations et les liens permettent de revenir aux
 sources autorisées. Une mascotte ou une surface A2UI peut compléter ce parcours si son adoption est
 validée. Une vue immersive nécessite un besoin distinct ; elle n'est pas créée par anticipation.
-Pour Staport Intelligence, ce besoin est validé (2026-10-25) : barre de commande au repos (`Ctrl K`), discussion
-ancrée sur le côté, étapes et outils de chaque réponse dans un bloc repliable (déplié pendant le
+Pour Staport Intelligence, ce besoin est validé (2026-10-25) : icône flottante (ou `Ctrl K`) qui ouvre un espace IA
+plein écran (`/assistant`, KAN-91) avec la liste des conversations, étapes et outils de chaque réponse dans un bloc repliable (déplié pendant le
 travail), réponse vérifiée, ouverture de la vue et mise en évidence des valeurs citées ; plein écran
 sur téléphone. Les surfaces A2UI et la mascotte Rive restent des extensions à valider (J4).
 

@@ -3,9 +3,11 @@ import { CopilotChat, CopilotKit, injectAgentStore, injectChatConfiguration, pro
 
 import { MessageComponent } from '../../shared/ui/message/message.component';
 import { AccordInterruptionComponent } from './accord-interruption.component';
+import { CapacitesAssistant } from './capacites-assistant.service';
 import { FilAssistant } from './fil-assistant.service';
 import { ListeConversationsComponent } from './liste-conversations.component';
 import { MemoireAssistantComponent } from './memoire-assistant.component';
+import { RaisonnementAssistantComponent } from './raisonnement-assistant.component';
 
 
 /**
@@ -50,7 +52,10 @@ import { MemoireAssistantComponent } from './memoire-assistant.component';
     @if (erreur()) {
       <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
     }
-    <copilot-chat />
+    @if (capacites.erreurPiece(); as piece) {
+      <stp-message severity="warn" class="piece mx-4 my-2" [text]="piece" />
+    }
+    <copilot-chat [reasoningMessageComponent]="raisonnement" [attachments]="capacites.pieces()" />
     @if (fil.listeOuverte()) {
       <app-liste-conversations />
     }
@@ -62,12 +67,17 @@ import { MemoireAssistantComponent } from './memoire-assistant.component';
 })
 export class AssistantChatComponent {
   protected readonly fil = inject(FilAssistant);
+  /** Pièces jointes (KAN-93) : le bouton « Ajouter un fichier » n'apparaît que si le serveur les active. */
+  protected readonly capacites = inject(CapacitesAssistant);
+  /** Le message de raisonnement aux couleurs de Staport (emplacement officiel de la discussion, KAN-88). */
+  protected readonly raisonnement = RaisonnementAssistantComponent;
   private readonly store = injectAgentStore('default');
   private readonly copilotKit = inject(CopilotKit);
   private readonly configuration = injectChatConfiguration();
   protected readonly erreur = signal(false);
 
   constructor() {
+    void this.capacites.charger();
     effect(() => {
       const fil = this.fil.fil();
       if (fil !== undefined) {

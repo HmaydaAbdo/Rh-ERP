@@ -38,6 +38,9 @@ before(async () => {
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
   // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
   agent = createServer((requete, reponse) => {
+    if (requete.url === '/capacites') {
+      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: true, recu: requete.headers.authorization }));
+    }
     if (requete.method === 'DELETE') {
       suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
       return reponse.writeHead(panneIa ? 500 : 204).end();
@@ -315,5 +318,83 @@ describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agen
     } finally {
       lenteurIaMs = 0;
     }
+  });
+});
+
+describe('capacités du service IA (KAN-93)', () => {
+  test('exigent une authentification puis relaient la réponse du service IA avec le jeton de l’utilisateur', async () => {
+    assert.equal((await appeler('/capacites')).status, 401);
+    assert.equal((await appeler('/capacites', { jeton: 'jeton-sans-droit' })).status, 403);
+    const reponse = await appeler('/capacites', { jeton: 'jeton-1' });
+    assert.equal(reponse.status, 200);
+    assert.deepEqual(JSON.parse(reponse.texte), { piecesJointes: true, recu: 'Bearer jeton-1' });
+  });
+});
+
+describe('dictée (KAN-93) : transcription officielle vers un Whisper local compatible OpenAI', () => {
+  let whisper;
+  let appStt;
+  let baseStt;
+  const requetesWhisper = [];
+
+  before(async () => {
+    whisper = createServer((requete, reponse) => {
+      requetesWhisper.push({ url: requete.url, type: requete.headers['content-type'] ?? '' });
+      requete.resume();
+      requete.on('end', () => reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ text: 'bonjour la paie' })));
+    });
+    await new Promise((ok) => whisper.listen(0, '127.0.0.1', ok));
+    const creation = creerApp({
+      urlAgent: `http://127.0.0.1:${agent.address().port}/agui`,
+      urlApi: `http://127.0.0.1:${api.address().port}`,
+      journal: { error: () => {} },
+      stt: { url: `http://127.0.0.1:${whisper.address().port}`, modele: 'Systran/faster-whisper-small', langue: 'fr' }
+    });
+    appStt = creation.app.listen(0, '127.0.0.1');
+    await new Promise((ok) => appStt.once('listening', ok));
+    baseStt = `http://127.0.0.1:${appStt.address().port}/copilotkit`;
+  });
+
+  after(() => {
+    appStt.closeAllConnections();
+    appStt.close();
+    whisper.closeAllConnections();
+    whisper.close();
+  });
+
+  const dicter = (jeton, adresse = baseStt) => {
+    const formulaire = new FormData();
+    formulaire.append('audio', new Blob([new Uint8Array(64)], { type: 'audio/webm' }), 'voix.webm');
+    return fetch(`${adresse}/transcribe`, {
+      method: 'POST',
+      headers: jeton ? { authorization: `Bearer ${jeton}` } : {},
+      body: formulaire,
+      signal: AbortSignal.timeout(10_000)
+    });
+  };
+
+  test('la capacité est annoncée seulement quand un service de transcription est configuré', async () => {
+    const avec = await (await fetch(`${baseStt}/info`, { headers: { authorization: 'Bearer jeton-1' } })).json();
+    assert.equal(avec.audioFileTranscriptionEnabled, true);
+    const sans = await (await fetch(`${base}/info`, { headers: { authorization: 'Bearer jeton-1' } })).json();
+    assert.equal(sans.audioFileTranscriptionEnabled, false);
+  });
+
+  test("exige l'authentification et le droit IA_UTILISER avant toute transcription", async () => {
+    assert.equal((await dicter(undefined)).status, 401);
+    assert.equal((await dicter('jeton-sans-droit')).status, 403);
+    assert.equal(requetesWhisper.length, 0);
+  });
+
+  test("transcrit l'audio d'un utilisateur autorisé par le Whisper local", async () => {
+    const reponse = await dicter('jeton-1');
+    assert.equal(reponse.status, 200);
+    assert.equal((await reponse.json()).text, 'bonjour la paie');
+    assert.equal(requetesWhisper.length, 1);
+    assert.match(requetesWhisper[0].url, /\/v1\/audio\/transcriptions$/);
+  });
+
+  test('sans service de transcription configuré, la dictée est refusée', async () => {
+    assert.ok((await dicter('jeton-1', base)).status >= 400);
   });
 });

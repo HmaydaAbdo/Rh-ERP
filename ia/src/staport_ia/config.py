@@ -26,10 +26,16 @@ class Settings(BaseSettings):
     # `ModelFallbackMiddleware` essaie ce groupe, d'une autre famille de modèles que `complex`. Vide : aucun repli.
     llm_repli: Literal["", "simple", "medium", "code"] = "medium"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
-    # Base PostgreSQL des conversations (service ia-db) ; absente, les conversations restent en mémoire du processus.
+    # Base PostgreSQL des conversations (base `ia` de l'ERP) ; absente, elles restent en mémoire du processus.
     database_url: SecretStr | None = None
     # Une conversation inactive depuis ce nombre de jours est supprimée.
     conversation_jours: int = Field(default=30, ge=1, le=365)
+    # Pièces jointes à une question (KAN-93) : activées ; images, PDF et texte, revérifiés ici (type réel, antivirus).
+    # Sans antivirus joignable, aucun fichier n'est accepté (échec fermé).
+    pieces_jointes: bool = True
+    # Démon ClamAV (clamd) qui analyse chaque fichier joint ; absent : les pièces jointes sont refusées.
+    antivirus_hote: str | None = None
+    antivirus_port: int = Field(default=3310, ge=1, le=65535)
     # Racine de l'API (jeton agent et route /mcp), par exemple http://backend:8080.
     erp_api_url: AnyHttpUrl
 

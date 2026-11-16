@@ -75,8 +75,8 @@ staport-intelligence-api (FastAPI) : adaptateurs MCP → façades de domaine →
 PostgreSQL ERP (métier) · base LiteLLM dédiée (clés virtuelles, budgets) · plus tard corpus/pgvector
 ```
 
-Les services IA démarrent par défaut avec `docker compose up -d`, sans profil (depuis le 2026-10-26) ; la tâche
-ponctuelle `litellm-cles` enregistre les clés virtuelles. La pile ERP n'en dépend pas : `IA_ENABLED=false` ou
+Les services IA démarrent par défaut avec `docker compose up -d`, sans profil (depuis le 2026-10-26) ; LiteLLM enregistre
+lui-même les clés virtuelles au démarrage. La pile ERP n'en dépend pas : `IA_ENABLED=false` ou
 `MCP_ENABLED=false` coupe l'assistant. Les checkpoints durables LangGraph arrivent avec les écritures (J6).
 
 L'interface résout l'URL du runtime avec la base du document Angular : sous `/erp-rh/`, les appels passent par

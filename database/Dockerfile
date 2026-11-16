@@ -17,3 +17,6 @@ RUN apt-get update \
 COPY --from=build /usr/lib/postgresql/18/lib/pgaudit.so /usr/lib/postgresql/18/lib/pgaudit.so
 COPY --from=build /usr/share/postgresql/18/extension/pgaudit* /usr/share/postgresql/18/extension/
 COPY --chmod=0755 pgaudit-retention-scheduler.sh /usr/local/bin/pgaudit-retention-scheduler
+COPY --chmod=0755 entrypoint.sh /usr/local/bin/staport-intelligence-postgres-entrypoint
+ENTRYPOINT ["/usr/local/bin/staport-intelligence-postgres-entrypoint"]
+CMD ["postgres"]

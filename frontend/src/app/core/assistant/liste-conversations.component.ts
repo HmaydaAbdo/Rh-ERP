@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideCheck, LucidePencil, LucideTrash2, LucideX } from '@lucide/angular';
 
@@ -12,11 +12,13 @@ import { Conversation, FilAssistant } from './fil-assistant.service';
  */
 @Component({
   selector: 'app-liste-conversations',
-  host: { class: 'absolute inset-0 z-10 flex min-h-0 flex-col bg-surface' },
+  host: { '[class]': 'classeHote()' },
   imports: [DatePipe, FormsModule, LucideCheck, LucidePencil, LucideTrash2, LucideX],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h3 class="m-0 border-b border-border px-4 py-3 text-sm font-semibold text-text">Conversations</h3>
+    @if (!lateral()) {
+      <h3 class="m-0 border-b border-border px-4 py-3 text-sm font-semibold text-text">Conversations</h3>
+    }
     <ul class="m-0 min-h-0 flex-1 list-none overflow-y-auto p-2" aria-label="Conversations">
       @for (conversation of fil.conversations(); track conversation.id) {
         <li class="flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-alt" [class.bg-surface-alt]="conversation.id === fil.fil()">
@@ -44,6 +46,9 @@ import { Conversation, FilAssistant } from './fil-assistant.service';
   `,
 })
 export class ListeConversationsComponent {
+  /** Dans la barre latérale de l'espace IA (KAN-91) plutôt que par-dessus la discussion du panneau. */
+  readonly lateral = input(false);
+  protected readonly classeHote = computed(() => (this.lateral() ? 'flex min-h-0 flex-1 flex-col' : 'absolute inset-0 z-10 flex min-h-0 flex-col bg-surface'));
   protected readonly fil = inject(FilAssistant);
   protected readonly edition = signal<string | null>(null);
   protected readonly suppression = signal<string | null>(null);

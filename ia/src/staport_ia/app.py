@@ -19,13 +19,16 @@ from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, demander_arret, routeur_agui
+from staport_ia.capacites import routeur_capacites
 from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
 from staport_ia.fichiers import routeur_fichiers
 from staport_ia.memoire import Memoire, ouvrir_memoire
 from staport_ia.modeles import Tache, modele
+from staport_ia.pieces_jointes import Analyseur, AnalyseurClamd
 from staport_ia.routage import Routeur
 from staport_ia.souvenirs import routeur_souvenirs
+from staport_ia.titres import routeur_titres
 
 
 class Sante(BaseModel):
@@ -70,6 +73,7 @@ def cycle_ia(
     acces: AccesErp | None = None,
     routage: Routage | None = None,
     memoire: FabriqueMemoire | None = None,
+    analyseur: Analyseur | None = None,
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     """``memoire`` n'est fournie que par les tests rapides ; le service ouvre toujours PostgreSQL (KAN-39)."""
 
@@ -77,6 +81,10 @@ def cycle_ia(
     async def cycle(app: FastAPI) -> AsyncGenerator[None]:
         async with httpx.AsyncClient(timeout=30.0) as client:
             app.state.http = client
+            # Antivirus des pièces jointes (KAN-93) : le client ne se connecte qu'à l'analyse d'un fichier.
+            app.state.analyseur = analyseur or (
+                AnalyseurClamd(config.antivirus_hote, config.antivirus_port) if config.antivirus_hote else None
+            )
             if not config.enabled:  # service désactivé : aucune base à ouvrir, les routes répondent 503
                 yield
                 return
@@ -138,6 +146,8 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
             actif=lambda: config.enabled,
             memoire=lambda: app.state.memoire,
             routage=lambda: app.state.routage,
+            pieces_jointes=lambda: config.pieces_jointes,
+            analyseur=lambda: getattr(app.state, "analyseur", None),
         )
     )
 
@@ -147,6 +157,15 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
 
     routeur.include_router(
         routeur_souvenirs(acces=lambda: app.state.acces, actif=lambda: config.enabled, store=lambda: app.state.store)
+    )
+
+    routeur.include_router(routeur_titres(acces=lambda: app.state.acces, actif=lambda: config.enabled))
+    routeur.include_router(
+        routeur_capacites(
+            acces=lambda: app.state.acces,
+            actif=lambda: config.enabled,
+            pieces_jointes=lambda: config.pieces_jointes and getattr(app.state, "analyseur", None) is not None,
+        )
     )
 
     @routeur.get("/health/ia")
@@ -176,6 +195,7 @@ def creer_app(
     acces: AccesErp | None = None,
     routage: Routage | None = None,
     memoire: FabriqueMemoire | None = None,
+    analyseur: Analyseur | None = None,
 ) -> FastAPI:
     """Application IA autonome conservée pour les tests et la transition vers le conteneur unique."""
     config = settings or get_settings()
@@ -185,7 +205,7 @@ def creer_app(
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
-        lifespan=cycle_ia(config, fabrique, acces, routage, memoire),
+        lifespan=cycle_ia(config, fabrique, acces, routage, memoire, analyseur),
     )
     app.include_router(routeur_ia(app, config))
 

@@ -4,8 +4,9 @@
 """Conversations durables de l'assistant (site/docs/ia, T19).
 
 Le checkpointer officiel de LangGraph pour PostgreSQL (``AsyncPostgresSaver``) garde l'état de chaque conversation
-dans une base dédiée à l'IA (service ``ia-db``, aucune donnée du reste de l'ERP) : une question posée après un
-redémarrage, ou le lendemain, retrouve son fil. Le ``Store`` officiel (``AsyncPostgresStore``) garde dans la même base
+dans une base dédiée à l'IA (base ``ia`` du PostgreSQL de l'ERP, compte limité à cette base) : une question posée
+après un redémarrage, ou le lendemain, retrouve son fil. Le ``Store`` officiel (``AsyncPostgresStore``) garde dans la
+même base
 les fichiers de l'espace de chaque utilisateur (``/espace/``), avec l'expiration native (``TTLConfig``) : ils survivent
 à un redémarrage et sont partagés entre instances. La base est obligatoire, en local comme en production : aucun
 repli sur la mémoire du processus dans le service (il masquerait une panne de configuration, KAN-39) ; seuls les tests
