@@ -20,5 +20,6 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
 | [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
+| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, éteinte par défaut |
 
 Le suivi des tâches vit dans Jira et l'état du comportement dans le code et les tests.

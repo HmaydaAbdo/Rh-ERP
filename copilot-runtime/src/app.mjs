@@ -36,10 +36,10 @@ const masquerSkills = (input, next) =>
   );
 
 /**
- * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string } }} options
+ * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string }, vuesLibres?: boolean }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
-export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt }) {
+export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt, vuesLibres = false }) {
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
@@ -56,6 +56,9 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt 
     // Seul le jeton de l'utilisateur est transmis à l'agent (ni `x-*` du navigateur, ni l'en-tête interne).
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
+    // Vues libres (KAN-95) : le middleware officiel transforme l'outil `generateSandboxedUi` de l'agent en vue affichée dans une
+    // iframe isolée. Coupé par défaut (VUES_LIBRES) ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
+    ...(vuesLibres ? { openGenerativeUI: { agents: ['default'] } } : {}),
     // Dictée (KAN-93) : le service de transcription officiel de CopilotKit (API compatible OpenAI) pointé sur un Whisper
     // local sur CPU ; sans `stt`, le runtime annonce la capacité désactivée et la discussion n'affiche pas le micro.
     ...(stt
