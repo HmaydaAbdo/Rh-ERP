@@ -20,7 +20,7 @@ gratuites et auto-hébergeables comptent ; CopilotKit Intelligence (hébergé) e
 | Authentification du runtime (en-têtes, jeton) | **Utilisée** | jeton rafraîchi avant l'envoi |
 | Inspecteur de développement | **Coupé volontairement** | `enableInspector: false` (KAN-98) |
 | Contrat de production | **Appliqué** | KAN-97 |
-| Outils côté navigateur (`registerFrontendTool`) | **Utilisé (pilote Employés, KAN-270)** | `employes_regler_filtres` : l'agent règle les filtres de la page ouverte, sans navigation ; reste à déployer sur les autres pages |
+| Outils côté navigateur (`registerFrontendTool`) | **Utilisé (KAN-270)** | un outil `*_regler_filtres` par page de liste (Employés, Chantiers, Équipes, Fonctions, Paie, Heures supp.) : l'agent règle les filtres de la page ouverte, sans navigation, retiré avec la page, réservé au droit `IA_UTILISER` |
 | `registerHumanInTheLoop`, `registerComponent` | **À adopter (KAN-270)** | selon les besoins des pages |
 | Surfaces `CopilotSidebar` et `CopilotPopup` | **Non utilisées** | l'espace IA plein écran et le panneau maison du KAN-91 les remplacent |
 | Interface sans chat (headless), emplacements (slots), CSS | **Partiel** | thème Staport prévu au KAN-102 |
