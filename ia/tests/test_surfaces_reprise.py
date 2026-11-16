@@ -18,10 +18,10 @@ CATALOGUE: dict[str, Any] = _parametres_a2ui()["catalog"]
 VALIDE: dict[str, Any] = {"components": [{"id": "root", "component": "Text", "text": "Effectif : 150"}], "data": {}}
 # Composant hors catalogue fermé (une jauge n'existe pas) : refusé par la validation.
 INVALIDE: dict[str, Any] = {"components": [{"id": "root", "component": "Jauge", "valeur": 3}], "data": {}}
-# Composant de l'ERP sans ses propriétés obligatoires (colonnes et lignes). Les composants du catalogue de base
-# déclarent les leurs dans `allOf`, que le validateur officiel ne lit pas : ce cas reste couvert par le repli lisible de
-# l'interface.
+# Composant de l'ERP sans ses propriétés obligatoires (colonnes et lignes).
 INCOMPLET: dict[str, Any] = {"components": [{"id": "root", "component": "DataTable"}], "data": {}}
+# Composant du catalogue de base sans son texte : propriété obligatoire dans `allOf` (`_avec_requis_a_la_racine`).
+TEXTE_VIDE: dict[str, Any] = {"components": [{"id": "root", "component": "Text"}], "data": {}}
 
 
 def _jouer(essais: list[dict[str, Any]], maximum: int = 3) -> tuple[dict[str, Any], list[str]]:
@@ -73,3 +73,11 @@ def test_apres_trois_essais_invalides_aucune_surface_n_est_livree_et_le_repli_pr
     echec = json.loads(resultat["envelope"])
     assert echec["code"] == "a2ui_recovery_exhausted"
     assert "surface" not in echec  # rien à peindre : la réponse reste le texte de l'agent
+
+
+def test_une_propriete_obligatoire_du_catalogue_de_base_est_aussi_reprise() -> None:
+    resultat, invites = _jouer([TEXTE_VIDE, VALIDE])
+
+    assert resultat["ok"] is True
+    assert resultat["attempts"][0]["ok"] is False
+    assert "text" in invites[1]
