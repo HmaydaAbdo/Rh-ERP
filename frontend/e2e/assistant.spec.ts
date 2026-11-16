@@ -216,6 +216,24 @@ test.describe('Staport Intelligence', () => {
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
   });
 
+  test('bascule le thème depuis l’espace IA, qui masque la barre de l’application (KAN-102)', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    await page.goto('/assistant');
+    const espace = page.getByRole('region', { name: 'Staport Intelligence' });
+    await expect(espace.getByPlaceholder('Posez votre question…')).toBeVisible();
+    // Clair par défaut (décision du 2026-11-02) ; la bascule est dans le pied de la barre latérale.
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await espace.getByRole('button', { name: 'Passer au thème sombre' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(espace.getByRole('button', { name: 'Passer au thème clair' })).toBeVisible();
+    // Le choix est mémorisé sur ce navigateur.
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await espace.getByRole('button', { name: 'Passer au thème clair' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  });
+
   test('propose les pièces jointes et la dictée seulement quand le serveur les active (KAN-93)', async ({ page }) => {
     await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
     await simulerRuntime(page);
