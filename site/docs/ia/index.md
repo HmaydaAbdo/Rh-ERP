@@ -11,7 +11,7 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 |---|---|
 | [Vue d'ensemble](vue-d-ensemble.md) | Objectif, décisions, architecture |
 | [Exactitude et veille](exactitude-et-veille.md) | Le modèle ne calcule pas, jeu de référence, veille mensuelle des modèles |
-| [Sécurité et expérience](securite-et-experience.md) | Périmètres, jetons, audit, interface A2UI, mascotte |
+| [Sécurité et expérience](securite-et-experience.md) | Périmètres, jetons, audit, interface A2UI |
 | [Vision](vision.md) | Vision courte et vision longue |
 | [Registre](registre-code-maison-et-middlewares.md) | Décisions ouvertes, code maison à résorber, middlewares officiels |
 | [État technique et catalogue MCP](etat-technique-et-catalogue-mcp.md) | Les 32 outils MCP, leurs permissions et leurs vues |
@@ -20,8 +20,9 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
 | [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
-| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, éteinte par défaut |
+| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, activée pour tous |
 | [Contrat de production](contrat-de-production.md) | Cycle de vie de CopilotKit, budget de taille, inspecteur coupé |
+| [Déploiement des modes](deploiement-des-modes.md) | Modes M0 à M4 par domaine : état réel, porte à six preuves, revue par domaine |
 | [Inventaire CopilotKit](inventaire-copilotkit.md) | Fonctions gratuites de la bibliothèque : utilisées, écartées, hors périmètre |
 
 Le suivi des tâches vit dans Jira et l'état du comportement dans le code et les tests.

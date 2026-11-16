@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AuthService } from '../auth/services/auth.service';
+import { configurationAssistant } from './assistant-config';
 import { AssistantRacineComponent } from './assistant-racine.component';
 
 describe('AssistantRacineComponent', () => {
@@ -24,7 +25,13 @@ describe('AssistantRacineComponent', () => {
   ])('monte l’assistant avec le runtime résolu depuis %s', async (base, attendu) => {
     vi.spyOn(document, 'baseURI', 'get').mockReturnValue(base);
     const auth = { getAccessToken: () => 'jeton', refreshOnce: () => of({}) };
-    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: AuthService, useValue: auth }] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: auth },
+        { provide: COPILOT_KIT_CONFIG, useFactory: () => configurationAssistant(auth as never, document) }
+      ]
+    });
 
     const fixture = TestBed.createComponent(AssistantRacineComponent);
     await fixture.whenStable();

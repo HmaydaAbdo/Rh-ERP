@@ -440,6 +440,7 @@ AUDITEES = {
     ("PUT", "/users/{identifiant}"): "UTILISATEUR_MODIFICATION",
     ("PUT", "/users/{identifiant}/permissions-refusees"): "UTILISATEUR_PERMISSIONS_REFUSEES",
     ("PUT", "/parametres/{identifiant}"): "PARAMETRE_MODIFICATION",
+    ("POST", "/parametres/vues-libres/ouvertures"): "VUE_LIBRE_OUVERTURE",
     ("POST", "/functions"): "FONCTION_CREATION",
     ("PUT", "/functions/{identifiant}"): "FONCTION_MODIFICATION",
     ("PUT", "/accueil"): "ACCUEIL_MODIFICATION",

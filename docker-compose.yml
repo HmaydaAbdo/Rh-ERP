@@ -359,8 +359,8 @@ services:
       # Dictée (KAN-93) : Whisper local sur CPU (service stt), API compatible OpenAI ; l'audio ne quitte pas les serveurs.
       # Vider STT_URL retire le micro de la discussion.
       STT_URL: ${STT_URL-http://stt:8000}
-      # Vues libres (KAN-95) : interface générative ouverte, éteinte par défaut ; voir site/docs/ia/vues-libres.md avant de l'activer.
-      VUES_LIBRES: ${VUES_LIBRES:-false}
+      # Vues libres (KAN-95) : interface générative ouverte, activée pour tous (décision du propriétaire du 2026-11-16) ; `false` l'éteint. Voir site/docs/ia/vues-libres.md.
+      VUES_LIBRES: ${VUES_LIBRES:-true}
       STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-small}
       # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
       CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}

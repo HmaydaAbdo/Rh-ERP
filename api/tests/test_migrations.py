@@ -53,7 +53,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0006_retrait_table_suivi"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0007_parametres_vues_libres"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -115,7 +115,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0006_retrait_table_suivi"
+            == "0007_parametres_vues_libres"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -199,7 +199,7 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0006_retrait_table_suivi"
+            == "0007_parametres_vues_libres"
         )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant

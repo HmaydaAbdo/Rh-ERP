@@ -158,6 +158,53 @@ CRON_SYNCHRONISATION_CHANTIERS = DefinitionParametre(
     None,
 )
 
+VUES_LIBRES_ACTIVES = DefinitionParametre(
+    "ia.vues-libres.actives",
+    "Vues libres de l'assistant (1 = actives, 0 = coupées)",
+    "Interrupteur d'arrêt à chaud : à 0, l'agent ne reçoit plus l'outil qui écrit une vue libre, dès sa prochaine "
+    "question, sans redéploiement. Les vues déjà affichées restent à l'écran.",
+    TypeParametre.ENTIER,
+    None,
+    0,
+    1,
+)
+VUES_LIBRES_TAILLE_MAX = DefinitionParametre(
+    "ia.vues-libres.taille-max.ko",
+    "Taille maximale du code d'une vue libre",
+    "Au-delà, la vue est refusée et l'agent retombe sur le catalogue ou sur le texte.",
+    TypeParametre.ENTIER,
+    "Ko",
+    1,
+    1024,
+)
+VUES_LIBRES_DUREE_MAX = DefinitionParametre(
+    "ia.vues-libres.duree-max.secondes",
+    "Durée maximale d'exécution d'une vue libre",
+    "Une vue qui ne rend pas la main dans ce délai est retirée de l'écran.",
+    TypeParametre.ENTIER,
+    "secondes",
+    1,
+    120,
+)
+VUES_LIBRES_PAR_REPONSE = DefinitionParametre(
+    "ia.vues-libres.par-reponse",
+    "Vues libres par réponse",
+    "Nombre maximal de vues libres que l'agent peut ouvrir dans une même réponse.",
+    TypeParametre.ENTIER,
+    "vues",
+    1,
+    50,
+)
+VUES_LIBRES_PAR_MINUTE = DefinitionParametre(
+    "ia.vues-libres.par-minute",
+    "Vues libres par minute et par utilisateur",
+    "Fréquence maximale d'ouverture de vues libres pour un même utilisateur.",
+    TypeParametre.ENTIER,
+    "vues/minute",
+    1,
+    600,
+)
+
 CATALOGUE: tuple[DefinitionParametre, ...] = (
     JETON_ACCES,
     JETON_SESSION,
@@ -165,6 +212,11 @@ CATALOGUE: tuple[DefinitionParametre, ...] = (
     LONGUEUR_MOT_DE_PASSE,
     PAS_TRANCHE_ANALYTIQUE,
     CRON_SYNCHRONISATION_CHANTIERS,
+    VUES_LIBRES_ACTIVES,
+    VUES_LIBRES_TAILLE_MAX,
+    VUES_LIBRES_DUREE_MAX,
+    VUES_LIBRES_PAR_REPONSE,
+    VUES_LIBRES_PAR_MINUTE,
 )
 
 

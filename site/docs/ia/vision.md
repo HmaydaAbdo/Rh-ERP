@@ -31,7 +31,7 @@ suit les jalons J2 à J9 ci-dessus et ne change aucune décision du § 2.
 |---|---|---|
 | J2 | **Périmètres par fiche de poste** | Aujourd'hui toute permission donne accès à toutes les données du domaine ; le périmètre (chantiers, équipes, département) est appliqué dans l'API pour REST et MCP |
 | J3 | **Pilote réel et modèle hébergé ou local** | Matériel limité : modèles ouverts servis par un fournisseur hébergé ; un abonnement payant minimal sera à arbitrer si les offres gratuites ne tiennent pas la charge ; accord CNDP déjà obtenu |
-| J4 | **Espace IA immersif** | Plein écran, surfaces A2UI avec composants métier Staport (`createAngularCatalog`) : indicateurs, graphiques, tableaux ; mascotte Rive seulement si le propriétaire la confirme (la mascotte maison est retirée) |
+| J4 | **Espace IA immersif** | Plein écran, surfaces A2UI avec composants métier Staport (`createAngularCatalog`) : indicateurs, graphiques, tableaux ; pas de mascotte (décision du 2026-11-16) |
 | J5 à J7 | **Agents de domaine** | Passage à Deep Agents (`create_deep_agent`) quand le jeu de référence le justifie : contrôle de la paie, documents RH, assistant réglementaire. **Skills pour l'agent**, distincts des skills de développement : `ia/skills/<domaine>/SKILL.md` courts, dans la voix de l'agent, reprenant les définitions des README (une seule source) et chargés à la demande |
 | J6 | **Premières écritures** | Diff, approbation humaine, idempotence, checkpoints durables ; jamais d'écriture sans confirmation |
 | J7 | **Assistant réglementaire** | Corpus versionné (Code du travail, CNSS/AMO, barème IR), plein texte puis hybride pgvector, citations vérifiées |

@@ -16,6 +16,7 @@ import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
 import OpenAI from 'openai';
 import { creerConversations } from './conversations.mjs';
+import { creerGouverneurVuesLibres } from './vues-libres.mjs';
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, débogage) répondent 404. `transcribe` (dictée, KAN-93) n'existe que si un service de transcription est configuré. */
 const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop', 'transcribe']);
@@ -36,20 +37,53 @@ const masquerSkills = (input, next) =>
   );
 
 /**
+ * Agent AG-UI du service IA qui déclare ses capacités (KAN-270) : le runtime les publie dans `/info` (`getCapabilities`, point
+ * d'extension officiel du client AG-UI) et le navigateur les lit avec `injectCapabilities`. Les pièces jointes (images, PDF,
+ * fichiers) ne sont annoncées que si le service IA les accepte pour cet utilisateur (antivirus joignable, `IA_PIECES_JOINTES`) ;
+ * une panne du service laisse la déclaration vide, donc les pièces jointes fermées.
+ */
+class AgentServiceIa extends HttpAgent {
+  #urlCapacites;
+  #autorisation;
+
+  constructor(config, { urlAgent, autorisation }) {
+    super(config);
+    this.#urlCapacites = new URL('/capacites', urlAgent);
+    this.#autorisation = autorisation;
+  }
+
+  async getCapabilities() {
+    try {
+      const reponse = await fetch(this.#urlCapacites, { headers: { authorization: this.#autorisation }, signal: AbortSignal.timeout(10_000) });
+      const { piecesJointes } = reponse.ok ? await reponse.json() : {};
+      return piecesJointes === true ? { multimodal: { input: { image: true, pdf: true, file: true } } } : {};
+    } catch {
+      return {};
+    }
+  }
+}
+
+/**
  * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string }, vuesLibres?: boolean }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
 export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt, vuesLibres = false }) {
+  const gouverneur = vuesLibres ? creerGouverneurVuesLibres({ urlApi, journal }) : undefined;
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
     // et le service IA le fait valider par l'API.
     agents: ({ request }) => ({
-      default: new HttpAgent({
-        url: urlAgent,
-        // En-tête fixé par le serveur : il l'emporte sur tout en-tête transmis. Les suggestions n'ont pas de fil persistant.
-        headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
-      }).use(masquerSkills)
+      default: new AgentServiceIa(
+        {
+          url: urlAgent,
+          // En-tête fixé par le serveur : il l'emporte sur tout en-tête transmis. Les suggestions n'ont pas de fil persistant.
+          headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
+        },
+        { urlAgent, autorisation: request.headers.get('authorization') ?? '' }
+      )
+        .use(masquerSkills)
+        .use(...(gouverneur ? [gouverneur({ autorisation: request.headers.get('authorization') ?? '', utilisateur: request.headers.get(ENTETE_UTILISATEUR) ?? '' })] : []))
     }),
     // L'utilisateur vérifié par `onRequest` : chaque fil appartient à celui dont la requête l'a créé.
     identifyUser: (request) => ({ id: request.headers.get(ENTETE_UTILISATEUR) ?? '' }),
@@ -57,7 +91,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
     // Vues libres (KAN-95) : le middleware officiel transforme l'outil `generateSandboxedUi` de l'agent en vue affichée dans une
-    // iframe isolée. Coupé par défaut (VUES_LIBRES) ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
+    // iframe isolée. Activé par `serveur.mjs` sauf VUES_LIBRES=false ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
     ...(vuesLibres ? { openGenerativeUI: { agents: ['default'] } } : {}),
     // Dictée (KAN-93) : le service de transcription officiel de CopilotKit (API compatible OpenAI) pointé sur un Whisper
     // local sur CPU ; sans `stt`, le runtime annonce la capacité désactivée et la discussion n'affiche pas le micro.
@@ -81,18 +115,6 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
   if (conversations) {
     app.use('/copilotkit/conversations', conversations.routeur);
   }
-  // Capacités du service IA (KAN-93) : le navigateur n'atteint pas le service IA ; le runtime, déjà authentifié auprès de
-  // l'API, relaie la réponse du service (pièces jointes ouvertes seulement si l'antivirus est joignable).
-  app.get('/copilotkit/capacites', async (requete, reponse) => {
-    try {
-      const autorisation = requete.headers.authorization ?? '';
-      await authentifier(autorisation, urlApi);
-      const relais = await fetch(new URL('/capacites', urlAgent), { headers: { authorization: autorisation }, signal: AbortSignal.timeout(10_000) });
-      reponse.status(relais.status).type('application/json').send(await relais.text());
-    } catch (panne) {
-      reponse.status(panne instanceof Response ? panne.status : 502).end();
-    }
-  });
   app.use(
     createCopilotExpressHandler({
       runtime,

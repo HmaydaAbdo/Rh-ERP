@@ -1,11 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { registerFrontendTool } from '@copilotkit/angular';
+
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { EmployeeActionsComponent } from '../actions/employee-actions.component';
 import { AUCUN_FILTRE, EmployeeFiltres, lireFiltres, versParametres } from '../filtres/employee-filtres';
 import { EmployeeFiltresComponent } from '../filtres/employee-filtres.component';
+import { outilFiltresEmployes } from '../filtres/employee-outils-assistant';
 
 /** Les trois vues des employés, dans l'ordre des onglets (voir `employee.routes.ts`). */
 const CONFIGURATION_EMPLOYES: CollectionShellConfig = {
@@ -40,6 +44,7 @@ export class EmployeeVuesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   protected readonly filtres = signal<EmployeeFiltres>(AUCUN_FILTRE);
   /** Faux le temps d'un tour d'écran pour recréer la vue affichée (voir `rafraichirVue`). */
@@ -47,6 +52,10 @@ export class EmployeeVuesComponent {
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltres(params)));
+    // L'agent peut régler les filtres de cette page (outil côté navigateur, retiré avec la page) ; réservé au droit IA.
+    if (this.auth.hasPermission('IA_UTILISER')) {
+      registerFrontendTool(outilFiltresEmployes(() => this.filtres(), (filtres) => this.appliquer(filtres)));
+    }
   }
 
   /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. Le périmètre reste synchronisé entre les vues. */

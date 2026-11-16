@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { registerFrontendTool } from '@copilotkit/angular';
+
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { PaieActionsComponent } from '../actions/paie-actions.component';
 import { AUCUN_FILTRE, lireFiltres, PaieFiltres, versParametres } from '../filtres/paie-filtres';
 import { PaieFiltresComponent } from '../filtres/paie-filtres.component';
 import { PaieService } from '../services/paie.service';
+import { outilFiltresPaie } from '../filtres/paie-outils-assistant';
 
 /** Les trois vues de la paie, dans l'ordre des onglets (voir `paie.routes.ts`). */
 const CONFIGURATION_PAIE: CollectionShellConfig = {
@@ -38,6 +42,7 @@ export class PaieVuesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   /** Mois qui contiennent de la paie, pour griser les autres dans la barre. */
   protected readonly periodes = signal<string[]>([]);
@@ -49,6 +54,10 @@ export class PaieVuesComponent {
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.filtres.set(lireFiltres(params)));
+    // L'agent peut régler les filtres de cette page (outil côté navigateur, retiré avec la page) ; réservé au droit IA.
+    if (this.auth.hasPermission('IA_UTILISER')) {
+      registerFrontendTool(outilFiltresPaie(() => this.filtres(), () => this.moisRequis(), (filtres) => this.appliquer(filtres)));
+    }
   }
 
   /** Les filtres deviennent l'URL de la vue courante (sans empiler l'historique à chaque saisie) ; ce sont les vues qui réagissent. Le périmètre et le mois restent synchronisés entre les vues. */

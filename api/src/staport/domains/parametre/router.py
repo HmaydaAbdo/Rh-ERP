@@ -1,4 +1,4 @@
-"""Routes HTTP du domaine parametre : chemins, statuts et permissions (2 routes)."""
+"""Routes HTTP du domaine parametre : chemins, statuts et permissions (4 routes)."""
 
 from typing import Annotated
 
@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.auth.dependencies import Contexte, exiger
-from staport.domains.parametre.schemas import ParametreModificationRequete, ParametreReponse
+from staport.domains.parametre.schemas import (
+    OuvertureVueLibreRequete,
+    ParametreModificationRequete,
+    ParametreReponse,
+    PolitiqueVuesLibres,
+)
 from staport.platform.base_de_donnees import session_requete
 
 Session = Annotated[AsyncSession, Depends(session_requete)]
@@ -19,6 +24,27 @@ parametres = APIRouter(prefix="/parametres", tags=["Paramètres"])
 )
 async def lister_parametres(session: Session, contexte: Contexte) -> list[ParametreReponse]:
     return await contexte.parametres.lister(session)
+
+
+@parametres.get(
+    "/vues-libres",
+    summary="Politique des vues libres de l'assistant (interrupteur et bornes)",
+    dependencies=[Depends(exiger("IA_UTILISER"))],
+)
+async def lire_politique_vues_libres(session: Session, contexte: Contexte) -> PolitiqueVuesLibres:
+    return await contexte.parametres.politique_vues_libres(session)
+
+
+@parametres.post(
+    "/vues-libres/ouvertures",
+    summary="Inscrire au journal l'ouverture d'une vue libre de l'assistant",
+    status_code=204,
+    dependencies=[Depends(exiger("IA_UTILISER"))],
+)
+async def enregistrer_ouverture_vue_libre(
+    corps: OuvertureVueLibreRequete, session: Session, contexte: Contexte
+) -> None:
+    await contexte.parametres.enregistrer_ouverture_vue_libre(session, corps)
 
 
 @parametres.put(

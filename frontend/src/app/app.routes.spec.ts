@@ -14,7 +14,7 @@ describe('routes principales', () => {
   it('protège l’accueil et chaque domaine métier avec le guard authentifié', () => {
     expect(routeByPath.get('')?.canActivate).toContain(homeGuard);
 
-    for (const path of ['acces-refuse', 'employees', 'chantiers', 'functions', 'equipes', 'paie', 'audit', 'admin']) {
+    for (const path of ['acces-refuse', '**', 'employees', 'chantiers', 'functions', 'equipes', 'paie', 'audit', 'admin']) {
       expect(routeByPath.get(path)?.canActivate).toContain(authGuard);
     }
   });
