@@ -108,6 +108,7 @@ def test_la_zone_unique_cherche_le_nom_ou_le_cin_dans_n_importe_quel_ordre(jeu: 
 def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
     base = jeu["corps"]("Invalide", f"CIN-INV-{uuid.uuid4().hex[:6]}", None)
     for variante in (
+        {"typeSalaire": "MENSUEL"},  # type sans salaire
         {"dateNaissance": "2999-01-01"},  # naissance future
     ):
         reponse = jeu["client"].post("/employees", headers=jeu["entetes"], json={**base, **variante})
@@ -131,17 +132,29 @@ def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
         (0, "JOURNALIER"),
     ],
 )
-def test_le_type_de_salaire_se_deduit_du_montant_et_n_est_jamais_saisi(
+def test_le_type_de_salaire_se_deduit_du_montant_s_il_n_est_pas_choisi(
     jeu: dict[str, Any], salaire: int, type_attendu: str
 ) -> None:
     base = jeu["corps"]("Deduit", f"CIN-TYP-{uuid.uuid4().hex[:6]}", None)
-    # Un type envoyé par un client (ici faux) est ignoré : le montant décide.
-    faux = "JOURNALIER" if type_attendu == "MENSUEL" else "MENSUEL"
-    reponse = jeu["client"].post(
-        "/employees", headers=jeu["entetes"], json={**base, "salaire": salaire, "typeSalaire": faux}
-    )
+    reponse = jeu["client"].post("/employees", headers=jeu["entetes"], json={**base, "salaire": salaire})
     assert reponse.status_code == 201, reponse.text
     assert reponse.json()["typeSalaire"] == type_attendu
+
+
+def test_l_utilisateur_peut_choisir_le_type_de_salaire_a_la_creation_et_a_la_modification(
+    jeu: dict[str, Any],
+) -> None:
+    base = jeu["corps"]("Choisi", f"CIN-CHX-{uuid.uuid4().hex[:6]}", None)
+    reponse = jeu["client"].post(
+        "/employees", headers=jeu["entetes"], json={**base, "salaire": 5500, "typeSalaire": "JOURNALIER"}
+    )
+    assert reponse.status_code == 201, reponse.text
+    cree = reponse.json()
+    assert cree["typeSalaire"] == "JOURNALIER"  # le choix explicite l'emporte sur la déduction
+    modification = {**base, "version": cree["version"], "statut": "ACTIF", "salaire": 5500}
+    reponse = jeu["client"].put(f"/employees/{cree['id']}", headers=jeu["entetes"], json=modification)
+    assert reponse.status_code == 200, reponse.text
+    assert reponse.json()["typeSalaire"] == "MENSUEL"  # sans choix : redéduit du montant
 
 
 def test_references_inconnues_et_doublon_de_cin_refuses(jeu: dict[str, Any]) -> None:

@@ -315,7 +315,7 @@ les autres bulletins.
 | **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 
-Le **type de salaire** (mensuel ou journalier) n'est ni dans le fichier ni choisi : il se déduit du salaire (≤ 500 DH journalier, sinon mensuel). Un type saisi à la main contredisait le montant (5 500 DH « journalier » donnait un S/H de 550 DH au lieu de 21).
+Le **type de salaire** (mensuel ou journalier) n'est ni dans le fichier ni choisi : il se déduit du salaire (≤ 500 DH journalier, sinon mensuel). Seule la fiche Employé permet de le modifier à la main ; un type saisi à tort contredisait le montant (5 500 DH « journalier » donnait un S/H de 550 DH au lieu de 21).
 Un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent l'import (les chantiers viennent de
 l'ERP, les équipes ont leur propre domaine). Une **fonction** inconnue est **créée par l'import** pour qui a `FUNCTION_WRITE`
 (`fonctionsACreer` dans l'analyse, qui n'écrit rien ; libellé tel que dans le fichier, 100 caractères au plus) ; de même, un

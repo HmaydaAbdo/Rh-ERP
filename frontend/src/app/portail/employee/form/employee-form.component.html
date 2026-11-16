@@ -82,6 +82,11 @@
         <stp-field-error [field]="form.salaire" />
       </div>
 
+      <div class="field">
+        <label for="typeSalaire">Type de salaire</label>
+        <stp-select ariaLabel="Type de salaire" inputId="typeSalaire" [formField]="form.typeSalaire" [options]="typeSalaireOptions" placeholder="Non renseigné"></stp-select>
+        <stp-field-error [field]="form.typeSalaire" />
+      </div>
     }
 
     @if (isEditMode()) {
