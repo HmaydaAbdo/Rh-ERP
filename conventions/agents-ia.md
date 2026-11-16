@@ -875,7 +875,7 @@ leurs règles métier et ne pourra pas élargir les permissions de l'utilisateur
 indicateurs resteront détenus par leurs domaines ; tout corpus partagé devra préserver les droits et
 la provenance des sources.
 
-Pour les événements vers l'interface, les surfaces génératives et la mascotte, appliquer
+Pour les événements vers l'interface, et les surfaces génératives, appliquer
 [`agent-ui.md`](agent-ui.md). Cette convention ne remplace pas les contrôles d'identité, de permission et d'audit
 définis ici, dans `security.md`, `audit.md` et `mcp.md`.
 

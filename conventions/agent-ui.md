@@ -9,7 +9,7 @@ ses parcours dans le site de documentation (`site/docs/`).
 Pour Staport Intelligence, l'orientation retenue est Angular → AG-UI → service IA Python (LangGraph), avec les
 capacités métier MCP côté API ; décisions et état dans [`site/docs/ia`](../site/docs/ia/vue-d-ensemble.md). Le premier
 parcours rend messages, sources et états avec les composants Staport et **pilote les vues partagées
-existantes** (voir « Pilotage des vues existantes »). A2UI, une mascotte Rive ou une vue immersive
+existantes** (voir « Pilotage des vues existantes »). A2UI ou une vue immersive
 ne sont introduits qu'après un besoin mesuré que ce pilotage ne couvre pas.
 
 ## Progression des modes et contrôle utilisateur
@@ -77,8 +77,6 @@ Les protocoles sont complémentaires :
 * **Le catalogue du client** associe les cartes typées, ou les types A2UI autorisés si retenus, aux
   composants natifs du design system.
   Le client garde la maîtrise du rendu, de la navigation, des actions et de l'accessibilité.
-* **La mascotte facultative** consomme un contrat de comportement logique distinct. Le protocole ne commande pas
-  directement Rive, ne transporte pas d'animation et ne modifie pas la structure A2UI.
 
 Flux de confiance :
 
@@ -208,63 +206,16 @@ définition exécutable.
   identité, permission, périmètre, validation métier et risque ; une confirmation humaine est exigée
   pour les actions sensibles selon `security.md` et `mcp.md`.
 * Utiliser les mêmes composants accessibles que l'interface ordinaire. Toute surface est utilisable
-  sans mascotte, animation ou voix.
+  sans animation ni voix.
 
-## État de la mascotte
+## Mascotte : abandonnée
 
-Les événements de mascotte expriment un état logique et borné, indépendant du moteur d'animation. Ils
-sont corrélés au même `threadId`/`runId` que les événements d'agent. Une référence facultative à
-`surfaceId` et `componentId` permet une réaction liée à un composant A2UI précis. Les émotions
-décrivent l'état explicite de l'agent (écoute, réflexion, succès, erreur) ; elles ne sont pas une
-inférence de l'émotion, de la personnalité ou de l'état de santé de l'utilisateur.
-
-Exemple d'extension AG-UI, à transporter dans l'événement personnalisé de la version AG-UI adoptée :
-
-```json
-{
-  "type": "CUSTOM",
-  "name": "com.staport.mascot.state.v1",
-  "metadata": {
-    "com_staport": {
-      "threadId": "thread-opaque",
-      "runId": "run-opaque"
-    }
-  },
-  "value": {
-    "sequence": 12,
-    "mood": "attentive",
-    "action": "point_right",
-    "target": {
-      "surfaceId": "assistant-panel",
-      "componentId": "payroll-summary"
-    },
-    "expiresInMs": 1800
-  }
-}
-```
-
-`mood`, `action` et les cibles sont des enums/identifiants vérifiés contre un contrat documenté par
-l'application. Les valeurs inconnues retombent sur `neutral`/`idle`. L'événement ne porte pas le nom
-d'une machine Rive, d'un fichier `.riv`, d'un timeline ou d'une entrée runtime. Il ne transporte pas
-de script, d'URL d'asset, de voix ni de phonèmes.
-
-### Option visuelle Rive
-
-Le contrat reste interchangeable. Si une mascotte est retenue, Rive et ses State Machines peuvent
-être évalués : un adaptateur local mappe les enums logiques aux entrées nommées et validées du
-fichier Rive. La valeur d'usage, l'accessibilité, le poids et la maintenance sont évalués avant
-adoption ; le runtime peut être remplacé sans changer le contrat agent.
-
-Les assets `.riv` et la correspondance avec les State Machines sont contrôlés/versionnés avec
-l'application. Charger uniquement des assets approuvés. Prévoir un état statique de repli si le
-runtime ou l'asset échoue, respecter `prefers-reduced-motion`, suspendre l'animation hors écran et
-laisser l'utilisateur masquer la mascotte. Les animations ne doivent ni bloquer une action métier,
-ni transmettre seules une information indispensable.
+Décision du propriétaire (2026-11-16, KAN-100 abandonné) : il n'y a ni mascotte, ni Rive, ni événement
+`com.staport.mascot.state.v1`. Le retour visuel de l'agent (raisonnement, appels d'outils) est celui de CopilotKit.
 
 La voix et le TTS sont hors du premier périmètre : l'interaction initiale est visuelle, avec texte et
 sous-titres. Toute future sortie vocale sera pilotée par le client, révocable immédiatement, réglable
-par l'utilisateur et accompagnée d'une transcription. Les paramètres vocaux ne sont pas ajoutés au
-contrat de mascotte avant décision et revue spécifiques.
+par l'utilisateur et accompagnée d'une transcription, après décision et revue spécifiques.
 
 ## Expérience de confiance
 
@@ -307,12 +258,12 @@ Ces principes s'appliquent à tout mode, du panneau à l'espace immersif :
 L'expérience proposée pour Staport Intelligence est un accès discret à un panneau contextuel latéral, adapté au
 téléphone et sans masquer une action métier en cours. La maquette, les règles de focus et le
 parcours sont validés avant réalisation. Les citations et les liens permettent de revenir aux
-sources autorisées. Une mascotte ou une surface A2UI peut compléter ce parcours si son adoption est
+sources autorisées. Une surface A2UI peut compléter ce parcours si son adoption est
 validée. Une vue immersive nécessite un besoin distinct ; elle n'est pas créée par anticipation.
 Pour Staport Intelligence, ce besoin est validé (2026-10-25) : icône flottante (ou `Ctrl K`) qui ouvre un espace IA
 plein écran (`/assistant`, KAN-91) avec la liste des conversations, étapes et outils de chaque réponse dans un bloc repliable (déplié pendant le
 travail), réponse vérifiée, ouverture de la vue et mise en évidence des valeurs citées ; plein écran
-sur téléphone. Les surfaces A2UI et la mascotte Rive restent des extensions à valider (J4).
+sur téléphone. Les surfaces A2UI restent une extension à valider (J4).
 
 À la réception d'une interruption (bouton arrêter, nouvelle demande ou fermeture explicite) :
 
@@ -327,7 +278,7 @@ sur téléphone. Les surfaces A2UI et la mascotte Rive restent des extensions à
    pas une action métier à partir d'une simple interruption UI.
 
 La promesse n'est pas une latence réseau nulle : le client réagit localement immédiatement, puis
-synchronise l'annulation distante au mieux. Les états du panneau, de la mascotte et des surfaces sont
+synchronise l'annulation distante au mieux. Les états du panneau et des surfaces sont
 reconstruisibles à partir d'un snapshot puis de deltas, sans dépendre d'un seul delta manqué.
 
 ## Nouveau projet
@@ -341,8 +292,7 @@ reconstruisibles à partir d'un snapshot puis de deltas, sans dépendre d'un seu
    limites et les comportements de repli.
 4. Implémenter l'adaptateur AG-UI côté client et côté serveur autour des cas d'usage du domaine ;
    les appels d'outils conservent identité, autorisations et audit conformément à `mcp.md`.
-5. Ajouter seulement les extensions validées : renderer A2UI ou adaptateur de mascotte logique.
-   Le runtime d'animation n'est jamais connu du LLM.
+5. Ajouter seulement les extensions validées : renderer A2UI.
 6. Tester contrats, interruptions, erreurs, perte/reconnexion de flux, autorisations, accessibilité,
    performance et repli avant d'élargir le catalogue.
 
@@ -360,12 +310,12 @@ ne navigue pas entre pages ni vues : l'agentification se fait au niveau de chaqu
 3. un catalogue initial réduit, mappé aux composants accessibles déjà approuvés ;
 4. un endpoint/adapter serveur relié aux cas d'usage existants et aux mêmes contrôles RBAC, audit et
    validation ;
-5. les extensions A2UI ou mascotte seulement si elles sont validées, sans modifier la logique métier
+5. l'extension A2UI seulement si elle est validée, sans modifier la logique métier
    des vues ;
 6. un pilote limité à un parcours en lecture seule avant toute action d'écriture, puis une extension
    graduelle selon les résultats d'évaluation.
 
-Un échec du renderer de cartes, d'A2UI ou d'une mascotte conserve une réponse texte lorsque le
+Un échec du renderer de cartes, ou d'A2UI conserve une réponse texte lorsque le
 transport fonctionne. Si AG-UI ou le runtime est indisponible, afficher un état explicite et un
 accès aux parcours métier ordinaires ; ne pas promettre une conversation sans canal disponible.
 Les écrans existants continuent de fonctionner sans dépendre du renderer agentique.
@@ -374,14 +324,14 @@ Les écrans existants continuent de fonctionner sans dépendre du renderer agent
 
 La convention `testing.md` s'applique. Chaque implémentation ajoute au minimum :
 
-* validation des schémas AG-UI et cartes et, si adoptés, d'A2UI et des extensions mascotte (valides,
+* validation des schémas AG-UI et cartes et, si adoptés, d'A2UI (valides,
   invalides, inconnues et incompatibles) ;
 * tests de contrat et compatibilité producteur/renderer ;
 * tests d'autorisation serveur pour chaque action et chaque périmètre de données ;
 * tests de streaming partiel, ordre, snapshot/delta, reconnexion, événements périmés, annulation,
   erreur et reprise ;
 * tests renderer des composants autorisés, composants refusés, limites et fallback ;
-* tests clavier, focus, lecteur d'écran, responsive, mouvement réduit et expérience sans mascotte ;
+* tests clavier, focus, lecteur d'écran, responsive, mouvement réduit ;
 * tests de rendu sûr : une réponse contenant HTML, markdown, lien ou image est affichée comme texte ;
 * tests de conversation : reprise, suppression, isolation entre utilisateurs et contexte d'écran
   refusé lorsqu'il désigne un élément hors périmètre ;
@@ -410,5 +360,3 @@ Vérifier ces documents au moment de chaque adoption ou mise à niveau :
 * [CopilotKit — client Angular et runtime](https://docs.copilotkit.ai/angular)
 * [A2UI — protocole v1.0, statut Candidate constaté au 2026-10-23](https://github.com/a2ui-project/a2ui/blob/main/specification/v1_0/docs/a2ui_protocol.md)
 * [Intégration A2UI avec un agent compatible AG-UI](https://github.com/a2ui-project/a2ui/blob/main/docs/public/guides/a2ui-with-any-agent-framework.md)
-* [Rive — runtimes et State Machines](https://rive.app/docs/auth)
-* [Rive — accessibilité et mouvement](https://www.rive.app/blog/making-rive-designs-more-visually-accessible)

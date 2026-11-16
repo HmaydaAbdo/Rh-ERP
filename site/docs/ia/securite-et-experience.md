@@ -76,18 +76,8 @@ tous rendus par des composants Staport du catalogue versionné — avec transiti
 à la vue classique en un clic. Clavier, lecteur d'écran, mobile et `prefers-reduced-motion` sont
 pris en charge ; chaque surface a un repli texte.
 
-**Mascotte.** Un personnage Rive vivant, présent dans le panneau et dans l'Espace IA :
-
-- il **écoute** pendant la saisie, **réfléchit** pendant le raisonnement, **cherche** pendant un
-  appel d'outil, **trouve** à l'arrivée du résultat, **demande** lors d'une confirmation et
-  **s'excuse** sur un refus ou une erreur ;
-- il **désigne** le composant dont parle la réponse (cible `surfaceId/componentId`), suit le
-  pointeur du regard et a des animations de repos ;
-- il est piloté par l'événement AG-UI `com.staport.mascot.state.v1` décrit dans
-  agent-ui (`conventions/agent-ui.md`), jamais directement par le modèle ;
-- avec la voix (J9), il parle avec synchronisation labiale et sous-titres ;
-- l'utilisateur peut le masquer ; une image fixe remplace l'animation si Rive est indisponible ou
-  si le mouvement réduit est demandé.
+**Pas de mascotte.** Décision du propriétaire du 2026-11-16 (KAN-100 abandonné) : aucun personnage animé, aucun Rive,
+aucun événement dédié. Le retour visuel pendant le travail de l'agent est celui de CopilotKit (raisonnement et appels d'outils).
 
 ## Accessibilité et appareils : preuves (KAN-99)
 
