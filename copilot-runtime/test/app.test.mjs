@@ -325,6 +325,31 @@ describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agen
   });
 });
 
+describe('annulation d’un run (KAN-99) : l’arrêt est réservé au propriétaire du fil', () => {
+  test('arrêter un run en cours le coupe avant sa réponse ; un autre utilisateur ne peut pas l’arrêter', async () => {
+    const fil = 'u1-annule';
+    lenteurIaMs = 1500;
+    try {
+      const run = fetch(`${base}/agent/default/run`, {
+        method: 'POST',
+        headers: { authorization: 'Bearer jeton-1', 'content-type': 'application/json' },
+        body: JSON.stringify(corpsRun(fil)),
+        signal: AbortSignal.timeout(10_000)
+      }).then((reponse) => reponse.text()).catch(() => '');
+      await new Promise((ok) => setTimeout(ok, 300));
+
+      const intrus = await appeler(`/agent/default/stop/${fil}`, { jeton: 'jeton-2', corps: {} });
+      // Comportement officiel : pour un fil qui n'est pas le sien, « aucun run actif » (sans révéler que le fil existe).
+      assert.equal(JSON.parse(intrus.texte).stopped, false, 'un autre utilisateur ne peut pas arrêter le fil');
+      const arret = await appeler(`/agent/default/stop/${fil}`, { jeton: 'jeton-1', corps: {} });
+      assert.equal(JSON.parse(arret.texte).stopped, true);
+      assert.ok(!(await run).includes(SECRET), 'la réponse n’arrive pas : le run a été coupé');
+    } finally {
+      lenteurIaMs = 0;
+    }
+  });
+});
+
 describe('capacités du service IA (KAN-93, KAN-270)', () => {
   test('sont déclarées dans /info (AG-UI) avec le jeton de l’utilisateur : pièces jointes ouvertes si le service les accepte', async () => {
     const reponse = await appeler('/info', { jeton: 'jeton-1' });
