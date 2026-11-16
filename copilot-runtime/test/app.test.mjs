@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { after, before, describe, test } from 'node:test';
+import { after, before, beforeEach, describe, test } from 'node:test';
 import Database from 'better-sqlite3';
 import { creerApp } from '../src/app.mjs';
 
@@ -32,10 +32,30 @@ let derniereAutorisationCapacites;
 // Exécutions du service IA (un POST = un run de l'agent) et lenteur du flux simulé, pour la reprise d'un flux coupé (KAN-85).
 let executionsIa = 0;
 let lenteurIaMs = 0;
+// Politique des vues libres que l'API simulée renvoie (KAN-281, KAN-282) : interrupteur et bornes lus dans Paramètres.
+const POLITIQUE_DEPART = { actives: true, tailleMaxOctets: 204800, dureeMaxSecondes: 15, parReponse: 10, parMinute: 60 };
+let politiqueVuesLibres = { ...POLITIQUE_DEPART };
+// Journal d'audit des ouvertures (KAN-283) : ce que l'API simulée a reçu, et sa panne éventuelle.
+const ouverturesAuditees = [];
+let panneAudit = false;
 
 before(async () => {
   api = createServer((requete, reponse) => {
     const utilisateur = UTILISATEURS[(requete.headers.authorization ?? '').replace('Bearer ', '')];
+    if (requete.url === '/parametres/vues-libres/ouvertures' && requete.method === 'POST') {
+      let corps = '';
+      requete.on('data', (morceau) => (corps += morceau));
+      requete.on('end', () => {
+        if (utilisateur && !panneAudit) {
+          ouverturesAuditees.push(JSON.parse(corps));
+        }
+        reponse.writeHead(!utilisateur ? 401 : panneAudit ? 500 : 204).end();
+      });
+      return;
+    }
+    if (requete.url === '/parametres/vues-libres') {
+      return reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ? politiqueVuesLibres : {}));
+    }
     reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ?? {}));
   });
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
@@ -441,6 +461,16 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
   const DOCUMENT = '<html><body><p>Vue de test</p></body></html>';
   let agentOutil;
   let serveurs = [];
+  // Ce que l'agent simulé fait à chaque run : nombre d'appels de l'outil et octets de remplissage de leur HTML.
+  let appels = 1;
+  let rembourrage = 0;
+  beforeEach(() => {
+    appels = 1;
+    rembourrage = 0;
+    politiqueVuesLibres = { ...POLITIQUE_DEPART };
+    panneAudit = false;
+    ouverturesAuditees.length = 0;
+  });
 
   const demarrer = async (vuesLibres) => {
     const app = creerApp({
@@ -462,14 +492,13 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
       requete.on('data', (morceau) => (corps += morceau));
       requete.on('end', () => {
         const { threadId, runId } = JSON.parse(corps);
-        const arguments_ = JSON.stringify({ initialHeight: 120, placeholderMessages: ['Préparation…'], css: 'p{color:#222}', html: [DOCUMENT], jsFunctions: '', jsExpressions: [] });
-        const evenements = [
-          { type: 'RUN_STARTED', threadId, runId },
-          { type: 'TOOL_CALL_START', toolCallId: 't1', toolCallName: 'generateSandboxedUi', parentMessageId: 'm1' },
-          { type: 'TOOL_CALL_ARGS', toolCallId: 't1', delta: arguments_ },
-          { type: 'TOOL_CALL_END', toolCallId: 't1' },
-          { type: 'RUN_FINISHED', threadId, runId }
-        ];
+        const arguments_ = JSON.stringify({ initialHeight: 120, placeholderMessages: ['Préparation…'], css: 'p{color:#222}', html: [DOCUMENT + '<!--' + 'x'.repeat(rembourrage) + '-->'], jsFunctions: '', jsExpressions: [] });
+        const appelsOutil = Array.from({ length: appels }, (_, i) => [
+          { type: 'TOOL_CALL_START', toolCallId: `t${i + 1}`, toolCallName: 'generateSandboxedUi', parentMessageId: 'm1' },
+          { type: 'TOOL_CALL_ARGS', toolCallId: `t${i + 1}`, delta: arguments_ },
+          { type: 'TOOL_CALL_END', toolCallId: `t${i + 1}` }
+        ]).flat();
+        const evenements = [{ type: 'RUN_STARTED', threadId, runId }, ...appelsOutil, { type: 'RUN_FINISHED', threadId, runId }];
         reponse.writeHead(200, { 'content-type': 'text/event-stream' });
         evenements.forEach((evenement) => reponse.write(`data: ${JSON.stringify(evenement)}\n\n`));
         reponse.end();
@@ -509,5 +538,81 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
 
     assert.ok(flux.includes('open-generative-ui'), flux.slice(0, 800));
     assert.ok(flux.includes('Vue de test'));
+  });
+
+  const vues = (flux) => (flux.match(/open-generative-ui/g) ?? []).length;
+
+  test('arrêt à chaud (KAN-281) : l\'interrupteur de Paramètres coupe les vues à la question suivante, sans redéploiement', async () => {
+    const racine = await demarrer(true);
+    assert.ok(vues(await lancer(racine)) > 0);
+
+    politiqueVuesLibres.actives = false;
+    const f = await lancer(racine);
+    assert.equal(vues(f), 0);
+
+    politiqueVuesLibres.actives = true;
+    assert.ok(vues(await lancer(racine)) > 0);
+  });
+
+  test('une politique illisible ferme les vues (échec fermé)', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres = undefined;
+
+    assert.equal(vues(await lancer(racine)), 0);
+  });
+
+  test('taille (KAN-282) : un code trop gros est refusé sans qu\'un seul morceau parte au navigateur', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.tailleMaxOctets = 2_000;
+    rembourrage = 5_000;
+    const flux = await lancer(racine);
+
+    assert.equal(vues(flux), 0);
+    assert.ok(!flux.includes('Vue de test'), 'aucun morceau du code ne part');
+    assert.ok(flux.includes('RUN_FINISHED'), flux.slice(-600));
+  });
+
+  test('nombre par réponse (KAN-282) : au-delà de la limite, les vues en trop sont retirées', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.parReponse = 2;
+    appels = 5;
+    const flux = await lancer(racine);
+
+    assert.ok(vues(flux) > 0);
+    assert.ok(flux.includes('"messageId":"t2-activity"'), 'les deux premières vues passent');
+    assert.ok(!flux.includes('"messageId":"t3-activity"'), 'la troisième vue est retirée');
+  });
+
+  test('audit (KAN-283) : chaque vue admise est inscrite avec son fil et sa taille, jamais son contenu', async () => {
+    const flux = await lancer(await demarrer(true));
+
+    assert.ok(vues(flux) > 0);
+    assert.equal(ouverturesAuditees.length, 1);
+    assert.match(ouverturesAuditees[0].fil, /^vue-/);
+    assert.ok(ouverturesAuditees[0].octets > 0);
+    assert.ok(!JSON.stringify(ouverturesAuditees[0]).includes('Vue de test'), 'le contenu n’est pas journalisé');
+  });
+
+  test('audit (KAN-283) : une vue refusée n’est pas inscrite, et si l’inscription échoue la vue n’est pas montrée', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.tailleMaxOctets = 2_000;
+    rembourrage = 5_000;
+    await lancer(racine);
+    assert.equal(ouverturesAuditees.length, 0);
+
+    politiqueVuesLibres.tailleMaxOctets = 204800;
+    rembourrage = 0;
+    panneAudit = true;
+    const flux = await lancer(racine);
+    assert.equal(vues(flux), 0);
+    assert.ok(!flux.includes('Vue de test'));
+  });
+
+  test('fréquence par minute (KAN-282) : la limite est par utilisateur', async () => {
+    const racine = await demarrer(true);
+    politiqueVuesLibres.parMinute = 1;
+
+    assert.ok(vues(await lancer(racine)) > 0);
+    assert.equal(vues(await lancer(racine)), 0, 'la deuxième vue de la minute est refusée');
   });
 });

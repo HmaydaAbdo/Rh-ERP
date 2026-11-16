@@ -16,6 +16,7 @@ import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
 import OpenAI from 'openai';
 import { creerConversations } from './conversations.mjs';
+import { creerGouverneurVuesLibres } from './vues-libres.mjs';
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, débogage) répondent 404. `transcribe` (dictée, KAN-93) n'existe que si un service de transcription est configuré. */
 const ROUTES_SERVIES = new Set(['info', 'agent/run', 'agent/suggest', 'agent/connect', 'agent/stop', 'transcribe']);
@@ -67,6 +68,7 @@ class AgentServiceIa extends HttpAgent {
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
 export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt, vuesLibres = false }) {
+  const gouverneur = vuesLibres ? creerGouverneurVuesLibres({ urlApi, journal }) : undefined;
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
@@ -79,7 +81,9 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
           headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
         },
         { urlAgent, autorisation: request.headers.get('authorization') ?? '' }
-      ).use(masquerSkills)
+      )
+        .use(masquerSkills)
+        .use(...(gouverneur ? [gouverneur({ autorisation: request.headers.get('authorization') ?? '', utilisateur: request.headers.get(ENTETE_UTILISATEUR) ?? '' })] : []))
     }),
     // L'utilisateur vérifié par `onRequest` : chaque fil appartient à celui dont la requête l'a créé.
     identifyUser: (request) => ({ id: request.headers.get(ENTETE_UTILISATEUR) ?? '' }),
