@@ -136,3 +136,7 @@ Trois conteneurs ponctuels (`phoenix-db-init`, `litellm-cles`) et deux instances
 d'un déploiement client. **À faire :** initialiser dans le conteneur qui détient déjà le droit nécessaire : l'entrée de l'image
 PostgreSQL crée les comptes et bases de service (idempotent, `CONNECT` retiré à `PUBLIC`), l'entrée de l'image LiteLLM enregistre
 ses clés ; l'API migre elle-même au démarrage (`api/entrypoint.sh`), comme Flyway dans Spring Boot, et retire les identifiants propriétaire de l'environnement avant le serveur. Plus aucun conteneur ponctuel.
+
+## 2026-11-16 — Deux `location = /health` dans nginx (déploiement)
+
+Le renommage `/actuator/health` → `/health` (KAN-269) a créé un doublon : nginx refusait de démarrer (`duplicate location`) et le conteneur `frontend` redémarrait en boucle, sans que la CI le voie. **À faire :** valider `frontend/nginx.conf` avec `nginx -t` (image `nginx`) après toute modification, et regarder `docker compose ps` après le premier `up -d` d'une version.
