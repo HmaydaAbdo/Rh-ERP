@@ -270,6 +270,9 @@ def _parametres_a2ui() -> dict[str, Any]:
     composants = _avec_requis_a_la_racine({**catalogue["components"], **erp["components"]})
     return {
         "catalog": {"components": composants},
+        # Les surfaces générées se lient au catalogue que rend le navigateur (celui de l'ERP) : sans cela,
+        # `generate_a2ui` les lie au catalogue de base, introuvable côté navigateur, et le graphique n'apparaît pas.
+        "default_catalog_id": erp["catalogId"],
         # Reprise (KAN-96) : un essai invalide est renvoyé au sous-agent avec ses erreurs, au plus trois essais en tout.
         "recovery": {"maxAttempts": 3},
         "guidelines": {
