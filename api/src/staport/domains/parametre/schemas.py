@@ -24,3 +24,20 @@ class ParametreReponse(ModeleApi):
     minimum: int | None
     maximum: int | None
     valeur: str
+
+
+class PolitiqueVuesLibres(ModeleApi):
+    """Ce que le runtime de l'assistant applique à chaque question : interrupteur et bornes des vues libres."""
+
+    actives: bool
+    tailleMaxOctets: int
+    dureeMaxSecondes: int
+    parReponse: int
+    parMinute: int
+
+
+class OuvertureVueLibreRequete(ModeleApi):
+    """Une vue libre sur le point d'être montrée : le journal garde le fil et la taille, jamais le contenu."""
+
+    fil: Annotated[NonVide, Field(max_length=100)]
+    octets: Annotated[int, Field(ge=0, le=10_000_000)]

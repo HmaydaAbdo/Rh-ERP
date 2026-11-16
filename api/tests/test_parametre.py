@@ -26,7 +26,7 @@ from staport.domains.parametre.exceptions import InstallationIncomplete, Paramet
 
 def test_les_codes_sont_uniques_et_retrouvables() -> None:
     codes = [d.code for d in catalogue.CATALOGUE]
-    assert len(set(codes)) == len(codes) == 6
+    assert len(set(codes)) == len(codes) == 11
     for definition in catalogue.CATALOGUE:
         assert catalogue.depuis_code(definition.code) is definition
     assert catalogue.depuis_code("inconnu") is None
@@ -99,6 +99,11 @@ DEPART = {
     catalogue.LONGUEUR_MOT_DE_PASSE.code: "10",
     catalogue.PAS_TRANCHE_ANALYTIQUE.code: "500",
     catalogue.CRON_SYNCHRONISATION_CHANTIERS.code: "0 0 23 * * *",
+    catalogue.VUES_LIBRES_ACTIVES.code: "1",
+    catalogue.VUES_LIBRES_TAILLE_MAX.code: "200",
+    catalogue.VUES_LIBRES_DUREE_MAX.code: "15",
+    catalogue.VUES_LIBRES_PAR_REPONSE.code: "10",
+    catalogue.VUES_LIBRES_PAR_MINUTE.code: "60",
 }
 
 
@@ -327,3 +332,78 @@ def test_une_cle_du_catalogue_sans_ligne_est_une_installation_incomplete(platefo
 
     with pytest.raises(InstallationIncomplete, match=r"test\.absente"):
         portail.call(lire)
+
+
+def test_la_politique_des_vues_libres_suit_les_parametres_aussitot(
+    plateforme: Plateforme, admin: dict[str, str]
+) -> None:
+    """KAN-281 et KAN-282 : l'interrupteur et les bornes se lisent à chaque appel, sans redéploiement."""
+    depart = plateforme.client.get("/parametres/vues-libres", headers=admin)
+    assert depart.status_code == 200, depart.text
+    assert depart.json() == {
+        "actives": True,
+        "tailleMaxOctets": 200 * 1024,
+        "dureeMaxSecondes": 15,
+        "parReponse": 10,
+        "parMinute": 60,
+    }
+
+    ligne = _lister(plateforme, admin)[catalogue.VUES_LIBRES_ACTIVES.code]
+    coupe = plateforme.client.put(
+        f"/parametres/{ligne['id']}", headers=admin, json={"version": ligne["version"], "valeur": "0"}
+    )
+    assert coupe.status_code == 200, coupe.text
+    assert plateforme.client.get("/parametres/vues-libres", headers=admin).json()["actives"] is False
+
+    refus = plateforme.client.put(
+        f"/parametres/{ligne['id']}", headers=admin, json={"version": coupe.json()["version"], "valeur": "2"}
+    )
+    assert refus.status_code == 400
+
+
+def test_la_politique_des_vues_libres_exige_un_jeton(plateforme: Plateforme) -> None:
+    plateforme.client.cookies.clear()
+    assert plateforme.client.get("/parametres/vues-libres").status_code == 401
+
+
+def test_chaque_ouverture_de_vue_libre_est_inscrite_au_journal_sans_son_contenu(
+    plateforme: Plateforme, admin: dict[str, str]
+) -> None:
+    """KAN-283 : l'audit garde le fil et la taille, jamais le code de la vue."""
+    reponse = plateforme.client.post(
+        "/parametres/vues-libres/ouvertures", headers=admin, json={"fil": "fil-audit-essai", "octets": 1234}
+    )
+    assert reponse.status_code == 204, reponse.text
+
+    lignes = _lignes(
+        plateforme,
+        "SELECT action, categorie, resultat, entite_type, nombre_elements, perimetre::text AS perimetre "
+        "FROM audit_journal WHERE action = 'VUE_LIBRE_OUVERTURE' AND perimetre::text LIKE '%fil-audit-essai%'",
+    )
+    assert len(lignes) == 1
+    assert (lignes[0]["categorie"], lignes[0]["resultat"], lignes[0]["entite_type"]) == (
+        "OPERATION",
+        "SUCCES",
+        "VueLibre",
+    )
+    assert "1234" in lignes[0]["perimetre"]
+    assert "html" not in lignes[0]["perimetre"].lower()
+
+
+def test_une_ouverture_mal_formee_ou_sans_jeton_est_refusee(plateforme: Plateforme, admin: dict[str, str]) -> None:
+    assert (
+        plateforme.client.post(
+            "/parametres/vues-libres/ouvertures", headers=admin, json={"fil": "", "octets": 1}
+        ).status_code
+        == 400
+    )
+    assert (
+        plateforme.client.post(
+            "/parametres/vues-libres/ouvertures", headers=admin, json={"fil": "a", "octets": -1}
+        ).status_code
+        == 400
+    )
+    plateforme.client.cookies.clear()
+    assert (
+        plateforme.client.post("/parametres/vues-libres/ouvertures", json={"fil": "a", "octets": 1}).status_code == 401
+    )
