@@ -48,7 +48,7 @@ const TEXTE_INDISPONIBLE = 'Je n’ai pas pu terminer cette demande. Le service 
       userMessageToolbarEditMessageLabel: 'Modifier',
       // Pas d'avertissement permanent sous la saisie : la vérification des chiffres se voit dans la réponse.
       chatDisclaimerText: '',
-      welcomeMessageText: 'Bonjour, je suis Staport Intelligence, votre assistant numérique. Je peux vous aider avec les informations et services accessibles à votre compte.'
+      welcomeMessageText: 'Bonjour, je suis Staport Intelligence. Que voulez-vous savoir sur les données de votre compte ?'
     })
   ],
   template: `
