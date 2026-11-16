@@ -119,3 +119,13 @@ Le script `filtrer_config.py` contournait le fait que LiteLLM ne bascule pas sur
 
 Le `MemoryMiddleware` officiel de Deep Agents charge `AGENTS.md` une seule fois par conversation et le garde dans l'état du fil. Un « tout oublier » aurait donc laissé la mémoire visible dans toutes les conversations déjà commencées : un oubli qui n'oublie pas. Le test d'une seule conversation ne l'aurait pas montré ; il a fallu un test sur trois tours d'un même fil (correction, puis oubli entre deux tours).
 **À faire :** pour toute donnée copiée dans l'état d'un fil (mémoire, droits, contexte), se demander qui la met à jour quand sa source change ; tester le changement de la source entre deux tours d'un même fil, pas seulement au premier tour.
+
+## 2026-11-16 — Un fichier joint se vérifie à trois niveaux, et un contrôle indisponible refuse (KAN-93)
+
+Le type annoncé par le navigateur et le filtre `accept` de la discussion ne protègent de rien : le serveur doit revérifier la déclaration (types, taille, données en ligne), le contenu réel (signature des octets, UTF-8 pour le texte) et l'antivirus, et refuser quand l'antivirus est injoignable ou pas encore prêt (échec fermé). Le protocole AG-UI renvoie tout l'historique à chaque question : sans cache par empreinte, chaque tour réanalyserait chaque fichier. Les tests ont été écrits avec de vrais octets (en-têtes PNG, PDF) et non des zéros, qui n'auraient pas passé le contrôle du contenu.
+
+**À faire :** pour toute nouvelle entrée de fichier, écrire d'abord les tests de déguisement (PDF annoncé en image, exécutable annoncé en texte) et d'antivirus indisponible ; garder le test contre un vrai démon, ignoré sans variable d'environnement, pour le prouver sur la pile réelle.
+
+## 2026-11-16 — Barres obliques inverses doublées dans les scripts du terminal (outillage)
+
+Dans un script Python passé par l'outil Bash, `\x00` ou `\n` arrive au script comme `\x00` ou un saut de ligne réels : les littéraux d'octets d'un fichier de test se sont retrouvés avec de vrais caractères de contrôle et un octet nul, et le fichier ne se compilait plus. **À faire :** écrire les fichiers contenant des échappements avec l'outil d'écriture (Write), ou construire le caractère avec `chr(92)` ; vérifier avec `python -m pytest --collect-only` avant d'enchaîner les corrections.

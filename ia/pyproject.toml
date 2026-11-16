@@ -29,6 +29,8 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.6",
     "deepagents>=0.7.38",
     "fastembed>=0.9.1",
+    "aioclamd>=1.1.0",
+    "puremagic>=2.2.1",
 ]
 
 [dependency-groups]

@@ -310,7 +310,7 @@ test.describe('Staport Intelligence', () => {
     });
 
     // Tout est fermé par défaut : ni bouton de fichier, ni micro.
-    await page.route('**/ia/capacites', (route) => route.fulfill({ json: { piecesJointes: false } }));
+    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: false } }));
     await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(false) }));
     await page.goto('/assistant');
     const espace = page.getByRole('region', { name: 'Staport Intelligence' });
@@ -319,7 +319,7 @@ test.describe('Staport Intelligence', () => {
     await expect(espace.getByRole('button', { name: 'Dicter' })).toHaveCount(0);
 
     // Activés côté serveur : le bouton « Ajouter un fichier » et le micro apparaissent.
-    await page.route('**/ia/capacites', (route) => route.fulfill({ json: { piecesJointes: true } }));
+    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: true } }));
     await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(true) }));
     await page.reload();
     await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toBeVisible();

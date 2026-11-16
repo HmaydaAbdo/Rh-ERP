@@ -34,7 +34,7 @@ export class CapacitesAssistant {
   private demande: Promise<void> | null = null;
 
   charger(): Promise<void> {
-    this.demande ??= firstValueFrom(this.http.get<Capacites>('ia/capacites'))
+    this.demande ??= firstValueFrom(this.http.get<Capacites>('ia/copilotkit/capacites'))
       .then((capacites) => this.piecesJointes.set(capacites.piecesJointes === true))
       .catch(() => {
         this.demande = null; // une panne laisse les pièces jointes fermées ; on réessaiera

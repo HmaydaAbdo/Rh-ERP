@@ -70,6 +70,15 @@ wheels = [
 ]
 
 [[package]]
+name = "aioclamd"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/17/d7978e1ac067a5639528f0e5ae32acb418302599e7fa3785a3fbb3597ce2/aioclamd-1.1.0.tar.gz", hash = "sha256:56fc307da2bc372f764bf06c9d116bb89b40081321e4923bec180990ec9bbf95", size = 8399, upload-time = "2026-09-17T12:03:58.731Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/89/596b85aa615cf3fbf414d950294e77bc6b11a5e16e4c60c45b753635147e/aioclamd-1.1.0-py3-none-any.whl", hash = "sha256:49f2831d6d0fe7cd26da1e5eaa65fe32d8c5d0afdcaa9e86929ecbb801f57784", size = 6619, upload-time = "2026-09-17T12:03:57.65Z" },
+]
+
+[[package]]
 name = "aiofile"
 version = "3.12.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2267,6 +2276,15 @@ wheels = [
 ]
 
 [[package]]
+name = "puremagic"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/06/7ff22db9002cfd33740a765a28291ecbb4a688855c940d95ad15c86925f5/puremagic-2.2.1.tar.gz", hash = "sha256:f7ab764fcef4ca76c806e9242ba22bb79ecaa30427874bbb93a99172eca64852", size = 1212219, upload-time = "2026-11-13T18:59:56.225Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/f8/899cdaeeaa789f9af482cb25e0543e1d110c4d2dc7e12ff0e4ee65537c61/puremagic-2.2.1-py3-none-any.whl", hash = "sha256:cd869c1fe1123ebc58e17ee4c12ced366265099b4f53eb6896bbb3b92531f07e", size = 72361, upload-time = "2026-11-13T18:59:54.54Z" },
+]
+
+[[package]]
 name = "py-key-value-aio"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2782,6 +2800,7 @@ source = { editable = "." }
 dependencies = [
     { name = "ag-ui-langgraph" },
     { name = "ag-ui-protocol" },
+    { name = "aioclamd" },
     { name = "authlib" },
     { name = "copilotkit" },
     { name = "deepagents" },
@@ -2801,6 +2820,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-instrumentation-httpx" },
     { name = "psycopg", extra = ["binary", "pool"] },
+    { name = "puremagic" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
@@ -2822,6 +2842,7 @@ dev = [
 requires-dist = [
     { name = "ag-ui-langgraph", specifier = "==0.0.47" },
     { name = "ag-ui-protocol", specifier = "==1.0.0" },
+    { name = "aioclamd", specifier = ">=1.1.0" },
     { name = "authlib" },
     { name = "copilotkit", specifier = ">=0.1.97" },
     { name = "deepagents", specifier = ">=0.7.38" },
@@ -2841,6 +2862,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = "==0.66b2" },
     { name = "opentelemetry-instrumentation-httpx", specifier = "==0.66b2" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3.6" },
+    { name = "puremagic", specifier = ">=2.2.1" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },

@@ -12,7 +12,7 @@ describe('CapacitesAssistant', () => {
     expect(service.pieces().enabled).toBe(false);
 
     const chargement = service.charger();
-    TestBed.inject(HttpTestingController).expectOne('ia/capacites').flush({ piecesJointes: false });
+    TestBed.inject(HttpTestingController).expectOne('ia/copilotkit/capacites').flush({ piecesJointes: false });
     await chargement;
     expect(service.pieces().enabled).toBe(false);
   });
@@ -20,7 +20,7 @@ describe('CapacitesAssistant', () => {
   it('ouvre images, PDF, texte et CSV de 10 Mo au plus quand le serveur les active', async () => {
     const service = TestBed.inject(CapacitesAssistant);
     const chargement = service.charger();
-    TestBed.inject(HttpTestingController).expectOne('ia/capacites').flush({ piecesJointes: true });
+    TestBed.inject(HttpTestingController).expectOne('ia/copilotkit/capacites').flush({ piecesJointes: true });
     await chargement;
 
     expect(service.pieces()).toMatchObject({ enabled: true, accept: PIECES_JOINTES.accept, maxSize: 10 * 1024 * 1024 });
@@ -30,7 +30,7 @@ describe('CapacitesAssistant', () => {
   it('une panne du serveur laisse les pièces jointes fermées', async () => {
     const service = TestBed.inject(CapacitesAssistant);
     const chargement = service.charger();
-    TestBed.inject(HttpTestingController).expectOne('ia/capacites').flush('x', { status: 500, statusText: 'Erreur' });
+    TestBed.inject(HttpTestingController).expectOne('ia/copilotkit/capacites').flush('x', { status: 500, statusText: 'Erreur' });
     await chargement;
     expect(service.pieces().enabled).toBe(false);
   });
