@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 
 import { AuthService } from '../auth/services/auth.service';
 import { FilAssistant } from './fil-assistant.service';
@@ -10,7 +11,7 @@ describe('FilAssistant', () => {
   const utilisateur = signal<{ id: number } | null>({ id: 7 });
 
   function service(): FilAssistant {
-    TestBed.configureTestingModule({ providers: [FilAssistant, provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { user: utilisateur } }] });
+    TestBed.configureTestingModule({ providers: [FilAssistant, provideHttpClient(), provideHttpClientTesting(), provideRouter([{ path: 'paie', children: [] }, { path: 'assistant', children: [] }, { path: '', children: [] }]), { provide: AuthService, useValue: { user: utilisateur } }] });
     return TestBed.inject(FilAssistant);
   }
 
@@ -25,6 +26,30 @@ describe('FilAssistant', () => {
 
     TestBed.resetTestingModule();
     expect(service().fil()).toBe(premier);
+  });
+
+  it('ouvre l’espace IA en retenant l’écran d’origine, puis y revient', async () => {
+    const fil = service();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/paie?periode=2026-08');
+
+    fil.ouvrirEspace();
+    await vi.waitFor(() => expect(router.url).toBe('/assistant'));
+    expect(fil.origine()).toBe('/paie?periode=2026-08');
+
+    fil.quitter();
+    await vi.waitFor(() => expect(router.url).toBe('/paie?periode=2026-08'));
+    expect(fil.origine()).toBeNull();
+  });
+
+  it('ouvert directement, l’espace ramène à l’accueil et non à lui-même', async () => {
+    const fil = service();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/assistant');
+
+    fil.ouvrirEspace();
+    fil.quitter();
+    await vi.waitFor(() => expect(router.url).toBe('/'));
   });
 
   it('commence une nouvelle conversation sur demande', () => {
