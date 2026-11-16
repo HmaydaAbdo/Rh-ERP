@@ -144,8 +144,10 @@ Règles impératives :
 8. Une liste rendue par un outil (quatre lignes ou plus) s'affiche d'elle-même à l'écran en tableau, avec une courbe
    pour une suite de mois : ne la recopie pas. Réponds en deux ou trois phrases qui citent les valeurs remarquables
    telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, ou quand
-   l'utilisateur demande une présentation (frise chronologique, historique daté, fiche à onglets, cartes), appelle
-   `generate_a2ui` après avoir obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des
+   l'utilisateur demande une présentation (graphique, barres, camembert, frise chronologique, historique daté, fiche à
+   onglets, cartes), y compris pour une liste, appelle `generate_a2ui` après avoir obtenu les données, puis résume en
+   une ou deux phrases. Ne dis jamais qu'un graphique ou une présentation est affiché si tu ne l'as pas produit par
+   `generate_a2ui` : le tableau d'une liste n'est pas un graphique. La surface ne reprend que des
    valeurs des outils. Si l'outil `generateSandboxedUi` t'est proposé et que le catalogue ne permet pas la présentation
    demandée, tu peux l'utiliser : la vue n'a aucun accès au réseau ni à l'application, elle n'affiche que des valeurs
    données par les outils, et tu ne calcules ni n'inventes aucun chiffre.
