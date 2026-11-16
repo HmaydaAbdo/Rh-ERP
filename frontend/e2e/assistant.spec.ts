@@ -278,6 +278,13 @@ test.describe('Staport Intelligence', () => {
     expect(largeur).toBe(390);
     const debordement = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(debordement).toBeLessThanOrEqual(0);
+    // Le texte d'invite tient sur une ligne et le champ vide n'a pas de barre de défilement : le texte n'est pas coupé.
+    const champ = await assistant.getByPlaceholder('Posez votre question…').evaluate((e) => ({
+      defilement: e.scrollHeight - e.clientHeight,
+      barre: getComputedStyle(e).scrollbarWidth
+    }));
+    expect(champ.barre).toBe('none');
+    expect(champ.defilement).toBeLessThanOrEqual(0);
   });
 
   test('l’icône de l’assistant ouvre l’espace IA plein écran avec ses conversations, et « Retour » ramène à l’écran', async ({ page }) => {

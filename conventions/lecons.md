@@ -144,3 +144,7 @@ Le renommage `/actuator/health` → `/health` (KAN-269) a créé un doublon : ng
 ## Délai de connexion du navigateur de test en CI (2026-11-16)
 
 Le contrôle frontend a échoué avec « Failed to connect to the browser session » alors que les 1088 tests passent en local : Chromium met parfois plus de 60 s (défaut de Vitest) à se connecter sur les machines partagées. Un échec de ce type, sans test en cause, se corrige en laissant plus de temps (`test.browser.connectTimeout` dans `frontend/vitest-base.config.mts`), pas en relançant à l aveugle.
+
+## Repli SPA et dossier du build (2026-11-16)
+
+Un rechargement direct de `/carte` renvoyait « Ce site est inaccessible » : le dossier `carte/` du build (MapLibre) existe sur le disque, et `try_files $uri $uri/ /index.html` répondait par une redirection absolue vers le port interne (`http://localhost:8080/carte/`). Aucun test ne rechargeait une route de premier niveau portant le nom d'un dossier. Règle : le repli SPA de nginx est `try_files $uri /index.html` (jamais `$uri/`), et toute route Angular dont le nom est aussi un dossier du build se vérifie par un accès direct (`curl -I`) sur la pile déployée.
