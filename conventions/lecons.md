@@ -140,3 +140,7 @@ ses clés ; l'API migre elle-même au démarrage (`api/entrypoint.sh`), comme Fl
 ## 2026-11-16 — Deux `location = /health` dans nginx (déploiement)
 
 Le renommage `/actuator/health` → `/health` (KAN-269) a créé un doublon : nginx refusait de démarrer (`duplicate location`) et le conteneur `frontend` redémarrait en boucle, sans que la CI le voie. **À faire :** valider `frontend/nginx.conf` avec `nginx -t` (image `nginx`) après toute modification, et regarder `docker compose ps` après le premier `up -d` d'une version.
+
+## Délai de connexion du navigateur de test en CI (2026-11-16)
+
+Le contrôle frontend a échoué avec « Failed to connect to the browser session » alors que les 1088 tests passent en local : Chromium met parfois plus de 60 s (défaut de Vitest) à se connecter sur les machines partagées. Un échec de ce type, sans test en cause, se corrige en laissant plus de temps (`test.browser.connectTimeout` dans `frontend/vitest-base.config.mts`), pas en relançant à l aveugle.

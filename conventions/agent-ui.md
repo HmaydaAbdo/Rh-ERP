@@ -46,7 +46,7 @@ son test, et aucune n'est remplacée par une autre :
 
 * **Isolation** : seul le moteur officiel, iframe sans accès à l'origine ; vérifier par un test que le code généré ne peut ni
   lire le stockage ou les cookies de l'application, ni naviguer la page parente, ni émettre de requête réseau non prévue
-  (politique de contenu de l'iframe à fixer et à prouver ; non vérifiée à ce jour).
+  (politique de contenu de l'iframe fixée et prouvée dans Chromium pour le prototype KAN-95 : `frontend/src/app/core/assistant/vues-libres.ts`, test `frontend/e2e/vues-libres.spec.ts`).
 * **Fonctions de l'hôte** : liste blanche minimale ; chacune valide ses arguments, revérifie identité, permission et
   périmètre côté serveur, journalise l'appel dans l'audit, et ne renvoie que des données autorisées.
 * **Données** : seules les données nécessaires à la vue entrent dans le code généré, après les projections par champ de

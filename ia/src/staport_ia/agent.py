@@ -146,7 +146,9 @@ Règles impératives :
    telles que l'outil les donne. Pour des indicateurs ou un graphique qui ne viennent pas d'une liste, ou quand
    l'utilisateur demande une présentation (frise chronologique, historique daté, fiche à onglets, cartes), appelle
    `generate_a2ui` après avoir obtenu les données, puis résume en une ou deux phrases. La surface ne reprend que des
-   valeurs des outils.
+   valeurs des outils. Si l'outil `generateSandboxedUi` t'est proposé et que le catalogue ne permet pas la présentation
+   demandée, tu peux l'utiliser : la vue n'a aucun accès au réseau ni à l'application, elle n'affiche que des valeurs
+   données par les outils, et tu ne calcules ni n'inventes aucun chiffre.
 9. Les montants sont en dirhams (MAD).
 10. Si la demande est ambiguë et que le choix change le résultat (période, périmètre, critère de classement, sens
     d'un mot), pose une question avec l'outil `poser_question` à l'utilisateur avec 2 à 5 options
@@ -240,6 +242,21 @@ def _capacites_dynamiques(outils: Sequence[BaseTool]) -> Any:
     return prompt_capacites
 
 
+def _avec_requis_a_la_racine(composants: dict[str, Any]) -> dict[str, Any]:
+    """Remonte à la racine de chaque composant les propriétés obligatoires déclarées dans ses ``allOf`` (KAN-96).
+
+    Le catalogue de base A2UI les range dans ``allOf`` (composant commun, puis propriétés propres) ; le validateur
+    officiel de la boucle de reprise ne lit que ``required`` à la racine et laissait passer un ``Text`` sans texte. Le
+    fichier de la spécification n'est pas modifié : seule la copie donnée à la validation est aplatie."""
+    aplatis: dict[str, Any] = {}
+    for nom, schema in composants.items():
+        requis: list[str] = list(schema.get("required", []))
+        for partie in schema.get("allOf", []):
+            requis.extend(r for r in partie.get("required", []) if r not in requis)
+        aplatis[nom] = {**schema, "required": requis} if requis else schema
+    return aplatis
+
+
 def _parametres_a2ui() -> dict[str, Any]:
     """Paramètres officiels de l'outil ``generate_a2ui`` : le catalogue de base A2UI v0.9 (fichier de la spécification,
     copié de ``@a2ui/web_core`` 0.10.4, celui que rend CopilotKit Angular) complété des composants de l'ERP
@@ -248,9 +265,11 @@ def _parametres_a2ui() -> dict[str, Any]:
     paquet = resources.files("staport_ia")
     catalogue = json.loads(paquet.joinpath("catalogue_a2ui_base.json").read_text(encoding="utf-8"))
     erp = json.loads(paquet.joinpath("catalogue_a2ui_erp.json").read_text(encoding="utf-8"))
-    composants = {**catalogue["components"], **erp["components"]}
+    composants = _avec_requis_a_la_racine({**catalogue["components"], **erp["components"]})
     return {
         "catalog": {"components": composants},
+        # Reprise (KAN-96) : un essai invalide est renvoyé au sous-agent avec ses erreurs, au plus trois essais en tout.
+        "recovery": {"maxAttempts": 3},
         "guidelines": {
             "design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}",
             "composition_guide": _guide_composition(composants),
