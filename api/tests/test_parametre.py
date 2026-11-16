@@ -26,7 +26,7 @@ from staport.domains.parametre.exceptions import InstallationIncomplete, Paramet
 
 def test_les_codes_sont_uniques_et_retrouvables() -> None:
     codes = [d.code for d in catalogue.CATALOGUE]
-    assert len(set(codes)) == len(codes) == 11
+    assert len(set(codes)) == len(codes) == 6
     for definition in catalogue.CATALOGUE:
         assert catalogue.depuis_code(definition.code) is definition
     assert catalogue.depuis_code("inconnu") is None
@@ -99,11 +99,6 @@ DEPART = {
     catalogue.LONGUEUR_MOT_DE_PASSE.code: "10",
     catalogue.PAS_TRANCHE_ANALYTIQUE.code: "500",
     catalogue.CRON_SYNCHRONISATION_CHANTIERS.code: "0 0 23 * * *",
-    catalogue.VUES_LIBRES_ACTIVES.code: "1",
-    catalogue.VUES_LIBRES_TAILLE_MAX.code: "200",
-    catalogue.VUES_LIBRES_DUREE_MAX.code: "15",
-    catalogue.VUES_LIBRES_PAR_REPONSE.code: "10",
-    catalogue.VUES_LIBRES_PAR_MINUTE.code: "60",
 }
 
 
@@ -334,36 +329,10 @@ def test_une_cle_du_catalogue_sans_ligne_est_une_installation_incomplete(platefo
         portail.call(lire)
 
 
-def test_la_politique_des_vues_libres_suit_les_parametres_aussitot(
-    plateforme: Plateforme, admin: dict[str, str]
-) -> None:
-    """KAN-281 et KAN-282 : l'interrupteur et les bornes se lisent à chaque appel, sans redéploiement."""
-    depart = plateforme.client.get("/parametres/vues-libres", headers=admin)
-    assert depart.status_code == 200, depart.text
-    assert depart.json() == {
-        "actives": True,
-        "tailleMaxOctets": 200 * 1024,
-        "dureeMaxSecondes": 15,
-        "parReponse": 10,
-        "parMinute": 60,
-    }
-
-    ligne = _lister(plateforme, admin)[catalogue.VUES_LIBRES_ACTIVES.code]
-    coupe = plateforme.client.put(
-        f"/parametres/{ligne['id']}", headers=admin, json={"version": ligne["version"], "valeur": "0"}
-    )
-    assert coupe.status_code == 200, coupe.text
-    assert plateforme.client.get("/parametres/vues-libres", headers=admin).json()["actives"] is False
-
-    refus = plateforme.client.put(
-        f"/parametres/{ligne['id']}", headers=admin, json={"version": coupe.json()["version"], "valeur": "2"}
-    )
-    assert refus.status_code == 400
-
-
-def test_la_politique_des_vues_libres_exige_un_jeton(plateforme: Plateforme) -> None:
-    plateforme.client.cookies.clear()
-    assert plateforme.client.get("/parametres/vues-libres").status_code == 401
+def test_les_vues_libres_n_ont_ni_parametre_ni_politique(plateforme: Plateforme, admin: dict[str, str]) -> None:
+    """Décision du 2026-11-16 : toujours actives, sans interrupteur ni plafond (révision 0008)."""
+    assert not [cle for cle in _lister(plateforme, admin) if cle.startswith("ia.vues-libres.")]
+    assert plateforme.client.get("/parametres/vues-libres", headers=admin).status_code in (404, 405)
 
 
 def test_chaque_ouverture_de_vue_libre_est_inscrite_au_journal_sans_son_contenu(

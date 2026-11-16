@@ -18,9 +18,6 @@ from mcp.types import CallToolResult, Implementation
 URL = os.environ.get("MCP_STAPORT_URL", "")
 JETON = os.environ.get("MCP_STAPORT_JETON", "")
 UTILISATEUR = os.environ.get("MCP_STAPORT_UTILISATEUR", "")
-pytestmark = [
-    pytest.mark.skipif(not URL, reason="MCP_STAPORT_URL absent : lancé par McpClientPythonIntegrationTest"),
-]
 
 
 @pytest.fixture(autouse=True)

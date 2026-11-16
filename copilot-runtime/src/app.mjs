@@ -64,11 +64,11 @@ class AgentServiceIa extends HttpAgent {
 }
 
 /**
- * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string }, vuesLibres?: boolean }} options
+ * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string } }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
-export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt, vuesLibres = false }) {
-  const gouverneur = vuesLibres ? creerGouverneurVuesLibres({ urlApi, journal }) : undefined;
+export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt }) {
+  const gouverneur = creerGouverneurVuesLibres({ urlApi, journal });
   const runner = cheminBase ? new SqliteAgentRunner({ dbPath: cheminBase }) : undefined;
   const runtime = new CopilotRuntime({
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
@@ -83,7 +83,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
         { urlAgent, autorisation: request.headers.get('authorization') ?? '' }
       )
         .use(masquerSkills)
-        .use(...(gouverneur ? [gouverneur({ autorisation: request.headers.get('authorization') ?? '', utilisateur: request.headers.get(ENTETE_UTILISATEUR) ?? '' })] : []))
+        .use(gouverneur({ autorisation: request.headers.get('authorization') ?? '' }))
     }),
     // L'utilisateur vérifié par `onRequest` : chaque fil appartient à celui dont la requête l'a créé.
     identifyUser: (request) => ({ id: request.headers.get(ENTETE_UTILISATEUR) ?? '' }),
@@ -91,8 +91,8 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
     // Vues libres (KAN-95) : le middleware officiel transforme l'outil `generateSandboxedUi` de l'agent en vue affichée dans une
-    // iframe isolée. Activé par `serveur.mjs` sauf VUES_LIBRES=false ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
-    ...(vuesLibres ? { openGenerativeUI: { agents: ['default'] } } : {}),
+    // iframe isolée. Toujours actif (décision du propriétaire, 2026-11-16) ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
+    openGenerativeUI: { agents: ['default'] },
     // Dictée (KAN-93) : le service de transcription officiel de CopilotKit (API compatible OpenAI) pointé sur un Whisper
     // local sur CPU ; sans `stt`, le runtime annonce la capacité désactivée et la discussion n'affiche pas le micro.
     ...(stt

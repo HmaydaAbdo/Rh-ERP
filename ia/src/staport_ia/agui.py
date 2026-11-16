@@ -30,6 +30,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import RunControl
 from langgraph.types import Durability
 
+from staport_ia.documents import TextesExtraits, convertir_documents
 from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
 from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp, titres_erp
@@ -283,6 +284,7 @@ def routeur_agui(
 ) -> APIRouter:
     routeur = APIRouter()
     verifies = FichiersVerifies()
+    textes = TextesExtraits()
 
     @routeur.post("/agui")
     async def executer(entree: RunAgentInput, requete: Request) -> StreamingResponse:  # pyright: ignore[reportUnusedFunction]
@@ -293,6 +295,10 @@ def routeur_agui(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         verifier_question(entree)
         await verifier_pieces_jointes(entree.messages, pieces_jointes(), analyseur(), verifies)
+        try:
+            messages_lus = await convertir_documents(entree.messages, textes)
+        except Exception as erreur:  # format illisible malgré une signature correcte
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce document n'a pas pu être lu.") from erreur
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)
@@ -307,11 +313,18 @@ def routeur_agui(
         # Le contexte d'écran du navigateur est un indice : le serveur le revérifie et le réécrit (ecran.py, KAN-83).
         contexte_ecran = contexte_verifie(entree.context)
         if est_reprise(entree):
-            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil, "context": contexte_ecran})
+            entree_serveur = entree.model_copy(
+                update={"state": {}, "thread_id": fil, "context": contexte_ecran, "messages": messages_lus}
+            )
         else:
             epinglees = await routage()(texte_question(entree), outils) if routage else []
             entree_serveur = entree.model_copy(
-                update={"state": {"pinned_skills": epinglees}, "thread_id": fil, "context": contexte_ecran}
+                update={
+                    "state": {"pinned_skills": epinglees},
+                    "thread_id": fil,
+                    "context": contexte_ecran,
+                    "messages": messages_lus,
+                }
             )
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"

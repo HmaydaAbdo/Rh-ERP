@@ -15,7 +15,7 @@ Cadrage de KAN-101 (épopée E12), choix du propriétaire du 2026-11-16 : **cons
 | M1 | Le chat : question, réponse citée | Agent + outils MCP en lecture, filtrés par droit |
 | M2 | Cartes et tableaux prévus à l'avance, filtres réglés sur la page | Rendu des appels d'outils (carte par outil, `registerRenderToolCall`) et outils de page (`registerFrontendTool`) |
 | M3 | Une vue composée avec les briques Staport | Catalogue A2UI fermé : grille d'indicateurs, graphique, tableau, frise |
-| M4 | Une vue libre écrite par l'agent | Iframe isolée, zéro porte, aucun réseau ; **activée pour tous** (décision du 2026-11-16 ; interrupteur `VUES_LIBRES=false`, voir [Vues libres](vues-libres.md)) |
+| M4 | Une vue libre écrite par l'agent | Iframe isolée, zéro porte, aucun réseau ; **toujours active, pour tous, sans interrupteur ni plafond** (décision du 2026-11-16, voir [Vues libres](vues-libres.md)) |
 
 **Règle du propriétaire (2026-11-16) : M1 à M4 sont ouverts pour tous les domaines, obligatoirement.** Les modes coexistent : chaque parcours garde son écran classique (M0). Aucun mode n'accorde un droit : chaque outil revérifie identité, permission et périmètre côté serveur, et **tout est en lecture** (les écritures passent par l'accord humain, voir [Sécurité et expérience](securite-et-experience.md)).
 
@@ -56,4 +56,4 @@ Les seuils (utilité, latence, coût) sont fixés par le propriétaire du domain
 
 ## Suivi
 
-Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous (arrêt à chaud, bornes, audit, jeu adverse) sont décrits dans [Vues libres](vues-libres.md).
+Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous (isolation, politique de contenu, audit, jeu adverse) sont décrits dans [Vues libres](vues-libres.md).

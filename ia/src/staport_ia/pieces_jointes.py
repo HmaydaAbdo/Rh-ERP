@@ -26,14 +26,18 @@ import puremagic
 from ag_ui.core import Message, UserMessage
 from fastapi import HTTPException, status
 
-#: Types admis : images, PDF et texte brut (CSV compris). Aucun audio, vidéo ni fichier exécutable ou archive.
+from staport_ia.documents import TYPES_OFFICE, archive_office_sure
+
+#: Types admis : images, PDF, Office et texte (CSV, Markdown, JSON). Aucun audio, vidéo, exécutable ni archive.
+TYPES_TEXTE = frozenset({"text/plain", "text/csv", "text/markdown", "application/json"})
 TYPES_ADMIS = frozenset(
-    {"image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "text/plain", "text/csv"}
+    {"image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf"} | TYPES_TEXTE | TYPES_OFFICE
 )
-TYPES_TEXTE = frozenset({"text/plain", "text/csv"})
 PIECES_MAX = 3
-TAILLE_MAX_PIECE = 10 * 1024 * 1024
-TAILLE_MAX_MESSAGE = 12 * 1024 * 1024
+#: 500 Mo (décision du propriétaire) : un PDF de 500 pages, même scanné en haute définition ; le même plafond que le
+#: navigateur, nginx (base64, +33 %) et clamd.
+TAILLE_MAX_PIECE = 500 * 1024 * 1024
+TAILLE_MAX_MESSAGE = 520 * 1024 * 1024
 EMPREINTES_MAX = 256
 INDISPONIBLE = "L'analyse antivirus est momentanément indisponible."
 
@@ -56,7 +60,7 @@ class PieceRefusee(Exception):
 class AnalyseurClamd:
     """ClamAV par son protocole ``INSTREAM`` : les octets sont envoyés au démon, jamais écrits sur disque."""
 
-    def __init__(self, hote: str, port: int = 3310, delai: float = 60.0) -> None:
+    def __init__(self, hote: str, port: int = 3310, delai: float = 300.0) -> None:
         import aioclamd  # pyright: ignore[reportMissingTypeStubs]
 
         self._client: Any = aioclamd.ClamdAsyncClient(host=hote, port=port, timeout=delai)
@@ -122,6 +126,12 @@ def verifier_contenu(donnees: bytes, declare: str) -> None:
         except UnicodeDecodeError as erreur:
             raise PieceRefusee("Un fichier texte doit être en UTF-8.") from erreur
         return
+    if declare in TYPES_OFFICE:
+        # puremagic ne distingue pas Word, Excel et PowerPoint (même archive Office) : il suffit que ce soit une archive
+        # Office saine ; le format exact est validé à la lecture (MarkItDown).
+        if reel not in (TYPES_OFFICE | {"application/zip"}) or not archive_office_sure(donnees):
+            raise PieceRefusee("Le contenu de ce fichier ne correspond pas à son type.")
+        return
     if reel != declare:
         raise PieceRefusee("Le contenu de ce fichier ne correspond pas à son type.")
 
@@ -152,7 +162,9 @@ async def verifier_pieces_jointes(
                 )
             declare = str(getattr(source, "mime_type", "")).lower()
             if declare not in TYPES_ADMIS:
-                raise _refuser("Type de fichier non admis (images, PDF, texte et CSV seulement).")
+                raise _refuser(
+                    "Type non admis (images, PDF, Word, Excel, PowerPoint, texte, CSV, Markdown et JSON seulement)."
+                )
             texte = str(getattr(source, "value", ""))
             taille = _taille_decodee(texte)
             if taille > TAILLE_MAX_PIECE:

@@ -32,9 +32,6 @@ let derniereAutorisationCapacites;
 // Exécutions du service IA (un POST = un run de l'agent) et lenteur du flux simulé, pour la reprise d'un flux coupé (KAN-85).
 let executionsIa = 0;
 let lenteurIaMs = 0;
-// Politique des vues libres que l'API simulée renvoie (KAN-281, KAN-282) : interrupteur et bornes lus dans Paramètres.
-const POLITIQUE_DEPART = { actives: true, tailleMaxOctets: 204800, dureeMaxSecondes: 15, parReponse: 10, parMinute: 60 };
-let politiqueVuesLibres = { ...POLITIQUE_DEPART };
 // Journal d'audit des ouvertures (KAN-283) : ce que l'API simulée a reçu, et sa panne éventuelle.
 const ouverturesAuditees = [];
 let panneAudit = false;
@@ -52,9 +49,6 @@ before(async () => {
         reponse.writeHead(!utilisateur ? 401 : panneAudit ? 500 : 204).end();
       });
       return;
-    }
-    if (requete.url === '/parametres/vues-libres') {
-      return reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ? politiqueVuesLibres : {}));
     }
     reponse.writeHead(utilisateur ? 200 : 401, { 'content-type': 'application/json' }).end(JSON.stringify(utilisateur ?? {}));
   });
@@ -457,7 +451,7 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
   });
 });
 
-describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées par l’interrupteur', () => {
+describe('vues libres (KAN-95) : toujours actives, rendues par le middleware officiel, auditées', () => {
   const DOCUMENT = '<html><body><p>Vue de test</p></body></html>';
   let agentOutil;
   let serveurs = [];
@@ -467,17 +461,15 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
   beforeEach(() => {
     appels = 1;
     rembourrage = 0;
-    politiqueVuesLibres = { ...POLITIQUE_DEPART };
     panneAudit = false;
     ouverturesAuditees.length = 0;
   });
 
-  const demarrer = async (vuesLibres) => {
+  const demarrer = async () => {
     const app = creerApp({
       urlAgent: `http://127.0.0.1:${agentOutil.address().port}/agui`,
       urlApi: `http://127.0.0.1:${api.address().port}`,
-      journal: { error: () => {} },
-      vuesLibres
+      journal: { error: () => {} }
     });
     const http = app.app.listen(0, '127.0.0.1');
     await new Promise((ok) => http.once('listening', ok));
@@ -527,14 +519,8 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
     return reponse.text();
   };
 
-  test('interrupteur éteint (VUES_LIBRES=false) : aucun événement de vue libre', async () => {
-    const flux = await lancer(await demarrer(false));
-
-    assert.ok(!flux.includes('open-generative-ui'));
-  });
-
   test('activées : l\'appel de l\'outil devient une vue libre (activité officielle)', async () => {
-    const flux = await lancer(await demarrer(true));
+    const flux = await lancer(await demarrer());
 
     assert.ok(flux.includes('open-generative-ui'), flux.slice(0, 800));
     assert.ok(flux.includes('Vue de test'));
@@ -542,49 +528,27 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
 
   const vues = (flux) => (flux.match(/open-generative-ui/g) ?? []).length;
 
-  test('arrêt à chaud (KAN-281) : l\'interrupteur de Paramètres coupe les vues à la question suivante, sans redéploiement', async () => {
-    const racine = await demarrer(true);
-    assert.ok(vues(await lancer(racine)) > 0);
-
-    politiqueVuesLibres.actives = false;
-    const f = await lancer(racine);
-    assert.equal(vues(f), 0);
-
-    politiqueVuesLibres.actives = true;
-    assert.ok(vues(await lancer(racine)) > 0);
-  });
-
-  test('une politique illisible ferme les vues (échec fermé)', async () => {
-    const racine = await demarrer(true);
-    politiqueVuesLibres = undefined;
-
-    assert.equal(vues(await lancer(racine)), 0);
-  });
-
-  test('taille (KAN-282) : un code trop gros est refusé sans qu\'un seul morceau parte au navigateur', async () => {
-    const racine = await demarrer(true);
-    politiqueVuesLibres.tailleMaxOctets = 2_000;
-    rembourrage = 5_000;
-    const flux = await lancer(racine);
-
-    assert.equal(vues(flux), 0);
-    assert.ok(!flux.includes('Vue de test'), 'aucun morceau du code ne part');
-    assert.ok(flux.includes('RUN_FINISHED'), flux.slice(-600));
-  });
-
-  test('nombre par réponse (KAN-282) : au-delà de la limite, les vues en trop sont retirées', async () => {
-    const racine = await demarrer(true);
-    politiqueVuesLibres.parReponse = 2;
-    appels = 5;
+  test('aucun plafond : une grosse vue et de nombreuses vues par réponse passent', async () => {
+    const racine = await demarrer();
+    rembourrage = 250_000;
+    appels = 12;
     const flux = await lancer(racine);
 
     assert.ok(vues(flux) > 0);
-    assert.ok(flux.includes('"messageId":"t2-activity"'), 'les deux premières vues passent');
-    assert.ok(!flux.includes('"messageId":"t3-activity"'), 'la troisième vue est retirée');
+    assert.ok(flux.includes('"messageId":"t12-activity"'), 'la douzième vue passe (l’ancien plafond était de 10)');
+    assert.equal(ouverturesAuditees.length, 12, 'chacune est inscrite au journal');
+    assert.ok(ouverturesAuditees.every((ouverture) => ouverture.octets > 250_000));
+  });
+
+  test('aucune fréquence imposée : deux réponses de suite montrent leur vue', async () => {
+    const racine = await demarrer();
+
+    assert.ok(vues(await lancer(racine)) > 0);
+    assert.ok(vues(await lancer(racine)) > 0);
   });
 
   test('audit (KAN-283) : chaque vue admise est inscrite avec son fil et sa taille, jamais son contenu', async () => {
-    const flux = await lancer(await demarrer(true));
+    const flux = await lancer(await demarrer());
 
     assert.ok(vues(flux) > 0);
     assert.equal(ouverturesAuditees.length, 1);
@@ -593,26 +557,13 @@ describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées pa
     assert.ok(!JSON.stringify(ouverturesAuditees[0]).includes('Vue de test'), 'le contenu n’est pas journalisé');
   });
 
-  test('audit (KAN-283) : une vue refusée n’est pas inscrite, et si l’inscription échoue la vue n’est pas montrée', async () => {
-    const racine = await demarrer(true);
-    politiqueVuesLibres.tailleMaxOctets = 2_000;
-    rembourrage = 5_000;
-    await lancer(racine);
-    assert.equal(ouverturesAuditees.length, 0);
-
-    politiqueVuesLibres.tailleMaxOctets = 204800;
-    rembourrage = 0;
+  test('audit (KAN-283) : si l’inscription échoue, la vue n’est pas montrée', async () => {
+    const racine = await demarrer();
     panneAudit = true;
     const flux = await lancer(racine);
+
     assert.equal(vues(flux), 0);
     assert.ok(!flux.includes('Vue de test'));
-  });
-
-  test('fréquence par minute (KAN-282) : la limite est par utilisateur', async () => {
-    const racine = await demarrer(true);
-    politiqueVuesLibres.parMinute = 1;
-
-    assert.ok(vues(await lancer(racine)) > 0);
-    assert.equal(vues(await lancer(racine)), 0, 'la deuxième vue de la minute est refusée');
+    assert.ok(flux.includes('RUN_FINISHED'), flux.slice(-600));
   });
 });

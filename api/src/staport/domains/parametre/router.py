@@ -1,4 +1,4 @@
-"""Routes HTTP du domaine parametre : chemins, statuts et permissions (4 routes)."""
+"""Routes HTTP du domaine parametre : chemins, statuts et permissions (3 routes)."""
 
 from typing import Annotated
 
@@ -10,7 +10,6 @@ from staport.domains.parametre.schemas import (
     OuvertureVueLibreRequete,
     ParametreModificationRequete,
     ParametreReponse,
-    PolitiqueVuesLibres,
 )
 from staport.platform.base_de_donnees import session_requete
 
@@ -24,15 +23,6 @@ parametres = APIRouter(prefix="/parametres", tags=["Paramètres"])
 )
 async def lister_parametres(session: Session, contexte: Contexte) -> list[ParametreReponse]:
     return await contexte.parametres.lister(session)
-
-
-@parametres.get(
-    "/vues-libres",
-    summary="Politique des vues libres de l'assistant (interrupteur et bornes)",
-    dependencies=[Depends(exiger("IA_UTILISER"))],
-)
-async def lire_politique_vues_libres(session: Session, contexte: Contexte) -> PolitiqueVuesLibres:
-    return await contexte.parametres.politique_vues_libres(session)
 
 
 @parametres.post(
