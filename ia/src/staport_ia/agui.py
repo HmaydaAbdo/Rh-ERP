@@ -32,6 +32,7 @@ from langgraph.types import Durability
 from staport_ia.ecran import contexte_verifie
 from staport_ia.memoire import espace_conversation, sujet
 from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp, titres_erp
+from staport_ia.pieces_jointes import verifier_pieces_jointes
 
 journal = logging.getLogger(__name__)
 
@@ -247,6 +248,7 @@ def routeur_agui(
     actif: Callable[[], bool],
     memoire: Callable[[], BaseCheckpointSaver[Any]] | None = None,
     routage: Callable[[], Routage] | None = None,
+    pieces_jointes: Callable[[], bool] = lambda: False,
 ) -> APIRouter:
     routeur = APIRouter()
 
@@ -258,6 +260,7 @@ def routeur_agui(
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         verifier_question(entree)
+        verifier_pieces_jointes(entree.messages, pieces_jointes())
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())
         outils = await _outils(erp, jeton)

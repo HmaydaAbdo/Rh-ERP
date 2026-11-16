@@ -19,5 +19,6 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Principes et décisions](principes-et-decisions.md) | Principes, fonctions exclues, décisions du propriétaire, sources officielles |
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
+| [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
 
 Le suivi des tâches vit dans Jira et l'état du comportement dans le code et les tests.

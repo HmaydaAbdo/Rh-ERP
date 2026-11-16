@@ -377,6 +377,8 @@ services:
       IA_LLM_REPLI: ${IA_LLM_REPLI:-medium}
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
+      # Pièces jointes (KAN-93, prototype) : désactivées par défaut ; images, PDF et texte, revérifiés par le service.
+      IA_PIECES_JOINTES: ${IA_PIECES_JOINTES:-false}
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
@@ -423,6 +425,10 @@ services:
         required: false
     environment:
       IA_AGUI_URL: http://ia:8000/agui
+      # Dictée (KAN-93) : Whisper local sur CPU (service stt), API compatible OpenAI ; l'audio ne quitte pas les serveurs.
+      # Vider STT_URL retire le micro de la discussion.
+      STT_URL: ${STT_URL-http://stt:8000}
+      STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-small}
       # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
       CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
@@ -446,9 +452,33 @@ services:
       - assistant-net
       - trace-net
       - runtime-auth-net
+      - stt-net
     # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
+
+  # Transcription vocale locale (KAN-93) : Speaches (faster-whisper, API compatible OpenAI), sur CPU, gratuit, sans
+  # compte ni envoi d'audio à un tiers. Joignable par le seul runtime CopilotKit. Le modèle est téléchargé une fois (cache
+  # dans le volume stt_models) ; seul ce service sort vers Hugging Face pour cela.
+  stt:
+    image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
+    restart: unless-stopped
+    environment:
+      PRELOAD_MODELS: '["${STT_MODELE:-Systran/faster-whisper-small}"]'
+      WHISPER__INFERENCE_DEVICE: cpu
+    volumes:
+      - stt_models:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - stt-net
 
   # Crée une fois, de façon idempotente, le compte et la base `phoenix` dans le PostgreSQL de l'ERP (installation neuve ou
   # existante), puis s'arrête. Phoenix y écrit ses traces : la sauvegarde chiffrée quotidienne les couvre avec la base.
@@ -515,6 +545,7 @@ volumes:
   ia_db_data:
   runtime_data:
   phoenix_data:
+  stt_models:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -534,6 +565,8 @@ networks:
   runtime-net:
   # Runtime CopilotKit et backend seuls : le runtime y authentifie chaque requête de l'assistant (/auth/me).
   runtime-auth-net:
+  # Dictée (KAN-93) : runtime CopilotKit et service de transcription seulement.
+  stt-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.
   trace-net:
   # Phoenix et le PostgreSQL de l'ERP (base `phoenix`) seulement.

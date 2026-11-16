@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, demander_arret, routeur_agui
+from staport_ia.capacites import routeur_capacites
 from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
 from staport_ia.fichiers import routeur_fichiers
@@ -139,6 +140,7 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
             actif=lambda: config.enabled,
             memoire=lambda: app.state.memoire,
             routage=lambda: app.state.routage,
+            pieces_jointes=lambda: config.pieces_jointes,
         )
     )
 
@@ -151,6 +153,11 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
     )
 
     routeur.include_router(routeur_titres(acces=lambda: app.state.acces, actif=lambda: config.enabled))
+    routeur.include_router(
+        routeur_capacites(
+            acces=lambda: app.state.acces, actif=lambda: config.enabled, pieces_jointes=lambda: config.pieces_jointes
+        )
+    )
 
     @routeur.get("/health/ia")
     async def vivant() -> Sante:  # pyright: ignore[reportUnusedFunction]
