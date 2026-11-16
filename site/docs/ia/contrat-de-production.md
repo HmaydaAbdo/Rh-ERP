@@ -18,3 +18,7 @@ Mesures de la construction de production (2026-11-16) :
 - **Initial** : 911 kB brut (157 kB transférés). Le seuil d'avertissement passe de 800 à **950 kB** (erreur à 1 Mo inchangée) : le dépassement vient de la coque de l'application, pas de l'assistant.
 - **Assistant** : 4,86 Mo brut (1,57 Mo transférés), **chargé à la demande** (`@defer`), donc hors du budget initial. À surveiller : toute entrée dans le bundle initial est une régression.
 - Style du composant `app-shell` : seuil d'avertissement de 8 à **10 kB** (erreur à 16 kB inchangée).
+
+## Inspecteur de développement (KAN-98)
+
+L'inspecteur de la bibliothèque ne se monte que si le navigateur, le mode développement **et** la configuration l'autorisent (`shouldEnableInspector`). Il est coupé deux fois : le mode développement n'existe pas en production, et `enableInspector: false` le refuse même en développement (test dans `assistant-racine.component.spec.ts`). Son code vit dans un morceau différé, importé seulement au montage, donc jamais téléchargé. Ses fils enrichis exigent Intelligence (exclu).
