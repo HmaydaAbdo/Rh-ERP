@@ -20,9 +20,10 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
 | [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
-| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, activée pour tous |
+| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, toujours active pour tous |
 | [Contrat de production](contrat-de-production.md) | Cycle de vie de CopilotKit, budget de taille, inspecteur coupé |
 | [Déploiement des modes](deploiement-des-modes.md) | Modes M0 à M4 par domaine : état réel, porte à six preuves, revue par domaine |
+| [Gestion documentaire intelligente](etude-gestion-documentaire.md) | Épopée E14 : étude des techniques (Docling, OCR, RAG, graphes, évaluation, sécurité) et architecture cible |
 | [Inventaire CopilotKit](inventaire-copilotkit.md) | Fonctions gratuites de la bibliothèque : utilisées, écartées, hors périmètre |
 
 Le suivi des tâches vit dans Jira et l'état du comportement dans le code et les tests.

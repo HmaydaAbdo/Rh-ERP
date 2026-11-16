@@ -3,8 +3,13 @@ import { injectCapabilities, type AttachmentsConfig } from '@copilotkit/angular'
 
 /** Fichiers que la discussion propose d'ajouter ; le service IA revérifie types, nombre et tailles (il fait foi). */
 export const PIECES_JOINTES = {
-  accept: 'image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv',
-  maxSize: 10 * 1024 * 1024
+  accept:
+    'image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,text/markdown,application/json,'
+    + 'application/vnd.openxmlformats-officedocument.wordprocessingml.document,'
+    + 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,'
+    + 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  /** 500 Mo : un PDF de 500 pages, même scanné ; le service IA, nginx et l'antivirus ont le même plafond. */
+  maxSize: 500 * 1024 * 1024
 } as const;
 
 /**
@@ -31,7 +36,7 @@ export function messagePiece(raison: string): string {
     case 'file-too-large':
       return `Ce fichier dépasse ${PIECES_JOINTES.maxSize / (1024 * 1024)} Mo.`;
     case 'invalid-type':
-      return 'Ce type de fichier n’est pas accepté (images, PDF, texte, CSV).';
+      return 'Ce type de fichier n’est pas accepté (images, PDF, Word, Excel, PowerPoint, texte, CSV, Markdown, JSON).';
     default:
       return 'Le fichier n’a pas pu être ajouté.';
   }

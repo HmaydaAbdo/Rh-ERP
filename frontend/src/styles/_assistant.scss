@@ -199,6 +199,12 @@ html .espace-assistant [data-copilotkit] {
 }
 
 html .espace-assistant-discussion {
+  // Pleine largeur : la bibliothèque borne messages et saisie à 48 rem (`cpk:max-w-3xl`) ; l'espace IA occupe tout l'écran,
+  // avec des marges latérales confortables plutôt qu'une colonne étroite.
+  [class*='cpk:max-w-3xl'] {
+    max-width: none;
+  }
+
   // Défilement : fondus en haut et en bas, barre fine qui se révèle au survol (le contenu glisse sous le bord au lieu d'être coupé).
   [class*='overflow-y-auto'] {
     mask-image: linear-gradient(to bottom, transparent 0, #000 1.25rem, #000 calc(100% - 1.5rem), transparent 100%);

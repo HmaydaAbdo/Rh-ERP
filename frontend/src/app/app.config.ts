@@ -12,7 +12,6 @@ import {
   OPEN_GENERATIVE_UI_WEBSANDBOX_LOADER,
 } from '@copilotkit/angular';
 import {
-  HttpClient,
   provideHttpClient,
   withInterceptors,
   withXhr,
@@ -61,12 +60,7 @@ export const appConfig: ApplicationConfig = {
     // Vues libres (KAN-95) : moteur officiel, sans fonction de l'hôte, sous politique de contenu stricte (vues-libres.ts).
     {
       provide: OPEN_GENERATIVE_UI_WEBSANDBOX_LOADER,
-      useFactory: () => {
-        const http = inject(HttpClient);
-        return chargeurVuesLibres(() =>
-          firstValueFrom(http.get<{ dureeMaxSecondes: number }>('parametres/vues-libres')).then((politique) => politique.dureeMaxSecondes)
-        );
-      },
+      useFactory: () => chargeurVuesLibres(),
     },
     fournirSignalForms(),
   ],

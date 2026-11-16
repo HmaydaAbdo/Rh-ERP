@@ -199,7 +199,7 @@ def test_chaque_outil_exige_la_permission_de_son_ecran(
 def test_les_parametres_sont_lus_avec_leurs_bornes(plateforme: Plateforme, admin: tuple[str, str, int]) -> None:
     donnees = _donnees(_appel(plateforme, admin[0], "parametres_lire"))
     par_cle = {p["cle"]: p for p in donnees["parametres"]}
-    assert len(par_cle) == 11
+    assert len(par_cle) == 6
     session = par_cle["securite.jeton-session.heures"]
     assert (session["unite"], session["minimum"], session["maximum"]) == ("heures", 1, 720)
     assert session["type"] == "ENTIER" and session["valeur"] and session["libelle"] and session["description"]

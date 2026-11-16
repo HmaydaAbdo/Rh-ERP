@@ -50,8 +50,7 @@ export function configurationAssistant(
         debugExposure: 'hidden',
       },
     },
-    // Vues libres (KAN-95) : pas d'`openGenerativeUI` ici, donc ni outil ni rendu tant que le runtime ne les annonce pas
-    // (VUES_LIBRES, activé par défaut ; `false` l'éteint) ; le moteur n'a de toute façon aucune fonction de l'hôte (vues-libres.ts).
+    // Vues libres (KAN-95) : toujours actives, annoncées par le runtime ; le moteur n'a aucune fonction de l'hôte (vues-libres.ts).
     // Rendu des surfaces A2UI en français (messages de construction, de reprise et d'échec) : point d'extension officiel,
     // le composant de la bibliothèque est réutilisé pour la surface elle-même (surface-a2ui-francais.component.ts).
     renderActivityMessages: [

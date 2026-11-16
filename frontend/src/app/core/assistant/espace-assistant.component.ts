@@ -5,6 +5,7 @@ import { ThemeService } from '../theme/theme.service';
 
 import { AssistantChatComponent } from './assistant-chat.component';
 import { FilAssistant } from './fil-assistant.service';
+import { InfobullesAssistantDirective } from './infobulles-assistant.directive';
 import { ListeConversationsComponent } from './liste-conversations.component';
 
 /**
@@ -15,11 +16,11 @@ import { ListeConversationsComponent } from './liste-conversations.component';
  */
 @Component({
   selector: 'app-espace-assistant',
-  imports: [AssistantChatComponent, ListeConversationsComponent, LucideArrowLeft, LucideBrain, LucideHistory, LucideMoon, LucideSparkles, LucideSquarePen, LucideSun],
+  imports: [AssistantChatComponent, InfobullesAssistantDirective, ListeConversationsComponent, LucideArrowLeft, LucideBrain, LucideHistory, LucideMoon, LucideSparkles, LucideSquarePen, LucideSun],
   host: { class: 'contents' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="espace-assistant fixed inset-0 z-[500] flex bg-surface text-text" role="region" aria-label="Staport Intelligence">
+    <section appInfobulles class="espace-assistant fixed inset-0 z-[500] flex bg-surface text-text" role="region" aria-label="Staport Intelligence">
       <aside class="hidden w-72 flex-none flex-col border-0 border-e border-solid border-border bg-surface-alt md:flex" aria-label="Conversations">
         <div class="flex items-center gap-2 px-3 py-3">
           <span class="relative size-(--control-height) flex-none" aria-hidden="true">
@@ -78,7 +79,7 @@ import { ListeConversationsComponent } from './liste-conversations.component';
             <svg lucideSquarePen class="size-4" aria-hidden="true"></svg>
           </button>
         </header>
-        <div class="espace-assistant-discussion mx-auto min-h-0 w-full max-w-3xl flex-1">
+        <div class="espace-assistant-discussion min-h-0 w-full flex-1">
           <app-assistant-chat />
         </div>
       </div>

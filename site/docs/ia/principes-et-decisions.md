@@ -14,8 +14,9 @@ vérifiées en CI contre le code.
 
 **Numérotation des épopées (réorganisée le 2026-11-02).** Ordre de livraison : E1 Heures supplémentaires, puis E2 backend
 FastAPI (un seul conteneur avec l'IA) et E3 frontend Next.js ; E4 exploitation et qualité des données en parallèle ; les épopées IA
-E5 à E17 reprennent ensuite ; E18 documentation Mintlify (au départ de la migration vers le nouveau stack) ; E19 marque
-« Staport Intelligence » et persona de l'agent. E0 (refonte du frontend Angular) est inchangée. Les titres Jira portent la nouvelle
+E5 à E16 reprennent ensuite ; E18 documentation Mintlify (au départ de la migration vers le nouveau stack) ; E19 marque
+« Staport Intelligence » et persona de l'agent. E0 (refonte du frontend Angular) est inchangée. E17 (IA interne vLLM et sortie de
+LiteLLM) est supprimée sur décision du propriétaire (2026-11-16). Les titres Jira portent la nouvelle
 numérotation ; ce tableau convertit les anciens numéros encore cités dans des commentaires ou des preuves.
 
 | Ancien | Nouveau | Sujet |
@@ -33,7 +34,7 @@ numérotation ; ce tableau convertit les anciens numéros encore cités dans des
 | E11 | E14 | RAG et assistant réglementaire |
 | E12 | E15 | Agents spécialisés (Deep Agents) |
 | E13 | E16 | Pilote réel, exploitation, extensions |
-| E14 | E17 | IA interne (vLLM) et sortie de LiteLLM |
+| E14 | (supprimée) | IA interne (vLLM) et sortie de LiteLLM : ancienne E17, supprimée le 2026-11-16 |
 | E15 | E3 | Refonte du frontend en Next.js |
 | E17 (provisoire) | E4 | Exploitation, qualité des données, domaines restants |
 
@@ -98,7 +99,7 @@ Rien de ceci n'est adopté ni planifié ; cette liste évite de le reproposer :
 | Q15 | Migration vers FastAPI : **tout le backend, domaine par domaine**, transversal d'abord puis métier un par un ; ordre métier `function`, `equipe`, `chantier`, `employee`, `heuresupp`, `paie` ; motif : **outils IA natifs Python** (E2). |
 | Q16 | Serveurs de documentation pour les assistants de développement : **CopilotKit** (avec ses compétences), **LangChain** (docs et référence), **Angular CLI** ; Context7 pour le reste (E5.7). |
 | Q17 | Contrôle d'accès par **RBAC, permissions et droits par champ** ; départements et hiérarchie = **information** seulement ; champs sensibles : **rémunération, identité, banque et social, contact** (E7). |
-| Q18 | Matériel de modèles internes **inconnu** : inventaire d'abord ; LiteLLM abandonné **dès que le premier modèle interne tient le jeu de référence** (E17). |
+| Q18 | Matériel de modèles internes **inconnu** : inventaire d'abord ; LiteLLM abandonné **dès que le premier modèle interne tient le jeu de référence** (l'épopée E17 qui devait porter ce passage est supprimée le 2026-11-16 ; le sujet reste ouvert, sans épopée). |
 | Q19 | Dependabot activé pour les composants IA ; ses PR lancent la CI. |
 | Q20 | Ticket CopilotKit (E5.8) et essai isolé de `@a2ui/angular` (E5.9, fait) ; protocole A2UI **v0.9 adopté, v1.0 quand stable**. |
 | Q22 | **Sélection d'outils juste-à-temps bornée** (2026-11-03) : jamais de catalogue chargé globalement ; 5 à 7 schémas d'outils métier hydratés par tour, choisis hors modèle (filtre d'accès dans le résolveur, puis similarité vectorielle qui épingle des compétences), **aucun tour de modèle supplémentaire** pour le routage de base ; repli par lecture du `SKILL.md` (pas d'outil `request_broader_tools`) ; mécanisme : outils de compétence protégés de Deep Agents ≥ 0.7.23 (vérifié sur 0.7.32) ; isolation par domaine avec sous-agents Deep Agents, sous-graphes LangGraph et `Command` seulement si nécessaire. Règle et protocole d'évaluation dans `conventions/agents-ia.md`. Conséquence : `LLMToolSelectorMiddleware` quitte le chemin systématique. Applicable à toute fonctionnalité qui utilise Deep Agents. |
@@ -129,7 +130,6 @@ lues. Chaque épopée porte une tâche « E*n*.R » pour cette relecture.
 | E14 | pgvector, PostgreSQL (recherche plein texte), documentation du modèle d'embeddings choisi ; LangChain : retrieval |
 | E15 | Deep Agents : toutes les pages ; LangChain : multi-agents ; LangGraph : sous-graphes |
 | E16 | Documentation des fournisseurs de modèles de la passerelle ; ce qui a changé depuis la dernière relecture |
-| E17 | vLLM (installation, serveur compatible OpenAI, quantification, parallélisme), LangChain (`langchain-openai`) |
 
 ## 4. Sources officielles lues (2026-10-31)
 
