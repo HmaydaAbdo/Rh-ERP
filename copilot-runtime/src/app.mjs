@@ -36,6 +36,33 @@ const masquerSkills = (input, next) =>
   );
 
 /**
+ * Agent AG-UI du service IA qui déclare ses capacités (KAN-270) : le runtime les publie dans `/info` (`getCapabilities`, point
+ * d'extension officiel du client AG-UI) et le navigateur les lit avec `injectCapabilities`. Les pièces jointes (images, PDF,
+ * fichiers) ne sont annoncées que si le service IA les accepte pour cet utilisateur (antivirus joignable, `IA_PIECES_JOINTES`) ;
+ * une panne du service laisse la déclaration vide, donc les pièces jointes fermées.
+ */
+class AgentServiceIa extends HttpAgent {
+  #urlCapacites;
+  #autorisation;
+
+  constructor(config, { urlAgent, autorisation }) {
+    super(config);
+    this.#urlCapacites = new URL('/capacites', urlAgent);
+    this.#autorisation = autorisation;
+  }
+
+  async getCapabilities() {
+    try {
+      const reponse = await fetch(this.#urlCapacites, { headers: { authorization: this.#autorisation }, signal: AbortSignal.timeout(10_000) });
+      const { piecesJointes } = reponse.ok ? await reponse.json() : {};
+      return piecesJointes === true ? { multimodal: { input: { image: true, pdf: true, file: true } } } : {};
+    } catch {
+      return {};
+    }
+  }
+}
+
+/**
  * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string }, vuesLibres?: boolean }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
@@ -45,11 +72,14 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
     // Un agent par requête (fabrique officielle) : le jeton de l'utilisateur lui est transmis par `forwardHeaders`
     // et le service IA le fait valider par l'API.
     agents: ({ request }) => ({
-      default: new HttpAgent({
-        url: urlAgent,
-        // En-tête fixé par le serveur : il l'emporte sur tout en-tête transmis. Les suggestions n'ont pas de fil persistant.
-        headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
-      }).use(masquerSkills)
+      default: new AgentServiceIa(
+        {
+          url: urlAgent,
+          // En-tête fixé par le serveur : il l'emporte sur tout en-tête transmis. Les suggestions n'ont pas de fil persistant.
+          headers: { 'X-Staport-Stateless-Suggestion': new URL(request.url).pathname.endsWith('/suggest') ? 'true' : 'false' }
+        },
+        { urlAgent, autorisation: request.headers.get('authorization') ?? '' }
+      ).use(masquerSkills)
     }),
     // L'utilisateur vérifié par `onRequest` : chaque fil appartient à celui dont la requête l'a créé.
     identifyUser: (request) => ({ id: request.headers.get(ENTETE_UTILISATEUR) ?? '' }),
@@ -81,18 +111,6 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
   if (conversations) {
     app.use('/copilotkit/conversations', conversations.routeur);
   }
-  // Capacités du service IA (KAN-93) : le navigateur n'atteint pas le service IA ; le runtime, déjà authentifié auprès de
-  // l'API, relaie la réponse du service (pièces jointes ouvertes seulement si l'antivirus est joignable).
-  app.get('/copilotkit/capacites', async (requete, reponse) => {
-    try {
-      const autorisation = requete.headers.authorization ?? '';
-      await authentifier(autorisation, urlApi);
-      const relais = await fetch(new URL('/capacites', urlAgent), { headers: { authorization: autorisation }, signal: AbortSignal.timeout(10_000) });
-      reponse.status(relais.status).type('application/json').send(await relais.text());
-    } catch (panne) {
-      reponse.status(panne instanceof Response ? panne.status : 502).end();
-    }
-  });
   app.use(
     createCopilotExpressHandler({
       runtime,

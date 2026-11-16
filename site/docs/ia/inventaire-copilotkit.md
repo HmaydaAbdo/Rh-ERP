@@ -20,10 +20,12 @@ gratuites et auto-hébergeables comptent ; CopilotKit Intelligence (hébergé) e
 | Authentification du runtime (en-têtes, jeton) | **Utilisée** | jeton rafraîchi avant l'envoi |
 | Inspecteur de développement | **Coupé volontairement** | `enableInspector: false` (KAN-98) |
 | Contrat de production | **Appliqué** | KAN-97 |
-| Outils côté navigateur (`registerFrontendTool`, `registerHumanInTheLoop`, `registerComponent`) | **Non utilisés** | décision « l'agent ne navigue pas » : les capacités passent par MCP, protégées par les permissions du domaine. À rouvrir avec les modes M1 à M3 (KAN-101) |
+| Outils côté navigateur (`registerFrontendTool`) | **Utilisé (pilote Employés, KAN-270)** | `employes_regler_filtres` : l'agent règle les filtres de la page ouverte, sans navigation ; reste à déployer sur les autres pages |
+| `registerHumanInTheLoop`, `registerComponent` | **À adopter (KAN-270)** | selon les besoins des pages |
 | Surfaces `CopilotSidebar` et `CopilotPopup` | **Non utilisées** | l'espace IA plein écran et le panneau maison du KAN-91 les remplacent |
 | Interface sans chat (headless), emplacements (slots), CSS | **Partiel** | thème Staport prévu au KAN-102 |
-| `injectCapabilities`, `injectCopilotKitConfig`, `CopilotKitAgentContext`, `selfManagedAgents` | **Non adoptés** | voir [contrat de production](contrat-de-production.md) |
+| `injectCapabilities` | **Utilisée (KAN-270)** | pièces jointes lues dans les capacités AG-UI du runtime ; relais maison supprimé |
+| `injectCopilotKitConfig`, `CopilotKitAgentContext`, `selfManagedAgents` | **En cours de décision (KAN-270)** | doublon de `connectAgentContext` (déjà utilisée) ; `selfManagedAgents` contourne le runtime |
 | MCP Apps (`provideMCPApps`) | **Écarté** | décision du KAN-94 |
 | Fils enrichis (`injectThreads`), mémoires (`injectMemories`), inspection avancée | **Hors périmètre** | exigent Intelligence (hébergé), exclu |
 

@@ -15,8 +15,8 @@ Page de référence : *production lifecycle* de la documentation officielle Copi
 
 Mesures de la construction de production (2026-11-16) :
 
-- **Initial** : 911 kB brut (157 kB transférés). Le seuil d'avertissement passe de 800 à **950 kB** (erreur à 1 Mo inchangée) : le dépassement vient de la coque de l'application, pas de l'assistant.
-- **Assistant** : 4,86 Mo brut (1,57 Mo transférés), **chargé à la demande** (`@defer`), donc hors du budget initial. À surveiller : toute entrée dans le bundle initial est une régression.
+- **Avant KAN-270** : initial 911 kB brut (157 kB transférés), assistant 4,86 Mo en chargement différé.
+- **Depuis KAN-270** (décision du propriétaire, voie officielle stricte : CopilotKit fourni à la racine pour que chaque page enregistre ses outils) : initial **7,28 Mo brut (2,07 Mo transférés)**. Budget fixé à 7,5 Mo (avertissement) et 8 Mo (erreur). Retour possible : un petit registre de ponts, au prix de code maison.
 - Style du composant `app-shell` : seuil d'avertissement de 8 à **10 kB** (erreur à 16 kB inchangée).
 
 ## Inspecteur de développement (KAN-98)

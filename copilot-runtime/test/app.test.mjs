@@ -26,6 +26,9 @@ let fermer;
 let purger;
 const suppressionsIa = [];
 let panneIa = false;
+// Réponse simulée de `/capacites` du service IA et dernier jeton reçu (capacités déclarées dans /info, KAN-270).
+let piecesJointesIa = true;
+let derniereAutorisationCapacites;
 // Exécutions du service IA (un POST = un run de l'agent) et lenteur du flux simulé, pour la reprise d'un flux coupé (KAN-85).
 let executionsIa = 0;
 let lenteurIaMs = 0;
@@ -39,7 +42,8 @@ before(async () => {
   // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
   agent = createServer((requete, reponse) => {
     if (requete.url === '/capacites') {
-      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: true, recu: requete.headers.authorization }));
+      derniereAutorisationCapacites = requete.headers.authorization;
+      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: piecesJointesIa }));
     }
     if (requete.method === 'DELETE') {
       suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
@@ -321,13 +325,22 @@ describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agen
   });
 });
 
-describe('capacités du service IA (KAN-93)', () => {
-  test('exigent une authentification puis relaient la réponse du service IA avec le jeton de l’utilisateur', async () => {
-    assert.equal((await appeler('/capacites')).status, 401);
-    assert.equal((await appeler('/capacites', { jeton: 'jeton-sans-droit' })).status, 403);
-    const reponse = await appeler('/capacites', { jeton: 'jeton-1' });
+describe('capacités du service IA (KAN-93, KAN-270)', () => {
+  test('sont déclarées dans /info (AG-UI) avec le jeton de l’utilisateur : pièces jointes ouvertes si le service les accepte', async () => {
+    const reponse = await appeler('/info', { jeton: 'jeton-1' });
+
     assert.equal(reponse.status, 200);
-    assert.deepEqual(JSON.parse(reponse.texte), { piecesJointes: true, recu: 'Bearer jeton-1' });
+    assert.deepEqual(JSON.parse(reponse.texte).agents.default.capabilities, { multimodal: { input: { image: true, pdf: true, file: true } } });
+    assert.equal(derniereAutorisationCapacites, 'Bearer jeton-1');
+  });
+
+  test('restent vides quand le service IA les refuse ou tombe : les pièces jointes restent fermées', async () => {
+    piecesJointesIa = false;
+    try {
+      assert.deepEqual(JSON.parse((await appeler('/info', { jeton: 'jeton-1' })).texte).agents.default.capabilities, {});
+    } finally {
+      piecesJointesIa = true;
+    }
   });
 });
 
