@@ -33,3 +33,20 @@ gratuites et auto-hébergeables comptent ; CopilotKit Intelligence (hébergé) e
 
 Toutes les fonctions gratuites utiles à un agent au niveau de la page sont utilisées. Les trois lacunes assumées sont les outils côté
 navigateur, les surfaces latérales de la bibliothèque et l'interface sans chat ; elles se rouvrent avec KAN-101 et KAN-102, pas avant.
+
+## Déclencheurs d'adoption (décision du propriétaire, 2026-11-16)
+
+Une fonction gratuite et officielle qui n'a pas encore de cas d'usage s'adopte **au moment où elle est utilisée**, par la voie officielle, sans doublon maison :
+
+| Fonction | Déclencheur |
+|---|---|
+| `registerHumanInTheLoop` | première action d'écriture proposée par l'agent (épopée d'écriture, accord humain obligatoire) |
+| MCP Apps (`provideMCPApps`, `mcpApps.servers` du runtime) | premier serveur MCP qui renvoie une ressource d'interface ; la limite d'identité (le runtime doit joindre MCP avec le jeton de l'utilisateur) se règle alors |
+| Emplacements (slots), interface sans chat, CSS | thème Staport (KAN-102) |
+| `registerComponent` | seulement si un affichage fixe ne peut pas passer par le catalogue A2UI |
+| `selfManagedAgents` | jamais en production (contourne le runtime et ses contrôles) ; agents locaux de test seulement |
+| Sidebar, Popup | seulement si un mode d'affichage compact est demandé |
+
+## Offre Intelligence relue le 2026-11-16
+
+La page officielle des plans indique que le plan **Developer** est gratuit (un siège, AG-UI Streams, mémoire utilisateur, apprentissage automatique, limites d'usage), hébergé par l'éditeur. L'auto-hébergement en production exige les plans Team Self-hosted ou Enterprise. Nos exclusions (Q3) tiennent à l'hébergement chez l'éditeur (données de paie et d'identité hors de notre réseau) et aux quotas, pas seulement au prix.
