@@ -210,8 +210,7 @@ PostgreSQL, semis répétable (`ia/tests/test_memoire.py`).
   balayeur natif du Store.
 - **Reprise** : le service accepte un run de reprise (`RunAgentInput.resume` ou `forwardedProps.command.resume`) sans
   nouvelle question ; l'état du fil (compétences épinglées) est conservé. Test de bout en bout par `/agui`.
-- **Téléchargement** : `GET /ia/fichiers` (liste) et `GET /ia/fichiers/espace/<chemin>` (nginx vers le routeur IA de
-  l'API). L'identité vient de l'échange du jeton de connexion ; le fichier d'un autre utilisateur est introuvable (404) ;
+- **Téléchargement** : `GET /ia/fichiers` (liste) et `GET /ia/fichiers/espace/<chemin>` (nginx vers le runtime CopilotKit, qui relaie au service IA). L'identité vient de l'échange du jeton de connexion ; le fichier d'un autre utilisateur est introuvable (404) ;
   réponse en pièce jointe, `nosniff`, sans cache.
 - **Bornes** (écrites par nous, aucun framework ne les fournit) : 200 000 caractères par fichier et 50 fichiers par
   utilisateur, par un middleware `wrap_tool_call` (`ia/src/staport_ia/fichiers.py`) ; le refus arrive à l'exécution,

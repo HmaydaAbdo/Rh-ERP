@@ -16,6 +16,7 @@ import { createCopilotExpressHandler } from '@copilotkit/runtime/v2/express';
 import express from 'express';
 import OpenAI from 'openai';
 import { creerConversations } from './conversations.mjs';
+import { creerRelaisIa } from './relais-ia.mjs';
 import { creerGouverneurVuesLibres } from './vues-libres.mjs';
 
 /** Routes servies ; toutes les autres (fils, mémoires, inspecteur, débogage) répondent 404. `transcribe` (dictée, KAN-93) n'existe que si un service de transcription est configuré. */
@@ -115,6 +116,8 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt 
   if (conversations) {
     app.use('/copilotkit/conversations', conversations.routeur);
   }
+  // Titres des outils, mémoire longue et fichiers (KAN-87, KAN-84, KAN-267) : routes du service IA relayées au navigateur.
+  app.use(creerRelaisIa({ urlAgent, authentifier: (autorisation) => authentifier(autorisation, urlApi), journal }));
   app.use(
     createCopilotExpressHandler({
       runtime,

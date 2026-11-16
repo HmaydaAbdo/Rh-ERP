@@ -168,3 +168,11 @@ Quatre-vingt-deux tests du service IA étaient ignorés (base de test, ClamAV, b
 ## Une adresse d'API saisie dans le navigateur sert l'API, pas l'application (2026-11-16)
 
 Ouvrir `/parametres` (alors que l'écran est `/admin/parametres`) renvoyait le JSON `401` de l'API : nginx relaie sans condition les préfixes d'API sans route Angular de même nom. **À faire :** sur ces préfixes aussi, une navigation (`Accept: text/html`) sert l'application (`rewrite ^ /__spa_fallback last`), qui répond « page introuvable » ou renvoie à la connexion ; les appels `HttpClient` n'envoient jamais `text/html`.
+
+## Refus du garde-fou : le test doit renvoyer tout l'historique (2026-11-16)
+
+KAN-280 était vert en test et faux en déploiement : le test ne renvoyait que la nouvelle question, alors que le navigateur renvoie toute la conversation. Avec `RemoveMessage`, `ag_ui_langgraph` rajoutait la question refusée (identifiant absent du fil) ; avec un simple remplacement de texte, il y voyait une modification et rétablissait le texte d'origine. Chaque message suivant du fil était refusé. Règle : tout test de reprise de fil rejoue la requête comme le client la fait (historique complet, mêmes identifiants), et un correctif de comportement de conversation se constate dans le navigateur après déploiement avant de se déclarer terminé.
+
+## Routes de l'assistant lues par le navigateur et limite de question (2026-11-16)
+
+Trois routes du service IA (`/ia/outils`, `/ia/memoire`, `/ia/fichiers`) étaient envoyées par nginx à l'API, qui répondait 404 : le service IA n'est pas joignable du navigateur (`assistant-net`), et le commentaire « servi par le routeur IA de l'API » datait de l'époque où le routeur y était intégré. Elles passent désormais par le runtime CopilotKit (`relais-ia.mjs`, proxy officiel `http-proxy-middleware`, authentification comme les autres routes). Règle : toute route que le navigateur appelle se vérifie de bout en bout dans les conteneurs (une requête réelle par nginx), pas seulement par un test du service qui la porte. Autre surprise : une limite de 2 000 caractères posée au premier jet du point d'entrée contredisait la décision « aucun plafond » et faisait refuser la requête de suggestions de CopilotKit (plus de 3 000 caractères), donc aucune suggestion ne venait : plus aucune longueur maximale, et tout seuil exige une source.

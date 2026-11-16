@@ -1,35 +1,6 @@
-<div class="app-page">
-  <div class="app-page__header">
-    <h1>Entrants</h1>
-  </div>
-
-  <app-mouvement-barre
-    [periode]="filtres().periode"
-    [filtres]="filtres().employes"
-    [exportVisible]="peutExporter"
-    [exportEnCours]="exportEnCours()"
-    (periodeChange)="choisirMois($event)"
-    (filtresChange)="changerEmployes($event)"
-    (exporter)="exporter()"
-  >
-    <stp-select
-      [value]="filtres().valeurs"
-      (valueChange)="changerTypes($event)"
-      [options]="optionsType"
-      [multiple]="true"
-      summaryLabel="{0} types"
-      ariaLabel="Type d’entrée"
-      placeholder="Type d’entrée"
-    ></stp-select>
-  </app-mouvement-barre>
-
-  @if (resultat(); as entrants) {
-    @if (!entrants.comparable) {
-      <stp-message
-        severity="warn"
-        text="Entrants indisponibles : ce mois ou le mois civil précédent n’a aucun bulletin de paie, on ne peut pas dire qui entre."
-      />
-    }
+<div class="entrant-list">
+  @if (etat.nonComparable()) {
+    <stp-message severity="warn" [text]="messageNonComparable" />
   }
 
   @if (chiffres(); as c) {
@@ -67,7 +38,7 @@
   <div class="app-table-bar">
     <div class="app-table-bar__summary">
       <p class="app-table-bar__total" role="status" aria-live="polite">
-        @if (!chargement() && resultat(); as entrants) {
+        @if (!etat.chargement() && etat.resultat(); as entrants) {
           {{ entrants.nombre }} {{ entrants.nombre > 1 ? 'entrants' : 'entrant' }} sur la période {{ entrants.periode }}
         }
       </p>
@@ -80,7 +51,7 @@
     label="Entrants du mois"
     [value]="lignes()"
     [columns]="colonnes.visible"
-    [loading]="chargement()"
+    [loading]="etat.chargement()"
     [rowActionsVisible]="false"
     [rowsPerPageOptions]="[10, 20, 50, 100]"
     emptyMessage="Aucun entrant sur cette période."
