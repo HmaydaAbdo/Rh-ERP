@@ -1,5 +1,5 @@
 import { NgComponentOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DOCUMENT, EnvironmentInjector, createEnvironmentInjector, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DOCUMENT, DestroyRef, EnvironmentInjector, createEnvironmentInjector, inject } from '@angular/core';
 import {
   COPILOT_KIT_CONFIG,
   anyActivityContentSchema,
@@ -32,6 +32,7 @@ import { chargeurVuesLibres } from './vues-libres';
 export class AssistantRacineComponent {
   private readonly auth = inject(AuthService);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly assistant = AssistantComponent;
   protected readonly injecteur = createEnvironmentInjector(
@@ -46,6 +47,12 @@ export class AssistantRacineComponent {
     ],
     inject(EnvironmentInjector)
   );
+
+  constructor() {
+    // Contrat de production de la bibliothèque (KAN-97) : ses services s'arrêtent avec leur injecteur (abonnements, enregistrements,
+    // minuteries). L'injecteur créé ici ne se détruit pas seul : on le détruit avec le composant (déconnexion, fermeture).
+    this.destroyRef.onDestroy(() => this.injecteur.destroy());
+  }
 
   private configuration(): CopilotKitConfig {
     return {
