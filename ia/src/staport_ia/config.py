@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # `ModelFallbackMiddleware` essaie ce groupe, d'une autre famille de modèles que `complex`. Vide : aucun repli.
     llm_repli: Literal["", "simple", "medium", "code"] = "medium"
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
-    # Base PostgreSQL des conversations (service ia-db) ; absente, les conversations restent en mémoire du processus.
+    # Base PostgreSQL des conversations (base `ia` de l'ERP) ; absente, elles restent en mémoire du processus.
     database_url: SecretStr | None = None
     # Une conversation inactive depuis ce nombre de jours est supprimée.
     conversation_jours: int = Field(default=30, ge=1, le=365)

@@ -45,8 +45,8 @@ configuration ne référence que des variables `os.environ/…`, fournies par le
   identifiant entier et réponse fondée sur le résultat. Cette sonde ne remplace pas le rejeu du jeu métier complet.
 - La clé applicative est autorisée sur les six groupes de capacité et le groupe de secours. Les permissions
   LiteLLM sur les modèles excluent les groupes d'évaluation, les sondes directes et `ai-gateway-selftest`.
-- Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base dédiée
-  `litellm-db` (même image PostgreSQL que l'ERP, volume séparé) pour les clés virtuelles, budgets et
+- Une instance, un worker : l'état du routeur reste en mémoire, sans Redis. Base `litellm`
+  du PostgreSQL de l'ERP (compte dédié, limité à cette base) pour les clés virtuelles, budgets et
   journaux de dépense (30 jours).
 - Réponses JSON validées contre le schéma demandé ; une réponse non conforme bascule sur un autre
   modèle. Cache désactivé.
@@ -65,7 +65,7 @@ section « Passerelle de modèles ».
 
 ## Démarrer
 
-Les services `litellm-db`, `litellm`, `litellm-cles` et `ia` démarrent par défaut avec le reste du
+Les services `litellm` et `ia` démarrent par défaut avec le reste du
 `docker-compose.yml` racine, sans profil ; la pile ERP n'en dépend pas.
 
 ```bash
@@ -73,9 +73,8 @@ docker compose pull && docker compose up -d
 docker compose logs -f litellm
 ```
 
-Les valeurs des clés virtuelles sont dans le `.env` racine (`IA_LITELLM_API_KEY`, `LITELLM_TEST_API_KEY`). La tâche
-ponctuelle `litellm-cles` les enregistre à chaque `up -d` dès que la passerelle est prête, puis s'arrête en
-`Exited (0)` ; les groupes autorisés des clés connues sont synchronisés (`[SYNCHRO]`) ; une clé déjà conforme reste telle quelle (`[DÉJÀ]`).
+Les valeurs des clés virtuelles sont dans le `.env` racine (`IA_LITELLM_API_KEY`, `LITELLM_TEST_API_KEY`). Le conteneur
+`litellm` les enregistre lui-même à chaque démarrage dès que la passerelle est prête (entrée de l'image, aucun conteneur ponctuel) ; les groupes autorisés des clés connues sont synchronisés (`[SYNCHRO]`) ; une clé déjà conforme reste telle quelle (`[DÉJÀ]`).
 Hors Compose, contre une passerelle d'essai, le même script se lance à la main :
 
 ```bash
@@ -103,7 +102,7 @@ Le script lit `LITELLM_GATEWAY_URL` et `LITELLM_TEST_API_KEY` dans le `.env` rac
 
 ## Mettre à jour LiteLLM
 
-1. Lire les notes de version ; sauvegarder la base `litellm-db`.
+1. Lire les notes de version ; la base `litellm` est dans la sauvegarde chiffrée du PostgreSQL de l'ERP.
 2. Remplacer le tag **et** le digest dans le `Dockerfile`
    (`docker buildx imagetools inspect ghcr.io/berriai/litellm:<tag>`). Jamais `latest`.
 3. Relancer `--providers`, la suite complète et `--production-key` : bascule et permissions des groupes
@@ -111,7 +110,7 @@ Le script lit `LITELLM_GATEWAY_URL` et `LITELLM_TEST_API_KEY` dans le `.env` rac
 
 ## Diagnostic
 
-- **401/403 de la passerelle** : vérifier les groupes autorisés sur la clé (`litellm-cles` les synchronise).
+- **401/403 de la passerelle** : vérifier les groupes autorisés sur la clé (`litellm` les synchronise au démarrage).
 - **401/403 du fournisseur** : clé fournisseur invalide ou indisponible ; `GET /health` (ou `/health?model_id=<id>`)
   identifie le déploiement et la cause ; il sort du routage jusqu'à la prochaine sonde.
 - **429** : quota fournisseur ou limite locale ; vérifier les tentatives de bascule dans le même groupe.

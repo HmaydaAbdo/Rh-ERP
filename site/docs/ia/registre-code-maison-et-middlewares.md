@@ -252,7 +252,7 @@ Source : doc LangGraph « Fault tolerance » (retries, timeouts, error handling,
   en local comme en production. Plus aucun repli sur `InMemorySaver` ni `InMemoryStore` dans le service : il masquait une
   panne de configuration et perdait conversations et fichiers au redémarrage. Les tests rapides reçoivent leur mémoire par
   injection (`creer_app(..., memoire=...)`, `ia/tests/doubles.py`) ; les tests de l'API et du lanceur ouvrent une base
-  PostgreSQL vierge, comme `ia-db`. Le service désactivé (`IA_ENABLED=false`) n'ouvre aucune base.
+  PostgreSQL vierge, comme la base `ia`. Le service désactivé (`IA_ENABLED=false`) n'ouvre aucune base.
 - **Arrêt en douceur** (`RunControl`, doc « Graceful shutdown ») : à SIGTERM (`docker compose up -d` après un `pull`), chaque
   run en cours termine son étape, enregistre un point de reprise et s'arrête (`GraphDrained`) ; le navigateur reçoit
   `RUN_ERROR` avec le code `SERVICE_REDEMARRE` et un message qui invite à renvoyer le message ; la conversation reprend avec
