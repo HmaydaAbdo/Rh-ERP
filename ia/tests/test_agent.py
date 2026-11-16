@@ -354,3 +354,8 @@ async def test_les_vieux_resultats_d_outils_sont_effaces_et_les_recents_gardes()
     # L'état de la conversation garde tous les résultats : l'effacement ne vaut que pour la requête au modèle.
     en_etat = [m.content for m in resultat["messages"] if isinstance(m, ToolMessage) and m.name == "paie_indicateurs"]
     assert all("Chantier 0" in str(contenu) for contenu in en_etat)
+
+
+def test_les_surfaces_generees_se_lient_au_catalogue_rendu_par_le_navigateur() -> None:
+    """Sans identifiant, `generate_a2ui` lie la surface au catalogue de base, inconnu du navigateur."""
+    assert _parametres_a2ui()["default_catalog_id"] == "staport-intelligence://a2ui/catalogue-erp"
