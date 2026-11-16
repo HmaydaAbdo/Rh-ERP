@@ -22,7 +22,7 @@ from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
-from langchain_core.messages import RemoveMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -44,6 +44,9 @@ MESSAGE_BLOQUE = (
     "Votre message n'a pas été traité : il contient une formulation que l'assistant refuse pour des raisons de "
     "sécurité. Reformulez votre demande ; la conversation reste utilisable."
 )
+
+TEXTE_QUESTION_REFUSEE = "[Message refusé pour des raisons de sécurité]"
+MARQUE_REFUSEE = "refusee"
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
 FabriqueAgent = Callable[
@@ -171,14 +174,41 @@ def bloquee_par_le_garde_fou(message_erreur: str) -> bool:
     return "Content blocked" in message_erreur
 
 
-async def oublier_la_question_bloquee(graphe: CompiledStateGraph[Any, Any, Any, Any], entree: RunAgentInput) -> None:
-    """Retire du fil la question refusée (``RemoveMessage``, mécanisme de LangGraph) : le point de reprise la gardait,
-    et chaque message suivant de la conversation était alors refusé à son tour."""
+async def neutraliser_la_question_bloquee(
+    graphe: CompiledStateGraph[Any, Any, Any, Any], entree: RunAgentInput
+) -> None:
+    """Garde dans le fil la question refusée sous un texte neutre, marqué ``refusee``, sous le même identifiant.
+
+    Ni ``RemoveMessage`` ni un simple remplacement ne suffisent : le navigateur renvoie tout l'historique à chaque
+    tour, et l'intégration AG-UI (``ag_ui_langgraph``) rajoute au fil un message dont l'identifiant a disparu ou, si
+    son texte diffère de celui du fil, y voit une modification et rétablit le texte d'origine. Dans les deux cas la
+    question refusée revenait et chaque message suivant de la conversation était refusé à son tour
+    (``sans_questions_refusees`` la retire de l'entrée)."""
     identifiants = [m.id for m in entree.messages if isinstance(m, UserMessage)]
     if identifiants:
         await graphe.aupdate_state(
-            {"configurable": {"thread_id": entree.thread_id}}, {"messages": [RemoveMessage(id=identifiants[-1])]}
+            {"configurable": {"thread_id": entree.thread_id}},
+            {
+                "messages": [
+                    HumanMessage(
+                        id=identifiants[-1], content=TEXTE_QUESTION_REFUSEE, additional_kwargs={MARQUE_REFUSEE: True}
+                    )
+                ]
+            },
         )
+
+
+async def sans_questions_refusees(
+    graphe: CompiledStateGraph[Any, Any, Any, Any], entree: RunAgentInput
+) -> RunAgentInput:
+    """Retire de l'entrée les questions déjà refusées dans ce fil : le fil les garde sous leur texte neutre."""
+    etat = await graphe.aget_state({"configurable": {"thread_id": entree.thread_id}})
+    refusees = {
+        m.id for m in etat.values.get("messages", []) if m.additional_kwargs.get(MARQUE_REFUSEE) and m.id is not None
+    }
+    if not refusees:
+        return entree
+    return entree.model_copy(update={"messages": [m for m in entree.messages if m.id not in refusees]})
 
 
 async def evenements(
@@ -211,7 +241,7 @@ async def evenements(
             # LangGraph, propre au framework, arrête un run qui boucle ; une durée anormale se détecte par les alertes.
             config={"recursion_limit": 200},
         )
-        async for brut in officiel.run(entree):
+        async for brut in officiel.run(await sans_questions_refusees(graphe, entree)):
             evenement = cast(BaseEvent, brut)
             if evenement.type == EventType.RUN_ERROR:
                 bloquee = bloquee_par_le_garde_fou(getattr(evenement, "message", "") or "")
@@ -227,7 +257,7 @@ async def evenements(
         bloquee = bloquee and not arret
         if bloquee and graphe is not None:
             try:
-                await oublier_la_question_bloquee(graphe, entree)
+                await neutraliser_la_question_bloquee(graphe, entree)
             except Exception as echec:  # la réponse d'erreur part quand même : seul le fil garde alors la question
                 journal.warning("Question refusée non retirée du fil %s : %s", entree.run_id, type(echec).__name__)
         if arret:
