@@ -359,8 +359,6 @@ services:
       # Dictée (KAN-93) : Whisper local sur CPU (service stt), API compatible OpenAI ; l'audio ne quitte pas les serveurs.
       # Vider STT_URL retire le micro de la discussion.
       STT_URL: ${STT_URL-http://stt:8000}
-      # Vues libres (KAN-95) : interface générative ouverte, activée pour tous (décision du propriétaire du 2026-11-16) ; `false` l'éteint. Voir site/docs/ia/vues-libres.md.
-      VUES_LIBRES: ${VUES_LIBRES:-true}
       STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-small}
       # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
       CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
@@ -398,6 +396,10 @@ services:
     restart: unless-stopped
     environment:
       CLAMAV_NO_MILTERD: "true"
+      # Pièces jointes jusqu'à 500 Mo (KAN-93) : clamd refuse par défaut les flux de plus de 100 Mo.
+      CLAMD_CONF_StreamMaxLength: 520M
+      CLAMD_CONF_MaxFileSize: 520M
+      CLAMD_CONF_MaxScanSize: 1000M
     volumes:
       - antivirus_db:/var/lib/clamav
     healthcheck:
@@ -418,7 +420,6 @@ services:
     image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
     restart: unless-stopped
     environment:
-      PRELOAD_MODELS: '["${STT_MODELE:-Systran/faster-whisper-small}"]'
       WHISPER__INFERENCE_DEVICE: cpu
     volumes:
       - stt_models:/home/ubuntu/.cache/huggingface/hub
@@ -428,6 +429,22 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - stt-net
+
+  # Téléchargement du modèle de dictée au démarrage : Speaches 0.8.x ne précharge rien (PRELOAD_MODELS n'existe pas), sans
+  # modèle installé la transcription répond 404 et le micro ne fait rien. Ce service appelle l'API officielle d'installation
+  # d'un modèle ; il est sans effet (rapide) quand le modèle est déjà dans le volume stt_models, puis s'arrête.
+  stt-modele:
+    image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
+    restart: "no"
+    depends_on:
+      stt:
+        condition: service_healthy
+    entrypoint: ["curl", "--fail", "--silent", "--show-error", "--max-time", "1800", "--retry", "5", "--retry-delay", "10", "--retry-all-errors", "-X", "POST", "http://stt:8000/v1/models/${STT_MODELE:-Systran/faster-whisper-small}"]
     cap_drop: ["ALL"]
     security_opt:
       - no-new-privileges:true

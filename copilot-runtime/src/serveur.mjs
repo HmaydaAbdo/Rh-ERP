@@ -15,8 +15,6 @@ const { app, purger } = creerApp({
   urlAgent: obligatoire('IA_AGUI_URL'),
   urlApi: obligatoire('ERP_API_URL').replace(/\/$/, ''),
   cheminBase: process.env.THREADS_DB_PATH,
-  // Vues libres (KAN-95) : activées pour tous (décision du propriétaire, 2026-11-16) ; VUES_LIBRES=false est l'interrupteur d'arrêt.
-  vuesLibres: process.env.VUES_LIBRES !== 'false',
   // Dictée (KAN-93) : Whisper local compatible OpenAI ; absent, le micro n'est pas proposé.
   stt: process.env.STT_URL
     ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-small', langue: process.env.STT_LANGUE ?? 'fr' }

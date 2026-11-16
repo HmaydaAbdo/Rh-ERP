@@ -3,7 +3,6 @@
 """Mémoire longue (KAN-84) : consentement, consultation, correction, oubli, isolation et expiration."""
 
 import asyncio
-import os
 import uuid
 from collections.abc import Sequence
 from typing import Any
@@ -25,7 +24,6 @@ from staport_ia.app import creer_app
 from staport_ia.fichiers import FICHIER_MEMOIRE, TAILLE_MAX_MEMOIRE
 from staport_ia.memoire import ouvrir_memoire, sujet
 
-URL = os.environ.get("IA_TEST_DATABASE_URL")
 FAIT = "- Je suis responsable du chantier Atlas."
 _DEMANDE: Any = {"messages": [HumanMessage(content="Retiens que je suis responsable du chantier Atlas.")]}
 
@@ -173,11 +171,10 @@ def test_la_memoire_d_un_utilisateur_n_est_visible_que_de_lui_et_exige_une_conne
     assert autre is not None and autre.value["content"] == "SECRET"  # l'oubli d'un utilisateur ne touche pas l'autre
 
 
-@pytest.mark.skipif(URL is None, reason="IA_TEST_DATABASE_URL absent")
-async def test_la_memoire_expire_par_le_balayeur_natif_du_store() -> None:
+async def test_la_memoire_expire_par_le_balayeur_natif_du_store(url_base: str) -> None:
     """KAN-84 : l'expiration de la mémoire est celle du Store officiel (``TTLConfig``), sans tâche à nous."""
     utilisateur = f"u-{uuid.uuid4().hex}"
-    async with ouvrir_memoire(str(URL)) as memoire:
+    async with ouvrir_memoire(url_base) as memoire:
         store = memoire.store
         assert isinstance(store, AsyncPostgresStore)
         await store.aput((utilisateur, "memoire"), "/AGENTS.md", {"content": FAIT}, ttl=0.01)  # 0,6 seconde

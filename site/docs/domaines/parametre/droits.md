@@ -7,7 +7,6 @@ sidebar_position: 3
 |---|---|---|
 | `GET /parametres` | `PARAMETRE_READ` | Lire le catalogue fixe, ses métadonnées et les valeurs courantes. |
 | `PUT /parametres/{id}` | `PARAMETRE_WRITE` | Modifier la valeur d'un paramètre existant. |
-| `GET /parametres/vues-libres` | `IA_UTILISER` | Lire la politique des vues libres de l'assistant (interrupteur et bornes). |
 | `POST /parametres/vues-libres/ouvertures` | `IA_UTILISER` | Inscrire au journal l'ouverture d'une vue libre (action `VUE_LIBRE_OUVERTURE`). |
 
 | Élément frontend | Condition |

@@ -21,7 +21,6 @@ from staport.domains.parametre.schemas import (
     OuvertureVueLibreRequete,
     ParametreModificationRequete,
     ParametreReponse,
-    PolitiqueVuesLibres,
 )
 
 
@@ -93,17 +92,6 @@ class ServiceParametre:
 
     async def cron_synchronisation_chantiers(self, session: AsyncSession) -> str:
         return await self._valeur(session, catalogue.CRON_SYNCHRONISATION_CHANTIERS)
-
-    async def politique_vues_libres(self, session: AsyncSession) -> PolitiqueVuesLibres:
-        """Interrupteur et bornes des vues libres, lus à chaque appel (arrêt à chaud sans redéploiement)."""
-        async with session.begin():
-            return PolitiqueVuesLibres(
-                actives=await self._entier(session, catalogue.VUES_LIBRES_ACTIVES) == 1,
-                tailleMaxOctets=await self._entier(session, catalogue.VUES_LIBRES_TAILLE_MAX) * 1024,
-                dureeMaxSecondes=await self._entier(session, catalogue.VUES_LIBRES_DUREE_MAX),
-                parReponse=await self._entier(session, catalogue.VUES_LIBRES_PAR_REPONSE),
-                parMinute=await self._entier(session, catalogue.VUES_LIBRES_PAR_MINUTE),
-            )
 
     async def enregistrer_ouverture_vue_libre(self, session: AsyncSession, requete: OuvertureVueLibreRequete) -> None:
         """Inscrit au journal d'audit l'ouverture d'une vue libre (fil et taille, sans le contenu)."""
