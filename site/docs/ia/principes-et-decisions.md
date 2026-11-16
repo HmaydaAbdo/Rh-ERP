@@ -91,7 +91,7 @@ Rien de ceci n'est adopté ni planifié ; cette liste évite de le reproposer :
 | Q8 | Latence **p95 ≤ 30 s** ; jeu de référence d'environ **200 cas** ; retard de version toléré **30 jours** ; conservation des conversations **90 jours** ; traces Phoenix **sans limite**, contenus en clair, supprimées seulement par le propriétaire (décision du 2026-11-04) ; **aucun plafond** appliqué par nous (E6.9). |
 | Q9 | Jeu adverse avec **PyRIT** (Microsoft), documentation lue avant adoption, complété par des cas propres à l'ERP (E9.5). |
 | Q10 | Liste des conversations par une **table de fils tenue par l'ERP** (E10.10). |
-| Q11 | Pièces jointes et voix (E12.7) — **révisé le 2026-11-16** : cadre écrit et prototype livrés, **fermés par défaut** ([page](pieces-jointes-et-voix.md)) ; dictée par un Whisper **local sur CPU** (gratuit, audio gardé sur les serveurs), pas de service en ligne sans accord CNDP. |
+| Q11 | Pièces jointes et voix (E12.7) — **révisé le 2026-11-16** : cadre écrit et livré, **activés par défaut** avec antivirus ClamAV et contrôle du contenu réel ([page](pieces-jointes-et-voix.md)) ; dictée par un Whisper **local sur CPU** (gratuit, audio gardé sur les serveurs), pas de service en ligne sans accord CNDP. |
 | Q12 | **Tous** les corpus (aide métier de l'ERP, textes réglementaires, procédures internes) ; **tout le RAG est isolé dans E11**. |
 | Q13 | Compétences : **contenu séparé** (les `SKILL.md` du dépôt restent pour les développeurs ; l'agent a les siennes, E15.4). |
 | Q14 | Tables du point de reprise : **`setup()` officiel de LangGraph** au démarrage (E6.8). |

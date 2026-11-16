@@ -78,6 +78,18 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt 
   if (conversations) {
     app.use('/copilotkit/conversations', conversations.routeur);
   }
+  // Capacités du service IA (KAN-93) : le navigateur n'atteint pas le service IA ; le runtime, déjà authentifié auprès de
+  // l'API, relaie la réponse du service (pièces jointes ouvertes seulement si l'antivirus est joignable).
+  app.get('/copilotkit/capacites', async (requete, reponse) => {
+    try {
+      const autorisation = requete.headers.authorization ?? '';
+      await authentifier(autorisation, urlApi);
+      const relais = await fetch(new URL('/capacites', urlAgent), { headers: { authorization: autorisation }, signal: AbortSignal.timeout(10_000) });
+      reponse.status(relais.status).type('application/json').send(await relais.text());
+    } catch (panne) {
+      reponse.status(panne instanceof Response ? panne.status : 502).end();
+    }
+  });
   app.use(
     createCopilotExpressHandler({
       runtime,

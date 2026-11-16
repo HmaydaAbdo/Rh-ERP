@@ -377,8 +377,10 @@ services:
       IA_LLM_REPLI: ${IA_LLM_REPLI:-medium}
       # Interrupteur global de l'IA, actif par défaut ; une variable obligatoire manquante empêche le démarrage.
       IA_ENABLED: ${IA_ENABLED:-true}
-      # Pièces jointes (KAN-93, prototype) : désactivées par défaut ; images, PDF et texte, revérifiés par le service.
-      IA_PIECES_JOINTES: ${IA_PIECES_JOINTES:-false}
+      # Pièces jointes (KAN-93) : activées ; chaque fichier est contrôlé (type réel) puis analysé par ClamAV. Sans antivirus
+      # joignable, aucun fichier n'est accepté. IA_PIECES_JOINTES=false les coupe.
+      IA_PIECES_JOINTES: ${IA_PIECES_JOINTES:-true}
+      IA_ANTIVIRUS_HOTE: antivirus
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
@@ -407,6 +409,7 @@ services:
       - runtime-net
       - trace-net
       - memoire-net
+      - av-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -456,6 +459,27 @@ services:
     # Pour `ng serve` en développement (proxy.conf.js) ; en production, nginx passe par le réseau assistant-net.
     ports:
       - "127.0.0.1:${COPILOT_RUNTIME_PORT:-5004}:4100"
+
+  # Antivirus des pièces jointes (KAN-93) : ClamAV (clamd), joignable par le seul service IA, qui lui envoie chaque fichier
+  # joint (INSTREAM) avant tout modèle. Les signatures se mettent à jour seules (freshclam) ; le premier démarrage les
+  # télécharge (quelques minutes, ~1 Go de RAM). Pas encore prêt, il fait refuser les pièces jointes (échec fermé).
+  antivirus:
+    image: clamav/clamav:${CLAMAV_IMAGE_TAG:-1.5.4}
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_MILTERD: "true"
+    volumes:
+      - antivirus_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - av-net
 
   # Transcription vocale locale (KAN-93) : Speaches (faster-whisper, API compatible OpenAI), sur CPU, gratuit, sans
   # compte ni envoi d'audio à un tiers. Joignable par le seul runtime CopilotKit. Le modèle est téléchargé une fois (cache
@@ -546,6 +570,7 @@ volumes:
   runtime_data:
   phoenix_data:
   stt_models:
+  antivirus_db:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -565,6 +590,8 @@ networks:
   runtime-net:
   # Runtime CopilotKit et backend seuls : le runtime y authentifie chaque requête de l'assistant (/auth/me).
   runtime-auth-net:
+  # Pièces jointes (KAN-93) : service IA et antivirus seulement.
+  av-net:
   # Dictée (KAN-93) : runtime CopilotKit et service de transcription seulement.
   stt-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.

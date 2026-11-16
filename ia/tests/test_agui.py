@@ -403,6 +403,27 @@ def test_la_suppression_exige_une_connexion_valide() -> None:
         assert client.delete("/conversations/t1", headers={"Authorization": "Bearer expire"}).status_code == 401
 
 
+class AnalyseurSimule:
+    """Antivirus simulé : propre, infecté (``EICAR`` dans les octets) ou indisponible ; compte les analyses."""
+
+    def __init__(self, indisponible: bool = False) -> None:
+        self.indisponible = indisponible
+        self.analyses = 0
+
+    async def verifier(self, donnees: bytes) -> None:
+        from staport_ia.pieces_jointes import INDISPONIBLE, PieceRefusee
+
+        self.analyses += 1
+        if self.indisponible:
+            raise PieceRefusee(INDISPONIBLE, indisponible=True)
+        if b"EICAR" in donnees:
+            raise PieceRefusee("Ce fichier a été bloqué par l'antivirus.")
+
+
+PNG = b"\x89PNG\r\n\x1a\n"
+PDF = b"%PDF-1.7\n"
+
+
 def _avec_piece(piece: dict[str, Any], pieces: int = 1) -> dict[str, Any]:
     corps = _corps()
     corps["messages"] = [
@@ -411,15 +432,17 @@ def _avec_piece(piece: dict[str, Any], pieces: int = 1) -> dict[str, Any]:
     return corps
 
 
-def _image(taille: int = 100, mime: str = "image/png") -> dict[str, Any]:
+def _fichier(
+    contenu: bytes = PNG + b"\x00" * 100, mime: str = "image/png", genre: str = "image", taille: int = 0
+) -> dict[str, Any]:
     import base64
 
-    donnees = base64.b64encode(b"\x00" * taille).decode()
-    return {"type": "image", "source": {"type": "data", "value": donnees, "mimeType": mime}}
+    donnees = base64.b64encode(contenu + b"\x00" * taille).decode()
+    return {"type": genre, "source": {"type": "data", "value": donnees, "mimeType": mime}}
 
 
-def _poster_pieces(corps: dict[str, Any], actives: bool, jeton: str | None = "c"):
-    entetes = {"Accept": "text/event-stream", "Authorization": f"Bearer {jeton}"}
+def _poster_pieces(corps: dict[str, Any], actives: bool, analyseur: AnalyseurSimule | None = None):
+    entetes = {"Accept": "text/event-stream", "Authorization": "Bearer c"}
     parametres = _settings().model_copy(update={"pieces_jointes": actives})
     with TestClient(
         creer_app(
@@ -428,50 +451,124 @@ def _poster_pieces(corps: dict[str, Any], actives: bool, jeton: str | None = "c"
             acces=AccesSimule([]),
             routage=_routage_paie,
             memoire=memoire_processus,
+            analyseur=analyseur,
         )
     ) as client:
         return client.post("/agui", json=corps, headers=entetes)
 
 
 def test_les_pieces_jointes_sont_refusees_tant_qu_elles_ne_sont_pas_activees() -> None:
-    reponse = _poster_pieces(_avec_piece(_image()), actives=False)
+    reponse = _poster_pieces(_avec_piece(_fichier()), actives=False, analyseur=AnalyseurSimule())
 
     assert reponse.status_code == 422
     assert "pas activées" in reponse.json()["detail"]
 
 
-def test_une_image_est_acceptee_quand_les_pieces_jointes_sont_activees() -> None:
-    reponse = _poster_pieces(_avec_piece(_image()), actives=True)
+def test_une_image_saine_est_analysee_puis_acceptee() -> None:
+    analyseur = AnalyseurSimule()
+
+    reponse = _poster_pieces(_avec_piece(_fichier()), actives=True, analyseur=analyseur)
 
     assert reponse.status_code == 200
     assert "RUN_FINISHED" in reponse.text
+    assert analyseur.analyses == 1
+
+
+def test_un_pdf_et_un_texte_reels_sont_acceptes() -> None:
+    pdf = _avec_piece(_fichier(PDF + b"contenu", "application/pdf", "document"))
+    texte = _avec_piece(_fichier("Période;Masse\n2026-08;4800\n".encode(), "text/csv", "document"))
+
+    assert _poster_pieces(pdf, True, AnalyseurSimule()).status_code == 200
+    assert _poster_pieces(texte, True, AnalyseurSimule()).status_code == 200
+
+
+def test_un_fichier_infecte_est_bloque_avant_le_modele() -> None:
+    reponse = _poster_pieces(_avec_piece(_fichier(PNG + b"EICAR")), actives=True, analyseur=AnalyseurSimule())
+
+    assert reponse.status_code == 422
+    assert "antivirus" in reponse.json()["detail"]
+
+
+def test_sans_antivirus_joignable_aucun_fichier_n_est_accepte() -> None:
+    for analyseur in (None, AnalyseurSimule(indisponible=True)):
+        reponse = _poster_pieces(_avec_piece(_fichier()), actives=True, analyseur=analyseur)
+
+        assert reponse.status_code == 503
+        assert "indisponible" in reponse.json()["detail"]
 
 
 @pytest.mark.parametrize(
     "piece",
     [
-        _image(mime="image/svg+xml"),  # script possible
-        _image(mime="application/zip"),
-        _image(mime="audio/webm"),
+        _fichier(PDF + b"x", "image/png"),  # un PDF déguisé en image
+        _fichier(PNG + b"x", "application/pdf", "document"),  # une image déguisée en PDF
+        _fichier(b"MZ\x90\x00" + b"\x00" * 60, "text/plain", "document"),  # un executable deguise en texte
+        _fichier(PNG + b"x", "text/csv", "document"),  # une image déguisée en CSV
+        _fichier(b"abc\x00def", "text/plain", "document"),  # octet nul : pas du texte
+        _fichier(b"\xff\xfe\xfa", "text/plain", "document"),  # pas de l'UTF-8
+        _fichier(b"<svg onload=alert(1)>", "image/png"),  # sans signature d'image
+        {"type": "image", "source": {"type": "data", "value": "pas du base64 !!", "mimeType": "image/png"}},
+    ],
+)
+def test_le_contenu_reel_doit_correspondre_au_type_annonce(piece: dict[str, Any]) -> None:
+    analyseur = AnalyseurSimule()
+
+    assert _poster_pieces(_avec_piece(piece), actives=True, analyseur=analyseur).status_code == 422
+    assert analyseur.analyses == 0  # refusé avant même l'analyse
+
+
+@pytest.mark.parametrize(
+    "piece",
+    [
+        _fichier(mime="image/svg+xml"),  # script possible
+        _fichier(mime="application/zip"),
+        _fichier(mime="audio/webm"),
         {"type": "image", "source": {"type": "url", "value": "http://interne/secret.png"}},  # jamais d'URL (SSRF)
         {"type": "audio", "source": {"type": "data", "value": "AAAA", "mimeType": "audio/webm"}},
         {"type": "video", "source": {"type": "data", "value": "AAAA", "mimeType": "video/mp4"}},
-        _image(taille=10 * 1024 * 1024 + 1),
+        _fichier(taille=10 * 1024 * 1024),
     ],
 )
 def test_une_piece_jointe_hors_liste_ou_trop_grosse_est_refusee(piece: dict[str, Any]) -> None:
-    assert _poster_pieces(_avec_piece(piece), actives=True).status_code == 422
+    assert _poster_pieces(_avec_piece(piece), actives=True, analyseur=AnalyseurSimule()).status_code == 422
 
 
 def test_trop_de_pieces_ou_un_total_trop_lourd_est_refuse() -> None:
-    assert _poster_pieces(_avec_piece(_image(), pieces=4), actives=True).status_code == 422
-    assert _poster_pieces(_avec_piece(_image(taille=5 * 1024 * 1024), pieces=3), actives=True).status_code == 422
+    assert _poster_pieces(_avec_piece(_fichier(), pieces=4), True, AnalyseurSimule()).status_code == 422
+    lourd = _fichier(taille=5 * 1024 * 1024)
+    assert _poster_pieces(_avec_piece(lourd, pieces=3), True, AnalyseurSimule()).status_code == 422
 
 
-def test_les_capacites_disent_si_les_pieces_jointes_sont_actives() -> None:
-    for actives in (False, True):
+def test_un_fichier_deja_accepte_n_est_pas_reanalyse_quand_l_historique_revient() -> None:
+    import asyncio
+
+    from ag_ui.core import UserMessage
+
+    from staport_ia.pieces_jointes import FichiersVerifies, verifier_pieces_jointes
+
+    analyseur = AnalyseurSimule()
+    verifies = FichiersVerifies()
+    message = UserMessage.model_validate(_avec_piece(_fichier())["messages"][0])
+
+    async def deux_fois() -> None:
+        await verifier_pieces_jointes([message], True, analyseur, verifies)
+        await verifier_pieces_jointes([message], True, analyseur, verifies)
+
+    asyncio.run(deux_fois())
+
+    assert analyseur.analyses == 1
+
+
+def test_les_capacites_n_ouvrent_les_pieces_jointes_qu_avec_un_antivirus() -> None:
+    for actives, analyseur, attendu in (
+        (True, AnalyseurSimule(), True),
+        (True, None, False),
+        (False, AnalyseurSimule(), False),
+    ):
         parametres = _settings().model_copy(update={"pieces_jointes": actives})
-        with TestClient(creer_app(parametres, acces=AccesSimule([]), memoire=memoire_processus)) as client:
+        with TestClient(
+            creer_app(parametres, acces=AccesSimule([]), memoire=memoire_processus, analyseur=analyseur)
+        ) as client:
             assert client.get("/capacites").status_code == 401
             reponse = client.get("/capacites", headers={"Authorization": "Bearer c"})
-            assert reponse.json() == {"piecesJointes": actives}
+            assert reponse.json() == {"piecesJointes": attendu}

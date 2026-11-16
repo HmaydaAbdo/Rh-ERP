@@ -38,6 +38,9 @@ before(async () => {
   await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
   // Service IA simulé : un run AG-UI valide qui répond `SECRET`, pour qu'un historique existe à protéger.
   agent = createServer((requete, reponse) => {
+    if (requete.url === '/capacites') {
+      return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: true, recu: requete.headers.authorization }));
+    }
     if (requete.method === 'DELETE') {
       suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
       return reponse.writeHead(panneIa ? 500 : 204).end();
@@ -315,6 +318,16 @@ describe('reconnexion du flux (KAN-85) : se rattacher ne relance jamais l’agen
     } finally {
       lenteurIaMs = 0;
     }
+  });
+});
+
+describe('capacités du service IA (KAN-93)', () => {
+  test('exigent une authentification puis relaient la réponse du service IA avec le jeton de l’utilisateur', async () => {
+    assert.equal((await appeler('/capacites')).status, 401);
+    assert.equal((await appeler('/capacites', { jeton: 'jeton-sans-droit' })).status, 403);
+    const reponse = await appeler('/capacites', { jeton: 'jeton-1' });
+    assert.equal(reponse.status, 200);
+    assert.deepEqual(JSON.parse(reponse.texte), { piecesJointes: true, recu: 'Bearer jeton-1' });
   });
 });
 
