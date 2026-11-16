@@ -31,6 +31,7 @@ dependencies = [
     "fastembed>=0.9.1",
     "aioclamd>=1.1.0",
     "puremagic>=2.2.1",
+    "markitdown[docx,pdf,pptx,xlsx]>=0.1.9",
 ]
 
 [dependency-groups]
@@ -43,6 +44,7 @@ dev = [
     "aimock-pytest>=0.7.0",
     "pre-commit>=4.7.0",
     "pytest-asyncio>=1.4.1.post1",
+    "testcontainers[postgres]>=4.15.0",
 ]
 
 [build-system]

@@ -157,6 +157,18 @@ Un rechargement direct de `/carte` renvoyait « Ce site est inaccessible » : le
 
 La PR #195 a échoué en CI sur trois points que les contrôles ciblés ne voyaient pas : un import `of` inutilisé (ESLint du runtime), la nouvelle route `POST /parametres/vues-libres/ouvertures` absente de `AUDITEES` (test_audit) et le nombre de paramètres attendu (test_mcp, 6 devenu 11). Règle : une nouvelle route d'écriture ou un nouveau paramètre du catalogue se déclare dans `test_audit.py` et `test_mcp.py` dans le même commit, et `eslint . --max-warnings 0` se lance dans chaque module touché.
 
+## Un identifiant de révision Alembic tient en 32 caractères (2026-11-16)
+
+La révision `0008_retrait_parametres_vues_libres` (35 caractères) a fait échouer toutes les bases de test : la colonne `alembic_version.version_num` est un `VARCHAR(32)`. **À faire :** nommer une révision en 32 caractères au plus (`0008_retrait_vues_libres`) ; le test de migration le révèle immédiatement, mais seulement si on le lance avant de continuer.
+
+## Un test ignoré faute d'environnement est un test que personne ne lance (2026-11-16)
+
+Quatre-vingt-deux tests du service IA étaient ignorés (base de test, ClamAV, banc d'évaluation) parce qu'ils attendaient une variable d'environnement qu'aucun poste ni la CI ne fournissait : leur état « vert » ne prouvait rien. **À faire :** un test qui a besoin d'un service le démarre lui-même (fixture testcontainers, `ia/tests/conftest.py`) ; un test qui exige l'application complète n'est collecté que par son lanceur (`pytest_ignore_collect`), jamais ignoré avec une raison ; ne pas écrire `skipif` pour une dépendance que l'on peut démarrer.
+
+## Une adresse d'API saisie dans le navigateur sert l'API, pas l'application (2026-11-16)
+
+Ouvrir `/parametres` (alors que l'écran est `/admin/parametres`) renvoyait le JSON `401` de l'API : nginx relaie sans condition les préfixes d'API sans route Angular de même nom. **À faire :** sur ces préfixes aussi, une navigation (`Accept: text/html`) sert l'application (`rewrite ^ /__spa_fallback last`), qui répond « page introuvable » ou renvoie à la connexion ; les appels `HttpClient` n'envoient jamais `text/html`.
+
 ## Refus du garde-fou : le test doit renvoyer tout l'historique (2026-11-16)
 
 KAN-280 était vert en test et faux en déploiement : le test ne renvoyait que la nouvelle question, alors que le navigateur renvoie toute la conversation. Avec `RemoveMessage`, `ag_ui_langgraph` rajoutait la question refusée (identifiant absent du fil) ; avec un simple remplacement de texte, il y voyait une modification et rétablissait le texte d'origine. Chaque message suivant du fil était refusé. Règle : tout test de reprise de fil rejoue la requête comme le client la fait (historique complet, mêmes identifiants), et un correctif de comportement de conversation se constate dans le navigateur après déploiement avant de se déclarer terminé.

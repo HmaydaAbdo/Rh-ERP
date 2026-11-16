@@ -1,35 +1,25 @@
-"""Preuve contre un vrai démon ClamAV (KAN-93) : les deux premiers tests sont ignorés sans ``IA_TEST_CLAMD_HOTE``.
-
-Lancer par exemple ``docker run -d -p 13310:3310 clamav/clamav:1.5.4`` puis, une fois les signatures chargées,
-``IA_TEST_CLAMD_HOTE=127.0.0.1 IA_TEST_CLAMD_PORT=13310 pytest tests/test_pieces_jointes_clamd.py``.
-"""
-
-import os
+"""Preuve contre un vrai démon ClamAV (KAN-93) : la fixture ``demon_clamd`` (``conftest.py``) démarre l'image officielle
+et attend ses signatures ; ``IA_TEST_CLAMD_HOTE`` et ``IA_TEST_CLAMD_PORT`` désignent un démon déjà prêt."""
 
 import pytest
 
 from staport_ia.pieces_jointes import AnalyseurClamd, PieceRefusee
 
-HOTE = os.environ.get("IA_TEST_CLAMD_HOTE")
-demon_requis = pytest.mark.skipif(HOTE is None, reason="IA_TEST_CLAMD_HOTE absent : pas de démon ClamAV")
-
 # Fichier de test standard EICAR (inoffensif, reconnu par tous les antivirus), écrit en deux morceaux.
 EICAR = ("X5O!P%@AP[4" + chr(92) + "PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*").encode()
 
 
-def _analyseur() -> AnalyseurClamd:
-    return AnalyseurClamd(HOTE or "", int(os.environ.get("IA_TEST_CLAMD_PORT", "3310")), delai=30.0)
+def _analyseur(demon: tuple[str, int]) -> AnalyseurClamd:
+    return AnalyseurClamd(demon[0], demon[1], delai=30.0)
 
 
-@demon_requis
-async def test_un_fichier_sain_passe() -> None:
-    await _analyseur().verifier(b"Periode;Masse\n2026-08;4800\n")
+async def test_un_fichier_sain_passe(demon_clamd: tuple[str, int]) -> None:
+    await _analyseur(demon_clamd).verifier(b"Periode;Masse\n2026-08;4800\n")
 
 
-@demon_requis
-async def test_le_fichier_de_test_eicar_est_bloque() -> None:
+async def test_le_fichier_de_test_eicar_est_bloque(demon_clamd: tuple[str, int]) -> None:
     with pytest.raises(PieceRefusee) as erreur:
-        await _analyseur().verifier(EICAR)
+        await _analyseur(demon_clamd).verifier(EICAR)
 
     assert not erreur.value.indisponible
     assert "antivirus" in erreur.value.motif

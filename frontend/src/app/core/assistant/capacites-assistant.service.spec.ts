@@ -31,17 +31,17 @@ describe('CapacitesAssistant', () => {
     expect(service.pieces().enabled).toBe(false);
   });
 
-  it('ouvre images, PDF, texte et CSV de 10 Mo au plus quand l’agent déclare accepter les fichiers', async () => {
+  it('ouvre images, PDF, texte et CSV de 500 Mo au plus quand l’agent déclare accepter les fichiers', async () => {
     const service = demarrer(info({ multimodal: { input: { image: true, pdf: true, file: true } } }));
 
     await attendre(() => service.pieces().enabled);
 
-    expect(service.pieces()).toMatchObject({ enabled: true, accept: PIECES_JOINTES.accept, maxSize: 10 * 1024 * 1024 });
+    expect(service.pieces()).toMatchObject({ enabled: true, accept: PIECES_JOINTES.accept, maxSize: 500 * 1024 * 1024 });
     expect(PIECES_JOINTES.accept).not.toMatch(/svg|zip|audio|video|html/);
   });
 
   it('dit en français pourquoi un fichier est refusé', () => {
-    expect(messagePiece('file-too-large')).toBe('Ce fichier dépasse 10 Mo.');
+    expect(messagePiece('file-too-large')).toBe('Ce fichier dépasse 500 Mo.');
     expect(messagePiece('invalid-type')).toContain('n’est pas accepté');
     expect(messagePiece('upload-failed')).toContain('n’a pas pu être ajouté');
   });

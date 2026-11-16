@@ -58,6 +58,7 @@ def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
             utilisateur=utilisateur,
             store=espaces,
             repli=repli,
+            sous_agents=config.sous_agents,
         )
 
     return fabriquer

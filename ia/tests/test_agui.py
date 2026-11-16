@@ -569,16 +569,23 @@ def test_le_contenu_reel_doit_correspondre_au_type_annonce(piece: dict[str, Any]
         {"type": "image", "source": {"type": "url", "value": "http://interne/secret.png"}},  # jamais d'URL (SSRF)
         {"type": "audio", "source": {"type": "data", "value": "AAAA", "mimeType": "audio/webm"}},
         {"type": "video", "source": {"type": "data", "value": "AAAA", "mimeType": "video/mp4"}},
-        _fichier(taille=10 * 1024 * 1024),
     ],
 )
 def test_une_piece_jointe_hors_liste_ou_trop_grosse_est_refusee(piece: dict[str, Any]) -> None:
     assert _poster_pieces(_avec_piece(piece), actives=True, analyseur=AnalyseurSimule()).status_code == 422
 
 
-def test_trop_de_pieces_ou_un_total_trop_lourd_est_refuse() -> None:
+def test_un_fichier_au_dela_du_plafond_est_refuse(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Plafond réduit pour le test : 500 Mo de base64 ne tiennent pas dans un test unitaire.
+    monkeypatch.setattr("staport_ia.pieces_jointes.TAILLE_MAX_PIECE", 1024 * 1024)
+    assert _poster_pieces(_avec_piece(_fichier(taille=2 * 1024 * 1024)), True, AnalyseurSimule()).status_code == 422
+
+
+def test_trop_de_pieces_ou_un_total_trop_lourd_est_refuse(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("staport_ia.pieces_jointes.TAILLE_MAX_PIECE", 1024 * 1024)
+    monkeypatch.setattr("staport_ia.pieces_jointes.TAILLE_MAX_MESSAGE", 1024 * 1024)
     assert _poster_pieces(_avec_piece(_fichier(), pieces=4), True, AnalyseurSimule()).status_code == 422
-    lourd = _fichier(taille=5 * 1024 * 1024)
+    lourd = _fichier(taille=600 * 1024)
     assert _poster_pieces(_avec_piece(lourd, pieces=3), True, AnalyseurSimule()).status_code == 422
 
 

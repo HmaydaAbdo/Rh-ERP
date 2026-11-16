@@ -26,6 +26,7 @@ from copilotkit import CopilotKitMiddleware
 from deepagents import GeneralPurposeSubagentProfile, HarnessProfile, create_deep_agent, register_harness_profile
 from deepagents.backends import CompositeBackend, StoreBackend
 from deepagents.middleware import FilesystemPermission, SkillsMiddleware
+from deepagents.middleware.subagents import SubAgent
 from langchain.agents.middleware import (
     AgentMiddleware,
     ClearToolUsesEdit,
@@ -45,11 +46,13 @@ from langgraph.errors import GraphBubbleUp
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
+from pydantic import BaseModel, Field
 
 from staport_ia.competences import (
     ESPACE_COMPETENCES,
     OUTILS_PERMANENTS,
     charger,
+    dossier_competences,
     resolveur,
     semer_competences_memoire,
 )
@@ -341,6 +344,36 @@ def _erreur_outil(erreur: Exception, requete: ToolCallRequest) -> str | None:
     )
 
 
+class ResultatDomaine(BaseModel):
+    """Sortie structurée d'un sous-agent de domaine (KAN-261) : ce qui remonte à l'agent principal."""
+
+    reponse: str = Field(description="Réponse rédigée en français, chiffres repris tels que renvoyés par les outils.")
+    outils_utilises: list[str] = Field(default_factory=list, description="Noms des outils appelés pour répondre.")
+
+
+def sous_agents_par_domaine(outils: Sequence[BaseTool]) -> list[SubAgent]:
+    """Un sous-agent par compétence (KAN-261) : ses seuls outils sont ceux de son domaine, sa fiche est sa consigne et
+    sa sortie est structurée (``response_format``). Variante mesurée au banc, activée par ``IA_SOUS_AGENTS``."""
+    par_nom = {outil.name: outil for outil in outils}
+    dossier = dossier_competences()
+    sous_agents: list[SubAgent] = []
+    for competence in charger().values():
+        outils_domaine = [par_nom[nom] for nom in competence.outils if nom in par_nom]
+        if not outils_domaine:
+            continue
+        fiche = (dossier / competence.nom / "SKILL.md").read_text(encoding="utf-8").split("---", 2)[-1].strip()
+        sous_agents.append(
+            {
+                "name": competence.nom,
+                "description": competence.description,
+                "system_prompt": f"Tu réponds en français, avec les seuls outils de ton domaine.\n\n{fiche}",
+                "tools": outils_domaine,
+                "response_format": ResultatDomaine,
+            }
+        )
+    return sous_agents
+
+
 def creer_agent(
     modele: BaseChatModel,
     outils: Sequence[BaseTool],
@@ -351,6 +384,7 @@ def creer_agent(
     store: BaseStore | None = None,
     repli: Sequence[BaseChatModel] = (),
     effacement_jetons: int = SEUIL_EFFACEMENT_JETONS,
+    sous_agents: bool = False,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
@@ -394,9 +428,12 @@ def creer_agent(
             SummarizationMiddleware(model=resumeur, trigger=("tokens", SEUIL_RESUME_JETONS), keep=("messages", 12)),
         )
     # Un outil métier n'est exposé que par une compétence : un appel non épinglé échoue sans s'exécuter (testé).
-    intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
+    # Variante sous-agents (KAN-261) : les outils de domaine passent aux sous-agents, l'agent principal délègue.
+    if not sous_agents:
+        intergiciels.append(SkillsMiddleware(backend=backend, sources=["/"], tools=resolveur(outils)))
     return create_deep_agent(
         model=modele,
+        subagents=sous_agents_par_domaine(outils) if sous_agents else None,
         tools=[*(outil for outil in outils if outil.name in OUTILS_PERMANENTS), poser_question],
         system_prompt=SYSTEME,
         memory=[FICHIER_MEMOIRE],

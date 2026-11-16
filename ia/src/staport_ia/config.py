@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     # Groupe LiteLLM du modèle de repli (KAN-265) : si le modèle principal échoue après le basculement de la passerelle,
     # `ModelFallbackMiddleware` essaie ce groupe, d'une autre famille de modèles que `complex`. Vide : aucun repli.
     llm_repli: Literal["", "simple", "medium", "code"] = "medium"
+    # Variante mesurée au banc (KAN-261) : un sous-agent par domaine à sortie structurée ; faux par défaut.
+    sous_agents: bool = False
     llm_timeout_seconds: float = Field(default=120.0, gt=0, le=600)
     # Base PostgreSQL des conversations (base `ia` de l'ERP) ; absente, elles restent en mémoire du processus.
     database_url: SecretStr | None = None

@@ -33,11 +33,6 @@ Le backend garde les valeurs en mémoire sur son instance et les invalide après
 | `securite.mot-de-passe.longueur-minimale` | 10 caractères | Minimum à la création et lors des réinitialisations ; de 8 à 100. Les mots de passe existants ne changent pas. |
 | `paie.analytique.pas-tranche` | 500 DH | Pas et largeur minimale des tranches de répartition des salaires ; de 1 à 100 000 DH. |
 | `chantier.synchronisation.cron` | `0 0 23 * * *` | Expression cron à six champs, secondes comprises, lue en UTC ; planifie la synchronisation quotidienne à 23 h. Relue avant chaque exécution. |
-| `ia.vues-libres.actives` | 1 | Interrupteur d'arrêt à chaud des vues libres de l'assistant (1 = actives, 0 = coupées) ; effet à la question suivante, sans redéploiement. |
-| `ia.vues-libres.taille-max.ko` | 200 Ko | Taille maximale du code d'une vue libre ; de 1 à 1 024. |
-| `ia.vues-libres.duree-max.secondes` | 15 s | Durée maximale d'exécution d'une vue libre avant retrait de l'écran ; de 1 à 120. |
-| `ia.vues-libres.par-reponse` | 10 | Vues libres au plus par réponse de l'agent ; de 1 à 50. |
-| `ia.vues-libres.par-minute` | 60 | Vues libres au plus par minute et par utilisateur ; de 1 à 600. |
 
 La définition complète (libellé, description, type et bornes) appartient au catalogue (`catalogue.py`). Une valeur entière est normalisée
 et bornée côté serveur. Une expression cron est validée par APScheduler (jours de semaine par noms `MON` à `SUN` ou `*`, jamais en chiffres). Une valeur invalide répond `400` et n'est pas enregistrée.
@@ -70,7 +65,6 @@ Une modification retourne le DTO complet actualisé. Codes d'erreur : `400` pour
 |---|---|---|---|
 | `GET` | `/parametres` | `PARAMETRE_READ` | Liste le catalogue avec les valeurs et métadonnées de saisie. |
 | `PUT` | `/parametres/{id}` | `PARAMETRE_WRITE` | Modifie la valeur d'une clé connue. |
-| `GET` | `/parametres/vues-libres` | `IA_UTILISER` | Politique des vues libres (interrupteur et bornes) que le runtime de l'assistant lit à chaque question. |
 | `POST` | `/parametres/vues-libres/ouvertures` | `IA_UTILISER` | Inscrit au journal d'audit l'ouverture d'une vue libre (fil et taille, jamais le contenu) ; `204`. |
 
 Le catalogue ne permet ni création, ni suppression, ni renommage de clé depuis l'interface. Les données sont validées à nouveau

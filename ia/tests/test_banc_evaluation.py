@@ -3,8 +3,8 @@
 """Banc d'évaluation : le jeu de référence rejoué par pytest sur le vrai agent (KAN-76, remplace le lanceur maison).
 
 Un cas = un test paramétré (``-k <id>`` pour en rejouer un, ``IA_EVALUATION_REPETITIONS`` pour la stabilité pass^k).
-Le banc ne s'exécute que lancé par ``api/tests/test_ia_lanceurs.py`` (variables ``EVAL_*`` et ``IA_LITELLM_*``, voir
-``staport_ia.evaluation``) ; sans elles, il est ignoré. Le rapport JSON (``EVAL_RAPPORT``) n'écrit ni jeton ni clé.
+Le banc n'est collecté que lancé par ``api/tests/test_ia_lanceurs.py`` (variables ``EVAL_*`` et ``IA_LITELLM_*``, voir
+``staport_ia.evaluation`` et ``conftest.py``). Le rapport JSON (``EVAL_RAPPORT``) n'écrit ni jeton ni clé.
 """
 
 import json
@@ -19,10 +19,6 @@ import httpx
 import pytest
 
 from staport_ia.evaluation import JEU, ResultatCas, cause, contexte_depuis_env, evaluer_cas, synthese
-
-pytestmark = pytest.mark.skipif(
-    "EVAL_API_URL" not in os.environ, reason="banc d'évaluation : variables EVAL_* absentes"
-)
 
 REPETITIONS = max(1, int(os.environ.get("IA_EVALUATION_REPETITIONS", "1")))
 _JEU: dict[str, Any] = json.loads(JEU.read_text(encoding="utf-8"))
@@ -61,9 +57,6 @@ async def test_le_cas_du_jeu_de_reference_reussit(cas: dict[str, Any], numero: i
     assert resultat.succes, resultat.raison
 
 
-@pytest.mark.skipif(
-    os.environ.get("IA_EVALUATION_SEUILS") != "1", reason="seuils d'acceptation : IA_EVALUATION_SEUILS=1"
-)
 def test_le_jeu_de_reference_atteint_les_seuils_d_acceptation() -> None:
     bilan = synthese(RESULTATS)
     assert bilan["acceptee"], bilan["acceptation"]
