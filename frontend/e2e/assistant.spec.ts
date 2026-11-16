@@ -301,6 +301,33 @@ test.describe('Staport Intelligence', () => {
     await expect(page.getByRole('heading', { name: 'Paie' })).toBeVisible();
   });
 
+  test('propose les pièces jointes et la dictée seulement quand le serveur les active (KAN-93)', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
+    await simulerRuntime(page);
+    const info = (audio: boolean) => ({
+      version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', suggestions: true, a2uiEnabled: true,
+      a2ui: { enabled: true }, audioFileTranscriptionEnabled: audio
+    });
+
+    // Tout est fermé par défaut : ni bouton de fichier, ni micro.
+    await page.route('**/ia/capacites', (route) => route.fulfill({ json: { piecesJointes: false } }));
+    await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(false) }));
+    await page.goto('/assistant');
+    const espace = page.getByRole('region', { name: 'Staport Intelligence' });
+    await expect(espace.getByPlaceholder('Posez votre question…')).toBeVisible();
+    await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toHaveCount(0);
+    await expect(espace.getByRole('button', { name: 'Dicter' })).toHaveCount(0);
+
+    // Activés côté serveur : le bouton « Ajouter un fichier » et le micro apparaissent.
+    await page.route('**/ia/capacites', (route) => route.fulfill({ json: { piecesJointes: true } }));
+    await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(true) }));
+    await page.reload();
+    await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toBeVisible();
+    await expect(espace.getByRole('button', { name: 'Dicter' })).toBeVisible();
+    const accessibilite = await new AxeBuilder({ page }).include('app-assistant').analyze();
+    expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
+  });
+
   test('n’apparaît pas sans le droit IA_UTILISER', async ({ page }) => {
     await mockApi(page, { username: 'paie', permissions: ['PAIE_READ'] }, routes());
     await page.goto('/paie');

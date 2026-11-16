@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AgentStore, CopilotChat, CopilotChatConfiguration, CopilotKit, CopilotkitAgentFactory } from '@copilotkit/angular';
 
 import { AccordInterruptionComponent } from './accord-interruption.component';
+import { CapacitesAssistant } from './capacites-assistant.service';
 import { FilAssistant } from './fil-assistant.service';
 import { AssistantChatComponent } from './assistant-chat.component';
 
@@ -32,6 +33,7 @@ describe('AssistantChatComponent', () => {
       imports: [AssistantChatComponent],
       providers: [
         { provide: FilAssistant, useValue: { fil: signal('u1-test'), listeOuverte: signal(false), memoireOuverte: signal(false), estUtilise: () => utilise, marquerUtilise, rafraichir } },
+        { provide: CapacitesAssistant, useValue: { pieces: signal({ enabled: false }), erreurPiece: signal(null), charger: () => Promise.resolve() } },
         { provide: CopilotKit, useValue: { core: { connectAgent } } },
         { provide: CopilotkitAgentFactory, useValue: { createAgentStoreSignal: () => signal(magasin) } }
       ],

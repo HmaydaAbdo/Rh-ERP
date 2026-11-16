@@ -401,3 +401,77 @@ def test_la_suppression_exige_une_connexion_valide() -> None:
     with TestClient(app) as client:
         assert client.delete("/conversations/t1").status_code == 401
         assert client.delete("/conversations/t1", headers={"Authorization": "Bearer expire"}).status_code == 401
+
+
+def _avec_piece(piece: dict[str, Any], pieces: int = 1) -> dict[str, Any]:
+    corps = _corps()
+    corps["messages"] = [
+        {"id": "m1", "role": "user", "content": [{"type": "text", "text": QUESTION}, *([piece] * pieces)]}
+    ]
+    return corps
+
+
+def _image(taille: int = 100, mime: str = "image/png") -> dict[str, Any]:
+    import base64
+
+    donnees = base64.b64encode(b"\x00" * taille).decode()
+    return {"type": "image", "source": {"type": "data", "value": donnees, "mimeType": mime}}
+
+
+def _poster_pieces(corps: dict[str, Any], actives: bool, jeton: str | None = "c"):
+    entetes = {"Accept": "text/event-stream", "Authorization": f"Bearer {jeton}"}
+    parametres = _settings().model_copy(update={"pieces_jointes": actives})
+    with TestClient(
+        creer_app(
+            parametres,
+            fabrique=_fabrique(modele(AIMessage(content=REPONSE))),
+            acces=AccesSimule([]),
+            routage=_routage_paie,
+            memoire=memoire_processus,
+        )
+    ) as client:
+        return client.post("/agui", json=corps, headers=entetes)
+
+
+def test_les_pieces_jointes_sont_refusees_tant_qu_elles_ne_sont_pas_activees() -> None:
+    reponse = _poster_pieces(_avec_piece(_image()), actives=False)
+
+    assert reponse.status_code == 422
+    assert "pas activées" in reponse.json()["detail"]
+
+
+def test_une_image_est_acceptee_quand_les_pieces_jointes_sont_activees() -> None:
+    reponse = _poster_pieces(_avec_piece(_image()), actives=True)
+
+    assert reponse.status_code == 200
+    assert "RUN_FINISHED" in reponse.text
+
+
+@pytest.mark.parametrize(
+    "piece",
+    [
+        _image(mime="image/svg+xml"),  # script possible
+        _image(mime="application/zip"),
+        _image(mime="audio/webm"),
+        {"type": "image", "source": {"type": "url", "value": "http://interne/secret.png"}},  # jamais d'URL (SSRF)
+        {"type": "audio", "source": {"type": "data", "value": "AAAA", "mimeType": "audio/webm"}},
+        {"type": "video", "source": {"type": "data", "value": "AAAA", "mimeType": "video/mp4"}},
+        _image(taille=10 * 1024 * 1024 + 1),
+    ],
+)
+def test_une_piece_jointe_hors_liste_ou_trop_grosse_est_refusee(piece: dict[str, Any]) -> None:
+    assert _poster_pieces(_avec_piece(piece), actives=True).status_code == 422
+
+
+def test_trop_de_pieces_ou_un_total_trop_lourd_est_refuse() -> None:
+    assert _poster_pieces(_avec_piece(_image(), pieces=4), actives=True).status_code == 422
+    assert _poster_pieces(_avec_piece(_image(taille=5 * 1024 * 1024), pieces=3), actives=True).status_code == 422
+
+
+def test_les_capacites_disent_si_les_pieces_jointes_sont_actives() -> None:
+    for actives in (False, True):
+        parametres = _settings().model_copy(update={"pieces_jointes": actives})
+        with TestClient(creer_app(parametres, acces=AccesSimule([]), memoire=memoire_processus)) as client:
+            assert client.get("/capacites").status_code == 401
+            reponse = client.get("/capacites", headers={"Authorization": "Bearer c"})
+            assert reponse.json() == {"piecesJointes": actives}

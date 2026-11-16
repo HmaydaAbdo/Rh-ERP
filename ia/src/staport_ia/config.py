@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     # Une conversation inactive depuis ce nombre de jours est supprimée.
     conversation_jours: int = Field(default=30, ge=1, le=365)
+    # Pièces jointes à une question (KAN-93, prototype) : désactivées par défaut ; images, PDF et texte, revérifiés ici.
+    pieces_jointes: bool = False
     # Racine de l'API (jeton agent et route /mcp), par exemple http://backend:8080.
     erp_api_url: AnyHttpUrl
 
