@@ -398,3 +398,78 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
     assert.ok((await dicter('jeton-1', base)).status >= 400);
   });
 });
+
+describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware officiel quand elles sont activées', () => {
+  const DOCUMENT = '<html><body><p>Vue de test</p></body></html>';
+  let agentOutil;
+  let serveurs = [];
+
+  const demarrer = async (vuesLibres) => {
+    const app = creerApp({
+      urlAgent: `http://127.0.0.1:${agentOutil.address().port}/agui`,
+      urlApi: `http://127.0.0.1:${api.address().port}`,
+      journal: { error: () => {} },
+      vuesLibres
+    });
+    const http = app.app.listen(0, '127.0.0.1');
+    await new Promise((ok) => http.once('listening', ok));
+    serveurs.push({ http, fermer: app.fermer });
+    return `http://127.0.0.1:${http.address().port}/copilotkit`;
+  };
+
+  before(async () => {
+    // Service IA simulé : l'agent appelle l'outil `generateSandboxedUi` (outil frontal que le runtime lui fait parvenir).
+    agentOutil = createServer((requete, reponse) => {
+      let corps = '';
+      requete.on('data', (morceau) => (corps += morceau));
+      requete.on('end', () => {
+        const { threadId, runId } = JSON.parse(corps);
+        const arguments_ = JSON.stringify({ initialHeight: 120, placeholderMessages: ['Préparation…'], css: 'p{color:#222}', html: [DOCUMENT], jsFunctions: '', jsExpressions: [] });
+        const evenements = [
+          { type: 'RUN_STARTED', threadId, runId },
+          { type: 'TOOL_CALL_START', toolCallId: 't1', toolCallName: 'generateSandboxedUi', parentMessageId: 'm1' },
+          { type: 'TOOL_CALL_ARGS', toolCallId: 't1', delta: arguments_ },
+          { type: 'TOOL_CALL_END', toolCallId: 't1' },
+          { type: 'RUN_FINISHED', threadId, runId }
+        ];
+        reponse.writeHead(200, { 'content-type': 'text/event-stream' });
+        evenements.forEach((evenement) => reponse.write(`data: ${JSON.stringify(evenement)}\n\n`));
+        reponse.end();
+      });
+    });
+    await new Promise((ok) => agentOutil.listen(0, '127.0.0.1', ok));
+  });
+
+  after(() => {
+    serveurs.forEach(({ http, fermer: arreter }) => {
+      http.closeAllConnections();
+      http.close();
+      arreter();
+    });
+    agentOutil.closeAllConnections();
+    agentOutil.close();
+  });
+
+  const lancer = async (racine) => {
+    const reponse = await fetch(`${racine}/agent/default/run`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer jeton-1', 'content-type': 'application/json' },
+      body: JSON.stringify({ ...corpsRun(`vue-${randomUUID()}`), tools: [{ name: 'generateSandboxedUi', description: 'x', parameters: { type: 'object', properties: {} } }] }),
+      signal: AbortSignal.timeout(10_000)
+    });
+    return reponse.text();
+  };
+
+  test('coupées par défaut : aucun événement de vue libre', async () => {
+    const flux = await lancer(await demarrer(false));
+
+    assert.ok(!flux.includes('open-generative-ui'));
+  });
+
+  test('activées : l\'appel de l\'outil devient une vue libre (activité officielle)', async () => {
+    const flux = await lancer(await demarrer(true));
+
+    assert.ok(flux.includes('open-generative-ui'), flux.slice(0, 800));
+    assert.ok(flux.includes('Vue de test'));
+  });
+});

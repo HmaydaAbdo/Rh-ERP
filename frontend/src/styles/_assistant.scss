@@ -193,3 +193,9 @@ html .espace-assistant-discussion {
   color: var(--color-text-muted);
   font-size: 0.875rem;
 }
+
+// Signalisation anglaise du composant officiel de reprise A2UI pendant son premier affichage : remplacée par celle de
+// `app-surface-a2ui-francais` (KAN-96). Ici et non dans le composant : les styles propres sont réservés à `shared/ui/`.
+app-surface-a2ui-francais copilot-a2ui-recovery {
+  display: none;
+}
