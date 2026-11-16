@@ -54,6 +54,7 @@ Chaque outil MCP exige en plus la permission de son domaine, revérifiée à cha
 |---|---|
 | Écran d'accueil `/` | `homeGuard` : premier écran du menu (`NAV_ITEMS`) autorisé pour l'utilisateur, sinon `/acces-refuse` |
 | Page `/acces-refuse` | `authGuard` — affichée quand un `permissionGuard` refuse l'accès (jamais une redirection vers `/`, qui bouclerait) |
+| Toute autre adresse (`**`) | `authGuard` — page « Page introuvable » avec retour à l'accueil, au lieu d'un écran vide ; sans session, la connexion passe d'abord |
 | Lien sidebar "Utilisateurs" | `authService.hasPermission('USER_MANAGE')` |
 | Lien sidebar "Rôles" | `authService.hasPermission('ROLE_MANAGE')` |
 | Routes `/admin/users/**` | `permissionGuard`, `data: { permission: 'USER_MANAGE' }` |
