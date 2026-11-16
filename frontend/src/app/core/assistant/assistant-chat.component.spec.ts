@@ -52,13 +52,24 @@ describe('AssistantChatComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
-    abonne?.onRunErrorEvent?.({} as Parameters<NonNullable<Abonne['onRunErrorEvent']>>[0]);
+    abonne?.onRunErrorEvent?.({ event: { code: 'AGENT_INDISPONIBLE', message: 'détail' } } as Parameters<NonNullable<Abonne['onRunErrorEvent']>>[0]);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('réessayez');
 
     abonne?.onRunStartedEvent?.({} as Parameters<NonNullable<Abonne['onRunStartedEvent']>>[0]);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('affiche le message du service quand une question est refusée par le garde-fou, sans annoncer une panne', () => {
+    const fixture = TestBed.createComponent(AssistantChatComponent);
+    fixture.detectChanges();
+
+    abonne?.onRunErrorEvent?.({ event: { code: 'DEMANDE_BLOQUEE', message: 'Votre message n’a pas été traité.' } } as Parameters<NonNullable<Abonne['onRunErrorEvent']>>[0]);
+    fixture.detectChanges();
+    const alerte = fixture.nativeElement.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alerte).toContain('Votre message n’a pas été traité.');
+    expect(alerte).not.toContain('réessayez');
   });
 
   it('n’affiche pas une annulation utilisateur comme une panne fournisseur', () => {
@@ -125,7 +136,7 @@ describe('AssistantChatComponent', () => {
     abonne?.onRunFinishedEvent?.({} as Parameters<NonNullable<Abonne['onRunFinishedEvent']>>[0]);
     finaliser();
     demarrer();
-    abonne?.onRunErrorEvent?.({} as Parameters<NonNullable<Abonne['onRunErrorEvent']>>[0]);
+    abonne?.onRunErrorEvent?.({ event: { code: 'AGENT_INDISPONIBLE', message: 'détail' } } as Parameters<NonNullable<Abonne['onRunErrorEvent']>>[0]);
     finaliser();
     demarrer();
     abonne?.onRunFailed?.({ error: Object.assign(new Error('interrompu'), { name: 'AbortError' }) } as unknown as Parameters<NonNullable<Abonne['onRunFailed']>>[0]);

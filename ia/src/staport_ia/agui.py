@@ -22,6 +22,7 @@ from ag_ui.encoder import EventEncoder
 from copilotkit import LangGraphAGUIAgent
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import Response, StreamingResponse
+from langchain_core.messages import RemoveMessage
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -39,6 +40,10 @@ journal = logging.getLogger(__name__)
 TAILLE_QUESTION = 2_000
 MESSAGE_REDEMARRAGE = "Le service redémarre : votre conversation est conservée, renvoyez votre message dans un instant."
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
+MESSAGE_BLOQUE = (
+    "Votre message n'a pas été traité : il contient une formulation que l'assistant refuse pour des raisons de "
+    "sécurité. Reformulez votre demande ; la conversation reste utilisable."
+)
 
 # L'agent d'un run, construit avec les outils MCP de l'utilisateur ; le checkpointer est celui de l'intégration.
 FabriqueAgent = Callable[
@@ -160,6 +165,22 @@ def verifier_question(entree: RunAgentInput) -> None:
         )
 
 
+def bloquee_par_le_garde_fou(message_erreur: str) -> bool:
+    """Le refus du garde-fou de LiteLLM (``litellm_config.yaml``, mots-clés ``BLOCK``) : l'intégration AG-UI rend le
+    texte de l'exception dans son événement ``RUN_ERROR``, et LiteLLM commence ce refus par « Content blocked »."""
+    return "Content blocked" in message_erreur
+
+
+async def oublier_la_question_bloquee(graphe: CompiledStateGraph[Any, Any, Any, Any], entree: RunAgentInput) -> None:
+    """Retire du fil la question refusée (``RemoveMessage``, mécanisme de LangGraph) : le point de reprise la gardait,
+    et chaque message suivant de la conversation était alors refusé à son tour."""
+    identifiants = [m.id for m in entree.messages if isinstance(m, UserMessage)]
+    if identifiants:
+        await graphe.aupdate_state(
+            {"configurable": {"thread_id": entree.thread_id}}, {"messages": [RemoveMessage(id=identifiants[-1])]}
+        )
+
+
 async def evenements(
     entree: RunAgentInput,
     fabrique: FabriqueAgent,
@@ -174,16 +195,18 @@ async def evenements(
     ``entree`` porte le fil propre à l'utilisateur ; les événements rendent au navigateur l'identifiant qu'il a
     envoyé (``thread_id``)."""
     demarre = False
+    graphe: CompiledStateGraph[Any, Any, Any, Any] | None = None
+    bloquee = False
     controle = RunControl()
     ARRETS_EN_COURS.add(controle)
     try:
+        # Mémoire durable (memoire.py) ou celle du run.
+        graphe = fabrique(outils, memoire or InMemorySaver(), utilisateur)
         officiel = AgentAGUI(
             controle=controle,
             contexte_erp=contexte_erp,
             name="staport-intelligence",
-            graph=fabrique(
-                outils, memoire or InMemorySaver(), utilisateur
-            ),  # mémoire durable (memoire.py) ou celle du run
+            graph=graphe,
             # Aucun plafond appliqué par nous (décision du propriétaire, KAN-40) : seule cette limite de récursion de
             # LangGraph, propre au framework, arrête un run qui boucle ; une durée anormale se détecte par les alertes.
             config={"recursion_limit": 200},
@@ -191,6 +214,7 @@ async def evenements(
         async for brut in officiel.run(entree):
             evenement = cast(BaseEvent, brut)
             if evenement.type == EventType.RUN_ERROR:
+                bloquee = bloquee_par_le_garde_fou(getattr(evenement, "message", "") or "")
                 raise RuntimeError("RUN_ERROR")
             if evenement.type == EventType.RAW:
                 continue
@@ -200,6 +224,12 @@ async def evenements(
             yield evenement.model_copy(update={"raw_event": None}) if evenement.raw_event is not None else evenement
     except Exception as panne:  # le détail reste côté serveur, sans contenu RH
         arret = controle.drain_requested
+        bloquee = bloquee and not arret
+        if bloquee and graphe is not None:
+            try:
+                await oublier_la_question_bloquee(graphe, entree)
+            except Exception as echec:  # la réponse d'erreur part quand même : seul le fil garde alors la question
+                journal.warning("Question refusée non retirée du fil %s : %s", entree.run_id, type(echec).__name__)
         if arret:
             journal.info("Run %s arrêté proprement (%s), reprise possible", entree.run_id, controle.drain_reason)
         else:
@@ -207,8 +237,8 @@ async def evenements(
         if not demarre:
             yield RunStartedEvent(thread_id=entree.thread_id, run_id=entree.run_id)
         yield RunErrorEvent(
-            message=MESSAGE_REDEMARRAGE if arret else ERREUR_PUBLIQUE,
-            code="SERVICE_REDEMARRE" if arret else "AGENT_INDISPONIBLE",
+            message=MESSAGE_REDEMARRAGE if arret else MESSAGE_BLOQUE if bloquee else ERREUR_PUBLIQUE,
+            code="SERVICE_REDEMARRE" if arret else "DEMANDE_BLOQUEE" if bloquee else "AGENT_INDISPONIBLE",
         )
     finally:
         ARRETS_EN_COURS.discard(controle)
