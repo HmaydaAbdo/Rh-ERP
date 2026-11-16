@@ -20,7 +20,7 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
 | [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
-| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, éteinte par défaut |
+| [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, activée pour tous |
 | [Contrat de production](contrat-de-production.md) | Cycle de vie de CopilotKit, budget de taille, inspecteur coupé |
 | [Déploiement des modes](deploiement-des-modes.md) | Modes M0 à M4 par domaine : état réel, porte à six preuves, revue par domaine |
 | [Inventaire CopilotKit](inventaire-copilotkit.md) | Fonctions gratuites de la bibliothèque : utilisées, écartées, hors périmètre |

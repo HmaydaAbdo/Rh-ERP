@@ -15,26 +15,25 @@ Cadrage de KAN-101 (épopée E12), choix du propriétaire du 2026-11-16 : **cons
 | M1 | Le chat : question, réponse citée | Agent + outils MCP en lecture, filtrés par droit |
 | M2 | Cartes et tableaux prévus à l'avance, filtres réglés sur la page | Rendu des appels d'outils (carte par outil, `registerRenderToolCall`) et outils de page (`registerFrontendTool`) |
 | M3 | Une vue composée avec les briques Staport | Catalogue A2UI fermé : grille d'indicateurs, graphique, tableau, frise |
-| M4 | Une vue libre écrite par l'agent | Iframe isolée, zéro porte, aucun réseau ; **éteinte par défaut** (`VUES_LIBRES`, voir [Vues libres](vues-libres.md)) |
+| M4 | Une vue libre écrite par l'agent | Iframe isolée, zéro porte, aucun réseau ; **activée pour tous** (décision du 2026-11-16 ; interrupteur `VUES_LIBRES=false`, voir [Vues libres](vues-libres.md)) |
 
-Les modes coexistent : chaque parcours garde son écran classique (M0). Aucun mode n'accorde un droit : chaque outil revérifie identité, permission et périmètre côté serveur, et **tout est en lecture** (les écritures passent par l'accord humain, voir [Sécurité et expérience](securite-et-experience.md)).
+**Règle du propriétaire (2026-11-16) : M1 à M4 sont ouverts pour tous les domaines, obligatoirement.** Les modes coexistent : chaque parcours garde son écran classique (M0). Aucun mode n'accorde un droit : chaque outil revérifie identité, permission et périmètre côté serveur, et **tout est en lecture** (les écritures passent par l'accord humain, voir [Sécurité et expérience](securite-et-experience.md)).
 
 ## État réel au 2026-11-16
 
 `✔` = livré et ouvert à qui a le droit ; `—` = non applicable. Le droit IA (`IA_UTILISER`) est requis partout.
 
-| Domaine | Droit de lecture des outils | M1 chat (outils MCP) | M2 cartes d'outils | M2 outil de page (filtres) | M3 vue A2UI proposée |
-|---|---|---|---|---|---|
-| Chantier | `CHANTIER_READ` | ✔ rechercher, fiche | ✔ | ✔ page Chantiers | fiche |
-| Employé | `EMPLOYEE_READ` (salaire : `PAIE_READ`) | ✔ rechercher, fiche, compter, regrouper, sorties, parcours | ✔ | ✔ page Employés | fiche, cartes, analytique |
-| Paie | `PAIE_READ` | ✔ indicateurs, périodes, répartition, évolution, comparer, mouvements, qualité, bulletins | ✔ | ✔ page Paie | analytique, cartes, tabulaire |
-| Équipe | `EQUIPE_READ` | ✔ rechercher, fiche | ✔ | ✔ page Équipes | tabulaire, fiche |
-| Fonction | `FUNCTION_READ` | ✔ rechercher, fiche | ✔ | ✔ page Fonctions | tabulaire, fiche |
-| Heures supplémentaires | `HEURES_SUP_READ` + `PAIE_READ` | ✔ périodes, prérequis d'import, indicateurs, rechercher | ✔ | ✔ page Heures supp. | analytique |
-| Rapport et export | `PAIE_EXPORT` + `PAIE_READ` | ✔ préparer (aucun fichier généré) | ✔ (carte d'export) | — | tabulaire |
-| Accueil | `ACCUEIL_READ` | ✔ indicateurs de l'utilisateur | ✔ | — | — |
-| Administration (paramètres, rôles, audit) | `PARAMETRE_READ`, `ROLE_MANAGE`, `AUDIT_READ` | ✔ lecture seule | ✔ | — | — |
-| Tous | — | — | — | — | M4 : éteint par défaut |
+| Domaine | Droit de lecture des outils | M1 chat (outils MCP) | M2 cartes d'outils | M2 outil de page (filtres) | M3 vue A2UI proposée | M4 vue libre |
+|---|---|---|---|---|---|---|
+| Chantier | `CHANTIER_READ` | ✔ rechercher, fiche | ✔ | ✔ page Chantiers | fiche | ✔ |
+| Employé | `EMPLOYEE_READ` (salaire : `PAIE_READ`) | ✔ rechercher, fiche, compter, regrouper, sorties, parcours | ✔ | ✔ page Employés | fiche, cartes, analytique | ✔ |
+| Paie | `PAIE_READ` | ✔ indicateurs, périodes, répartition, évolution, comparer, mouvements, qualité, bulletins | ✔ | ✔ page Paie | analytique, cartes, tabulaire | ✔ |
+| Équipe | `EQUIPE_READ` | ✔ rechercher, fiche | ✔ | ✔ page Équipes | tabulaire, fiche | ✔ |
+| Fonction | `FUNCTION_READ` | ✔ rechercher, fiche | ✔ | ✔ page Fonctions | tabulaire, fiche | ✔ |
+| Heures supplémentaires | `HEURES_SUP_READ` + `PAIE_READ` | ✔ périodes, prérequis d'import, indicateurs, rechercher | ✔ | ✔ page Heures supp. | analytique | ✔ |
+| Rapport et export | `PAIE_EXPORT` + `PAIE_READ` | ✔ préparer (aucun fichier généré) | ✔ (carte d'export) | — | tabulaire | ✔ |
+| Accueil | `ACCUEIL_READ` | ✔ indicateurs de l'utilisateur | ✔ | — | — | ✔ |
+| Administration (paramètres, rôles, audit) | `PARAMETRE_READ`, `ROLE_MANAGE`, `AUDIT_READ` | ✔ lecture seule | ✔ | — | — | ✔ |
 
 Le catalogue exact des outils, leurs arguments et leurs vues proposées sont dans [État technique et catalogue MCP](etat-technique-et-catalogue-mcp.md).
 
@@ -57,4 +56,4 @@ Les seuils (utilité, latence, coût) sont fixés par le propriétaire du domain
 
 ## Suivi
 
-Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) reste hors de cette revue : son ouverture suit [Vues libres](vues-libres.md) et l'étude de l'épopée E9.9.
+Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous restant à livrer sont suivis dans [Vues libres](vues-libres.md).
