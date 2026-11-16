@@ -5,6 +5,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 from doubles import appel, modele, outil
 
@@ -15,12 +16,12 @@ from staport_ia.config import Settings
 CATALOGUE = Path(__file__).resolve().parents[1] / "evaluation" / "catalogue_mcp.json"
 
 
-def _outils() -> list:  # type: ignore[type-arg]
+def _outils() -> list[Any]:
     return [outil(t["name"], {}) for t in json.loads(CATALOGUE.read_text(encoding="utf-8"))]
 
 
 def test_chaque_domaine_a_son_sous_agent_avec_ses_seuls_outils_et_une_sortie_structuree() -> None:
-    sous_agents = sous_agents_par_domaine(_outils())
+    sous_agents: list[Any] = list(sous_agents_par_domaine(_outils()))
 
     assert {s["name"] for s in sous_agents} == set(charger())
     for sous_agent in sous_agents:
@@ -30,7 +31,8 @@ def test_chaque_domaine_a_son_sous_agent_avec_ses_seuls_outils_et_une_sortie_str
 
 
 def test_aucun_outil_n_est_partage_entre_deux_sous_agents() -> None:
-    noms = [o.name for s in sous_agents_par_domaine(_outils()) for o in s["tools"]]
+    sous_agents: list[Any] = list(sous_agents_par_domaine(_outils()))
+    noms: list[str] = [o.name for s in sous_agents for o in s["tools"]]
 
     assert len(noms) == len(set(noms))
 

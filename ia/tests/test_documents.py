@@ -102,7 +102,7 @@ def test_le_document_est_remplace_par_son_texte_et_garde_en_cache() -> None:
     contenu = resultat[0].content
     assert isinstance(contenu, list)
     assert [partie.type for partie in contenu] == ["text", "text"]
-    assert "Contenu confidentiel du contrat" in contenu[1].text  # pyright: ignore[reportAttributeAccessIssue]
+    assert "Contenu confidentiel du contrat" in str(getattr(contenu[1], "text", ""))
 
     # Même document renvoyé avec l'historique : lu depuis le cache, sans nouvelle extraction.
     assert len(textes._textes) == 1  # pyright: ignore[reportPrivateUsage]
@@ -113,6 +113,8 @@ def test_le_document_est_remplace_par_son_texte_et_garde_en_cache() -> None:
 def test_un_document_tres_long_est_tronque_avec_une_mention(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("staport_ia.documents.CARACTERES_MAX", 50)
     resultat = asyncio.run(convertir_documents([_message(_docx("x" * 500), DOCX)], TextesExtraits()))
-    texte = resultat[0].content[1].text  # pyright: ignore[reportIndexIssue, reportAttributeAccessIssue]
+    contenu = resultat[0].content
+    assert isinstance(contenu, list)
+    texte = str(getattr(contenu[1], "text", ""))
     assert "Document tronqué" in texte
     assert CARACTERES_MAX > 50
