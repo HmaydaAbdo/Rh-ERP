@@ -153,6 +153,374 @@ html .espace-assistant-discussion {
   scrollbar-color: var(--color-border-strong) transparent;
 }
 
+// --- Espace Staport Intelligence : identité propre, verre mat et saphir (direction KAN-185, limitée à cet espace, KAN-102) ---
+// Jetons locaux : l'accent de l'IA est un saphir/indigo distinct de l'action de l'application ; couples vérifiés par axe (e2e).
+.espace-assistant {
+  --ia-accent: #4338ca;
+  --ia-accent-contrast: #ffffff;
+  --ia-aurore: color-mix(in srgb, #6366f1 22%, transparent);
+  --ia-verre: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  --ia-verre-bord: color-mix(in srgb, var(--color-border-strong) 55%, transparent);
+  --ia-halo: color-mix(in srgb, #6366f1 28%, transparent);
+  --assistant-accent: var(--ia-accent);
+  --assistant-accent-soft: color-mix(in srgb, var(--ia-accent) 12%, transparent);
+  --assistant-accent-contrast: var(--ia-accent-contrast);
+}
+
+:root[data-theme='dark'] .espace-assistant {
+  --ia-accent: #a5b4fc;
+  --ia-accent-contrast: #0f1330;
+  --ia-aurore: color-mix(in srgb, #6366f1 30%, transparent);
+  --ia-verre: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  --ia-halo: color-mix(in srgb, #818cf8 30%, transparent);
+}
+
+html .espace-assistant {
+  // Fond : la toile du thème, éclairée d'une aurore saphir en haut ; le verre des panneaux la laisse transparaître.
+  background:
+    radial-gradient(70rem 30rem at 50% -10rem, var(--ia-aurore), transparent 70%),
+    radial-gradient(40rem 24rem at 100% 100%, color-mix(in srgb, var(--ia-accent) 8%, transparent), transparent 70%),
+    var(--color-canvas);
+
+  > aside {
+    background: var(--ia-verre);
+    backdrop-filter: blur(18px) saturate(1.2);
+  }
+
+  > div > header {
+    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    backdrop-filter: blur(14px);
+  }
+}
+
+html .espace-assistant [data-copilotkit] {
+  --background: transparent;
+  --copilot-kit-background-color: transparent;
+}
+
+html .espace-assistant-discussion {
+  // Défilement : fondus en haut et en bas, barre fine qui se révèle au survol (le contenu glisse sous le bord au lieu d'être coupé).
+  [class*='overflow-y-auto'] {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 1.25rem, #000 calc(100% - 1.5rem), transparent 100%);
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color var(--duration-base) var(--ease-out);
+
+    &:hover {
+      scrollbar-color: color-mix(in srgb, var(--ia-accent) 55%, transparent) transparent;
+    }
+  }
+
+  // Le dégradé de pied de la bibliothèque (fond opaque derrière la saisie) est remplacé par le fond de l'espace.
+  copilot-chat-view-feather,
+  [class*='feather'],
+  [class*='bg-gradient-to-t'] {
+    background: none;
+  }
+
+  // Accueil : plus d'air, un titre posé, et l'orbe de l'IA (halo saphir, étincelle en masque vectoriel) au-dessus.
+  h1 {
+    position: relative;
+    max-width: 30rem;
+    padding-block-start: 5rem;
+    font-size: 1.625rem;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline: 0;
+      width: 3.5rem;
+      height: 3.5rem;
+      margin-inline: auto;
+    }
+
+    &::before {
+      border-radius: var(--radius-pill);
+      border: 1px solid color-mix(in srgb, var(--ia-accent) 45%, transparent);
+      background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--ia-accent) 38%, transparent), color-mix(in srgb, var(--ia-accent) 10%, transparent) 70%);
+      box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--ia-accent) 8%, transparent), 0 18px 44px -10px var(--ia-halo);
+    }
+
+    &::after {
+      background: var(--ia-accent);
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4l1.9 5.1L19 11l-5.1 1.9L12 18l-1.9-5.1L5 11l5.1-1.9z'/><path d='M19 3v3M17.5 4.5h3'/></svg>") center / 52% no-repeat;
+    }
+  }
+
+  // Saisie : une barre flottante de verre ; le halo saphir marque le focus.
+  .copilotKitInput {
+    border-color: var(--ia-verre-bord);
+    background: var(--ia-verre);
+    backdrop-filter: blur(18px) saturate(1.25);
+    box-shadow: 0 10px 30px -14px var(--ia-halo), var(--shadow-sm);
+
+    &:focus-within {
+      border-color: var(--ia-accent);
+      box-shadow: 0 0 0 3px var(--assistant-accent-soft), 0 14px 40px -14px var(--ia-halo);
+    }
+
+    button[type='submit']:not(:disabled),
+    button[aria-label='Send message']:not(:disabled) {
+      box-shadow: 0 6px 18px -8px var(--ia-halo);
+    }
+  }
+
+  // Questions proposées : des cartes de verre en grille, flèche révélée au survol (la bibliothèque Angular 0.6.0 n'a pas
+  // d'emplacement pour l'accueil : la grille est posée sur son conteneur `copilot-suggestions`).
+  [data-testid='copilot-suggestions'] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: var(--space-sm);
+    width: 100%;
+    margin-block-start: var(--space-md);
+    padding-inline: 0;
+  }
+
+  copilot-chat-suggestion-pill button {
+    position: relative;
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    min-height: 3.25rem;
+    padding: var(--space-sm) 2.5rem var(--space-sm) var(--space-md);
+    border-color: var(--ia-verre-bord);
+    border-radius: var(--radius-lg);
+    background: var(--ia-verre);
+    backdrop-filter: blur(12px);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    text-align: start;
+    white-space: normal;
+    transition: transform var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-inline-end: var(--space-md);
+      inset-block-start: 50%;
+      width: 1rem;
+      height: 1rem;
+      margin-block-start: -0.5rem;
+      background: var(--ia-accent);
+      opacity: 0;
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 17L17 7M8 7h9v9'/></svg>") center / contain no-repeat;
+      transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--ia-accent);
+      background: var(--ia-verre);
+      box-shadow: 0 12px 28px -16px var(--ia-halo);
+
+      &::after {
+        opacity: 1;
+      }
+    }
+  }
+
+  // Cartes de raisonnement et de consultation : verre mat, icône à l'accent de l'IA.
+  .raisonnement,
+  .carte-outil {
+    border-color: var(--ia-verre-bord);
+    background: var(--ia-verre);
+    backdrop-filter: blur(12px);
+
+    svg:first-of-type {
+      color: var(--ia-accent);
+    }
+  }
+
+  // Réponse en cours : le curseur de la bibliothèque devient un point saphir qui respire.
+  copilot-chat-message-view-cursor > * {
+    background: var(--ia-accent);
+    box-shadow: 0 0 12px var(--ia-halo);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--ia-accent) 28%, transparent);
+    color: var(--color-text);
+  }
+
+  // Message de l'utilisateur : bulle saphir discrète.
+  .copilotKitUserMessage copilot-chat-user-message-renderer {
+    border: 1px solid color-mix(in srgb, var(--ia-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--ia-accent) 14%, var(--color-surface));
+  }
+
+  // Réponse : l'étincelle de l'IA en repère (sans image : masque vectoriel).
+  .copilotKitAssistantMessage {
+    position: relative;
+    padding-inline-start: 2.25rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0.15rem;
+      inset-inline-start: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: var(--radius-pill);
+      background: color-mix(in srgb, var(--ia-accent) 18%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ia-accent) 40%, transparent);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block-start: 0.15rem;
+      inset-inline-start: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      background: var(--ia-accent);
+      mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5l1.6 4.4L18 11l-4.4 1.6L12 17l-1.6-4.4L6 11l4.4-1.6z'/></svg>") center / 70% no-repeat;
+    }
+  }
+
+  // Bouton « aller en bas » : rond de verre saphir.
+  copilot-chat-view-scroll-to-bottom-button button,
+  [class*='scroll-to-bottom'] {
+    border: 1px solid var(--ia-verre-bord);
+    background: var(--ia-verre);
+    backdrop-filter: blur(12px);
+    color: var(--ia-accent);
+    box-shadow: 0 8px 20px -10px var(--ia-halo);
+  }
+}
+
+// Pastille d'étincelle posée sur le monogramme : accent de l'IA.
+html .espace-assistant .pastille-ia {
+  background: var(--ia-accent);
+  color: var(--ia-accent-contrast);
+}
+
+// Organisation de l'espace : « Nouvelle conversation » en bouton saphir, actions libellées en pied de barre latérale.
+html .espace-assistant {
+  .nouvelle-conversation {
+    border-color: var(--ia-accent);
+    background: var(--ia-accent);
+    color: var(--ia-accent-contrast);
+    transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+
+    &:hover {
+      box-shadow: 0 10px 24px -12px var(--ia-halo);
+    }
+  }
+
+  .action-espace {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+
+    &:hover,
+    &[aria-pressed='true'] {
+      background: var(--assistant-accent-soft);
+      color: var(--color-text);
+    }
+  }
+}
+
+// Animations : légères, décoratives, et seulement si l'utilisateur n'a pas demandé moins de mouvement.
+@keyframes ia-flotter {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes ia-halo {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+@keyframes ia-tourner {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ia-entrer {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ia-pivoter {
+  from { transform: rotate(-70deg) scale(0.6); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html .espace-assistant-discussion {
+    h1 {
+      animation: ia-entrer 520ms var(--ease-out) both;
+
+      &::before {
+        animation: ia-flotter 6s ease-in-out infinite, ia-halo 4.5s ease-in-out infinite;
+      }
+
+      &::after {
+        animation: ia-flotter 6s ease-in-out infinite, ia-tourner 28s linear infinite;
+      }
+    }
+
+    copilot-chat-suggestion-pill {
+      animation: ia-entrer 420ms var(--ease-out) both;
+
+      &:nth-of-type(2) { animation-delay: 90ms; }
+      &:nth-of-type(3) { animation-delay: 180ms; }
+    }
+
+    copilot-chat-suggestion-pill button:hover:not(:disabled) {
+      transform: translateY(-2px);
+    }
+
+    .copilotKitUserMessage,
+    .copilotKitAssistantMessage {
+      animation: ia-entrer 320ms var(--ease-out) both;
+    }
+
+    .copilotKitAssistantMessage::after {
+      animation: ia-pivoter 520ms var(--ease-out) both;
+    }
+
+    copilot-chat-view-scroll-to-bottom-button button:hover {
+      transform: translateY(2px);
+    }
+  }
+
+  html .espace-assistant .bascule-theme svg {
+    animation: ia-pivoter 380ms var(--ease-out) both;
+  }
+
+  html .espace-assistant-discussion copilot-chat-message-view-cursor > * {
+    animation: ia-halo 1.4s ease-in-out infinite;
+  }
+
+  html .espace-assistant .pastille-ia {
+    animation: ia-halo 4.5s ease-in-out infinite;
+  }
+
+  html .espace-assistant-discussion copilot-chat-suggestion-pill button:hover:not(:disabled)::after {
+    transform: translate(2px, -2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html .espace-assistant-discussion [class*='overflow-y-auto'] {
+    transition: none;
+  }
+}
+
 /* Frise chronologique du catalogue A2UI (composant Timeline) : trait vertical, pastille par événement. */
 .app-timeline {
   position: relative;
