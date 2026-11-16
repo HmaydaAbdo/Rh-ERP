@@ -156,3 +156,7 @@ Un rechargement direct de `/carte` renvoyait « Ce site est inaccessible » : le
 ## Contrôles locaux complets avant push (2026-11-16)
 
 La PR #195 a échoué en CI sur trois points que les contrôles ciblés ne voyaient pas : un import `of` inutilisé (ESLint du runtime), la nouvelle route `POST /parametres/vues-libres/ouvertures` absente de `AUDITEES` (test_audit) et le nombre de paramètres attendu (test_mcp, 6 devenu 11). Règle : une nouvelle route d'écriture ou un nouveau paramètre du catalogue se déclare dans `test_audit.py` et `test_mcp.py` dans le même commit, et `eslint . --max-warnings 0` se lance dans chaque module touché.
+
+## Refus du garde-fou : le test doit renvoyer tout l'historique (2026-11-16)
+
+KAN-280 était vert en test et faux en déploiement : le test ne renvoyait que la nouvelle question, alors que le navigateur renvoie toute la conversation. Avec `RemoveMessage`, `ag_ui_langgraph` rajoutait la question refusée (identifiant absent du fil) ; avec un simple remplacement de texte, il y voyait une modification et rétablissait le texte d'origine. Chaque message suivant du fil était refusé. Règle : tout test de reprise de fil rejoue la requête comme le client la fait (historique complet, mêmes identifiants), et un correctif de comportement de conversation se constate dans le navigateur après déploiement avant de se déclarer terminé.

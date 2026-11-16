@@ -400,7 +400,13 @@ def test_une_question_refusee_par_le_garde_fou_est_expliquee_et_ne_bloque_pas_la
         creer_app(_settings(), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie, memoire=memoire_processus)
     ) as client:
         blocage = _lire(client.post("/agui", json=_corps(refusee), headers=entetes).text)
-        suite = _lire(client.post("/agui", json=_corps(QUESTION) | {"runId": "r2"}, headers=entetes).text)
+        # Comme le navigateur : tout l'historique est renvoyé, la question refusée (m1) comprise.
+        historique = _corps(QUESTION) | {"runId": "r2"}
+        historique["messages"] = [
+            {"id": "m1", "role": "user", "content": refusee},
+            {"id": "m2", "role": "user", "content": QUESTION},
+        ]
+        suite = _lire(client.post("/agui", json=historique, headers=entetes).text)
 
     erreur = next(e for e in blocage if e["type"] == EventType.RUN_ERROR)
     assert erreur["code"] == "DEMANDE_BLOQUEE" and erreur["message"] == MESSAGE_BLOQUE
