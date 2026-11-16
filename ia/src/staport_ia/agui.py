@@ -37,7 +37,6 @@ from staport_ia.pieces_jointes import Analyseur, FichiersVerifies, verifier_piec
 
 journal = logging.getLogger(__name__)
 
-TAILLE_QUESTION = 2_000
 MESSAGE_REDEMARRAGE = "Le service redémarre : votre conversation est conservée, renvoyez votre message dans un instant."
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
 MESSAGE_BLOQUE = (
@@ -150,9 +149,10 @@ def est_reprise(entree: RunAgentInput) -> bool:
 
 
 def verifier_question(entree: RunAgentInput) -> None:
-    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide ou trop long. La réponse à
-    une question de l'agent (``poser_question``) et l'accord avant écriture sont des reprises d'interruption : elles
-    n'apportent pas de nouvelle question et sont vérifiées par le fil propre à l'utilisateur, jamais par leur texte."""
+    """422 si le dernier message n'est pas une question de l'utilisateur, ou s'il est vide. Aucune longueur maximale
+    (décision du propriétaire : aucun plafond appliqué par nous). La réponse à une question de l'agent
+    (``poser_question``) et l'accord avant écriture sont des reprises d'interruption : elles n'apportent pas de
+    nouvelle question et sont vérifiées par le fil propre à l'utilisateur, jamais par leur texte."""
     if est_reprise(entree):
         return
     dernier = entree.messages[-1] if entree.messages else None
@@ -162,10 +162,8 @@ def verifier_question(entree: RunAgentInput) -> None:
         texte = dernier.content
     else:
         texte = " ".join(str(getattr(p, "text", "")) for p in dernier.content if getattr(p, "type", "") == "text")
-    if not texte.strip() or len(texte) > TAILLE_QUESTION:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, f"Question vide ou de plus de {TAILLE_QUESTION} caractères."
-        )
+    if not texte.strip():
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "La question est vide.")
 
 
 def bloquee_par_le_garde_fou(message_erreur: str) -> bool:
@@ -322,6 +320,7 @@ def routeur_agui(
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         verifier_question(entree)
+
         await verifier_pieces_jointes(entree.messages, pieces_jointes(), analyseur(), verifies)
         erp = acces()
         jeton = await _jeton(erp, autorisation[7:].strip())

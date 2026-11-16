@@ -28,7 +28,7 @@ Décision KAN-86 (épopée E11), appuyée sur la mémoire longue de KAN-84 et la
 
 - **Fichier unique** `/memoire/AGENTS.md`, passé au paramètre officiel `memory` de Deep Agents (toujours chargé dans le prompt), 4 000 caractères au plus ; le routage du `CompositeBackend` l'envoie dans le Store sous l'identité du jeton agent.
 - **Consentement** : toute écriture de l'agent dans `/memoire/` est interrompue par la permission `interrupt` de Deep Agents ; la carte d'accord de l'interface montre le contenu avant l'écriture. Le prompt demande de proposer de retenir plutôt que de retenir en silence, et interdit les données personnelles sur une autre personne, les mots de passe et les valeurs lues dans un outil.
-- **Consultation, correction, oubli** : le panneau « Ce que l'assistant retient » de l'assistant (routes `GET`, `PUT` et `DELETE /ia/memoire`). L'identité vient du jeton de connexion échangé par l'API, jamais d'un paramètre. Chaque modification est journalisée (chemin, taille, action ; jamais le contenu).
+- **Consultation, correction, oubli** : le panneau « Ce que l'assistant retient » de l'assistant (routes `GET`, `PUT` et `DELETE /ia/memoire`, relayées par le runtime CopilotKit : le navigateur n'atteint pas le service IA). L'identité vient du jeton de connexion échangé par l'API, jamais d'un paramètre. Chaque modification est journalisée (chemin, taille, action ; jamais le contenu).
 - **Expiration** : celle du Store (`TTLConfig`, balayeur natif) ; le Store en a donc un, contrairement à l'hypothèse du ticket. Chaque run relit la mémoire, ce qui prolonge sa durée : seule une longue inactivité l'efface.
 
 ## Reprise du flux (KAN-85)
