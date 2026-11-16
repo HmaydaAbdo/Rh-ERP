@@ -91,6 +91,14 @@ html .espace-assistant-discussion {
 
       &::placeholder {
         color: var(--color-text-muted);
+        // Une seule ligne, coupée par « … » : sur téléphone, le texte d'invite tenait sur deux lignes, tronqué.
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      // Champ vide : pas de barre de défilement (elle apparaissait seule quand le texte d'invite débordait).
+      &:placeholder-shown {
+        scrollbar-width: none;
       }
     }
 
