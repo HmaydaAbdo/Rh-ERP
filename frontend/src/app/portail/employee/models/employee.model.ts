@@ -33,6 +33,7 @@ export interface EmployeeCreateRequest {
   chantierId: number;
   equipeId: number | null;
   salaire: number | null;
+  typeSalaire: TypeSalaire | null;
 }
 
 export interface EmployeeUpdateRequest extends Omit<EmployeeCreateRequest, 'chantierId'> {
