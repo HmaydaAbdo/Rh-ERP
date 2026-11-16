@@ -9,6 +9,9 @@ import { ListeConversationsComponent } from './liste-conversations.component';
 import { MemoireAssistantComponent } from './memoire-assistant.component';
 import { RaisonnementAssistantComponent } from './raisonnement-assistant.component';
 
+/** Code du `RUN_ERROR` du service IA pour une question refusée par le garde-fou : son message est destiné à l'utilisateur. */
+const CODE_DEMANDE_BLOQUEE = 'DEMANDE_BLOQUEE';
+const TEXTE_INDISPONIBLE = 'Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant.';
 
 /**
  * Le contenu de l'assistant : la discussion de CopilotKit telle quelle (messages, raisonnement repliable, consultations,
@@ -49,8 +52,8 @@ import { RaisonnementAssistantComponent } from './raisonnement-assistant.compone
     })
   ],
   template: `
-    @if (erreur()) {
-      <stp-message severity="error" class="erreur mx-4 my-3" text="Je n’ai pas pu terminer cette demande. Le service est momentanément indisponible ; réessayez dans un instant." />
+    @if (erreur(); as texte) {
+      <stp-message severity="error" class="erreur mx-4 my-3" [text]="texte" />
     }
     @if (capacites.erreurPiece(); as piece) {
       <stp-message severity="warn" class="piece mx-4 my-2" [text]="piece" />
@@ -74,7 +77,8 @@ export class AssistantChatComponent {
   private readonly store = injectAgentStore('default');
   private readonly copilotKit = inject(CopilotKit);
   private readonly configuration = injectChatConfiguration();
-  protected readonly erreur = signal(false);
+  /** Le texte de l'erreur du dernier run, ou `null` : celui du service pour un refus du garde-fou, sinon la panne générique. */
+  protected readonly erreur = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -94,27 +98,27 @@ export class AssistantChatComponent {
       const abonnement = agent.subscribe({
         onRunStartedEvent: () => {
           termine = false;
-          this.erreur.set(false);
+          this.erreur.set(null);
           this.fil.marquerUtilise();
         },
         onRunFinishedEvent: () => {
           termine = true;
           void this.fil.rafraichir();
         },
-        onRunErrorEvent: () => {
+        onRunErrorEvent: ({ event }) => {
           termine = true;
-          this.erreur.set(true);
+          this.erreur.set(event.code === CODE_DEMANDE_BLOQUEE ? event.message : TEXTE_INDISPONIBLE);
         },
         onRunFailed: ({ error }) => {
           termine = true;
           if (error.name !== 'AbortError') {
-            this.erreur.set(true);
+            this.erreur.set(TEXTE_INDISPONIBLE);
           }
         },
         onRunFinalized: () => {
           if (!termine) {
             termine = true;
-            void this.copilotKit.core.connectAgent({ agent }).catch(() => this.erreur.set(true));
+            void this.copilotKit.core.connectAgent({ agent }).catch(() => this.erreur.set(TEXTE_INDISPONIBLE));
           }
         }
       });

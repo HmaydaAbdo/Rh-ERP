@@ -148,3 +148,7 @@ Le contrôle frontend a échoué avec « Failed to connect to the browser sessio
 ## La politique de contenu d'une iframe ne ferme pas sa propre navigation (2026-11-16)
 
 Le jeu adverse des vues libres (KAN-284) a montré qu'un `<meta http-equiv="refresh">` ou un `location.href` dans l'iframe faisait sortir des données dans l'adresse d'une page externe, malgré `connect-src 'none'` et `default-src 'none'` : ces directives ne gouvernent pas la navigation du cadre lui-même. **À faire :** poser `frame-src 'self'` sur le document hôte (`frontend/nginx.conf`), qui s'applique à chaque navigation de ses cadres, et juger les tentatives par un point d'interception réseau (`page.route`) plutôt que par les événements `request`, qui voient aussi les requêtes arrêtées par la politique.
+
+## Repli SPA et dossier du build (2026-11-16)
+
+Un rechargement direct de `/carte` renvoyait « Ce site est inaccessible » : le dossier `carte/` du build (MapLibre) existe sur le disque, et `try_files $uri $uri/ /index.html` répondait par une redirection absolue vers le port interne (`http://localhost:8080/carte/`). Aucun test ne rechargeait une route de premier niveau portant le nom d'un dossier. Règle : le repli SPA de nginx est `try_files $uri /index.html` (jamais `$uri/`), et toute route Angular dont le nom est aussi un dossier du build se vérifie par un accès direct (`curl -I`) sur la pile déployée.
