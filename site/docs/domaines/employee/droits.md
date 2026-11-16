@@ -35,7 +35,9 @@ sidebar_position: 3
 | Boutons « Nouvel employé » et « Modifier » (liste, détail) | `EMPLOYEE_WRITE` — `canWrite()` |
 | Boutons « Importer » / « Modèle Excel » | `EMPLOYEE_IMPORT` — `canImport()` |
 | Boutons « Exporter en PDF » (STC / Sortie, Entrants) et « Mouvements du mois (PDF) » (Employés) | `EMPLOYEE_EXPORT` — `canExport()` / `peutExporter` |
-| Lien sidebar « Entrants » et route `/entrants` | `EMPLOYEE_READ` |
+| Lien sidebar « Entrants » et routes `/entrants`, `/entrants/cartes`, `/entrants/analytique` | `EMPLOYEE_READ` |
+| Lien sidebar « STC / Sortie » et routes `/sorties`, `/sorties/cartes`, `/sorties/analytique` | `EMPLOYEE_READ` |
+| Montants des bulletins dans les cartes et l'analytique des entrants et des sorties | `PAIE_READ` (l'API ne les rend pas sinon : la carte n'affiche alors aucun montant) |
 | Bouton « Supprimer » (liste) | `EMPLOYEE_DELETE` — `canDelete()` |
 
 ## Salaire : donnée de paie

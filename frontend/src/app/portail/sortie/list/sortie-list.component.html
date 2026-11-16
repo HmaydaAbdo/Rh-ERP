@@ -1,28 +1,4 @@
-<div class="app-page">
-  <div class="app-page__header">
-    <h1>STC / Sortie</h1>
-  </div>
-
-  <app-mouvement-barre
-    [periode]="filtres().periode"
-    [filtres]="filtres().employes"
-    [exportVisible]="peutExporter"
-    [exportEnCours]="exportEnCours()"
-    (periodeChange)="choisirMois($event)"
-    (filtresChange)="changerEmployes($event)"
-    (exporter)="exporter()"
-  >
-    <stp-select
-      [value]="filtres().valeurs"
-      (valueChange)="changerMotifs($event)"
-      [options]="optionsMotifs()"
-      [multiple]="true"
-      summaryLabel="{0} motifs"
-      ariaLabel="Motif"
-      placeholder="Motif"
-    ></stp-select>
-  </app-mouvement-barre>
-
+<div class="sortie-list">
   @if (chiffres(); as c) {
     <section class="app-kpis" aria-label="Chiffres du mois">
       <div class="app-kpi">
@@ -60,7 +36,7 @@
   <div class="app-table-bar">
     <div class="app-table-bar__summary">
       <p class="app-table-bar__total" role="status" aria-live="polite">
-        @if (!chargement() && resultat(); as sorties) {
+        @if (!etat.chargement() && etat.resultat(); as sorties) {
           {{ sorties.nombre }} {{ sorties.nombre > 1 ? 'sorties' : 'sortie' }} sur la période {{ sorties.periode }}
         }
       </p>
@@ -73,7 +49,7 @@
     label="STC et sorties du mois"
     [value]="lignes()"
     [columns]="colonnes.visible"
-    [loading]="chargement()"
+    [loading]="etat.chargement()"
     [rowActionsVisible]="false"
     [rowsPerPageOptions]="[10, 20, 50, 100]"
     emptyMessage="Aucune sortie sur cette période."
