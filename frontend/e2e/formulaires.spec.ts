@@ -63,7 +63,7 @@ test.describe('Formulaires (Signal Forms)', () => {
 
       await expect(page).toHaveURL(/\/employees\/15$/);
       expect(mock.bodies['POST /employees']).toEqual([
-        { nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonctionId: 3, chantierId: 4, equipeId: null, salaire: null, typeSalaire: null }
+        { nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-31', dateEmbauche: '2018-05-14', fonctionId: 3, chantierId: 4, equipeId: null, salaire: null }
       ]);
     });
 

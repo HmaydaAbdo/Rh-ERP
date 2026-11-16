@@ -101,7 +101,7 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture**, en
 - Fonction, chantier et équipe sont résolus par les façades des domaines propriétaires. Une
   référence inconnue est refusée. `equipeId: null` signifie sans équipe; le formulaire convertit le
   choix synthétique « Orphelins (sans équipe) » en `null`, jamais en identifiant `0`.
-- Salaire et type de salaire se renseignent ensemble ou restent tous deux vides. Le salaire est
+- Le salaire est facultatif ; le type est **déduit du montant** par une règle unique (`type_pour`, modèle `Employee`) : jusqu'à 500 DH, journalier ; au-delà, mensuel. Personne ne le saisit (ni formulaire, ni import, ni API) : toute écriture du salaire le recalcule. Le salaire est
   positif ou nul, arrondi automatiquement à l'entier de dirham. La saisie et la lecture exigent `PAIE_READ` en plus du
   droit de l’opération Employé. Sans ce droit, les réponses masquent les deux champs, une écriture
   conserve le salaire existant et le tri sur ces champs est retiré.
@@ -132,7 +132,7 @@ Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimist
 | `chantier_id` | `BIGINT` | FK vers `chantier`; obligatoire en poste, vide après sortie |
 | `equipe_id` | `BIGINT` | FK vers `equipe`; facultative en poste, vide après sortie |
 | `salaire` | `NUMERIC(10,0)` | Facultatif; montant mensuel ou tarif d’une journée |
-| `type_salaire` | `VARCHAR(20)` | Facultatif; `MENSUEL` ou `JOURNALIER`, conjoint au salaire |
+| `type_salaire` | `VARCHAR(20)` | Déduit du salaire (≤ 500 DH : `JOURNALIER`, sinon `MENSUEL`), jamais saisi ; `NULL` seulement sans salaire |
 | `statut` | `VARCHAR(20)` | Obligatoire; `ACTIF` à la création, ou `INACTIF` |
 
 Les relations, statut et date d’embauche sont indexés. Les contraintes de base protègent les
@@ -169,8 +169,8 @@ longs, représentés comme nombres JSON. Les montants sont des décimaux exacts 
 | `fonctionId` | `entier` / entier | Obligatoire; référence existante |
 | `chantierId` | `entier` / entier ou `null` | Obligatoire à la création et pour une fiche en poste; `null` si sorti |
 | `equipeId` | `entier` / entier ou `null` | Facultatif; `null` si sorti |
-| `salaire` | `décimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à l'entier; avec son type |
-| `typeSalaire` | `TypeSalaire` / chaîne ou `null` | `MENSUEL` ou `JOURNALIER`; avec le salaire |
+| `salaire` | `décimal` / nombre ou `null` | ≥ 0, huit chiffres entiers; arrondi automatiquement à l'entier; le type s'en déduit |
+| `typeSalaire` | réponse seulement | Absent des requêtes : déduit du salaire par l'API |
 
 La modification ajoute `version` (`entier`, obligatoire) et `statut` (`EmployeeStatut`, obligatoire :
 `ACTIF` ou `INACTIF`). La création n’accepte pas de statut : l’employé est en poste.

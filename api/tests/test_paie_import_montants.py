@@ -44,7 +44,6 @@ def test_analyse_nomme_la_cellule_de_montant_et_avertit_sur_salaire_zero(
         avertissement["numeroLigne"] == 5
         and avertissement["champ"] == "salaireMensuel"
         and avertissement["codeAvertissement"] == "SALAIRE_ZERO"
-        and avertissement["typeSalairePropose"] == "JOURNALIER"
         for avertissement in analyse["avertissements"]
     )
     assert any(

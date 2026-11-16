@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from staport.domains.employee.models import TypeSalaire
 from staport.domains.employee.schemas import EmployeeCreationRequete
 from staport.domains.heuresupp.schemas import ImportCreation
 from staport.domains.paie.schemas import PaieCreationRequete
@@ -54,7 +53,6 @@ def test_le_salaire_d_une_fiche_employe_est_arrondi() -> None:
             "fonctionId": 1,
             "chantierId": 1,
             "salaire": 4500.555,
-            "typeSalaire": "MENSUEL",
         }
     )
     assert employe.salaire == Decimal("4501")
@@ -67,6 +65,5 @@ def test_le_salaire_d_un_employe_cree_depuis_les_heures_supplementaires_est_arro
         date_embauche=date(2020, 1, 1),
         fonction_id=1,
         salaire=Decimal("3000.126"),
-        type_salaire=TypeSalaire.MENSUEL,
     )
     assert creation.salaire == Decimal("3000")

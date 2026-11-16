@@ -208,7 +208,6 @@ class ImportCreation(ModeleApi):
     date_embauche: date
     fonction_id: int
     salaire: Annotated[Decimal, BeforeValidator(arrondir_si_nombre), Field(ge=0, max_digits=10, decimal_places=0)]
-    type_salaire: TypeSalaire
 
 
 class ImportCorrections(ModeleApi):

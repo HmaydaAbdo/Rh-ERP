@@ -187,8 +187,7 @@ describe('EmployeeFormComponent', () => {
         fonctionId: 3,
         chantierId: 4,
         equipeId: null,
-        salaire: null,
-        typeSalaire: null
+        salaire: null
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé créé');
       expect(navigation).toHaveBeenCalledWith(['/employees', 15]);
@@ -234,22 +233,17 @@ describe('EmployeeFormComponent', () => {
       TestBed.resetTestingModule();
       await afficher(undefined, ['EMPLOYEE_WRITE', 'PAIE_READ']);
       expect(racine().querySelector('#salaire')).not.toBeNull();
-      expect(racine().querySelector('#typeSalaire')).not.toBeNull();
+      expect(racine().querySelector('#typeSalaire')).toBeNull(); // le type se déduit du montant, il n’est pas saisi
     });
 
-    it('refuse un salaire sans son type, puis envoie l’équipe, le salaire et le type ensemble', async () => {
+    it('envoie l’équipe et le salaire, sans type de salaire (déduit du montant par l’API)', async () => {
       await afficher(undefined, ['EMPLOYEE_WRITE', 'PAIE_READ']);
       await remplir();
       formulaire().salaire().value.set(120);
 
-      await envoyer();
-      expect(service.create).not.toHaveBeenCalled();
-      expect(erreurs()).toContain('Renseignez le salaire et son type ensemble.');
-
-      formulaire().typeSalaire().value.set('JOURNALIER');
       formulaire().equipeId().value.set(5);
       await envoyer();
-      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: 5, salaire: 120, typeSalaire: 'JOURNALIER' }));
+      expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: 5, salaire: 120 }));
     });
   });
 
@@ -316,7 +310,6 @@ describe('EmployeeFormComponent', () => {
         chantierId: null,
         equipeId: null,
         salaire: null,
-        typeSalaire: null,
         statut: 'INACTIF'
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé modifié');

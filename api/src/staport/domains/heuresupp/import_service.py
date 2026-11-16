@@ -334,7 +334,6 @@ class ServiceImportHeuresSupp:
                         fonction_id=creation.fonction_id,
                         chantier_id=chantier_id,
                         salaire=creation.salaire,
-                        type_salaire=creation.type_salaire,
                     )
                 )
             await s.flush()

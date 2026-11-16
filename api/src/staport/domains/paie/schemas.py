@@ -436,7 +436,6 @@ class PaieImportErreur(ModeleApi):
     code_avertissement: Literal["SALAIRE_ZERO", "SALAIRE_DIFFERENT", "EQUIPE_VIDE"] | None = None
     employe_id: int | None = None
     salaire_actuel: str | None = None
-    type_salaire_propose: Literal["JOURNALIER", "MENSUEL"] | None = None
 
 
 class PaieImportControlePeriode(ModeleApi):
@@ -549,19 +548,16 @@ class PaieImportEcart(ModeleApi):
     cin: str
     nom_prenom: str
     champs: list[PaieImportChamp]
-    type_salaire: Literal["MENSUEL", "JOURNALIER"] | None
 
 
 class PaieImportAlignement(ModeleApi):
     employe_id: int
-    type_salaire: Literal["MENSUEL", "JOURNALIER"] | None = None
 
 
 class PaieImportCreationCorrection(ModeleApi):
     numero_ligne: int
     date_naissance: date
     date_embauche: date
-    type_salaire: Literal["MENSUEL", "JOURNALIER"]
 
 
 class PaieImportCorrections(ModeleApi):

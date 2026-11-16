@@ -19,14 +19,9 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
-import { EmployeeStatut, TypeSalaire } from '../models/employee.model';
+import { EmployeeStatut } from '../models/employee.model';
 import { STATUT_EMPLOYE_OPTIONS } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
-
-const TYPE_SALAIRE_OPTIONS: { label: string; value: TypeSalaire }[] = [
-  { label: 'Mensuel', value: 'MENSUEL' },
-  { label: 'Journalier (tarif d’une journée)', value: 'JOURNALIER' }
-];
 
 function toIsoDate(date: Date): string {
   const year = date.getFullYear();
@@ -49,7 +44,6 @@ interface EmployeeSaisie {
   chantierId: number | null;
   equipeId: number | null;
   salaire: number | null;
-  typeSalaire: TypeSalaire | null;
   statut: EmployeeStatut;
 }
 
@@ -71,7 +65,6 @@ export class EmployeeFormComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly statutOptions = STATUT_EMPLOYE_OPTIONS;
-  protected readonly typeSalaireOptions = TYPE_SALAIRE_OPTIONS;
   /** Le salaire est une donnée de paie : ses champs ne sont proposés qu'à qui a `PAIE_READ` (le serveur ignore sinon ce qui est saisi). */
   protected readonly voitLaPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
 
@@ -91,7 +84,6 @@ export class EmployeeFormComponent {
     chantierId: null,
     equipeId: null,
     salaire: null,
-    typeSalaire: null,
     statut: 'ACTIF'
   });
   protected readonly form = form(
@@ -120,12 +112,6 @@ export class EmployeeFormComponent {
           : undefined
       );
       min(chemin.salaire, 0, { message: 'Le salaire ne peut pas être négatif.' });
-      // Le salaire et son type vont ensemble : l'un sans l'autre ne dit pas combien l'employé est payé.
-      validate(chemin.typeSalaire, ({ value, valueOf }) =>
-        (value() === null) !== (valueOf(chemin.salaire) === null)
-          ? { kind: 'salaireEtType', message: 'Renseignez le salaire et son type ensemble.' }
-          : undefined
-      );
     },
     { submission: { action: () => this.enregistrer(), onInvalid: (formulaire) => focaliserPremiereErreur(formulaire) } }
   );
@@ -158,7 +144,6 @@ export class EmployeeFormComponent {
           chantierId: employee.chantier?.id ?? null,
           equipeId: employee.equipe?.id ?? null,
           salaire: employee.salaire,
-          typeSalaire: employee.typeSalaire,
           statut: employee.statut
         });
       },
@@ -177,8 +162,7 @@ export class EmployeeFormComponent {
       dateNaissance: toIsoDate(saisie.dateNaissance!),
       dateEmbauche: toIsoDate(saisie.dateEmbauche!),
       fonctionId: saisie.fonctionId!,
-      salaire: saisie.salaire,
-      typeSalaire: saisie.typeSalaire
+      salaire: saisie.salaire
     };
     const id = this.employeeId();
 

@@ -4,7 +4,6 @@ import { Observable, finalize, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { ChantierService } from '../../chantier/services/chantier.service';
-import { TypeSalaire } from '../../employee/models/employee.model';
 import { PaieImportAnalyse, PaieImportEcart, PaieImportResult } from '../models/paie.model';
 import { libellePeriode, moisCivilPrecedent } from '../paie-format';
 import { SousCategorie, sousCategoriesEcarts } from './paie-import-categories';
@@ -50,7 +49,6 @@ const LIBELLES_ETAPES: Record<EtapeImport, string> = {
 export interface CreationSaisie {
   dateNaissance: Date | null;
   dateEmbauche: Date | null;
-  typeSalaire: TypeSalaire | null;
 }
 
 /** Choix de l'utilisateur pour un départ proposé : le confirmer (coché) et son motif. */
@@ -124,8 +122,6 @@ export class PaieImportStore {
   /** Décalage du cas affiché dans la sous-étape : « Passer » avance, « Précédent » recule. */
   readonly decalage = signal(0);
 
-  /** Type de salaire choisi pour une fiche en écart (par identifiant d'employé) ; absent = celui de la fiche. */
-  readonly typesChoisis = signal<Record<number, TypeSalaire | null>>({});
   /** Saisies des employés à créer, par numéro de ligne du fichier. */
   readonly creations = signal<Record<number, CreationSaisie>>({});
   /** Choix de l'utilisateur quand le fichier laisse vide l'équipe d'un employé qui en a une (par employé). */
@@ -269,7 +265,6 @@ export class PaieImportStore {
     this.categoriesValidees.set([]);
     this.bilan.set(null);
     this.confirmerSalaireZero.set(false);
-    this.typesChoisis.set({});
     this.creations.set({});
     this.departs.set({});
   }
@@ -299,18 +294,17 @@ export class PaieImportStore {
     this.decalage.update((d) => d - 1);
   }
 
-  /** Recopie la date d'embauche et le type de salaire d'une embauche saisie sur les autres qui n'en ont pas encore. */
+  /** Recopie la date d'embauche d'une embauche saisie sur les autres qui n'en ont pas encore. */
   propagerCreation(numeroLigneSource: number): void {
     const source = this.creations()[numeroLigneSource];
     if (!source) return;
     this.creations.update((creations) => {
       const suite = { ...creations };
       for (const inconnu of this.analyse()?.cinInconnus ?? []) {
-        const actuelle = suite[inconnu.numeroLigne] ?? { dateNaissance: null, dateEmbauche: null, typeSalaire: null };
+        const actuelle = suite[inconnu.numeroLigne] ?? { dateNaissance: null, dateEmbauche: null };
         suite[inconnu.numeroLigne] = {
           ...actuelle,
-          dateEmbauche: actuelle.dateEmbauche ?? source.dateEmbauche,
-          typeSalaire: actuelle.typeSalaire ?? source.typeSalaire
+          dateEmbauche: actuelle.dateEmbauche ?? source.dateEmbauche
         };
       }
       return suite;
@@ -319,7 +313,7 @@ export class PaieImportStore {
 
   /** Embauches dont les trois valeurs sont saisies (ou proposées) : prêtes à créer d'un seul envoi. */
   readonly embauchesCompletes = computed(() =>
-    (this.analyse()?.cinInconnus ?? []).filter((i) => this.creationComplete(i.numeroLigne, i.salaire))
+    (this.analyse()?.cinInconnus ?? []).filter((i) => this.creationComplete(i.numeroLigne))
   );
 
   creerCompletes(): void {
@@ -329,8 +323,7 @@ export class PaieImportStore {
       return [{
         numeroLigne: inconnu.numeroLigne,
         dateNaissance: dateIso(saisie.dateNaissance),
-        dateEmbauche: dateIso(saisie.dateEmbauche),
-        typeSalaire: saisie.typeSalaire ?? this.typeSalairePropose(inconnu.salaire)
+        dateEmbauche: dateIso(saisie.dateEmbauche)
       }];
     });
     if (creer.length > 0) this.corriger({ aligner: [], creer });
@@ -355,31 +348,9 @@ export class PaieImportStore {
     });
   }
 
-  choisirType(employeId: number, type: TypeSalaire | null): void {
-    this.typesChoisis.update((types) => ({ ...types, [employeId]: type }));
-  }
-
   /** Met à jour les fiches choisies avec les valeurs de leur ligne ; chacune disparaît alors de la liste des écarts. */
   aligner(employeIds: number[]): void {
-    const types = this.typesChoisis();
-    this.corriger({
-      aligner: employeIds.map((employeId) => {
-        const ecart = this.analyse()?.ecarts.find((item) => item.employeId === employeId);
-        const salaire = ecart?.champs.find((champ) => champ.champ === 'salaire')?.fichier;
-        return {
-          employeId,
-          typeSalaire: types[employeId] ?? (salaire !== undefined && salaire !== null ? this.typeSalairePropose(Number(salaire)) : null)
-        };
-      }),
-      creer: []
-    });
-  }
-
-  typeSalairePourEcart(employeId: number, typeActuel: TypeSalaire | null): TypeSalaire | null {
-    const choisi = this.typesChoisis()[employeId];
-    if (choisi) return choisi;
-    const salaire = this.analyse()?.ecarts.find((item) => item.employeId === employeId)?.champs.find((champ) => champ.champ === 'salaire')?.fichier;
-    return salaire !== undefined && salaire !== null ? this.typeSalairePropose(Number(salaire)) : typeActuel;
+    this.corriger({ aligner: employeIds.map((employeId) => ({ employeId })), creer: [] });
   }
 
   alignerTout(): void {
@@ -389,29 +360,23 @@ export class PaieImportStore {
   saisirCreation(numeroLigne: number, saisie: Partial<CreationSaisie>): void {
     this.creations.update((creations) => ({
       ...creations,
-      [numeroLigne]: { ...(creations[numeroLigne] ?? { dateNaissance: null, dateEmbauche: null, typeSalaire: null }), ...saisie }
+      [numeroLigne]: { ...(creations[numeroLigne] ?? { dateNaissance: null, dateEmbauche: null }), ...saisie }
     }));
   }
 
-  /** Préremplissage métier du type de salaire : 500 DH et moins = journalier, au-delà = mensuel. */
-  typeSalairePropose(salaire: number): TypeSalaire {
-    return salaire <= 500 ? 'JOURNALIER' : 'MENSUEL';
+  creationComplete(numeroLigne: number): boolean {
+    const saisie = this.creations()[numeroLigne];
+    return !!saisie?.dateNaissance && !!saisie.dateEmbauche;
   }
 
-  creationComplete(numeroLigne: number, salaire: number): boolean {
+  creer(numeroLigne: number): void {
     const saisie = this.creations()[numeroLigne];
-    return !!saisie?.dateNaissance && !!saisie.dateEmbauche && !!(saisie.typeSalaire ?? this.typeSalairePropose(salaire));
-  }
-
-  creer(numeroLigne: number, salaire: number): void {
-    const saisie = this.creations()[numeroLigne];
-    const typeSalaire = saisie?.typeSalaire ?? this.typeSalairePropose(salaire);
     if (!saisie?.dateNaissance || !saisie.dateEmbauche) {
       return;
     }
     this.corriger({
       aligner: [],
-      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche), typeSalaire }]
+      creer: [{ numeroLigne, dateNaissance: dateIso(saisie.dateNaissance), dateEmbauche: dateIso(saisie.dateEmbauche) }]
     });
   }
 

@@ -164,8 +164,8 @@ refusée, même si sa colonne est facultative.
 Le contrat HTTP FastAPI du wizard utilise `multipart/form-data` sur les trois étapes : `file` et
 `periode` sont des champs du formulaire (`/import` ajoute `periode_confirmee`, `departs`, `equipes` et
 `ignorer_salaires_zero`, en texte JSON); `/import/corrections` reçoit également `corrections` comme
-texte JSON `{ aligner: [{ employeId, typeSalaire }], creer: [{ numeroLigne, dateNaissance,
-dateEmbauche, typeSalaire }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
+texte JSON `{ aligner: [{ employeId }], creer: [{ numeroLigne, dateNaissance,
+dateEmbauche }] }`. Le serveur relit et réanalyse le classeur à chaque correction; les
 identifiants et numéros de ligne doivent correspondre aux propositions de cette analyse. La route
 de correction exige `PAIE_IMPORT`, `PAIE_READ` et `EMPLOYEE_WRITE`; l'analyse exige `PAIE_IMPORT` et
 `PAIE_READ`. Les contrôles de contrat sont couverts par `api/tests/test_paie_contrat.py` (KAN-226).
@@ -182,13 +182,13 @@ Le modèle Excel utilisateur respecte l'ordre historique suivant (trois lignes d
 | `FonctionACreer` | `libelle:string`, `lignes:integer[]` | Fonction du fichier absente du référentiel, créée par l'import (`FUNCTION_WRITE`). |
 | `ChantierCloture` | `chantierId:integer`, `code:string`, `designation:string|null`, `lignes:integer[]` | Marché cité à rouvrir ou à corriger dans le fichier. |
 | `CinInconnu` | `numeroLigne:integer`, `cin:string`, `nomPrenom:string|null`, `fonction:string`, `chantier:string`, `equipe:string|null`, `salaire:number` | Données disponibles pour créer une fiche. |
-| `Ecart` | `employeId:integer`, `numeroLigne:integer`, `cin:string`, `nomPrenom:string`, `champs:Champ[]`, `typeSalaire:MENSUEL|JOURNALIER|null` | Champs à aligner, avec type de salaire existant. |
+| `Ecart` | `employeId:integer`, `numeroLigne:integer`, `cin:string`, `nomPrenom:string`, `champs:Champ[]` | Champs à aligner. |
 | `Champ` | `champ:string`, `base:string|null`, `fichier:string|null` | Nom du champ, valeur en fiche et valeur du fichier. |
 | `Depart` d'analyse | `employeId:integer`, `cin:string`, `nomPrenom:string`, `motif:string|null` | Départ proposé; `STC`/`Sortie` si le fichier l'indique, `null` si le salarié est seulement absent du fichier. |
 | `Retour` | `employeId:integer`, `cin:string`, `nomPrenom:string` | Employé sorti qui réapparaît dans le fichier. |
 | `PaieImportCorrectionsDto` | `aligner:Alignement[]`, `creer:Creation[]`; absents : listes vides | Corrections explicitement sélectionnées. |
-| `Alignement` | `employeId:integer` obligatoire; `typeSalaire:MENSUEL|JOURNALIER|null` | Fiche à aligner; type absent : conserver celui de la fiche s'il existe. |
-| `Creation` | `numeroLigne:integer`, `dateNaissance:string`, `dateEmbauche:string`, `typeSalaire:MENSUEL|JOURNALIER` | Dates ISO et type obligatoires pour une nouvelle fiche. |
+| `Alignement` | `employeId:integer` obligatoire | Fiche à aligner ; le type de salaire se déduit du montant, il n'est pas transmis. |
+| `Creation` | `numeroLigne:integer`, `dateNaissance:string`, `dateEmbauche:string` | Dates ISO obligatoires pour une nouvelle fiche ; le type de salaire se déduit du salaire du fichier. |
 | `PaieImportDepartsDto` | `departs:{employeId:integer,motif:string,sansMotif:boolean}[]`; absente : liste vide | Motif non blanc de 255 caractères au plus, **sauf** pour un départ déduit de l'absence du salarié (`motif` nul dans l'analyse) confirmé explicitement par `sansMotif: true` : le motif enregistré est alors « Absent du fichier ». Un départ `STC` ou `Sortie` exige toujours un motif. Seuls les départs proposés peuvent être confirmés. |
 | `PaieImportResultDto` | `periode:string`, `crees:integer`, `departs:integer`, `retours:integer` | Bilan de la transaction d'import. |
 

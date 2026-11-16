@@ -82,9 +82,9 @@ règles détaillées suivent dans les sections suivantes.
   fichier, Chantiers clôturés, Nouvelles embauches (CIN sans fiche), Mises à jour de fiches, Points à confirmer. La suivante s'ouvre
   quand la précédente est réglée. Les embauches et les mises à jour de fiches se règlent **un cas à la fois** : une fois le cas réglé,
   l'écran passe au suivant (« Passer » et « Précédent » pour garder un cas pour plus tard, liste complète à la demande, barre de
-  progression). Seules les révisions de salaire demandent un choix (mensuel ou journalier) ; le nom, la fonction, le chantier et l'équipe
+  progression). Aucune révision ne demande de choisir un type de salaire (il se déduit du montant) ; le nom, la fonction, le chantier et l'équipe
   du fichier s'appliquent sans confirmation. Pour les embauches, la
-  date d'embauche et le type de salaire se recopient sur les autres cas, puis les fiches complètes se créent d'un seul envoi. Les
+  date d'embauche se recopie sur les autres cas, puis les fiches complètes se créent d'un seul envoi. Les
   erreurs nombreuses du fichier se regroupent par type, avec un exemple et le détail à la demande.
   C'est lui qui aligne l'état des fiches Employé sur la dernière paie (voir [Employé](../employee/index.md)).
 - **Frontend** (`frontend/src/app/portail/paie/`) : Tabulaire, Cartes et Analytique de la paie, assistant d'import et
@@ -302,8 +302,8 @@ fiche de l'employé sur son **dernier bulletin** (`fiche_employe.aligner_fiche`)
 ce bulletin. Une observation « STC » ou « sortie » enregistre le départ du mois (`employe_sortie`, motif « STC » ou
 « Sortie ») ; si ce départ est au dernier mois, la fiche passe à « sortie » (sans chantier ni équipe). Supprimer ou corriger
 le bulletin retire le départ qu'il avait créé (un départ saisi à la main avec un autre motif n'est jamais touché) et
-recalcule la fiche. Un bulletin postérieur à un départ remet l'employé en poste, à condition que son type de salaire soit
-renseigné (sinon `409`) ; le salaire de la fiche est alors repris du bulletin. Le salaire de la fiche n'est pas modifié par
+recalcule la fiche. Un bulletin postérieur à un départ remet l'employé en poste, ; le salaire de la fiche est alors repris du bulletin
+(et son type s'en déduit). Le salaire de la fiche n'est pas modifié par
 les autres bulletins.
 
 ### Les problèmes du contrôle
@@ -315,8 +315,7 @@ les autres bulletins.
 | **CIN inconnu** | Le CIN n'a pas de fiche | Ici : créer l'employé avec les valeurs du fichier et ce qu'il n'a pas (date de naissance, date d'embauche, type de salaire) — ou corriger le CIN dans le fichier |
 | **Écart avec la fiche** | Nom (comparé sans casse et avec un seul espace entre les mots), fonction, chantier, équipe ou salaire différents | Ici : « Mettre à jour la fiche » (une à une ou toutes), la ligne disparaît — ou corriger le fichier |
 
-Le **type de salaire** (mensuel ou journalier) n'est pas dans le fichier : quand le salaire change, l'assistant propose
-celui de la fiche ; il est obligatoire si la fiche n'en a pas encore.
+Le **type de salaire** (mensuel ou journalier) n'est ni dans le fichier ni choisi : il se déduit du salaire (≤ 500 DH journalier, sinon mensuel). Un type saisi à la main contredisait le montant (5 500 DH « journalier » donnait un S/H de 550 DH au lieu de 21).
 Un **chantier** ou une **équipe** absents du référentiel sont signalés et bloquent l'import (les chantiers viennent de
 l'ERP, les équipes ont leur propre domaine). Une **fonction** inconnue est **créée par l'import** pour qui a `FUNCTION_WRITE`
 (`fonctionsACreer` dans l'analyse, qui n'écrit rien ; libellé tel que dans le fichier, 100 caractères au plus) ; de même, un
@@ -374,10 +373,10 @@ Le **mois s'applique à tout le fichier** — c'est un paramètre de la requête
 
 - `PaieImportAnalyseDto` (analyse et corrections) : `periode`, `totalLignes`, `erreurs[]` (`numeroLigne`, `cin`,
   `nomPrenom`, `raison`), `cinInconnus[]` (ligne, CIN, nom, fonction, chantier, équipe, salaire), `ecarts[]` (`employeId`,
-  ligne, CIN, nom de la fiche, `champs[]` = `champ`/`base`/`fichier`, `typeSalaire` de la fiche), `departs[]` (`employeId`,
+  ligne, CIN, nom de la fiche, `champs[]` = `champ`/`base`/`fichier`, `departs[]` (`employeId`,
   CIN, nom, `motif` « STC »/« Sortie » ou `null`), `retours[]`, `pret`.
-- `PaieImportCorrectionsDto` (partie JSON `corrections`) : `aligner[]` (`employeId`, `typeSalaire` ou `null` pour garder
-  celui de la fiche), `creer[]` (`numeroLigne`, `dateNaissance`, `dateEmbauche`, `typeSalaire`).
+- `PaieImportCorrectionsDto` (partie JSON `corrections`) : `aligner[]` (`employeId`),
+  `creer[]` (`numeroLigne`, `dateNaissance`, `dateEmbauche`).
 - `PaieImportDepartsDto` (partie JSON `departs`, facultative) : `departs[]` (`employeId`, `motif`).
 - `PaieImportResultDto` : `periode`, `crees`, `departs`, `retours`.
 

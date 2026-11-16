@@ -28,7 +28,7 @@ const PRETE: PaieImportAnalyse = {
 
 const AVEC_ECART: PaieImportAnalyse = {
   ...PRETE,
-  ecarts: [{ employeId: 4, numeroLigne: 5, cin: 'GH4', nomPrenom: 'SAID', typeSalaire: null, champs: [{ champ: 'salaire', base: null, fichier: '120' }] }],
+  ecarts: [{ employeId: 4, numeroLigne: 5, cin: 'GH4', nomPrenom: 'SAID', champs: [{ champ: 'salaire', base: null, fichier: '120' }] }],
   pret: false
 };
 
@@ -233,9 +233,8 @@ describe('PaieImportStore', () => {
     expect(store.etape()).toBe('controle');
 
     service.corrigerImport.mockReturnValue(of(PRETE));
-    store.choisirType(4, 'JOURNALIER');
     store.aligner([4]);
-    expect(service.corrigerImport).toHaveBeenCalledWith(fichier, '2026-10', { aligner: [{ employeId: 4, typeSalaire: 'JOURNALIER' }], creer: [] });
+    expect(service.corrigerImport).toHaveBeenCalledWith(fichier, '2026-10', { aligner: [{ employeId: 4 }], creer: [] });
     store.suivant();
     expect(store.etape()).toBe('departs');
 
@@ -265,19 +264,12 @@ describe('PaieImportStore', () => {
     store.analyser(fichier);
 
     store.saisirCreation(7, { dateNaissance: new Date(1990, 0, 2), dateEmbauche: new Date(2026, 9, 1) });
-    expect(store.creationComplete(7, 450)).toBe(true);
-    store.creer(7, 450);
+    expect(store.creationComplete(7)).toBe(true);
+    store.creer(7);
     expect(service.corrigerImport).toHaveBeenCalledWith(fichier, '2026-10', {
       aligner: [],
-      creer: [{ numeroLigne: 7, dateNaissance: '1990-01-02', dateEmbauche: '2026-10-01', typeSalaire: 'JOURNALIER' }]
+      creer: [{ numeroLigne: 7, dateNaissance: '1990-01-02', dateEmbauche: '2026-10-01' }]
     });
-  });
-
-  it('préremplit le type de salaire selon le seuil de 500 DH', () => {
-    expect(store.typeSalairePropose(500)).toBe('JOURNALIER');
-    expect(store.typeSalairePropose(500.01)).toBe('MENSUEL');
-    store.saisirCreation(7, { dateNaissance: new Date(1990, 0, 2), dateEmbauche: new Date(2026, 9, 1) });
-    expect(store.creationComplete(7, 500)).toBe(true);
   });
 
   it('importe avec les seuls départs cochés, puis annonce la fin', () => {

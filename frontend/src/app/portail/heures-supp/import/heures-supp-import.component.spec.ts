@@ -42,7 +42,7 @@ interface ImportApi {
   erreur: WritableSignal<string | null>;
   chargement: WritableSignal<boolean>;
   peutRemplacer(): boolean;
-  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number; typeSalaire: '' | 'JOURNALIER' | 'MENSUEL' }>>;
+  creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number}>>;
   alignements: WritableSignal<number[]>;
   valeurSalaire(numero: number): number | null;
   dateCreation(numero: number, cle: 'dateNaissance' | 'dateEmbauche'): Date | null;
@@ -178,7 +178,7 @@ describe('HeuresSuppImportComponent', () => {
 
   it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
     expect(api.valeurSalaire(2)).toBeNull();
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000 } });
     expect(api.valeurSalaire(2)).toBe(4000);
     expect(api.dateCreation(2, 'dateNaissance')).toEqual(new Date(1990, 0, 1));
     api.saisirDate(2, 'dateNaissance', new Date(1991, 2, 2));
@@ -209,9 +209,6 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirFonction(3, 8);
     api.choisirFonction(4, '9');
     expect(api.creations()).toMatchObject({ 3: { fonctionId: 8 }, 4: { fonctionId: 0 } });
-    api.choisirTypeSalaire(4, 'JOURNALIER');
-    api.choisirTypeSalaire(5, 'INCONNU');
-    expect(api.creations()[4].typeSalaire).toBe('JOURNALIER');
     expect(api.creations()[5]).toBeUndefined();
   });
 
@@ -354,7 +351,7 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirChantier(4);
     api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 12.5 }]);
     api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000 } });
     api.alignements.set([9]);
     service['corrigerImport'].mockReturnValue(of(ANALYSE));
 
@@ -362,7 +359,7 @@ describe('HeuresSuppImportComponent', () => {
 
     expect(service['corrigerImport']).toHaveBeenCalledWith(expect.any(File), '2026-10', 4, {
       aligner: [{ employeId: 9 }],
-      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000, typeSalaire: 'MENSUEL' }]
+      creer: [{ numeroLigne: 2, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000 }]
     }, [{ cin: 'AB123', montantDh: 12.5 }]);
   });
 
@@ -388,7 +385,7 @@ describe('HeuresSuppImportComponent', () => {
     api.fichier.set(fichier);
     api.choisirChantier(4);
     api.analyse.set({ ...ANALYSE, pret: false, lignes: [{ ...ANALYSE.lignes[0], employeId: null }] });
-    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: -1, typeSalaire: 'MENSUEL' } });
+    api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: -1 } });
     api.corriger();
     expect(api.erreur()).toContain('Complétez les dates');
     expect(service['corrigerImport']).not.toHaveBeenCalled();
