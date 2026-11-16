@@ -56,4 +56,4 @@ Les seuils (utilité, latence, coût) sont fixés par le propriétaire du domain
 
 ## Suivi
 
-Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous restant à livrer sont suivis dans [Vues libres](vues-libres.md).
+Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous (arrêt à chaud, bornes, audit, jeu adverse) sont décrits dans [Vues libres](vues-libres.md).

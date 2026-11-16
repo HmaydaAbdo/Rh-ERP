@@ -144,3 +144,7 @@ Le renommage `/actuator/health` → `/health` (KAN-269) a créé un doublon : ng
 ## Délai de connexion du navigateur de test en CI (2026-11-16)
 
 Le contrôle frontend a échoué avec « Failed to connect to the browser session » alors que les 1088 tests passent en local : Chromium met parfois plus de 60 s (défaut de Vitest) à se connecter sur les machines partagées. Un échec de ce type, sans test en cause, se corrige en laissant plus de temps (`test.browser.connectTimeout` dans `frontend/vitest-base.config.mts`), pas en relançant à l aveugle.
+
+## La politique de contenu d'une iframe ne ferme pas sa propre navigation (2026-11-16)
+
+Le jeu adverse des vues libres (KAN-284) a montré qu'un `<meta http-equiv="refresh">` ou un `location.href` dans l'iframe faisait sortir des données dans l'adresse d'une page externe, malgré `connect-src 'none'` et `default-src 'none'` : ces directives ne gouvernent pas la navigation du cadre lui-même. **À faire :** poser `frame-src 'self'` sur le document hôte (`frontend/nginx.conf`), qui s'applique à chaque navigation de ses cadres, et juger les tentatives par un point d'interception réseau (`page.route`) plutôt que par les événements `request`, qui voient aussi les requêtes arrêtées par la politique.

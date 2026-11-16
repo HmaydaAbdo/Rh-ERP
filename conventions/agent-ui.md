@@ -58,7 +58,7 @@ son test, et aucune n'est remplacée par une autre :
 * **Chiffres** : toute valeur affichée vient d'un outil métier ; une vue ouverte ne calcule ni ne remplace une valeur métier.
 * **Action humaine** : une vue ouverte n'exécute jamais d'écriture ; une action sensible passe par l'approbation humaine
   décrite dans `security.md` et `mcp.md`.
-* **Arrêt et repli** : un paramètre désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
+* **Arrêt et repli** (livré, KAN-281) : le paramètre `ia.vues-libres.actives` de l'écran Paramètres désactive les vues ouvertes sans redéploiement ; l'échec d'une vue ouverte affiche le
   repli (catalogue ou texte) et est journalisé sans son contenu.
 * **Veille** : à chaque revue mensuelle des modèles (`site/docs/ia` § 4.1), relire les nouvelles pratiques de sécurité des
   interfaces générées (OWASP GenAI, journaux de CopilotKit, d'AG-UI et d'A2UI) et consigner en commentaire de la tâche Jira de veille (label `veille-ia`) ce qui

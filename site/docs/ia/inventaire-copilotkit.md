@@ -10,7 +10,7 @@ gratuites et auto-hébergeables comptent ; CopilotKit Intelligence (hébergé) e
 | Rendu des appels d'outils (`registerRenderToolCall`) | **Utilisée** | carte, export de paie (`assistant.component.ts`) |
 | Interface générative A2UI (catalogue) | **Utilisée** | catalogue Staport, reprise des surfaces invalides (KAN-96) |
 | Rendu d'activité personnalisé (`renderActivityMessages`) | **Utilisée** | `surface-a2ui-francais.component.ts` |
-| Interface générative ouverte (`openGenerativeUI`) | **Utilisée, activée pour tous** (interrupteur `VUES_LIBRES=false`) | KAN-95, `VUES_LIBRES` |
+| Interface générative ouverte (`openGenerativeUI`) | **Utilisée, activée pour tous** (arrêt à chaud dans Paramètres, bornes, audit : KAN-281 à 284) | KAN-95, `VUES_LIBRES` |
 | Humain dans la boucle (`injectInterrupt`) | **Utilisée** | `accord-interruption.component.ts` |
 | État partagé (`injectAgentStore`) | **Utilisée** | `assistant-chat.component.ts` |
 | Contexte de page (`connectAgentContext`) | **Utilisée** | `assistant.component.ts` |
