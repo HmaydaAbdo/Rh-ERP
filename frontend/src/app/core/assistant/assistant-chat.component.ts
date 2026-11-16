@@ -77,7 +77,6 @@ export class AssistantChatComponent {
   protected readonly erreur = signal(false);
 
   constructor() {
-    void this.capacites.charger();
     effect(() => {
       const fil = this.fil.fil();
       if (fil !== undefined) {

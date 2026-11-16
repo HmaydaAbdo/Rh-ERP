@@ -26,7 +26,7 @@ export interface Conversation {
  * CopilotKit rejoue son historique, `connect`), remplacé par « Nouvelle conversation ». L'identifiant commence par
  * `u<id>-` : le runtime refuse un fil qui n'appartient pas à l'utilisateur authentifié.
  */
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class FilAssistant {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);

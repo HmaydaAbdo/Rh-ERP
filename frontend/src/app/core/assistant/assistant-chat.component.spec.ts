@@ -33,7 +33,7 @@ describe('AssistantChatComponent', () => {
       imports: [AssistantChatComponent],
       providers: [
         { provide: FilAssistant, useValue: { fil: signal('u1-test'), listeOuverte: signal(false), memoireOuverte: signal(false), estUtilise: () => utilise, marquerUtilise, rafraichir } },
-        { provide: CapacitesAssistant, useValue: { pieces: signal({ enabled: false }), erreurPiece: signal(null), charger: () => Promise.resolve() } },
+        { provide: CapacitesAssistant, useValue: { pieces: signal({ enabled: false }), erreurPiece: signal(null) } },
         { provide: CopilotKit, useValue: { core: { connectAgent } } },
         { provide: CopilotkitAgentFactory, useValue: { createAgentStoreSignal: () => signal(magasin) } }
       ],

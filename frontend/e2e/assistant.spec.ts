@@ -304,13 +304,14 @@ test.describe('Staport Intelligence', () => {
   test('propose les pièces jointes et la dictée seulement quand le serveur les active (KAN-93)', async ({ page }) => {
     await mockApi(page, { username: 'rh', permissions: DROITS }, routes());
     await simulerRuntime(page);
-    const info = (audio: boolean) => ({
-      version: '1.80.0', agents: { default: { name: 'default', description: '' } }, mode: 'sse', suggestions: true, a2uiEnabled: true,
-      a2ui: { enabled: true }, audioFileTranscriptionEnabled: audio
+    const info = (ouvert: boolean) => ({
+      version: '1.80.0',
+      // Les pièces jointes sont une capacité AG-UI déclarée par l'agent (KAN-270) ; la dictée, un drapeau du runtime.
+      agents: { default: { name: 'default', description: '', ...(ouvert ? { capabilities: { multimodal: { input: { image: true, pdf: true, file: true } } } } : {}) } },
+      mode: 'sse', suggestions: true, a2uiEnabled: true, a2ui: { enabled: true }, audioFileTranscriptionEnabled: ouvert
     });
 
     // Tout est fermé par défaut : ni bouton de fichier, ni micro.
-    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: false } }));
     await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(false) }));
     await page.goto('/assistant');
     const espace = page.getByRole('region', { name: 'Staport Intelligence' });
@@ -319,7 +320,6 @@ test.describe('Staport Intelligence', () => {
     await expect(espace.getByRole('button', { name: 'Dicter' })).toHaveCount(0);
 
     // Activés côté serveur : le bouton « Ajouter un fichier » et le micro apparaissent.
-    await page.route('**/ia/copilotkit/capacites', (route) => route.fulfill({ json: { piecesJointes: true } }));
     await page.route('**/ia/copilotkit/info', (route) => route.fulfill({ json: info(true) }));
     await page.reload();
     await expect(espace.getByRole('button', { name: 'Ajouter un fichier' })).toBeVisible();
