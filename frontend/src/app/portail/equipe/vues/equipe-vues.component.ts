@@ -1,11 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { registerFrontendTool } from '@copilotkit/angular';
+
+import { AuthService } from '../../../core/auth/services/auth.service';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { EquipeActionsComponent } from '../actions/equipe-actions.component';
 import { AUCUN_FILTRE_EQUIPE, EquipeFiltres, lireFiltresEquipe, versParametresEquipe } from '../filtres/equipe-filtres';
 import { EquipeFiltresComponent } from '../filtres/equipe-filtres.component';
+import { outilFiltresEquipes } from '../filtres/equipe-outils-assistant';
 
 const CONFIGURATION_EQUIPE: CollectionShellConfig = {
   titre: 'Équipes',
@@ -35,6 +39,7 @@ export class EquipeVuesComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -44,6 +49,10 @@ export class EquipeVuesComponent {
         void this.router.navigate([], { replaceUrl: true, queryParams: { periode: null }, queryParamsHandling: 'merge' });
       }
     });
+    // L'agent peut régler les filtres de cette page (outil côté navigateur, retiré avec la page) ; réservé au droit IA.
+    if (this.auth.hasPermission('IA_UTILISER')) {
+      registerFrontendTool(outilFiltresEquipes(() => this.filtres(), (filtres) => this.appliquer(filtres)));
+    }
   }
 
   protected appliquer(filtres: EquipeFiltres): void {

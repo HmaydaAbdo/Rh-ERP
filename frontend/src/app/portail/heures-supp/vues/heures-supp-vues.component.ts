@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { registerFrontendTool } from '@copilotkit/angular';
 import { debounceTime, finalize, Subject } from 'rxjs';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
@@ -18,6 +19,7 @@ import { libellePeriode } from '../../paie/paie-format';
 import { HeuresSuppExportMode, HeuresSuppSearchCriteria } from '../models/heures-supp.model';
 import { HeuresSuppService } from '../services/heures-supp.service';
 import { HeuresSuppExportEtat } from '../services/heures-supp-export-etat.service';
+import { outilFiltresHeuresSupp } from './heures-supp-outils-assistant';
 
 /** Tri affiché par défaut dans le tableau (mois décroissant) : sans le changer, le PDF reste classé par employé. */
 const TRI_PAR_DEFAUT = 'periode,desc';
@@ -102,6 +104,12 @@ export class HeuresSuppVuesComponent {
       this.equipeIds.set(this.lireIds(params.get('equipeIds')));
       this.fonctionIds.set(this.lireIds(params.get('fonctionIds')));
     });
+    // L'agent peut régler les filtres de cette page (outil côté navigateur, retiré avec la page) ; réservé au droit IA.
+    if (this.auth.hasPermission('IA_UTILISER')) {
+      registerFrontendTool(
+        outilFiltresHeuresSupp((queryParams) => void this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true }))
+      );
+    }
     this.changementTexte.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       void this.router.navigate([], { relativeTo: this.route, queryParams: { nom: this.nomPrenom() || null, cin: this.cin() || null, page: null }, queryParamsHandling: 'merge', replaceUrl: true });
     });
