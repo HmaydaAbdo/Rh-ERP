@@ -437,7 +437,7 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
   });
 });
 
-describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware officiel quand elles sont activées', () => {
+describe('vues libres (KAN-95) : rendues par le middleware officiel, coupées par l’interrupteur', () => {
   const DOCUMENT = '<html><body><p>Vue de test</p></body></html>';
   let agentOutil;
   let serveurs = [];
@@ -498,7 +498,7 @@ describe('vues libres (KAN-95) : coupées par défaut, rendues par le middleware
     return reponse.text();
   };
 
-  test('coupées par défaut : aucun événement de vue libre', async () => {
+  test('interrupteur éteint (VUES_LIBRES=false) : aucun événement de vue libre', async () => {
     const flux = await lancer(await demarrer(false));
 
     assert.ok(!flux.includes('open-generative-ui'));

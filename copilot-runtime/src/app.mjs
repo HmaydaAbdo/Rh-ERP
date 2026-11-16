@@ -87,7 +87,7 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt,
     forwardHeaders: { allow: ['authorization'] },
     a2ui: { injectA2UITool: true },
     // Vues libres (KAN-95) : le middleware officiel transforme l'outil `generateSandboxedUi` de l'agent en vue affichée dans une
-    // iframe isolée. Coupé par défaut (VUES_LIBRES) ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
+    // iframe isolée. Activé par `serveur.mjs` sauf VUES_LIBRES=false ; le navigateur n'accorde à la vue aucune fonction de l'hôte.
     ...(vuesLibres ? { openGenerativeUI: { agents: ['default'] } } : {}),
     // Dictée (KAN-93) : le service de transcription officiel de CopilotKit (API compatible OpenAI) pointé sur un Whisper
     // local sur CPU ; sans `stt`, le runtime annonce la capacité désactivée et la discussion n'affiche pas le micro.
