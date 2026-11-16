@@ -26,14 +26,6 @@ export const REPRISE_APRES_ESSAIS = 2;
   selector: 'app-surface-a2ui-francais',
   imports: [CopilotA2UIActivityRenderer, CopilotA2UIProgress, MessageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: [
-    `
-      /* Signalisation anglaise du composant officiel pendant son premier affichage : remplacée par la nôtre. */
-      app-surface-a2ui-francais ::ng-deep copilot-a2ui-recovery {
-        display: none;
-      }
-    `
-  ],
   template: `
     @if (avecSurface()) {
       <copilot-a2ui-activity-renderer [activityType]="activityType()" [content]="content()" [message]="message()" [agent]="agent()" />
