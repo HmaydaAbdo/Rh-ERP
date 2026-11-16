@@ -41,8 +41,9 @@ proposé.
 
 **Staport Intelligence (T8).** L'en-tête présente le monogramme officiel de Staport, le nom de l'assistant et la mention
 « Votre assistant numérique » ; le premier message explique que les services proposés dépendent des accès du compte.
-Barre de commande translucide au repos (`Ctrl K`), discussion ancrée à droite
-dès la première question, comme un chat d'assistant : pour chaque réponse, un bloc repliable
+L'icône flottante de l'assistant (ou `Ctrl K`) ouvre un **espace dédié à l'IA, plein écran** (route `/assistant`, KAN-91) :
+conversations titrées à gauche (reprise, renommage, suppression), discussion à droite, « Retour à l'application » vers
+l'écran d'origine ; le panneau latéral d'origine n'existe plus. Dans la discussion, comme un chat d'assistant : pour chaque réponse, un bloc repliable
 de raisonnement et d'outils, puis le texte et, si l'agent le demande, une surface A2UI composée à partir
 des résultats d'outils. L'accueil ne promet pas une liste fixe de domaines ; la réponse sur les capacités vient du
 catalogue MCP autorisé pour l'utilisateur. Aucun écran ERP n'est ouvert automatiquement. Plein écran sur téléphone,

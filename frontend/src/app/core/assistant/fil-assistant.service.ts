@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuid } from 'uuid';
 
@@ -8,6 +9,9 @@ import { AuthService } from '../auth/services/auth.service';
 const CLE = 'staport.assistant.fil';
 const CLE_UTILISE = 'staport.assistant.fil-utilise';
 const URL_CONVERSATIONS = 'ia/copilotkit/conversations';
+
+/** Adresse de l'espace Staport Intelligence (route de `app.routes.ts`). */
+export const ROUTE_ESPACE_ASSISTANT = '/assistant';
 
 /** Une conversation de la liste : le titre est le début de la première question, ou le nom donné par l'utilisateur. */
 export interface Conversation {
@@ -26,14 +30,15 @@ export interface Conversation {
 export class FilAssistant {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   /** Les conversations de l'utilisateur, la plus récente en tête (liste tenue par le runtime, KAN-81). */
   readonly conversations = signal<Conversation[]>([]);
   /** Liste des conversations affichée par-dessus la discussion. */
   readonly listeOuverte = signal(false);
   /** Panneau « Ce que l'assistant retient » (mémoire longue, KAN-84), affiché par-dessus la discussion. */
   readonly memoireOuverte = signal(false);
-  /** Panneau agrandi (bouton de l'en-tête) : la barre CopilotKit prend alors `width` de `AssistantComponent`. */
-  readonly agrandi = signal(false);
+  /** Écran d'où l'utilisateur est parti en ouvrant l'espace (KAN-91) : le « Retour » et le contexte d'écran s'y rapportent. */
+  readonly origine = signal<string | null>(null);
   private readonly courant = signal<string | null>(null);
 
   readonly fil = computed(() => {
@@ -44,6 +49,19 @@ export class FilAssistant {
     const fil = this.courant();
     return fil?.startsWith(`u${utilisateur}-`) ? fil : this.reprendre(utilisateur);
   });
+
+  /** Ouvre l'espace dédié à l'IA en retenant l'écran courant. */
+  ouvrirEspace(): void {
+    this.origine.set(this.router.url);
+    void this.router.navigateByUrl(ROUTE_ESPACE_ASSISTANT);
+  }
+
+  /** Quitte l'espace : retour à l'écran d'origine, ou à l'accueil si l'espace a été ouvert directement. */
+  quitter(): void {
+    const origine = this.origine();
+    this.origine.set(null);
+    void this.router.navigateByUrl(origine && !origine.startsWith(ROUTE_ESPACE_ASSISTANT) ? origine : '/');
+  }
 
   /** Commence une conversation vide ; l'ancienne reste dans la liste et dans la mémoire de l'agent. */
   nouveau(): void {

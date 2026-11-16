@@ -7,13 +7,18 @@ import { AssistantComponent } from './assistant.component';
 import { FilAssistant } from './fil-assistant.service';
 
 describe('AssistantComponent', () => {
+  const ouvrirEspace = vi.fn();
+  const quitter = vi.fn();
+
   beforeEach(() => {
+    ouvrirEspace.mockClear();
+    quitter.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: COPILOT_KIT_CONFIG, useValue: { enableInspector: false } },
-        // Fourni en production par la racine de l'assistant ; seul l'état « agrandi » sert ici.
-        { provide: FilAssistant, useValue: { agrandi: signal(false) } }
+        // Fourni en production par la racine de l'assistant ; seuls l'ouverture et la sortie de l'espace servent ici.
+        { provide: FilAssistant, useValue: { origine: signal<string | null>(null), ouvrirEspace, quitter } }
       ]
     });
   });
@@ -24,17 +29,27 @@ describe('AssistantComponent', () => {
     return fixture;
   }
 
-  it('s’ouvre et se ferme avec Ctrl K, sans laisser la touche à la page', () => {
+  it('l’icône de l’assistant ouvre l’espace dédié à l’IA', () => {
     const fixture = creer();
-    const assistant = fixture.componentInstance;
+    const lanceur = (fixture.nativeElement as HTMLElement).querySelector('button.lanceur') as HTMLButtonElement;
+    expect(lanceur.getAttribute('aria-label')).toBe('Ouvrir Staport Intelligence');
+
+    lanceur.click();
+    expect(ouvrirEspace).toHaveBeenCalledTimes(1);
+  });
+
+  it('Ctrl K ouvre l’espace sans laisser la touche à la page, et le referme depuis l’espace', () => {
+    const assistant = creer().componentInstance;
     const evenement = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true });
 
     assistant.raccourci(evenement);
-    expect(assistant.ouvert()).toBe(true);
+    expect(ouvrirEspace).toHaveBeenCalledTimes(1);
     expect(evenement.defaultPrevented).toBe(true);
 
+    // Dans l'espace : le même raccourci ramène à l'écran d'origine.
+    (assistant as unknown as { enEspace: () => boolean }).enEspace = () => true;
     assistant.raccourci(new KeyboardEvent('keydown', { key: 'K', metaKey: true }));
-    expect(assistant.ouvert()).toBe(false);
+    expect(quitter).toHaveBeenCalledTimes(1);
   });
 
   it('ignore les autres touches', () => {
@@ -43,7 +58,8 @@ describe('AssistantComponent', () => {
     assistant.raccourci(new KeyboardEvent('keydown', { key: 'k' }));
     assistant.raccourci(new KeyboardEvent('keydown', { key: 'j', ctrlKey: true }));
 
-    expect(assistant.ouvert()).toBe(false);
+    expect(ouvrirEspace).not.toHaveBeenCalled();
+    expect(quitter).not.toHaveBeenCalled();
   });
 
   it('suit le thème : la classe dark de la bibliothèque est posée en thème sombre', () => {
