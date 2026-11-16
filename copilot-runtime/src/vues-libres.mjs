@@ -13,7 +13,7 @@
 //    si l'inscription échoue, la vue n'est pas montrée.
 // La durée d'exécution se borne dans le navigateur (`frontend/src/app/core/assistant/vues-libres.ts`).
 import { EventType } from '@ag-ui/core';
-import { concatMap, defer, filter, mergeMap, of, tap } from 'rxjs';
+import { concatMap, defer, filter, mergeMap, tap } from 'rxjs';
 
 export const OUTIL_VUE_LIBRE = 'generateSandboxedUi';
 export const ACTIVITE_VUE_LIBRE = 'open-generative-ui';

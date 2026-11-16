@@ -152,3 +152,7 @@ Le jeu adverse des vues libres (KAN-284) a montré qu'un `<meta http-equiv="refr
 ## Repli SPA et dossier du build (2026-11-16)
 
 Un rechargement direct de `/carte` renvoyait « Ce site est inaccessible » : le dossier `carte/` du build (MapLibre) existe sur le disque, et `try_files $uri $uri/ /index.html` répondait par une redirection absolue vers le port interne (`http://localhost:8080/carte/`). Aucun test ne rechargeait une route de premier niveau portant le nom d'un dossier. Règle : le repli SPA de nginx est `try_files $uri /index.html` (jamais `$uri/`), et toute route Angular dont le nom est aussi un dossier du build se vérifie par un accès direct (`curl -I`) sur la pile déployée.
+
+## Contrôles locaux complets avant push (2026-11-16)
+
+La PR #195 a échoué en CI sur trois points que les contrôles ciblés ne voyaient pas : un import `of` inutilisé (ESLint du runtime), la nouvelle route `POST /parametres/vues-libres/ouvertures` absente de `AUDITEES` (test_audit) et le nombre de paramètres attendu (test_mcp, 6 devenu 11). Règle : une nouvelle route d'écriture ou un nouveau paramètre du catalogue se déclare dans `test_audit.py` et `test_mcp.py` dans le même commit, et `eslint . --max-warnings 0` se lance dans chaque module touché.
