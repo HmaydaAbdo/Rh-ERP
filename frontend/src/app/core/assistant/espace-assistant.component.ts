@@ -17,7 +17,7 @@ import { ListeConversationsComponent } from './liste-conversations.component';
   host: { class: 'contents' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="espace-assistant fixed inset-0 z-50 flex bg-surface text-text" role="region" aria-label="Staport Intelligence">
+    <section class="espace-assistant fixed inset-0 z-[500] flex bg-surface text-text" role="region" aria-label="Staport Intelligence">
       <aside class="hidden w-72 flex-none flex-col border-0 border-e border-solid border-border bg-surface-alt md:flex" aria-label="Conversations">
         <div class="flex items-center gap-2 px-3 py-3">
           <span class="relative size-(--control-height) flex-none" aria-hidden="true">
