@@ -83,7 +83,7 @@ modes exigent la passerelle LiteLLM ; sans elle ils sont ignorés. Le client Typ
 
 - Image multi-étapes, bases `python:3.14-slim` et `uv` épinglées par digest ; dépendances installées
   depuis `uv.lock` sans outils de développement ; utilisateur non privilégié `10001`.
-- Service Compose `ia` démarré par défaut (sans profil) après la tâche `litellm-cles`, système de fichiers en lecture seule, aucune capacité,
+- Service Compose `ia` démarré par défaut (sans profil) après `litellm` (sain), système de fichiers en lecture seule, aucune capacité,
   port `127.0.0.1:${IA_PORT}` (5003 par défaut).
 - Variables dans le `.env` racine unique : `IA_ENABLED`, `IA_LITELLM_API_KEY` (clé virtuelle
   Staport Intelligence, cinq groupes de production uniquement) ; les URL de la passerelle et du backend sont fixées par Compose.

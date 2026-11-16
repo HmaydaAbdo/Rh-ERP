@@ -140,7 +140,7 @@ def _jeton(
 
 @pytest.fixture
 def base_ia(creer_base: Callable[[str], str]) -> str:
-    """Une base vierge pour le service IA (URL au format psycopg), comme `ia-db` en production."""
+    """Une base vierge pour le service IA (URL au format psycopg), comme la base `ia` en production."""
     url = make_url(creer_base(f"ia_{uuid.uuid4().hex[:12]}"))
     return url.set(drivername="postgresql").render_as_string(hide_password=False)
 
