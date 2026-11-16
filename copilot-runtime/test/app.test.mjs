@@ -59,6 +59,14 @@ before(async () => {
       derniereAutorisationCapacites = requete.headers.authorization;
       return reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ piecesJointes: piecesJointesIa }));
     }
+    // Routes du service IA lues par le navigateur (KAN-87, KAN-84, KAN-267) : le simulé rend ce qu'il a reçu.
+    if (['/outils', '/memoire'].includes(requete.url) || requete.url.startsWith('/fichiers/')) {
+      let corpsRecu = '';
+      requete.on('data', (morceau) => (corpsRecu += morceau));
+      return requete.on('end', () => {
+        reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ methode: requete.method, url: requete.url, autorisation: requete.headers.authorization, corps: corpsRecu }));
+      });
+    }
     if (requete.method === 'DELETE') {
       suppressionsIa.push({ url: requete.url, autorisation: requete.headers.authorization });
       return reponse.writeHead(panneIa ? 500 : 204).end();
@@ -565,5 +573,32 @@ describe('vues libres (KAN-95) : toujours actives, rendues par le middleware off
     assert.equal(vues(flux), 0);
     assert.ok(!flux.includes('Vue de test'));
     assert.ok(flux.includes('RUN_FINISHED'), flux.slice(-600));
+  });
+});
+
+describe('routes du service IA relayées au navigateur (KAN-87, KAN-84, KAN-267)', () => {
+  test('exigent une authentification et le droit IA_UTILISER', async () => {
+    for (const chemin of ['/ia/outils', '/ia/memoire', '/ia/fichiers/a.xlsx']) {
+      assert.equal((await appeler(chemin)).status, 401, chemin);
+      assert.equal((await appeler(chemin, { jeton: 'jeton-sans-droit' })).status, 403, chemin);
+    }
+  });
+
+  test('relaient la route au service IA avec le jeton de l’utilisateur, sans le préfixe du relais', async () => {
+    const outils = JSON.parse((await appeler('/ia/outils', { jeton: 'jeton-1' })).texte);
+    assert.deepEqual([outils.methode, outils.url, outils.autorisation], ['GET', '/outils', 'Bearer jeton-1']);
+    const fichier = JSON.parse((await appeler('/ia/fichiers/rapport.xlsx', { jeton: 'jeton-1' })).texte);
+    assert.equal(fichier.url, '/fichiers/rapport.xlsx');
+  });
+
+  test('relaient aussi l’écriture de la mémoire, corps compris', async () => {
+    const reponse = await fetch(`${base}/ia/memoire`, {
+      method: 'PUT',
+      headers: { authorization: 'Bearer jeton-1', 'content-type': 'application/json' },
+      body: JSON.stringify({ contenu: 'Je préfère les tableaux.' })
+    });
+    const recu = await reponse.json();
+    assert.deepEqual([reponse.status, recu.methode, recu.url], [200, 'PUT', '/memoire']);
+    assert.equal(JSON.parse(recu.corps).contenu, 'Je préfère les tableaux.');
   });
 });

@@ -1,13 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import type { MockedObject } from 'vitest';
 
 import { fournirPermissions } from '../../../shared/testing/ecrans';
-import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
+import { EntrantEtat, libelleType } from '../entrant-etat';
 import { EntrantsMois } from '../models/entrant.model';
 import { EntrantService } from '../services/entrant.service';
-import { EntrantPageComponent, libelleType, severiteType } from './entrant-page.component';
+import { EntrantListComponent, severiteType } from './entrant-list.component';
 
 const OCTOBRE: EntrantsMois = {
   periode: '2026-10',
@@ -21,46 +21,38 @@ const OCTOBRE: EntrantsMois = {
   ]
 };
 
-describe('EntrantPageComponent', () => {
+describe('EntrantListComponent', () => {
   let service: MockedObject<Pick<EntrantService, 'entrantsDuMois' | 'exporterPdf'>>;
-  let fixture: ComponentFixture<EntrantPageComponent>;
+  let fixture: ComponentFixture<EntrantListComponent>;
 
-  function creer(permissions: string[] = ['EMPLOYEE_READ', 'EMPLOYEE_EXPORT'], requete: Record<string, string> = {}): void {
-    const parametres = new BehaviorSubject(convertToParamMap(requete));
+  function creer(): void {
+    const parametres = new BehaviorSubject(convertToParamMap({}));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        fournirPermissions(permissions).providers,
+        fournirPermissions(['EMPLOYEE_READ']).providers,
+        EntrantEtat,
         { provide: EntrantService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: parametres.value }, queryParamMap: parametres.asObservable() } }
       ]
     });
-    fixture = TestBed.createComponent(EntrantPageComponent);
+    fixture = TestBed.createComponent(EntrantListComponent);
     fixture.detectChanges();
   }
 
   beforeEach(() => {
-    service = { entrantsDuMois: vi.fn().mockReturnValue(of(OCTOBRE)), exporterPdf: vi.fn().mockReturnValue(of(new Blob(['pdf']))) } as unknown as MockedObject<
-      Pick<EntrantService, 'entrantsDuMois' | 'exporterPdf'>
-    >;
+    service = { entrantsDuMois: vi.fn().mockReturnValue(of(OCTOBRE)), exporterPdf: vi.fn() } as unknown as MockedObject<Pick<EntrantService, 'entrantsDuMois' | 'exporterPdf'>>;
   });
 
-  it('charge les entrants du mois et affiche les chiffres', () => {
+  it('affiche les chiffres du mois et le nombre de lignes', () => {
     creer();
 
     const racine = fixture.nativeElement as HTMLElement;
-    expect(racine.querySelector('h1')?.textContent).toContain('Entrants');
     const chiffres = racine.querySelector('.app-kpis')?.textContent ?? '';
     expect(chiffres).toContain('Entrants du mois');
     expect(chiffres).toContain('Nouvelles embauches');
     expect(chiffres).toContain('Retours');
     expect(racine.querySelector('.app-table-bar__total')?.textContent).toContain('2 entrants');
-  });
-
-  it('envoie le mois, les filtres et les types lus dans l’URL', () => {
-    creer(undefined, { periode: '2026-09', nom: 'ali', valeurs: 'RETOUR' });
-
-    expect(service.entrantsDuMois).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-09', nomPrenom: 'ali', types: ['RETOUR'] }));
   });
 
   it('avertit quand le mois n’est pas comparable et masque les chiffres', () => {
@@ -70,30 +62,6 @@ describe('EntrantPageComponent', () => {
     const racine = fixture.nativeElement as HTMLElement;
     expect(racine.querySelector('stp-message')?.textContent).toContain('Entrants indisponibles');
     expect(racine.querySelector('.app-kpis')).toBeNull();
-  });
-
-  it('exporte le PDF avec les mêmes filtres que la liste', () => {
-    creer(undefined, { periode: '2026-09', valeurs: 'RETOUR' });
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x');
-    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue();
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockReturnValue();
-
-    (fixture.componentInstance as unknown as { exporter(): void }).exporter();
-
-    expect(service.exporterPdf).toHaveBeenCalledWith(expect.objectContaining({ periode: '2026-09', types: ['RETOUR'] }));
-  });
-
-  it('cache l’export sans la permission EMPLOYEE_EXPORT', () => {
-    creer(['EMPLOYEE_READ']);
-
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Exporter en PDF');
-  });
-
-  it('signale l’échec du chargement', () => {
-    service.entrantsDuMois.mockReturnValue(throwError(() => new Error('503')));
-    creer();
-
-    expect(TestBed.inject(NotificationService).notifications().map((n) => n.summary)).toEqual(['Impossible de charger les entrants du mois.']);
   });
 
   it('libellés et couleurs du type d’entrée', () => {
