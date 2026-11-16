@@ -93,6 +93,11 @@ propriétaire : un middleware à risque (exécution de commandes) s'adopte avec 
   gardée : sortir de Deep Agents seulement pour un besoin précis qu'aucun middleware ne couvre.
 - **KAN-38, non applicable** : le sélecteur d'outils est un routage par embeddings sans appel de modèle, les surfaces sont
   déterministes, le juge utilise `openevals` et les sous-agents ont été écartés (KAN-261). Aucun code maison à remplacer.
+- **KAN-261, sous-agents par domaine : écartés sur mesure (2026-11-16)**. Variante `IA_SOUS_AGENTS=true` (un sous-agent Deep Agents par
+  compétence, outils propres, sortie structurée `ResultatDomaine`), banc de 71 cas, 1 répétition, comparée à la configuration
+  actuelle (95 % sur 133 exécutions servies, 91,5 % cumulé sur 213) : **25,4 % de réussite** (18 sur 71), latence médiane 30 s contre 6 à 13 s,
+  p95 180 s, 155 erreurs d'outils contre 6. La majorité des échecs (47 sur 53) vient de l'outil de délégation `task`, hors de la liste
+  d'outils admise. Désactivée par défaut (`sous_agents: false`), conservée derrière la variable pour une nouvelle mesure si Deep Agents évolue.
 - **KAN-41, veille** : `ag-ui-langgraph` 0.0.47 reste sur `astream_events` v2 et n'expose ni `control` ni `durability` ;
   notre sous-classe `AgentAGUI` les ajoute par `get_stream_kwargs`. Signalement publié :
   [ag-ui-protocol/ag-ui#3403](https://github.com/ag-ui-protocol/ag-ui/issues/3403). À retirer quand l'éditeur les prend en charge.
