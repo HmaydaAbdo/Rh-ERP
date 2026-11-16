@@ -378,3 +378,28 @@ exemple une sortie saisie sans bulletin) et il est voulu. Les PDF regroupent par
 chantier » en dernier) ; l'écran reste un tableau à plat. Les filtres de l'écran (mois, nom, CIN, fonctions, chantiers, équipes,
 motifs ou types) sont dans l'URL et sont exactement ceux envoyés au PDF. L'IA n'expose pas encore d'outil MCP pour les entrants :
 il demande le protocole d'évaluation des agents (à planifier).
+
+#### Les trois vues d'Entrants et de STC / Sortie (KAN-287)
+
+Les routes `/entrants` et `/sorties` suivent le motif des autres domaines : une coque (`vues/<domaine>-vues.component.ts`)
+porte le titre, les onglets Tabulaire, Cartes et Analytique, la barre du mois et des filtres, et l'export PDF ; trois vues
+s'affichent dessous (`/entrants`, `/entrants/cartes`, `/entrants/analytique`, de même pour `/sorties`).
+
+- **Un seul chargement par mois.** La coque fournit l'état du mois (`EntrantEtat`, `SortieEtat`, qui étendent `EtatMouvement`
+  de `portail/mouvement/`) : le mois et les filtres viennent de l'URL, la liste est chargée une fois et lue par les trois
+  vues. Changer d'onglet ne recharge rien ; changer de mois ou de filtre recharge une fois. Les onglets gardent le mois et
+  les filtres dans l'URL.
+- **Tabulaire.** Les chiffres du mois puis le tableau (colonnes au choix), comme avant ; « Entrants indisponibles » quand le
+  mois ou le précédent n'a aucun bulletin.
+- **Cartes.** Une carte par groupe, au choix par chantier, équipe, fonction ou catégorie (type d'entrée, motif) : nombre,
+  part du mois, répartition par catégorie, montant des bulletins (avec `PAIE_READ`). « Voir la liste » ramène au tableau
+  filtré sur le groupe. Pas de lien « sans fonction » (les fonctions n'ont pas de filtre « sans »).
+- **Analytique.** Chiffres du mois, puis la répartition par chantier, équipe et fonction en barres empilées par catégorie
+  (douze groupes au plus, tous dans le tableau de données qui accompagne chaque graphique).
+- **Pas de nouvelle route d'API.** Les agrégats sont calculés dans le navigateur sur la liste du mois que renvoient déjà
+  `/employees/entrants-mois` et `/employees/sorties-mois` (liste complète, non paginée, avec chantier, équipe et fonction de
+  chaque ligne). **Limite connue** : l'évolution sur plusieurs mois n'est pas proposée ; elle demanderait une route d'agrégat
+  (par exemple un nombre d'entrants et de sortants par mois, par chantier), à décider avec le propriétaire.
+- **Assistant.** Chaque coque enregistre un outil côté navigateur, réservé à `IA_UTILISER`, qui règle le mois et les filtres de
+  la page ouverte comme la barre : `entrants_regler_filtres` et `sorties_regler_filtres` (`filtres/<domaine>-outils-assistant.ts`).
+  L'agent ne change pas de page et ne lit rien.
