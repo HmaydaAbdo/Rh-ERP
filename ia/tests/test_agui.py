@@ -181,8 +181,8 @@ def test_les_refus_sont_des_erreurs_http_avant_tout_flux(
     assert not acces.jetons_agent  # aucun catalogue demandé
 
 
-@pytest.mark.parametrize("question", [None, "   ", "x" * 2001])
-def test_une_question_absente_vide_ou_trop_longue_est_refusee(question: str | None) -> None:
+@pytest.mark.parametrize("question", [None, "   "])
+def test_une_question_absente_ou_vide_est_refusee(question: str | None) -> None:
     assert _poster(_masse(), AccesSimule([]), _corps(question)).status_code == 422
 
 
@@ -400,7 +400,13 @@ def test_une_question_refusee_par_le_garde_fou_est_expliquee_et_ne_bloque_pas_la
         creer_app(_settings(), fabrique=_fabrique(faux), acces=acces, routage=_routage_paie, memoire=memoire_processus)
     ) as client:
         blocage = _lire(client.post("/agui", json=_corps(refusee), headers=entetes).text)
-        suite = _lire(client.post("/agui", json=_corps(QUESTION) | {"runId": "r2"}, headers=entetes).text)
+        # Comme le navigateur : tout l'historique est renvoyé, la question refusée (m1) comprise.
+        historique = _corps(QUESTION) | {"runId": "r2"}
+        historique["messages"] = [
+            {"id": "m1", "role": "user", "content": refusee},
+            {"id": "m2", "role": "user", "content": QUESTION},
+        ]
+        suite = _lire(client.post("/agui", json=historique, headers=entetes).text)
 
     erreur = next(e for e in blocage if e["type"] == EventType.RUN_ERROR)
     assert erreur["code"] == "DEMANDE_BLOQUEE" and erreur["message"] == MESSAGE_BLOQUE
@@ -609,3 +615,10 @@ def test_les_capacites_n_ouvrent_les_pieces_jointes_qu_avec_un_antivirus() -> No
             assert client.get("/capacites").status_code == 401
             reponse = client.get("/capacites", headers={"Authorization": "Bearer c"})
             assert reponse.json() == {"piecesJointes": attendu}
+
+
+def test_une_question_n_a_aucune_longueur_maximale() -> None:
+    """Décision du propriétaire : aucun plafond appliqué par nous. Une limite de 2 000 caractères refusait aussi la
+    requête de suggestions de CopilotKit (plus de 3 000 caractères) : aucune suggestion ne venait."""
+    longue = "Propose des suggestions. " * 400
+    assert _poster(_masse(), AccesSimule([outil("paie_indicateurs", INDICATEURS)]), _corps(longue)).status_code == 200

@@ -568,8 +568,9 @@ contournement trouvé devient un cas de régression avant sa correction.
   échec explicite, pas une réponse partielle silencieuse. Les entrées hors sujet ou abusives reçoivent
   un refus poli ; le contenu offensant visant une personne n'est ni produit ni relayé.
   Un refus du garde-fou de LiteLLM (« Content blocked ») n'est pas une panne : le service émet un `RUN_ERROR` de code
-  `DEMANDE_BLOQUEE` au message explicite, retire la question refusée du fil (`RemoveMessage`, sinon chaque message suivant
-  serait refusé) et l'interface affiche ce message au lieu de « réessayez ».
+  `DEMANDE_BLOQUEE` au message explicite, garde la question refusée dans le fil sous un texte neutre marqué (même identifiant) et la retire de l'entrée des tours
+  suivants : le navigateur renvoie tout l'historique, et l'intégration AG-UI rajoute au fil le message absent ou rétablit le texte
+  d'un message modifié, donc chaque message suivant serait refusé (`RemoveMessage` ne suffit pas), et l'interface affiche ce message au lieu de « réessayez ».
 * **Cycle de vie des modèles.** Les modèles servis sont identifiés par une version exacte lorsque le
   fournisseur en publie une. Un changement de modèle, de prompt ou de graphe passe par le jeu de
   référence, puis par une période de comparaison (même trafic en ombre ou part réduite du trafic)
