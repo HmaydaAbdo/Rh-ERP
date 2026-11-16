@@ -1,8 +1,8 @@
 # Client AG-UI de test (T7)
 
 Client TypeScript de test uniquement : le client officiel `@ag-ui/client` (`HttpAgent`) contre le point
-d'entrée `POST /agui` du service IA. Il vérifie le cycle complet (outil MCP, réponse vérifiée,
-mascotte), l'arrêt par le client et le refus d'un jeton invalide. Le client Angular du panneau (T8) est
+d'entrée `POST /agui` du service IA. Il vérifie le cycle complet (outil MCP, réponse vérifiée),
+l'arrêt par le client et le refus d'un jeton invalide. Le client Angular du panneau (T8) est
 un autre sujet ; ce dossier ne fait pas partie du runtime.
 
 Son lanceur est `api/tests/test_ia_lanceurs.py` (`IA_AGUI=1`, KAN-234) : il démarre l'API de test, le service IA et
