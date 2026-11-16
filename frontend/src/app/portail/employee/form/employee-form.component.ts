@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField, FormRoot, maxLength, min, required, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -27,6 +27,9 @@ const TYPE_SALAIRE_OPTIONS: { label: string; value: TypeSalaire }[] = [
   { label: 'Mensuel', value: 'MENSUEL' },
   { label: 'Journalier (tarif d’une journée)', value: 'JOURNALIER' }
 ];
+
+/** Même règle que l'API (`type_pour`) : jusqu'à 500 DH journalier, au-delà mensuel. */
+const SEUIL_JOURNALIER = 500;
 
 function toIsoDate(date: Date): string {
   const year = date.getFullYear();
@@ -75,6 +78,8 @@ export class EmployeeFormComponent {
   /** Le salaire est une donnée de paie : ses champs ne sont proposés qu'à qui a `PAIE_READ` (le serveur ignore sinon ce qui est saisi). */
   protected readonly voitLaPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
 
+  /** Dernier salaire pour lequel le type a été proposé : le type ne se recalcule que quand le salaire change. */
+  private salaireSuivi: number | null = null;
   private readonly employeeId = signal<number | null>(null);
   private readonly version = signal<number | null>(null);
   protected readonly isEditMode = computed(() => this.employeeId() !== null);
@@ -137,6 +142,19 @@ export class EmployeeFormComponent {
       this.employeeId.set(id);
       this.charger();
     }
+    // Le type se propose tout seul à chaque changement du salaire ; l'utilisateur peut ensuite le modifier.
+    effect(() => {
+      const salaire = this.form.salaire().value();
+      untracked(() => this.proposerLeType(salaire));
+    });
+  }
+
+  private proposerLeType(salaire: number | null): void {
+    if (salaire === this.salaireSuivi) {
+      return;
+    }
+    this.salaireSuivi = salaire;
+    this.form.typeSalaire().value.set(salaire === null ? null : salaire <= SEUIL_JOURNALIER ? 'JOURNALIER' : 'MENSUEL');
   }
 
   protected charger(): void {
@@ -149,6 +167,7 @@ export class EmployeeFormComponent {
     this.employeeService.getById(id).pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false))).subscribe({
       next: (employee) => {
         this.version.set(employee.version);
+        this.salaireSuivi = employee.salaire; // le type enregistré (éventuellement choisi à la main) est conservé
         this.modele.set({
           nomPrenom: employee.nomPrenom,
           cin: employee.cin,

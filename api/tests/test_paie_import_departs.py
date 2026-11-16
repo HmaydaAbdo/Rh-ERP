@@ -273,7 +273,7 @@ def test_import_atomique_un_depart_deja_enregistre_annule_toute_l_importation(
     assert _statut(plateforme, jeu.retour)[0] == "INACTIF"
 
 
-def test_un_retour_sans_type_de_salaire_est_refuse_et_annule_l_import(
+def test_un_retour_deduit_le_type_de_salaire_du_montant_au_lieu_de_le_refuser(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
 ) -> None:
     with plateforme.moteur.begin() as c:
@@ -281,10 +281,13 @@ def test_un_retour_sans_type_de_salaire_est_refuse_et_annule_l_import(
 
     reponse = _importer(plateforme, _entetes(connecter), jeu, _classeur(jeu), [])
 
-    assert reponse.status_code == 400, reponse.text
-    assert reponse.json()["message"] == "Le type de salaire de Import D doit être renseigné avant son retour"
-    assert _bulletins(plateforme, jeu) == 0
-    assert _statut(plateforme, jeu.retour)[0] == "INACTIF"
+    assert reponse.status_code == 200, reponse.text
+    assert _statut(plateforme, jeu.retour)[0] == "ACTIF"
+    with plateforme.moteur.connect() as c:
+        salaire, type_salaire = c.execute(
+            text("SELECT salaire, type_salaire FROM employe WHERE id = :e"), {"e": jeu.retour}
+        ).one()
+    assert type_salaire == ("JOURNALIER" if salaire <= 500 else "MENSUEL")
 
 
 @pytest.fixture

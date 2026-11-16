@@ -20,7 +20,6 @@ const ANALYSE: PaieImportAnalyse = {
       numeroLigne: 6,
       cin: 'AB9',
       nomPrenom: 'ALI ALAOUI',
-      typeSalaire: 'MENSUEL',
       champs: [
         { champ: 'chantier', base: 'C059', fichier: 'C168' },
         { champ: 'salaire', base: '4000.00', fichier: '4500' }
@@ -107,7 +106,7 @@ describe('PaieImportWizardComponent', () => {
       .toEqual(['C059 devient C168', '4 000 devient 4 500']);
 
     (Array.from(dialogue().querySelectorAll('button')).find((x) => x.textContent?.includes('Mettre à jour et passer au suivant')) as HTMLButtonElement).click();
-    expect(service.corrigerImport).toHaveBeenCalledWith(expect.any(File), '2026-10', { aligner: [{ employeId: 9, typeSalaire: 'MENSUEL' }], creer: [] });
+    expect(service.corrigerImport).toHaveBeenCalledWith(expect.any(File), '2026-10', { aligner: [{ employeId: 9 }], creer: [] });
   });
 
   it('un mois bloqué n’affiche qu’un message et ne laisse rien avancer', async () => {

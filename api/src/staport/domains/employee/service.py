@@ -241,8 +241,9 @@ class ServiceEmployee:
                 chantier_id=r.chantier_id,
                 equipe_id=r.equipe_id,
                 salaire=r.salaire if voit_paie else None,
-                type_salaire=r.type_salaire if voit_paie else None,
             )
+            if voit_paie and r.type_salaire is not None:
+                x.type_salaire = r.type_salaire  # choix explicite ; sinon le modèle l'a déduit du salaire
             s.add(x)
             await s.flush()
             cible.identifiant = x.id
@@ -271,7 +272,9 @@ class ServiceEmployee:
             )
             x.chantier_id, x.equipe_id = (r.chantier_id, r.equipe_id) if r.statut.value == "ACTIF" else (None, None)
             if voit_paie:
-                x.salaire, x.type_salaire = r.salaire, r.type_salaire
+                x.salaire = r.salaire  # le modèle Employee déduit le type du montant
+                if r.type_salaire is not None:
+                    x.type_salaire = r.type_salaire  # choix explicite de l'utilisateur
             await s.flush()
             return await reponse(s, x)
 

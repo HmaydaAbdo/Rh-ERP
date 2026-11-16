@@ -1,3 +1,4 @@
+import { ApplicationRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
@@ -237,16 +238,18 @@ describe('EmployeeFormComponent', () => {
       expect(racine().querySelector('#typeSalaire')).not.toBeNull();
     });
 
-    it('refuse un salaire sans son type, puis envoie l’équipe, le salaire et le type ensemble', async () => {
+    it('propose le type d’après le salaire, que l’utilisateur peut modifier, puis envoie l’équipe, le salaire et le type', async () => {
       await afficher(undefined, ['EMPLOYEE_WRITE', 'PAIE_READ']);
       await remplir();
       formulaire().salaire().value.set(120);
 
-      await envoyer();
-      expect(service.create).not.toHaveBeenCalled();
-      expect(erreurs()).toContain('Renseignez le salaire et son type ensemble.');
-
-      formulaire().typeSalaire().value.set('JOURNALIER');
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(formulaire().typeSalaire().value()).toBe('JOURNALIER'); // 120 DH : journalier, proposé automatiquement
+      formulaire().salaire().value.set(5500);
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(formulaire().typeSalaire().value()).toBe('MENSUEL');
+      formulaire().typeSalaire().value.set('JOURNALIER'); // l’utilisateur garde la main
+      formulaire().salaire().value.set(120);
       formulaire().equipeId().value.set(5);
       await envoyer();
       expect(service.create).toHaveBeenCalledWith(expect.objectContaining({ equipeId: 5, salaire: 120, typeSalaire: 'JOURNALIER' }));

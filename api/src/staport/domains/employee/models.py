@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import BigInteger, Date, ForeignKey, Identity, Integer, Numeric, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from staport.platform.base_de_donnees import Base, version_suivante
 
@@ -16,6 +16,18 @@ class EmployeeStatut(StrEnum):
 class TypeSalaire(StrEnum):
     MENSUEL = "MENSUEL"
     JOURNALIER = "JOURNALIER"
+
+
+SEUIL_JOURNALIER = Decimal(500)
+
+
+def type_pour(salaire: Decimal) -> TypeSalaire:
+    """Règle unique du type de salaire, jamais saisie par un utilisateur.
+
+    Jusqu'à 500 DH (les journaliers vont de 80 à 200 DH) : journalier ; au-delà (les mensuels commencent à 2 500 DH) :
+    mensuel. Un type qui contredit le montant donne un salaire horaire faux (5 500 DH « journalier » = 550 DH/h, au
+    lieu de 21 DH/h)."""
+    return TypeSalaire.JOURNALIER if salaire <= SEUIL_JOURNALIER else TypeSalaire.MENSUEL
 
 
 class Employee(Base):
@@ -34,6 +46,12 @@ class Employee(Base):
     salaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
     type_salaire: Mapped[TypeSalaire | None] = mapped_column(String(20))
     statut: Mapped[EmployeeStatut] = mapped_column(String(20), nullable=False, default=EmployeeStatut.ACTIF)
+
+    @validates("salaire")
+    def _deduire_le_type(self, _cle: str, salaire: Decimal | None) -> Decimal | None:
+        """Chaque écriture du salaire (saisie, import, reprise du bulletin) recalcule son type par la règle unique."""
+        self.type_salaire = None if salaire is None else type_pour(salaire)
+        return salaire
 
 
 class EmployeeSortie(Base):

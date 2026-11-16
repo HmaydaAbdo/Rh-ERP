@@ -199,8 +199,6 @@
               <stp-date-input [ariaLabel]="'Date de naissance de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateNaissance ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateNaissance: $event })" /></label>
               <label class="app-controle__champ"><span>Date d’embauche</span>
               <stp-date-input [ariaLabel]="'Date d’embauche de ' + (inconnu.nomPrenom ?? inconnu.cin)" [value]="store.creations()[inconnu.numeroLigne]?.dateEmbauche ?? null" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { dateEmbauche: $event })" /></label>
-              <label class="app-controle__champ"><span>Type de salaire</span>
-              <stp-select [ariaLabel]="'Type de salaire de ' + (inconnu.nomPrenom ?? inconnu.cin)" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.creations()[inconnu.numeroLigne]?.typeSalaire ?? store.typeSalairePropose(inconnu.salaire)" (valueChange)="store.saisirCreation(inconnu.numeroLigne, { typeSalaire: $any($event) })" /></label>
             </div>
           }
         </article>
@@ -210,7 +208,7 @@
             <button stp-button variant="secondary" icon="chevrons-right" type="button" (click)="store.passer()">Passer</button>
           }
           @if (store.peutCorriger()) {
-            <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne, inconnu.salaire) || store.occupe()" (click)="store.creer(inconnu.numeroLigne, inconnu.salaire)">Créer et passer au suivant</button>
+            <button stp-button icon="user-plus" type="button" [disabled]="!store.creationComplete(inconnu.numeroLigne) || store.occupe()" (click)="store.creer(inconnu.numeroLigne)">Créer et passer au suivant</button>
           }
         </div>
         @if (store.peutCorriger() && analyse.cinInconnus.length > 1) {
@@ -264,12 +262,6 @@
                 </div>
               }
             </dl>
-            @if (store.peutCorriger() && salaireChange(ecart.champs)) {
-              <div class="app-cas__champs">
-                <label class="app-controle__champ"><span>Type de salaire</span>
-                <stp-select [ariaLabel]="'Type de salaire de ' + ecart.nomPrenom" [options]="typesSalaire" placeholder="Type de salaire" [value]="store.typeSalairePourEcart(ecart.employeId, ecart.typeSalaire)" (valueChange)="store.choisirType(ecart.employeId, $any($event))" /></label>
-              </div>
-            }
           </article>
           <div class="app-cas__actions">
             @if (sous.elements.length > 1) {

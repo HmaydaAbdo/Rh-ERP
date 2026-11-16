@@ -201,17 +201,23 @@ def test_retour_apres_depart_par_un_bulletin_plus_recent(
     assert _departs(plateforme, jeu) == [(208801, "STC")]
 
 
-def test_retour_refuse_sans_type_de_salaire(
+def test_retour_reprend_le_salaire_et_deduit_le_type_du_montant(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
 ) -> None:
     entetes = _entetes(connecter)
     _creer(plateforme, entetes, jeu, 1, observation="STC")
     with plateforme.moteur.begin() as c:
-        c.execute(text("UPDATE employe SET type_salaire = NULL WHERE id = :e"), {"e": jeu.employe})
+        c.execute(
+            text("UPDATE employe SET type_salaire = 'JOURNALIER' WHERE id = :e"), {"e": jeu.employe}
+        )  # donnée erronée
     reponse = plateforme.client.post("/paie", headers=entetes, json=_corps(jeu, 2))
-    assert reponse.status_code == 409
-    assert "type de salaire" in reponse.text
-    assert _fiche(plateforme, jeu)["statut"] == "INACTIF"
+    assert reponse.status_code == 201, reponse.text
+    assert _fiche(plateforme, jeu)["statut"] == "ACTIF"
+    with plateforme.moteur.connect() as c:
+        salaire, type_salaire = c.execute(
+            text("SELECT salaire, type_salaire FROM employe WHERE id = :e"), {"e": jeu.employe}
+        ).one()
+    assert type_salaire == ("JOURNALIER" if salaire <= 500 else "MENSUEL")
 
 
 def test_sorties_du_mois_detaillent_le_dernier_bulletin_et_taisent_la_paie_sans_droit(
