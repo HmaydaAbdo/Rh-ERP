@@ -131,32 +131,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # Une seule exécution, avec le propriétaire du schéma ; le serveur API ne reçoit pas ses identifiants.
-  api-migrate:
-    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
-    restart: "no"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    entrypoint: ["python", "-m", "staport.migrations.deploiement"]
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB}
-      DB_MIGRATION_USER: ${POSTGRES_USER}
-      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_USER: ${POSTGRES_APP_USER:?POSTGRES_APP_USER est obligatoire}
-      DB_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD est obligatoire}
-      PGAUDIT_ENABLED: "true"
-    read_only: true
-    cap_drop: ["ALL"]
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-    networks:
-      - db-net
-
   api:
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -165,12 +139,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      api-migrate:
-        condition: service_completed_successfully
       phoenix:
         condition: service_healthy
         required: false
     environment:
+      # Migrations Alembic au démarrage (api/entrypoint.sh) avec le propriétaire du schéma ; ces deux identifiants sont retirés
+      # de l'environnement du serveur avant son lancement.
+      DB_MIGRATION_USER: ${POSTGRES_USER}
+      DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD}
+      PGAUDIT_ENABLED: "true"
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}

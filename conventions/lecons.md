@@ -135,4 +135,4 @@ Dans un script Python passé par l'outil Bash, `\x00` ou `\n` arrive au script c
 Trois conteneurs ponctuels (`phoenix-db-init`, `litellm-cles`) et deux instances PostgreSQL de plus (`litellm-db`, `ia-db`) alourdissaient la pile
 d'un déploiement client. **À faire :** initialiser dans le conteneur qui détient déjà le droit nécessaire : l'entrée de l'image
 PostgreSQL crée les comptes et bases de service (idempotent, `CONNECT` retiré à `PUBLIC`), l'entrée de l'image LiteLLM enregistre
-ses clés ; ne garder à part que ce qui isole un secret (`api-migrate` : mot de passe propriétaire du schéma).
+ses clés ; l'API migre elle-même au démarrage (`api/entrypoint.sh`), comme Flyway dans Spring Boot, et retire les identifiants propriétaire de l'environnement avant le serveur. Plus aucun conteneur ponctuel.
