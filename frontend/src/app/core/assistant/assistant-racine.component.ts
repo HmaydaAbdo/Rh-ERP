@@ -64,7 +64,13 @@ export class AssistantRacineComponent {
       // (tableau, indicateurs, graphique), aux couleurs Staport.
       // `includeSchema: false` : le schéma du catalogue et les consignes A2UI ne partent pas à chaque question (près de
       // 7 000 jetons par appel de modèle) ; le service IA les donne au seul sous-agent qui compose les surfaces.
-      a2ui: { catalog: catalogueErp, includeSchema: false },
+      // Reprise (KAN-96) : le serveur valide chaque surface contre le catalogue fermé et la fait refaire au plus trois fois ;
+      // la reprise n'est montrée qu'après 2 s ou 2 essais, et les diagnostics techniques restent cachés à l'utilisateur.
+      a2ui: {
+        catalog: catalogueErp,
+        includeSchema: false,
+        recovery: { showAfterMs: 2000, showAfterAttempts: 2, debugExposure: 'hidden' }
+      },
       // Vues libres (KAN-95) : pas d'`openGenerativeUI` ici, donc ni outil ni rendu tant que le runtime ne les annonce pas
       // (VUES_LIBRES, coupé par défaut) ; le moteur n'a de toute façon aucune fonction de l'hôte (vues-libres.ts).
       // Pas de consultations d'outils en brut (nom technique, statut en anglais) : le raisonnement replié dit déjà ce que

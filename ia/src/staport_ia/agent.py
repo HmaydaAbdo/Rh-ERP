@@ -253,6 +253,8 @@ def _parametres_a2ui() -> dict[str, Any]:
     composants = {**catalogue["components"], **erp["components"]}
     return {
         "catalog": {"components": composants},
+        # Reprise (KAN-96) : un essai invalide est renvoyé au sous-agent avec ses erreurs, au plus trois essais en tout.
+        "recovery": {"maxAttempts": 3},
         "guidelines": {
             "design_guidelines": f"{DEFAULT_DESIGN_GUIDELINES}\n{CONSIGNES_SURFACE}",
             "composition_guide": _guide_composition(composants),
