@@ -76,6 +76,8 @@ tous rendus par des composants Staport du catalogue versionné — avec transiti
 à la vue classique en un clic. Clavier, lecteur d'écran, mobile et `prefers-reduced-motion` sont
 pris en charge ; chaque surface a un repli texte.
 
+**Identité de l'espace (KAN-102).** Accent saphir propre à l'IA, fond aurore, panneaux de verre mat, étincelle repère sur chaque réponse, accueil en deux lignes avec questions proposées en cartes, défilement avec fondus aux bords, animations décoratives coupées en mouvement réduit. Bouton de thème dans le pied de la barre latérale (dans l'en-tête sur téléphone), car l'espace couvre la barre de l'application.
+
 **Pas de mascotte.** Décision du propriétaire du 2026-11-16 (KAN-100 abandonné) : aucun personnage animé, aucun Rive,
 aucun événement dédié. Le retour visuel pendant le travail de l'agent est celui de CopilotKit (raisonnement et appels d'outils).
 

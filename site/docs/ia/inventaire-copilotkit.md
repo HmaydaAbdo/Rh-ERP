@@ -21,18 +21,23 @@ gratuites et auto-hébergeables comptent ; CopilotKit Intelligence (hébergé) e
 | Inspecteur de développement | **Coupé volontairement** | `enableInspector: false` (KAN-98) |
 | Contrat de production | **Appliqué** | KAN-97 |
 | Outils côté navigateur (`registerFrontendTool`) | **Utilisé (KAN-270)** | un outil `*_regler_filtres` par page de liste (Employés, Chantiers, Équipes, Fonctions, Paie, Heures supp.) : l'agent règle les filtres de la page ouverte, sans navigation, retiré avec la page, réservé au droit `IA_UTILISER` |
-| `registerHumanInTheLoop`, `registerComponent` | **À adopter (KAN-270)** | selon les besoins des pages |
-| Surfaces `CopilotSidebar` et `CopilotPopup` | **Non utilisées** | l'espace IA plein écran et le panneau maison du KAN-91 les remplacent |
-| Interface sans chat (headless), emplacements (slots), CSS | **Partiel** | thème Staport prévu au KAN-102 |
+| `registerHumanInTheLoop` | **Reporté à l'épopée E13 (KAN-285)** | première action d'écriture proposée par l'agent ; choix à faire avec `injectInterrupt` (déjà utilisé), une seule voie par cas |
+| `registerComponent` | **Non utilisé** | seulement si un affichage fixe ne peut pas passer par le catalogue A2UI |
+| Surfaces `CopilotSidebar` et `CopilotPopup` | **Non utilisées** | l'espace IA plein écran et le panneau maison du KAN-91 les remplacent ; seulement si un mode d'affichage compact est demandé |
+| Emplacements (slots), CSS | **Utilisés (KAN-102)** | variables CSS reliées aux jetons, message de raisonnement (emplacement officiel), identité de l'espace IA (verre mat, saphir, animations) dans `_assistant.scss` ; l'accueil et la saisie n'ont pas d'emplacement en Angular 0.6.0, ils se stylent par leurs classes stables |
+| Interface sans chat (headless) | **Non utilisée** | la discussion préconstruite suffit ; à rouvrir si une interface qui ne ressemble pas à un chat est demandée |
 | `injectCapabilities` | **Utilisée (KAN-270)** | pièces jointes lues dans les capacités AG-UI du runtime ; relais maison supprimé |
-| `injectCopilotKitConfig`, `CopilotKitAgentContext`, `selfManagedAgents` | **En cours de décision (KAN-270)** | doublon de `connectAgentContext` (déjà utilisée) ; `selfManagedAgents` contourne le runtime |
-| MCP Apps (`provideMCPApps`) | **Écarté** | décision du KAN-94 |
+| `CopilotKitAgentContext` | **Non adopté, doublon** | `connectAgentContext` est la voie officielle déjà utilisée |
+| `injectCopilotKitConfig` | **À adopter au besoin** | aucun composant ne relit la configuration |
+| `selfManagedAgents` | **Exclu de la production** | contourne le runtime Node et ses contrôles ([contrat de production](contrat-de-production.md)) |
+| MCP Apps (`provideMCPApps`) | **Adopté, épopée E22 (KAN-286)** | décision du propriétaire du 2026-11-16 : appliqué à tout le projet, domaine par domaine, avec la politique de contenu des vues libres ; aucun serveur MCP ne renvoie encore de ressource d'interface |
 | Fils enrichis (`injectThreads`), mémoires (`injectMemories`), inspection avancée | **Hors périmètre** | exigent Intelligence (hébergé), exclu |
 
 ## Conclusion
 
-Toutes les fonctions gratuites utiles à un agent au niveau de la page sont utilisées. Les trois lacunes assumées sont les outils côté
-navigateur, les surfaces latérales de la bibliothèque et l'interface sans chat ; elles se rouvrent avec KAN-101 et KAN-102, pas avant.
+Toutes les fonctions gratuites et officielles de CopilotKit Angular sont soit utilisées, soit planifiées dans une épopée avec un déclencheur
+écrit, soit écartées avec une raison (doublon, contournement des contrôles, hébergement payant). Aucune n'est restée sans décision :
+`registerHumanInTheLoop` va en E13 (KAN-285), MCP Apps en E22 (KAN-286), `selfManagedAgents` est exclu de la production.
 
 ## Déclencheurs d'adoption (décision du propriétaire, 2026-11-16)
 
@@ -40,11 +45,12 @@ Une fonction gratuite et officielle qui n'a pas encore de cas d'usage s'adopte *
 
 | Fonction | Déclencheur |
 |---|---|
-| `registerHumanInTheLoop` | première action d'écriture proposée par l'agent (épopée d'écriture, accord humain obligatoire) |
-| MCP Apps (`provideMCPApps`, `mcpApps.servers` du runtime) | premier serveur MCP qui renvoie une ressource d'interface ; la limite d'identité (le runtime doit joindre MCP avec le jeton de l'utilisateur) se règle alors |
-| Emplacements (slots), interface sans chat, CSS | thème Staport (KAN-102) |
+| `registerHumanInTheLoop` | première action d'écriture proposée par l'agent : tâche KAN-285 (E13.7), avec KAN-103 |
+| MCP Apps (`provideMCPApps`, `mcpApps.servers` du runtime) | épopée E22 (KAN-286) ; la limite d'identité (le runtime doit joindre MCP avec le jeton de l'utilisateur) s'y règle |
+| Emplacements (slots), CSS | fait avec le thème Staport (KAN-102) ; interface sans chat : si une interface qui n'est pas un chat est demandée |
 | `registerComponent` | seulement si un affichage fixe ne peut pas passer par le catalogue A2UI |
 | `selfManagedAgents` | jamais en production (contourne le runtime et ses contrôles) ; agents locaux de test seulement |
+| `CopilotKitAgentContext`, `injectCopilotKitConfig` | `connectAgentContext` reste la voie du contexte ; `injectCopilotKitConfig` le jour où un composant relit la configuration |
 | Sidebar, Popup | seulement si un mode d'affichage compact est demandé |
 
 ## Offre Intelligence relue le 2026-11-16

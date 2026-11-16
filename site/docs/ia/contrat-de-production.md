@@ -8,8 +8,10 @@ Page de référence : *production lifecycle* de la documentation officielle Copi
 | Hydratation et rendu serveur | **Non applicable** : application purement cliente, pas de SSR. À revoir si le rendu serveur est adopté un jour. | — |
 | Propriété et nettoyage | La racine de l'assistant crée un injecteur d'environnement pour CopilotKit ; il est **détruit avec le composant** (`DestroyRef`), ce qui arrête les services de la bibliothèque (abonnements, enregistrements, minuteries). | `assistant-racine.component.spec.ts` |
 | `connectAgentContext` | Déjà utilisé par `assistant.component.ts` (contexte de page). | Code |
-| `injectCapabilities`, `injectCopilotKitConfig`, `CopilotKitAgentContext` | **Non adoptés pour l'instant** : aucun besoin métier ; le contexte passe déjà par `connectAgentContext`. Réévaluer avec les modes M1 à M3 (KAN-101). | — |
-| `selfManagedAgents` | **Non adopté** : l'agent est servi par le runtime Node (`/api/copilotkit`), jamais instancié dans le navigateur. | — |
+| `injectCapabilities` | **Adopté (KAN-270)** : les pièces jointes se lisent dans les capacités AG-UI que le runtime déclare ; le relais maison est supprimé. | Code, test e2e des pièces jointes |
+| `CopilotKitAgentContext` | **Non adopté, doublon (décision du 2026-11-16)** : la directive fait ce que fait déjà `connectAgentContext`, la fonction officielle utilisée par `assistant.component.ts`. Une seule voie officielle par besoin, sans doublon. | — |
+| `injectCopilotKitConfig` | **Adopté le jour où un composant relit la configuration** ; aucun composant n'en a besoin aujourd'hui, donc rien à remplacer (pas de code maison à retirer). | — |
+| `selfManagedAgents` | **Exclu de la production (décision du 2026-11-16)** : il ferait parler le navigateur directement à l'agent AG-UI, sans le runtime Node. Or ce runtime vérifie le jeton de l'utilisateur, applique les garde-fous, tient les fils et injecte A2UI et les vues libres : le contourner exposerait l'agent et nos contrôles. Agents locaux de test seulement. | Contrat, inventaire |
 
 ## Budget de taille
 
