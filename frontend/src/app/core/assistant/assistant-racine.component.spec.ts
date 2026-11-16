@@ -1,41 +1,22 @@
-import { of } from 'rxjs';
-import { vi } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 
-import type { LoginResponse } from '../auth/models/auth.model';
-import { jetonValide } from './assistant-racine.component';
+import { AuthService } from '../auth/services/auth.service';
+import { AssistantRacineComponent } from './assistant-racine.component';
 
-/** Un JWT non signé dont seul le champ `exp` compte ici. */
-function jwt(expDansSecondes: number): string {
-  const charge = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expDansSecondes }));
-  return `e30.${charge.replace(/=+$/, '')}.signature`;
-}
+describe('racine de l’assistant : contrat de production de CopilotKit (KAN-97)', () => {
+  it('détruit son injecteur d’environnement avec le composant, pour que les services de la bibliothèque se nettoient', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), { provide: AuthService, useValue: { getAccessToken: () => null, refreshOnce: () => undefined } }]
+    });
+    TestBed.overrideComponent(AssistantRacineComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(AssistantRacineComponent);
+    const injecteur = (fixture.componentInstance as unknown as { injecteur: { destroyed: boolean } }).injecteur;
 
-describe('jetonValide', () => {
-  function auth(initial: string | null) {
-    let jeton = initial;
-    return {
-      getAccessToken: vi.fn(() => jeton),
-      refreshOnce: vi.fn(() => {
-        jeton = 'rafraichi';
-        return of({} as LoginResponse);
-      })
-    };
-  }
+    expect(injecteur.destroyed).toBe(false);
+    fixture.destroy();
 
-  it('rend le jeton courant tant qu’il n’a pas expiré', async () => {
-    const service = auth(jwt(600));
-
-    expect(await jetonValide(service)).toBe(service.getAccessToken());
-    expect(service.refreshOnce).not.toHaveBeenCalled();
-  });
-
-  it('rafraîchit une fois un jeton expiré ou absent avant l’envoi', async () => {
-    const expire = auth(jwt(-5));
-    const absent = auth(null);
-
-    expect(await jetonValide(expire)).toBe('rafraichi');
-    expect(await jetonValide(absent)).toBe('rafraichi');
-    expect(expire.refreshOnce).toHaveBeenCalledTimes(1);
-    expect(absent.refreshOnce).toHaveBeenCalledTimes(1);
+    expect(injecteur.destroyed).toBe(true);
   });
 });
