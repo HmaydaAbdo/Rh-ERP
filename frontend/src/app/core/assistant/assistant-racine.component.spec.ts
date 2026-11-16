@@ -19,4 +19,14 @@ describe('racine de l’assistant : contrat de production de CopilotKit (KAN-97)
 
     expect(injecteur.destroyed).toBe(true);
   });
+
+  it('coupe l’inspecteur de la bibliothèque (KAN-98) : il ne se monte qu’en développement, et la configuration le refuse en plus', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), { provide: AuthService, useValue: { getAccessToken: () => null, refreshOnce: () => undefined } }]
+    });
+    TestBed.overrideComponent(AssistantRacineComponent, { set: { template: '' } });
+    const composant = TestBed.createComponent(AssistantRacineComponent).componentInstance as unknown as { configuration(): { enableInspector?: boolean } };
+
+    expect(composant.configuration().enableInspector).toBe(false);
+  });
 });
