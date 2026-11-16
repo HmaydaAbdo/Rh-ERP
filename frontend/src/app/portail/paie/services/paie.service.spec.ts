@@ -83,7 +83,7 @@ describe('PaieService', () => {
     expect((analyse.request.body as FormData).get('periode')).toBe('2026-10');
     analyse.flush({});
 
-    const corrections = { aligner: [{ employeId: 9, typeSalaire: null }], creer: [] };
+    const corrections = { aligner: [{ employeId: 9 }], creer: [] };
     service.corrigerImport(fichier, '2026-10', corrections).subscribe();
     const correction = requete(http, 'POST', 'paie/import/corrections');
     expect((correction.request.body as FormData).get('periode')).toBe('2026-10');

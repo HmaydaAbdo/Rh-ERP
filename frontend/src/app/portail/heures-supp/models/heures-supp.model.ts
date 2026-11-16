@@ -126,7 +126,6 @@ export interface HeuresSuppCreationEmploye {
   dateEmbauche: string;
   fonctionId: number;
   salaire: number;
-  typeSalaire: 'JOURNALIER' | 'MENSUEL';
 }
 export interface HeuresSuppImportCorrections {
   aligner: { employeId: number }[];

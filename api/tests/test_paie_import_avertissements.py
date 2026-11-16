@@ -179,11 +179,6 @@ async def test_analyse_signale_un_bulletin_deja_present_avant_import(
     assert codes == {"SALAIRE_DIFFERENT"}, "0 sur une fiche à salaire différent : un seul avertissement"
     differents = [x for x in analyse.avertissements if x.code_avertissement == "SALAIRE_DIFFERENT"]
     assert all(x.salaire_actuel is not None and x.salaire_actuel in x.raison for x in differents)
-    assert any(
-        avertissement.code_avertissement == "SALAIRE_DIFFERENT"
-        and avertissement.type_salaire_propose == ("JOURNALIER" if salaire_fichier == 0 else "MENSUEL")
-        for avertissement in analyse.avertissements
-    )
     assert analyse.pret is False
 
 

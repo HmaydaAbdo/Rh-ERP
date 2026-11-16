@@ -6,8 +6,6 @@ import { TableCellDirective, TableComponent } from '../../../../shared/ui/table/
 import { ButtonComponent } from '../../../../shared/ui/button/button.directive';
 import { DateInputComponent } from '../../../../shared/ui/date-input/date-input.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
-import { SelectComponent } from '../../../../shared/ui/select/select.component';
-import { TypeSalaire } from '../../../employee/models/employee.model';
 import { PaieImportChamp, PaieImportEcart, PaieImportErreur } from '../../models/paie.model';
 import { sousCategoriesAvertissements } from '../paie-import-categories';
 import { fichierChoisi, PaieImportStore } from '../paie-import.store';
@@ -58,11 +56,6 @@ export interface GroupeErreurs {
   valeurs: string[];
 }
 
-const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
-  { label: 'Mensuel', value: 'MENSUEL' },
-  { label: 'Journalier', value: 'JOURNALIER' }
-];
-
 /**
  * Étape « Contrôle » de l'assistant d'import (voir `PaieImportWizardComponent`) : chaque problème est rangé avec la façon de
  * le régler — erreurs à corriger dans le fichier (qu'on réimporte d'ici), chantiers clôturés à rouvrir, CIN sans fiche à créer, fiches différentes du
@@ -70,7 +63,7 @@ const TYPES_SALAIRE: { label: string; value: TypeSalaire }[] = [
  */
 @Component({
   selector: 'app-paie-import-etape-controle',
-  imports: [TableComponent, TableCellDirective, DecimalPipe, ButtonComponent, DateInputComponent, IconComponent, SelectComponent],
+  imports: [TableComponent, TableCellDirective, DecimalPipe, ButtonComponent, DateInputComponent, IconComponent],
   templateUrl: './controle-etape.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -85,7 +78,6 @@ export class PaieImportEtapeControleComponent {
   ];
   protected readonly store = inject(PaieImportStore);
   protected readonly libellesChamps = LIBELLES_CHAMPS;
-  protected readonly typesSalaire = TYPES_SALAIRE;
   protected readonly seuilGroupes = SEUIL_GROUPES;
   private readonly groupesOuverts = signal<string[]>([]);
   /** La liste complète des lignes de la sous-étape est dépliée. */

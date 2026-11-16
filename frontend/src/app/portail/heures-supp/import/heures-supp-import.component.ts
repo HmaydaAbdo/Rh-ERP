@@ -13,7 +13,6 @@ import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { DateInputComponent } from '../../../shared/ui/date-input/date-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
-import { SelectComponent, SelectOption } from '../../../shared/ui/select/select.component';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
@@ -26,12 +25,12 @@ import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppService } from '../services/heures-supp.service';
 
 type DonneeCreation = Omit<HeuresSuppCreationEmploye, 'numeroLigne'>;
-type BrouillonCreation = Omit<DonneeCreation, 'typeSalaire'> & { typeSalaire: '' | DonneeCreation['typeSalaire'] };
-const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionId: 0, salaire: Number.NaN, typeSalaire: '' };
+type BrouillonCreation = DonneeCreation;
+const VIDE: BrouillonCreation = { dateNaissance: '', dateEmbauche: '', fonctionId: 0, salaire: Number.NaN };
 
 @Component({
   selector: 'app-heures-supp-import',
-  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, NumberInputComponent, SelectComponent, LazySelectComponent, RouterLink, DialogComponent, IconComponent],
+  imports: [TableComponent, TableCellDirective, StepperComponent, WizardStateComponent, DecimalPipe, ButtonComponent, MessageComponent, DateInputComponent, NumberInputComponent, LazySelectComponent, RouterLink, DialogComponent, IconComponent],
   templateUrl: './heures-supp-import.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -82,9 +81,6 @@ export class HeuresSuppImportComponent {
   protected readonly resultat = signal<HeuresSuppImportResult | null>(null);
   protected readonly erreur = signal<string | null>(null);
   protected readonly chargement = signal(false);
-  protected readonly typesSalaire: SelectOption<BrouillonCreation['typeSalaire']>[] = [
-    { label: 'Journalier', value: 'JOURNALIER' }, { label: 'Mensuel', value: 'MENSUEL' }
-  ];
   protected readonly peutRemplacer = computed(() => {
     const erreurs = this.analyse()?.erreurs ?? [];
     return erreurs.length > 0 && erreurs.every((message) => message.includes('existe déjà'));
@@ -159,9 +155,6 @@ export class HeuresSuppImportComponent {
   protected saisirDate(numero: number, cle: 'dateNaissance' | 'dateEmbauche', valeur: Date | null): void {
     this.modifierCreation(numero, cle, valeur ? `${valeur.getFullYear()}-${String(valeur.getMonth() + 1).padStart(2, '0')}-${String(valeur.getDate()).padStart(2, '0')}` : '');
   }
-  protected choisirTypeSalaire(numero: number, valeur: unknown): void {
-    if (valeur === 'JOURNALIER' || valeur === 'MENSUEL') this.modifierCreation(numero, 'typeSalaire', valeur);
-  }
   protected choisirFichier(event: Event): void { this.fichier.set((event.target as HTMLInputElement).files?.[0] ?? null); this.analyse.set(null); }
   protected creation(numero: number): BrouillonCreation { return this.creations()[numero] ?? VIDE; }
   protected valeurSalaire(numero: number): number | null { const valeur = this.creation(numero).salaire; return Number.isFinite(valeur) ? valeur : null; }
@@ -191,9 +184,9 @@ export class HeuresSuppImportComponent {
     const forfaits = this.lireForfaits();
     for (const ligne of analyse.lignes.filter((l) => l.employeId === null)) {
       const c = this.creation(ligne.numeroLigne);
-      if (!c.dateNaissance || !c.dateEmbauche || !c.fonctionId || !Number.isFinite(c.salaire) || c.salaire < 0 || !c.typeSalaire) { this.erreur.set('Complétez les dates, la fonction, le salaire et le type de salaire de chaque nouvel employé.'); return; }
+      if (!c.dateNaissance || !c.dateEmbauche || !c.fonctionId || !Number.isFinite(c.salaire) || c.salaire < 0 ) { this.erreur.set('Complétez les dates, la fonction et le salaire de chaque nouvel employé.'); return; }
     }
-    const creer: HeuresSuppCreationEmploye[] = analyse.lignes.filter((l) => l.employeId === null).map((l) => ({ numeroLigne: l.numeroLigne, ...this.creation(l.numeroLigne), typeSalaire: this.creation(l.numeroLigne).typeSalaire as DonneeCreation['typeSalaire'] }));
+    const creer: HeuresSuppCreationEmploye[] = analyse.lignes.filter((l) => l.employeId === null).map((l) => ({ numeroLigne: l.numeroLigne, ...this.creation(l.numeroLigne) }));
     const corrections = { aligner: this.alignements().map((employeId) => ({ employeId })), creer };
     this.lancer(this.service.corrigerImport(file, this.periode(), id, corrections, forfaits), (nouvelleAnalyse) => this.analyse.set(nouvelleAnalyse));
   }

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
 from staport.domains.common.montant import arrondir_montant
-from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut, TypeSalaire
+from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut
 from staport.domains.equipe.models import Equipe
 from staport.domains.function.models import Fonction
 from staport.domains.heuresupp import ecouteur as ecouteur_heures_supp
@@ -523,7 +523,6 @@ class ServiceImportPaie:
                             cin=cin,
                             nom_prenom=nom or employe.nom_prenom,
                             champs=champs,
-                            type_salaire=TypeSalaire(employe.type_salaire).value if employe.type_salaire else None,
                         )
                     )
             for index, champ in (
@@ -617,7 +616,6 @@ class ServiceImportPaie:
                             raison="salaire nul : cliquer sur « Ignorer et conserver 0 »",
                             avertissement=True,
                             code_avertissement="SALAIRE_ZERO",
-                            type_salaire_propose="JOURNALIER",
                         )
                     )
                 if champ == "salaireMensuel" and cin and cin.upper() in employees and fiche_a_comparer:
@@ -638,7 +636,6 @@ class ServiceImportPaie:
                                 code_avertissement="SALAIRE_DIFFERENT",
                                 employe_id=employe.id,
                                 salaire_actuel=str(employe.salaire),
-                                type_salaire_propose="JOURNALIER" if nombre <= 500 else "MENSUEL",
                             )
                         )
         departs, retours = departs_et_retours(lignes, employees, {erreur.numero_ligne for erreur in erreurs})
@@ -770,10 +767,6 @@ class ServiceImportPaie:
                         changement = True
                     employes_a_aligner.append(employe.id)
                 elif cin in retours_cins:  # statut et affectations changent sans requête intercalée (contrainte V33)
-                    if employe.type_salaire is None:
-                        raise ErreurImportPaie(
-                            f"Le type de salaire de {employe.nom_prenom} doit être renseigné avant son retour"
-                        )
                     employe.salaire = montant_ligne(ligne, 6) or Decimal(0)
                     employe.statut = EmployeeStatut.ACTIF
                 if not mise_a_jour:
@@ -970,12 +963,7 @@ class ServiceImportPaie:
                             employe.equipe_id = equipe
                         salaire = montant_ligne(ligne, 6) or Decimal(0)
                         if employe.salaire != salaire:
-                            if correction.type_salaire is None:
-                                raise ErreurImportPaie(
-                                    "Le salaire différent exige le choix explicite d'un type de salaire."
-                                )
-                            employe.salaire = salaire
-                            employe.type_salaire = TypeSalaire(correction.type_salaire)
+                            employe.salaire = salaire  # le type se déduit du montant (modèle Employee)
                     journal.nombre_elements = len(corrections.aligner)
             if corrections.creer:
                 action = self._auditeur.auditer(
@@ -1007,7 +995,6 @@ class ServiceImportPaie:
                             chantier_id=chantier,
                             equipe_id=equipe,
                             salaire=montant_ligne(ligne, 6) or Decimal(0),
-                            type_salaire=TypeSalaire(correction.type_salaire),
                         )
                         session.add(employe)
                         employees[cin.upper()] = employe

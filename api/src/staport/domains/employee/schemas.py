@@ -18,12 +18,13 @@ class _EmployeeBase(ModeleApi):
     fonction_id: int
     equipe_id: int | None = None
     salaire: Montant | None = Field(default=None, ge=0, max_digits=10, decimal_places=0)
+    # Facultatif : absent, le type se déduit du salaire ; présent, c'est le choix explicite de l'utilisateur.
     type_salaire: TypeSalaire | None = None
 
     @model_validator(mode="after")
-    def salaire_et_type_ensemble(self):
-        if (self.salaire is None) != (self.type_salaire is None):
-            raise regle_metier("salaireEtTypeEnsemble", "le salaire et son type se renseignent ensemble")
+    def coherence(self):
+        if self.salaire is None and self.type_salaire is not None:
+            raise regle_metier("typeSansSalaire", "un type de salaire exige un salaire")
         if self.date_naissance >= date.today():
             raise regle_metier("dateNaissance", "la date de naissance doit être passée")
         return self

@@ -69,7 +69,7 @@ périmètre sélectionnés transmis au service du domaine ; aucun jeu d'employé
 | Chantier | Choisi dans l'assistant ; un seul chantier par import. Résolu par le domaine Chantier. |
 | CIN | Clé de rapprochement avec l'employé. Un CIN inconnu doit être résolu en créant la fiche Employé selon le parcours de correction de la Paie. |
 | Nom et prénom | Colonne obligatoire, utilisée pour contrôler le nom de la fiche trouvée par CIN et demander un alignement explicite en cas d'écart. |
-| Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction. |
+| Fonction, salaire et type de salaire | Récupérés de la fiche Employé alignée sur son état récent de paie ; absents du fichier. Pour un CIN inconnu, le wizard demande les informations nécessaires à la création, dont la fonction (le type de salaire n'est jamais demandé : il se déduit du salaire, ≤ 500 DH journalier, sinon mensuel). |
 | P/H | Nombre d'heures supplémentaires entier ; les saisies et imports sont arrondis selon `HALF_DOWN` (7,5 → 7 ; 7,51 → 8). Les valeurs négatives sont refusées. |
 | Ligne HS à zéro | Conservée comme ligne d'heures avec P/H = 0, S/H figé et Montant = 0. Son nombre apparaît dans le bilan. Une valeur HS vide reste une erreur, jamais un zéro implicite. |
 | S/H | Calculé à chaque nouvel import depuis le salaire et le type de salaire courants de l'employé : salaire journalier ÷ 10 ; salaire mensuel ÷ 26 ÷ 10, **arrondi à l'entier** (pas de virgule : fraction > 0,5 on monte, < 0,5 on descend, exactement 0,5 on descend, soit `HALF_DOWN`). La valeur arrondie est celle qui est conservée avec l'import. |

@@ -53,7 +53,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0008_retrait_vues_libres"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0009_type_salaire_deduit"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -115,7 +115,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0008_retrait_vues_libres"
+            == "0009_type_salaire_deduit"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -199,7 +199,7 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0008_retrait_vues_libres"
+            == "0009_type_salaire_deduit"
         )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
@@ -242,3 +242,91 @@ def test_les_modeles_correspondent_exactement_a_la_base_alembic(creer_base: Call
     moteur.dispose()
     assert differences == []
     assert temoin != []
+
+
+def test_la_revision_0009_corrige_les_types_de_salaire_et_recalcule_les_heures_supp(
+    creer_base: Callable[[str], str],
+) -> None:
+    """5 500 DH « journalier » (S/H 550) et 150 DH « mensuel » reprennent le type du montant ; un type juste reste."""
+    url = creer_base("type_salaire_deduit")
+    command.upgrade(_config(url), "0008_retrait_vues_libres")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('Pneumaticien') RETURNING id")).scalar_one()
+        chantier = c.execute(text("INSERT INTO chantier (code) VALUES ('C168') RETURNING id")).scalar_one()
+        identifiants: dict[str, int] = {}
+        for cin, salaire, type_salaire in (
+            ("ERR1", 5500, "JOURNALIER"),
+            ("ERR2", 150, "MENSUEL"),
+            ("OK1", 3000, "MENSUEL"),
+        ):
+            employe = c.execute(
+                text(
+                    "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
+                    "statut, salaire, type_salaire) VALUES (:n, :cin, '1990-01-01', '2020-01-01', :f, :c, 'ACTIF', "
+                    ":s, :t) RETURNING id"
+                ),
+                {"n": cin, "cin": cin, "f": fonction, "c": chantier, "s": salaire, "t": type_salaire},
+            ).scalar_one()
+            identifiants[cin] = employe
+            paie = c.execute(
+                text(
+                    "INSERT INTO paie (employee_id, periode, fonction_id, chantier_id, nombre_jours_travailles, "
+                    "salaire_mensuel, salaire_total) VALUES (:e, 202610, :f, :c, 26, :s, :s) RETURNING id"
+                ),
+                {"e": employe, "f": fonction, "c": chantier, "s": salaire},
+            ).scalar_one()
+            taux = salaire // 10 if type_salaire == "JOURNALIER" else round(salaire / 260)
+            c.execute(
+                text(
+                    "INSERT INTO heures_supp (employee_id, paie_id, fonction_id, chantier_id, periode, "
+                    "salaire_reference, type_salaire_reference, s_h, p_h, montant, est_stc_ou_sortie, stc_dh, "
+                    "forfait, net_a_payer) VALUES (:e, :p, :f, :c, 202610, :s, :t, :sh, 15, :m, false, 0, NULL, :m)"
+                ),
+                {
+                    "e": employe,
+                    "p": paie,
+                    "f": fonction,
+                    "c": chantier,
+                    "s": salaire,
+                    "t": type_salaire,
+                    "sh": taux,
+                    "m": taux * 15,
+                },
+            )
+    moteur.dispose()
+
+    command.upgrade(_config(url), "head")
+
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        types = dict(c.execute(text("SELECT cin, type_salaire FROM employe")).all())
+        assert types == {"ERR1": "MENSUEL", "ERR2": "JOURNALIER", "OK1": "MENSUEL"}
+        lignes = {
+            cin: ligne
+            for cin, *ligne in c.execute(
+                text(
+                    "SELECT e.cin, h.type_salaire_reference, h.s_h, h.montant, h.net_a_payer, h.version "
+                    "FROM heures_supp h JOIN employe e ON e.id = h.employee_id"
+                )
+            )
+        }
+        assert lignes["ERR1"] == ["MENSUEL", 21, 315, 315, 1]  # 5 500 / 260 = 21,15 : le cas du CIN Z692822
+        assert lignes["ERR2"] == ["JOURNALIER", 15, 225, 225, 1]
+        assert lignes["OK1"] == ["MENSUEL", 12, 180, 180, 0]  # intacte
+        revision = c.execute(
+            text("SELECT count(*) FROM audit_revision WHERE origine = 'MIGRATION' AND utilisateur_nom = 'Système'")
+        ).scalar_one()
+        assert revision >= 1
+        assert c.execute(text("SELECT count(*) FROM employe_aud WHERE revtype = 1")).scalar_one() == 2
+        assert c.execute(text("SELECT count(*) FROM heures_supp_aud WHERE revtype = 1")).scalar_one() == 2
+        assert (
+            c.execute(
+                text(
+                    "SELECT sum(nombre_elements) FROM audit_journal "
+                    "WHERE perimetre ->> 'migration' = '0009_type_salaire_deduit'"
+                )
+            ).scalar_one()
+            == 4
+        )
+    moteur.dispose()

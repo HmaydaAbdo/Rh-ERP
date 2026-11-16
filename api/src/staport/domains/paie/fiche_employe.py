@@ -7,7 +7,7 @@ modification, suppression, restauration) :
   la fiche est INACTIVE tant qu'un départ est postérieur ou égal au dernier bulletin, sans chantier ni équipe
   (contrainte `ck_employe_affectations_statut`) ;
 - sinon la fiche est ACTIVE et reprend fonction, chantier et équipe du dernier bulletin ; un employé sorti dont un
-  bulletin plus récent que son départ apparaît fait un retour (comme l'import : type de salaire exigé, salaire repris) ;
+  bulletin plus récent que son départ apparaît fait un retour (comme l'import : salaire repris) ;
 - un bulletin d'un mois plus ancien que le dernier ne change jamais la fiche.
 """
 
@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut
 
-from .exceptions import RetourSansTypeSalaire
 from .models import Paie
 from .observation import est_stc_ou_sortie
 
@@ -66,8 +65,6 @@ async def aligner_fiche(s: AsyncSession, employee_id: int, periodes_touchees: Co
         employe.equipe_id = None
     else:
         if employe.statut == EmployeeStatut.INACTIF:
-            if employe.type_salaire is None:
-                raise RetourSansTypeSalaire(employe.nom_prenom)
             employe.salaire = dernier.salaire_mensuel
             employe.statut = EmployeeStatut.ACTIF
         employe.chantier_id = dernier.chantier_id
