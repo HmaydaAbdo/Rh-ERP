@@ -38,7 +38,8 @@ function chercher(valeur: unknown, profondeur = 0): ExportPrepare | null {
         periode: typeof objet['periode'] === 'string' ? objet['periode'] : ''
       };
     }
-    return chercher(objet['structuredContent'] ?? objet['text'] ?? objet['content'], profondeur + 1);
+    // `resultat` : l'enveloppe des surfaces A2UI (`{ a2ui_operations, resultat }`, KAN-80) porte le résultat d'origine.
+    return chercher(objet['structuredContent'] ?? objet['resultat'] ?? objet['text'] ?? objet['content'], profondeur + 1);
   }
   return null;
 }

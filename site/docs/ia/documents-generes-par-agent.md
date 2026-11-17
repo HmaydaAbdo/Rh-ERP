@@ -5,7 +5,7 @@ sidebar_position: 12
 
 # Documents générés par l'agent
 
-Décision du propriétaire (2026-11-17, sans ticket Jira) : l'agent produit à la demande des fichiers Word, PowerPoint et Excel, avec des composants libres et locaux, sans nuage.
+Décision du propriétaire (2026-11-17, sans ticket Jira) : l'agent produit à la demande des fichiers Word, PowerPoint, Excel et PDF, avec des composants libres et locaux, sans nuage.
 
 ## Architecture
 
@@ -13,6 +13,10 @@ Décision du propriétaire (2026-11-17, sans ticket Jira) : l'agent produit à l
 |---|---|---|
 | Word et PowerPoint | `mcp-ms-office-documents` (MIT), image `georgx22/mcp-office-docs` épinglée par empreinte (service `mcp-office`) | Serveur MCP sans exécution de code ; seuls `create_word_from_markdown`, `create_powerpoint_presentation`, `list_presentation_templates` et `create_excel_from_markdown` sont exposés (liste blanche) |
 | Classeurs Excel | `excel-mcp-server` 2.3.2 (MIT), image construite par `mcp-excel/Dockerfile` (service `mcp-excel`) | Mise en forme, tableaux, graphiques et formules ; sept outils exposés, tous ne prenant qu'un nom de classeur |
+| PDF | WeasyPrint 70 + `markdown-it-py` (`ia/src/staport_ia/pdf.py`), dans le service IA lui-même, outil `create_pdf_from_markdown` | Aucun serveur de plus ; le rendu refuse tout chargement externe (`url_fetcher`), le HTML brut est désactivé ; l'image du service IA embarque les bibliothèques Pango |
+| Téléchargement | Carte de rendu `DocumentGenereAssistantComponent` (un bouton « Télécharger » par fichier, jamais de chemin affiché) | Le fichier est servi par `/ia/fichiers`, avec la connexion de l'utilisateur |
+| Noms de fichiers | Accents translittérés, caractères spéciaux remplacés par `_` (`Procédure d'accueil` → `Procedure_d_accueil.docx`) | Nom sûr et lisible |
+| Formules Excel | Noms de fonctions anglais exigés par la compétence `tableur` (`SUM`, pas `SOMME`) | Un fichier avec des noms français affiche `#NAME?` dans Excel |
 | Réseau | `docs-net`, interne (sans Internet), service IA et deux serveurs seulement | Aucun accès sortant ni exposition au navigateur |
 | Secret | `IA_BUREAUTIQUE_CLE`, partagé par le service IA et les deux serveurs | Un serveur sans clé n'est pas joignable |
 | Compétences | `documents` et `tableur` (`competences/`), routées comme les autres | Sélection juste-à-temps, 7 outils au plus par compétence |
@@ -31,4 +35,6 @@ Pas d'accord interactif avant la génération : la demande de l'utilisateur vaut
 - Tests unitaires (`ia/tests/test_bureautique.py`) : isolation, liste blanche, interception, bornes, audit, panne d'un serveur.
 - Essai réel (2026-11-17) contre les deux serveurs en conteneurs durcis (`read_only`, `cap_drop ALL`, `no-new-privileges`) : classeur, document Word et présentation rangés dans le Store, répertoire de sortie vide ensuite.
 
-**Non vérifié :** rendu visuel des fichiers dans Word, PowerPoint et Excel ; panneau de fichiers du navigateur (liste et téléchargement d'un document binaire, rafraîchissement après génération) ; protocole d'évaluation de l'agent (contexte, latence, sûreté des schémas) avec un vrai modèle ; droits d'écriture du volume `docs_sortie` pour l'utilisateur du service IA en production.
+- Recette dans l'application (2026-11-17, pile locale, Chrome) : PDF (titre, paragraphe, tableau, pagination), Word (sections, puces, tableau), PowerPoint (3 diapositives) et Excel (valeurs et formule) créés par l'agent, bouton « Télécharger » affiché, fichiers téléchargés et relus ; audit `ecritures-fichier` en 204. Défauts trouvés et corrigés pendant cette recette : bouton d'export de paie vide (enveloppe `resultat` non lue), absence de bouton de téléchargement, schéma d'audit trop strict, noms accentués tronqués, formule `SOMME`.
+
+**Non vérifié :** rendu visuel des fichiers dans Word, PowerPoint et Excel (seul le contenu des fichiers a été relu) ; panneau de fichiers du navigateur (liste, rafraîchissement après génération) ; protocole d'évaluation de l'agent (contexte, latence, sûreté des schémas) avec un vrai modèle ; droits d'écriture du volume `docs_sortie` pour l'utilisateur du service IA en production.

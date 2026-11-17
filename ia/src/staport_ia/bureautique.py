@@ -21,6 +21,7 @@ import binascii
 import hashlib
 import logging
 import re
+import unicodedata
 import warnings
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -42,6 +43,7 @@ with warnings.catch_warnings():
 
 from staport_ia.agui import SIGNALEUR_ECRITURE
 from staport_ia.config import Settings
+from staport_ia.pdf import OUTIL_PDF, outil_pdf
 
 journal = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ OUTILS_EXCEL = (
     "add_conditional_format",
     "export_workbook",
 )
-OUTILS_BUREAUTIQUE = frozenset({*OUTILS_OFFICE, *OUTILS_EXCEL})
+OUTILS_BUREAUTIQUE = frozenset({*OUTILS_OFFICE, *OUTILS_EXCEL, OUTIL_PDF})
 
 #: Où le fichier est rangé dans l'espace de l'utilisateur, et sa taille maximale (octets).
 DOSSIER_DOCUMENTS = "/documents"
@@ -93,6 +95,7 @@ async def outils_bureautique(
             outils.extend(o for o in await adaptateur.list_tools() if o.name in autorises)
         except Exception as panne:
             journal.warning("Serveur de documents indisponible : %s", type(panne).__name__)
+    outils.append(outil_pdf())  # le PDF est rendu ici (``pdf.py``) : il ne dépend d'aucun serveur
     return outils
 
 
@@ -119,6 +122,7 @@ def nom_sur(valeur: str, extension: str, defaut: str = "document") -> str:
     """Un nom de fichier sans dossier ni caractère spécial : seul le nom de base est gardé."""
     base = re.split(r"[\\/]", valeur.strip())[-1]
     base = re.sub(r"\.[A-Za-z0-9]{1,5}$", "", base)
+    base = unicodedata.normalize("NFKD", base).encode("ascii", "ignore").decode("ascii")
     base = re.sub(r"[^A-Za-z0-9_-]+", "_", base).strip("_.-")[:60]
     return f"{base or defaut}{extension}"
 
@@ -170,6 +174,8 @@ class Bureautique(AgentMiddleware[Any, Any, Any]):
         resultat = await handler(request)
         if nom in OUTILS_OFFICE_FICHIER and isinstance(resultat, ToolMessage):
             return await self._livrer_office(request, resultat)
+        if nom == OUTIL_PDF and isinstance(resultat, ToolMessage):
+            return await self._livrer_pdf(request, resultat)
         return resultat
 
     def _isoler(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -188,6 +194,13 @@ class Bureautique(AgentMiddleware[Any, Any, Any]):
             return _message(appel, "Le classeur n'a pas pu être récupéré.", erreur=True)
         nom = str(appel["args"]["path"]).removeprefix(f"{self._prefixe}__")
         return await self._ranger(request, nom, octets)
+
+    async def _livrer_pdf(self, request: ToolCallRequest, resultat: ToolMessage) -> ToolMessage:
+        appel = request.tool_call
+        artefact = resultat.artifact
+        if resultat.status == "error" or not isinstance(artefact, dict) or not isinstance(artefact.get("pdf"), bytes):
+            return resultat if resultat.status == "error" else _message(appel, "Le PDF n'a pas pu être créé.", True)
+        return await self._ranger(request, nom_sur(str(artefact.get("nom", "")), ".pdf"), artefact["pdf"])
 
     async def _livrer_office(self, request: ToolCallRequest, resultat: ToolMessage) -> ToolMessage:
         appel = request.tool_call
@@ -234,8 +247,8 @@ class Bureautique(AgentMiddleware[Any, Any, Any]):
         await _signaler(f"/espace{cle}", len(octets), appel["name"])
         return _message(
             appel,
-            f"Fichier prêt : {cle.rsplit('/', 1)[-1]} ({max(1, len(octets) // 1024)} Ko). L'utilisateur le télécharge "
-            "depuis son espace de fichiers ; ne donne aucun chemin ni lien dans ta réponse.",
+            f"Fichier prêt : {cle.rsplit('/', 1)[-1]} ({max(1, len(octets) // 1024)} Ko). Un bouton « Télécharger » "
+            "s'affiche dans la discussion ; ne donne aucun chemin ni lien dans ta réponse.",
         )
 
 
