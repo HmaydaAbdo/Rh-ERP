@@ -408,7 +408,7 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
       urlAgent: `http://127.0.0.1:${agent.address().port}/agui`,
       urlApi: `http://127.0.0.1:${api.address().port}`,
       journal: { error: () => {} },
-      stt: { url: `http://127.0.0.1:${whisper.address().port}`, modele: 'Systran/faster-whisper-small', langue: 'fr' }
+      stt: { url: `http://127.0.0.1:${whisper.address().port}`, modele: 'Systran/faster-whisper-base', langue: 'fr' }
     });
     appStt = creation.app.listen(0, '127.0.0.1');
     await new Promise((ok) => appStt.once('listening', ok));

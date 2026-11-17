@@ -17,7 +17,7 @@ const { app, purger } = creerApp({
   cheminBase: process.env.THREADS_DB_PATH,
   // Dictée (KAN-93) : Whisper local compatible OpenAI ; absent, le micro n'est pas proposé.
   stt: process.env.STT_URL
-    ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-small', langue: process.env.STT_LANGUE ?? 'fr' }
+    ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-base', langue: process.env.STT_LANGUE ?? 'fr' }
     : undefined
 });
 // Expiration des conversations inactives (KAN-82), au démarrage puis chaque jour ; même durée que la mémoire du service IA.

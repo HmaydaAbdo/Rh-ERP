@@ -16,6 +16,15 @@ Cette compétence construit un classeur Excel étape par étape, puis le rend t�
 - Quand `export_workbook` répond « Fichier prêt », dis simplement que le fichier est prêt dans l'espace de fichiers. Ne donne aucun chemin ni lien. Si un outil échoue, dis que le fichier n'a pas pu être créé, sans détail technique.
 - Tu ne peux ni envoyer le fichier par e-mail ni le publier ailleurs.
 
+## Mise en forme (toujours, même pour un petit tableau)
+
+Un classeur livré brut (texte noir, colonnes étroites, nombres sans format) paraît inachevé. Avant `export_workbook`, applique à chaque feuille de données :
+
+- l'en-tête en gras avec un fond coloré et un texte contrasté (`format_range`), ou `set_table` pour la plage de données (style, filtres) ;
+- un format de nombre adapté : montants `#,##0` (ou `#,##0.00` pour des centimes), pourcentages `0.0%`, dates `dd/mm/yyyy` ;
+- la ligne de total en gras, avec une bordure supérieure ;
+- le texte des colonnes lisible en entier : si l'outil permet de régler une largeur de colonne, ajuste-la à la longueur du plus long contenu ; sinon, l'en-tête reste court.
+
 ## Ordre des appels
 
 1. `create_workbook` avec le nom du classeur et les noms des feuilles (`overwrite` à vrai pour repartir d'un classeur vide).
