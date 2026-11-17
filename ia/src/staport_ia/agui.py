@@ -276,15 +276,24 @@ async def evenements(
 class AccesHttp:
     """``AccesErp`` réel : échange RFC 8693 (``/oauth/token``) puis ``/mcp`` de l'API ERP."""
 
-    def __init__(self, client: httpx.AsyncClient, api: str) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        api: str,
+        complement: Callable[[], Awaitable[Sequence[BaseTool]]] | None = None,
+    ) -> None:
         self._client = client
         self._api = api.rstrip("/")
+        #: Outils qui ne viennent pas de l'API ERP (serveurs de documents, ``bureautique.py``) : ajoutés au catalogue
+        #: de l'utilisateur ; ils n'ouvrent aucun accès aux données de l'ERP.
+        self._complement = complement
 
     async def jeton_agent(self, jeton_connexion: str) -> str:
         return await jeton_agent(self._api, jeton_connexion)
 
     async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
-        return await outils_erp(f"{self._api}/mcp", jeton_agent)
+        outils = await outils_erp(f"{self._api}/mcp", jeton_agent)
+        return [*outils, *await self._complement()] if self._complement else outils
 
     async def contexte(self, jeton_agent: str) -> str:
         return await contexte_erp(f"{self._api}/mcp", jeton_agent)
