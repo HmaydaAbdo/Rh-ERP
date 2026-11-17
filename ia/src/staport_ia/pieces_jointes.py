@@ -26,10 +26,9 @@ import puremagic
 from ag_ui.core import Message, UserMessage
 from fastapi import HTTPException, status
 
-from staport_ia.documents import TYPES_OFFICE, archive_office_sure
+from staport_ia.documents import TYPES_OFFICE, TYPES_TEXTE, archive_office_sure
 
 #: Types admis : images, PDF, Office et texte (CSV, Markdown, JSON). Aucun audio, vidéo, exécutable ni archive.
-TYPES_TEXTE = frozenset({"text/plain", "text/csv", "text/markdown", "application/json"})
 TYPES_ADMIS = frozenset(
     {"image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf"} | TYPES_TEXTE | TYPES_OFFICE
 )

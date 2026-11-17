@@ -3562,6 +3562,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "langgraph-checkpoint-postgres" },
     { name = "litellm" },
+    { name = "markdown-it-py" },
     { name = "markitdown", extra = ["docx", "pdf", "pptx", "xlsx"] },
     { name = "mcp" },
     { name = "openai" },
@@ -3575,6 +3576,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
+    { name = "weasyprint" },
 ]
 
 [package.metadata]
@@ -3593,6 +3595,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=1.2.22" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=3.2.1" },
     { name = "litellm", specifier = "==1.109.1" },
+    { name = "markdown-it-py", specifier = ">=3" },
     { name = "markitdown", extras = ["docx", "pdf", "pptx", "xlsx"], specifier = ">=0.1.9" },
     { name = "mcp" },
     { name = "openai" },
@@ -3606,6 +3609,7 @@ requires-dist = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
+    { name = "weasyprint", specifier = "==70.0" },
 ]
 
 [package.metadata.requires-dev]

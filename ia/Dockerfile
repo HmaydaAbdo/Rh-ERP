@@ -18,10 +18,14 @@ RUN /app/.venv/bin/python -c "from staport_ia.routage import MODELE_EMBEDDINGS; 
 RUN chmod -R a+rX /app/modeles
 
 FROM python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f
+# Bibliothèques de WeasyPrint (PDF créés par l'agent, ``pdf.py``) : les mêmes que l'image de l'API.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0 \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 ia && useradd --system --uid 10001 --gid ia --no-create-home ia
 COPY --from=build --chown=root:root /app/.venv /app/.venv
 COPY --from=build --chown=root:root /app/modeles /app/modeles
-ENV FASTEMBED_CACHE_PATH=/app/modeles HF_HUB_OFFLINE=1 PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+ENV FASTEMBED_CACHE_PATH=/app/modeles HF_HUB_OFFLINE=1 PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 XDG_CACHE_HOME=/tmp
 # Traces OpenTelemetry (site/docs/ia, T18) : lancées par l'auto-instrumentation officielle (FastAPI, httpx, LangChain par
 # OpenInference), coupées tant que Compose ne les active pas (OTEL_SDK_DISABLED=false et l'adresse de Phoenix).
 ENV OTEL_SDK_DISABLED=true OTEL_TRACES_EXPORTER=otlp OTEL_METRICS_EXPORTER=none OTEL_LOGS_EXPORTER=none OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf

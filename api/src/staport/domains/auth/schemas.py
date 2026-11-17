@@ -136,8 +136,16 @@ class EcritureFichierAgentRequete(ModeleApi):
     Le contenu n'est jamais transmis : seulement le chemin, la taille et l'outil."""
 
     chemin: Annotated[str, Field(pattern=r"^/(espace|memoire)/[^\x00-\x1f]{1,300}$")]
-    taille: Annotated[int, Field(ge=0, le=1_000_000)]
-    outil: Annotated[str, Field(pattern=r"^(write_file|edit_file|memoire_modifier|memoire_oublier)$")]
+    taille: Annotated[int, Field(ge=0, le=26_214_400)]  # 25 Mo : un document Word, Excel, PowerPoint ou PDF créé
+    outil: Annotated[
+        str,
+        Field(
+            pattern=(
+                r"^(write_file|edit_file|memoire_modifier|memoire_oublier|create_word_from_markdown|"
+                r"create_powerpoint_presentation|create_excel_from_markdown|create_pdf_from_markdown|export_workbook)$"
+            )
+        ),
+    ]
 
 
 class JetonAgentReponse(ModeleApi):

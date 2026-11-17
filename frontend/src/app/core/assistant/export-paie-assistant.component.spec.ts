@@ -15,6 +15,13 @@ describe('lireExportPrepare', () => {
     expect(lireExportPrepare({ structuredContent: RESULTAT })).toEqual(attendu);
   });
 
+  it('lit la référence dans l’enveloppe des surfaces A2UI (résultat d’origine en texte JSON)', () => {
+    const attendu = { reference: 'ref.jwt.sig', nomFichier: 'Paie_Export_2026-09.xlsx', periode: '2026-09' };
+    const enveloppe = { a2ui_operations: [{ op: 'x' }], resultat: JSON.stringify(RESULTAT) };
+    expect(lireExportPrepare(JSON.stringify(enveloppe))).toEqual(attendu);
+    expect(lireExportPrepare(enveloppe)).toEqual(attendu);
+  });
+
   it('ignore un résultat sans référence ou illisible', () => {
     expect(lireExportPrepare('Aucun bulletin')).toBeNull();
     expect(lireExportPrepare(undefined)).toBeNull();
