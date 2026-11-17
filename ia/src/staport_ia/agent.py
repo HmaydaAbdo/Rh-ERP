@@ -48,6 +48,7 @@ from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 from pydantic import BaseModel, Field
 
+from staport_ia.bureautique import Bureautique
 from staport_ia.competences import (
     ESPACE_COMPETENCES,
     OUTILS_PERMANENTS,
@@ -385,6 +386,7 @@ def creer_agent(
     repli: Sequence[BaseChatModel] = (),
     effacement_jetons: int = SEUIL_EFFACEMENT_JETONS,
     sous_agents: bool = False,
+    dossier_bureautique: str | None = None,
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """L'agent d'un run, un Deep Agent. ``outils`` est le catalogue MCP de l'utilisateur : seuls les outils permanents
     sont liés directement, les autres le sont par les compétences de domaine. ``resumeur`` résume le début d'une
@@ -417,6 +419,9 @@ def creer_agent(
             ]
         ),
     ]
+    if dossier_bureautique is not None:
+        # Documents Office à la demande : les fichiers de cet utilisateur seulement, rangés dans son espace.
+        intergiciels.append(Bureautique(utilisateur, dossier_bureautique))
     if repli:
         # Second filet (KAN-35) : si le modèle principal échoue après le routage LiteLLM, les modèles de repli sont
         # essayés dans l'ordre, par le middleware officiel. Sans repli configuré, aucun changement.

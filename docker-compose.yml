@@ -309,6 +309,13 @@ services:
       # joignable, aucun fichier n'est accepté. IA_PIECES_JOINTES=false les coupe.
       IA_PIECES_JOINTES: ${IA_PIECES_JOINTES:-true}
       IA_ANTIVIRUS_HOTE: antivirus
+      # Documents Word, PowerPoint et Excel créés par l'agent : deux serveurs MCP locaux (services mcp-office et mcp-excel),
+      # gratuits, sans accès Internet ; l'agent range le fichier produit dans l'espace de l'utilisateur. Vider la clé
+      # (IA_BUREAUTIQUE_CLE) retire les deux compétences.
+      IA_BUREAUTIQUE_CLE: ${IA_BUREAUTIQUE_CLE:?IA_BUREAUTIQUE_CLE est obligatoire (voir .env.example)}
+      IA_BUREAUTIQUE_OFFICE_URL: http://mcp-office:8958/mcp
+      IA_BUREAUTIQUE_EXCEL_URL: http://mcp-excel:8017/mcp
+      IA_BUREAUTIQUE_DOSSIER: /documents
       IA_LITELLM_BASE_URL: http://litellm:4000/v1
       # Le SDK utilise le catalogue livré avec sa version ; pas de téléchargement GitHub sur le chemin des appels.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
@@ -330,6 +337,9 @@ services:
     cap_drop: ["ALL"]
     security_opt:
       - no-new-privileges:true
+    volumes:
+      # Sortie du serveur Word/PowerPoint : l'agent lit le fichier produit, le range dans l'espace de l'utilisateur, puis le supprime.
+      - docs_sortie:/documents
     tmpfs:
       - /tmp
     networks:
@@ -338,6 +348,7 @@ services:
       - trace-net
       - bases-net
       - av-net
+      - docs-net
     ports:
       - "127.0.0.1:${IA_PORT:-5003}:8000"
 
@@ -412,6 +423,38 @@ services:
       - no-new-privileges:true
     networks:
       - av-net
+
+  # Documents Word et PowerPoint de l'agent : mcp-ms-office-documents (MIT), image épinglée par empreinte. Aucune exécution
+  # de code ni accès Internet (réseau docs-net interne) ; le fichier produit arrive dans le volume docs_sortie.
+  mcp-office:
+    image: georgx22/mcp-office-docs@sha256:94fb2e12f30bec1dca83eb2c58fd7cfb8f04da5f2a3506b94219d8b6197078e8
+    restart: unless-stopped
+    environment:
+      API_KEY: ${IA_BUREAUTIQUE_CLE:?IA_BUREAUTIQUE_CLE est obligatoire (voir .env.example)}
+    volumes:
+      - docs_sortie:/app/output
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - docs-net
+
+  # Classeurs Excel de l'agent : excel-mcp-server (MIT) fixé en version exacte (excel-mcp/Dockerfile) ; les classeurs vivent
+  # dans une mémoire volatile, l'export les renvoie à l'agent qui les range dans l'espace de l'utilisateur.
+  mcp-excel:
+    image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-mcp-excel:${MCP_EXCEL_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      EXCEL_MCP_AUTH_TOKEN: ${IA_BUREAUTIQUE_CLE:?IA_BUREAUTIQUE_CLE est obligatoire (voir .env.example)}
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /data
+    networks:
+      - docs-net
 
   # Transcription vocale locale (KAN-93) : Speaches (faster-whisper, API compatible OpenAI), sur CPU, gratuit, sans
   # compte ni envoi d'audio à un tiers. Joignable par le seul runtime CopilotKit. Le modèle est téléchargé une fois (cache
@@ -488,6 +531,7 @@ volumes:
   phoenix_data:
   stt_models:
   antivirus_db:
+  docs_sortie:
 
 networks:
   # postgres n'est joignable que par le backend — le frontend (nginx inner) ne peut pas
@@ -505,6 +549,9 @@ networks:
   runtime-auth-net:
   # Pièces jointes (KAN-93) : service IA et antivirus seulement.
   av-net:
+  # Documents de l'agent : service IA et serveurs MCP Word/PowerPoint et Excel seulement, sans accès Internet.
+  docs-net:
+    internal: true
   # Dictée (KAN-93) : runtime CopilotKit et service de transcription seulement.
   stt-net:
   # Traces OpenTelemetry : backend, service IA, runtime CopilotKit et Phoenix seulement.

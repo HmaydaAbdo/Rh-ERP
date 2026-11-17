@@ -17,6 +17,7 @@ from langchain_core.tools import StructuredTool
 
 from staport_ia import agent as module_agent
 from staport_ia.agent import ESPACE, PERMISSIONS_FICHIERS, backend_par_identite, creer_agent
+from staport_ia.bureautique import OUTILS_BUREAUTIQUE
 from staport_ia.competences import OUTILS_MAX_PAR_COMPETENCE, OUTILS_PERMANENTS, charger, competence_de
 from staport_ia.routage import Routeur
 
@@ -40,7 +41,9 @@ def test_chaque_outil_du_catalogue_a_une_et_une_seule_competence() -> None:
     exposes = [o for c in charger().values() for o in c.outils]
 
     assert len(exposes) == len(set(exposes)), "un outil dans deux compétences"
-    assert set(noms) - OUTILS_PERMANENTS == set(exposes)
+    # Les outils de documents (bureautique.py) viennent de deux serveurs MCP à part, jamais du catalogue de l'ERP.
+    assert OUTILS_BUREAUTIQUE <= set(exposes)
+    assert set(noms) - OUTILS_PERMANENTS == set(exposes) - OUTILS_BUREAUTIQUE
 
 
 def test_une_competence_expose_sept_outils_au_plus_et_porte_le_nom_de_son_dossier() -> None:

@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     antivirus_port: int = Field(default=3310, ge=1, le=65535)
     # Racine de l'API (jeton agent et route /mcp), par exemple http://backend:8080.
     erp_api_url: AnyHttpUrl
+    # Documents Office produits par l'agent : deux serveurs MCP open source (Word, PowerPoint et Excel simple ; Excel
+    # riche), une clé commune, et le dossier partagé où le premier écrit ses fichiers. Sans adresse, aucun outil de
+    # documents n'est proposé.
+    bureautique_office_url: AnyHttpUrl | None = None
+    bureautique_excel_url: AnyHttpUrl | None = None
+    bureautique_cle: SecretStr | None = Field(default=None, min_length=16)
+    bureautique_dossier: str = "/documents"
 
 
 @lru_cache
