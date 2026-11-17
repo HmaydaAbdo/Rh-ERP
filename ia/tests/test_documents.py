@@ -4,14 +4,18 @@ import asyncio
 import base64
 import io
 import zipfile
+from typing import Any, cast
 
 import openpyxl
 import pytest
 from ag_ui.core import DocumentInputContent, TextInputContent, UserMessage
+from langchain.agents.middleware import ModelRequest, ModelResponse
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from pptx import Presentation
 
 from staport_ia.documents import (
     CARACTERES_MAX,
+    LectureDocuments,
     TextesExtraits,
     archive_office_sure,
     convertir_documents,
@@ -135,3 +139,43 @@ def test_un_document_tres_long_est_tronque_avec_une_mention(monkeypatch: pytest.
     texte = str(getattr(contenu[1], "text", ""))
     assert "Document tronqué" in texte
     assert CARACTERES_MAX > 50
+
+
+def _requete(messages: list[AnyMessage]) -> ModelRequest[Any]:
+    return ModelRequest(model=cast(Any, object()), messages=messages)
+
+
+def _lire_par_le_modele(messages: list[AnyMessage]) -> list[Any]:
+    """Les messages tels que le modèle les reçoit, après le middleware."""
+    vus: list[Any] = []
+
+    async def modele(requete: ModelRequest[Any]) -> ModelResponse[Any]:
+        vus.extend(requete.messages)
+        return ModelResponse(result=[AIMessage(content="ok")])
+
+    asyncio.run(LectureDocuments(TextesExtraits()).awrap_model_call(_requete(messages), modele))
+    return vus
+
+
+def test_le_modele_lit_le_texte_et_le_fil_garde_le_fichier() -> None:
+    """La bulle de l'utilisateur doit montrer la pièce jointe, pas son contenu converti."""
+    valeur = base64.b64encode(b"Nom;Salaire\nAlami;5500").decode()
+    bloc: dict[str, Any] = {"type": "file", "base64": valeur, "mime_type": "text/csv"}
+    message = HumanMessage(content=[{"type": "text", "text": "Total ?"}, bloc])
+
+    vus = _lire_par_le_modele([message])
+
+    assert [partie["type"] for partie in vus[0].content] == ["text", "text"]
+    assert "Alami;5500" in vus[0].content[1]["text"]
+    assert message.content[1] == bloc  # l'état du fil n'est pas modifié
+
+
+def test_les_autres_blocs_et_messages_restent_inchanges() -> None:
+    image: dict[str, Any] = {"type": "image", "base64": "AAAA", "mime_type": "image/png"}
+    scan: dict[str, Any] = {"type": "file", "base64": base64.b64encode(b"  ").decode(), "mime_type": "text/plain"}
+    messages: list[AnyMessage] = [HumanMessage(content=[image, scan]), HumanMessage(content="bonjour")]
+
+    vus = _lire_par_le_modele(messages)
+
+    assert vus[0].content == [image, scan]
+    assert vus[1].content == "bonjour"
