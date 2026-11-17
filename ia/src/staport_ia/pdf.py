@@ -37,14 +37,11 @@ _STYLE = """
 _MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 
-def _refuser(*_args: Any, **_kwargs: Any) -> Any:
-    raise ValueError("Chargement externe refusé")
-
-
 def rendre_pdf(titre: str, markdown: str) -> bytes:
     """Le PDF d'un texte Markdown ; le titre est le premier titre de la page s'il n'y en a pas déjà un."""
     # Import tardif, comme l'API : WeasyPrint charge Pango à l'import (absent d'un poste Windows sans GTK).
     from weasyprint import CSS, HTML
+    from weasyprint.urls import URLFetcher
 
     titre = titre.strip()
     corps = markdown if markdown.lstrip().startswith("# ") or not titre else f"# {titre}\n\n{markdown}"
@@ -52,8 +49,13 @@ def rendre_pdf(titre: str, markdown: str) -> bytes:
         f"<!doctype html><html lang='fr'><meta charset='utf-8'><title>{escape(titre)}</title>"
         f"<body>{_MARKDOWN.render(corps)}</body></html>"
     )
+    # ``allowed_protocols=()`` (réglage officiel de WeasyPrint 70) : aucun protocole admis, donc aucun chargement
+    # externe ; la ressource est ignorée avec un avertissement et le rendu continue.
+    fetcheur = URLFetcher(allowed_protocols=())
     # Sans ``target``, WeasyPrint rend toujours les octets.
-    return cast(bytes, HTML(string=html, url_fetcher=_refuser).write_pdf(stylesheets=[CSS(string=_STYLE)]))
+    return cast(
+        bytes, HTML(string=html, url_fetcher=fetcheur).write_pdf(stylesheets=[CSS(string=_STYLE, url_fetcher=fetcheur)])
+    )
 
 
 async def _creer_pdf(
