@@ -30,11 +30,18 @@ npm start                                   # http://localhost:4200, proxy API v
 npm run build                               # build de production dans dist/
 npm test                                     # tests unitaires et composants (Vitest, Chromium headless ; CHROME_BIN si Chrome n'est pas détecté)
 npm run e2e                                  # parcours E2E Playwright contre une API simulée (serveur de dev sur le port 4300)
-npm run audit:deps                           # npm audit (vulnérabilités hautes, hors pairs optionnels)
+npm run audit:deps                           # npm audit des dépendances livrées (--omit=dev), bloquant dès « moderate »
+npm run audit:outils                         # npm audit complet (outils de build) : informatif, ne bloque pas la livraison
 npm run audit:licences                       # licences des dépendances livrées
 ```
 
 Ne pas employer `--force` ou `legacy-peer-deps` pour masquer les incompatibilités : `npm ci` doit passer sans option.
+
+**Audit des dépendances (décision du 2026-11-17).** Le contrôle bloquant porte sur ce qui est livré (`npm audit --omit=dev`) : toute vulnérabilité de
+niveau « moderate » ou plus y fait échouer la CI et bloque la publication des images. Les outils de build et de test sont audités à part, sans
+bloquer. Cas en cours : `picomatch` (GHSA-fc5q-39xc-vjpf, ReDoS, haute gravité, versions ≤ 4.0.7, aucune version corrigée) n'est tiré que par les outils
+Angular, Vitest et vite, jamais par le code livré. **À réexaminer** à la publication d'une version de `picomatch` au-delà de 4.0.7 (mise à jour par
+`overrides`, comme `katex` fixé à 0.19.1 pour GHSA-238p-pmpm-9mq7).
 
 Le proxy de développement (`frontend/proxy.conf.js`) relaie `/employees`, `/functions`, `/chantiers`,
 `/equipes`, `/paie`, `/parametres`, `/auth`, `/users`, `/roles`, `/permissions` vers `BACKEND_URL` (défaut
