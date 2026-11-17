@@ -216,6 +216,14 @@ jobs:
           npm run audit:licences
           npm sbom --omit=dev --sbom-format cyclonedx > sbom-frontend.cdx.json
 
+      # Outils de build et de test (jamais livrés) : l'alerte est visible mais ne bloque pas la livraison ; un avis sans
+      # correctif amont (picomatch GHSA-fc5q-39xc-vjpf, 2026-11-17) ne doit pas figer la production. À réexaminer à chaque
+      # nouvelle version du paquet concerné (site/docs/frontend/index.md).
+      - name: Audit build tooling (informational)
+        working-directory: frontend
+        continue-on-error: true
+        run: npm run audit:outils
+
       - name: Upload SBOM
         uses: actions/upload-artifact@v7
         with:
