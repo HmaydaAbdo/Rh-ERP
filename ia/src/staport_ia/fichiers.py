@@ -13,6 +13,7 @@ utilisateur (``QuotaEspace``, crochet officiel ``wrap_tool_call``, appliqué à 
 l'expiration est celle du Store (``memoire.py``).
 """
 
+import base64
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -35,6 +36,12 @@ journal = logging.getLogger(__name__)
 #: Taille maximale d'un fichier écrit par l'agent (caractères) et nombre maximal de fichiers par utilisateur.
 TAILLE_MAX_FICHIER = 200_000
 FICHIERS_MAX = 50
+#: Types des documents Office de l'agent (``bureautique.py``), stockés en base64 ; tout autre fichier est du texte.
+TYPES_OFFICE = {
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 #: La mémoire longue est un seul fichier toujours chargé dans le prompt : elle reste courte (KAN-84).
 FICHIER_MEMOIRE = "/memoire/AGENTS.md"
 TAILLE_MAX_MEMOIRE = 4_000
@@ -159,6 +166,22 @@ def _chemin_sur(chemin: str) -> str:
     return "/" + "/".join(morceaux)
 
 
+def _taille(valeur: dict[str, Any]) -> int:
+    """La taille du fichier en octets : celle du binaire décodé pour un document Office, sinon celle du texte."""
+    contenu = str(valeur.get("content", ""))
+    if valeur.get("encoding") == "base64":
+        return len(contenu) * 3 // 4 - (len(contenu) - len(contenu.rstrip("=")))
+    return len(contenu)
+
+
+def _contenu(valeur: dict[str, Any], nom: str) -> tuple[bytes, str]:
+    """Les octets et le type d'un fichier de l'espace : un document Office est décodé, un texte reste du texte."""
+    if valeur.get("encoding") == "base64":
+        extension = "." + nom.rsplit(".", 1)[-1].lower() if "." in nom else ""
+        return base64.b64decode(str(valeur.get("content", ""))), TYPES_OFFICE.get(extension, "application/octet-stream")
+    return str(valeur.get("content", "")).encode(), "text/plain; charset=utf-8"
+
+
 def routeur_fichiers(
     acces: Callable[[], AccesErp], actif: Callable[[], bool], store: Callable[[], BaseStore]
 ) -> APIRouter:
@@ -177,9 +200,7 @@ def routeur_fichiers(
         proprietaire = await utilisateur(requete)
         elements = await store().asearch((proprietaire, "espace"), limit=FICHIERS_MAX)
         return [
-            Fichier(
-                chemin=f"/espace{e.key}", taille=len(str(e.value.get("content", ""))), modifie=e.updated_at.isoformat()
-            )
+            Fichier(chemin=f"/espace{e.key}", taille=_taille(e.value), modifie=e.updated_at.isoformat())
             for e in sorted(elements, key=lambda e: e.key)
         ]
 
@@ -191,9 +212,10 @@ def routeur_fichiers(
         if element is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Fichier introuvable.")
         nom = cle.rsplit("/", 1)[-1].replace('"', "")
+        contenu, type_media = _contenu(element.value, nom)
         return Response(
-            content=str(element.value.get("content", "")).encode(),
-            media_type="text/plain; charset=utf-8",
+            content=contenu,
+            media_type=type_media,
             headers={
                 "Content-Disposition": f'attachment; filename="{nom}"',
                 "Cache-Control": "no-store",

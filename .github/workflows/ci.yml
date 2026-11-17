@@ -136,6 +136,7 @@ jobs:
           docker build --tag staport-intelligence-ia:ci ia
           docker build --tag staport-intelligence-copilot-runtime:ci copilot-runtime
           docker build --tag staport-intelligence-phoenix:ci phoenix
+          docker build --tag staport-intelligence-mcp-excel:ci mcp-excel
 
   frontend:
     runs-on: ubuntu-latest
@@ -390,12 +391,13 @@ jobs:
           docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-ia:$GITHUB_SHA" ia
           docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-copilot-runtime:$GITHUB_SHA" copilot-runtime
           docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-phoenix:$GITHUB_SHA" phoenix
+          docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-mcp-excel:$GITHUB_SHA" mcp-excel
           docker build --tag "$DOCKERHUB_USERNAME/staport-intelligence-docs:$GITHUB_SHA" site
 
       - name: Add release aliases
         run: |
           set -euo pipefail
-          for image in postgres api frontend backup litellm ia copilot-runtime phoenix docs; do
+          for image in postgres api frontend backup litellm ia copilot-runtime phoenix mcp-excel docs; do
             repository="$DOCKERHUB_USERNAME/staport-intelligence-$image"
             source="$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
@@ -416,7 +418,7 @@ jobs:
       - name: Publish validated images
         run: |
           set -euo pipefail
-          for image in postgres api frontend backup litellm ia copilot-runtime phoenix docs; do
+          for image in postgres api frontend backup litellm ia copilot-runtime phoenix mcp-excel docs; do
             repository="$DOCKERHUB_USERNAME/staport-intelligence-$image"
             docker push "$repository:$GITHUB_SHA"
             if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
