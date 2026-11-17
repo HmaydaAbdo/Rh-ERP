@@ -110,6 +110,23 @@ def test_le_document_est_remplace_par_son_texte_et_garde_en_cache() -> None:
     assert len(textes._textes) == 1  # pyright: ignore[reportPrivateUsage]
 
 
+@pytest.mark.parametrize("mime", ["text/plain", "text/csv", "text/markdown", "application/json"])
+def test_un_fichier_texte_arrive_au_modele_comme_du_texte(mime: str) -> None:
+    """Un ``.txt`` restait un bloc ``file`` que Deep Agents remplace par « non joint » : le modèle ne lisait rien."""
+    message = _message("Retard du ciment : 2 jours, responsable Karim.\né accentué".encode(), mime)
+    contenu = asyncio.run(convertir_documents([message], TextesExtraits()))[0].content
+    assert isinstance(contenu, list)
+    assert [partie.type for partie in contenu] == ["text", "text"]
+    assert "responsable Karim" in str(getattr(contenu[1], "text", ""))
+    assert "é accentué" in str(getattr(contenu[1], "text", ""))
+
+
+def test_un_fichier_texte_vide_reste_un_document() -> None:
+    contenu = asyncio.run(convertir_documents([_message(b"  \n", "text/plain")], TextesExtraits()))[0].content
+    assert isinstance(contenu, list)
+    assert [partie.type for partie in contenu] == ["text", "document"]
+
+
 def test_un_document_tres_long_est_tronque_avec_une_mention(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("staport_ia.documents.CARACTERES_MAX", 50)
     resultat = asyncio.run(convertir_documents([_message(_docx("x" * 500), DOCX)], TextesExtraits()))

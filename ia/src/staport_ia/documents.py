@@ -4,6 +4,8 @@ La passerelle de modèles enchaîne des modèles qui ne lisent pas tous les bloc
 que du texte, d'où les échecs observés avec un PDF). Le service convertit donc, après la vérification de
 ``pieces_jointes``, chaque PDF, document Word, classeur Excel et présentation PowerPoint en Markdown avec MarkItDown
 (Microsoft, conversion locale : aucun envoi à un tiers) ; le modèle reçoit du texte, quel que soit celui qui répond.
+Un fichier texte, CSV, Markdown ou JSON est décodé tel quel : le middleware de Deep Agents remplace tout bloc ``file``
+non PDF par une mention « non joint » pour un modèle sans profil de lecture de fichiers (constaté avec un ``.txt``).
 Un PDF sans texte (scan) reste un bloc ``file`` : seuls les modèles qui lisent les images pourront l'analyser.
 
 Un document très long est tronqué à ``CARACTERES_MAX`` (≈ 75 000 jetons) avec une mention explicite : au-delà, aucun
@@ -11,6 +13,7 @@ modèle de la passerelle ne le lirait en une fois.
 """
 
 import asyncio
+import base64
 import hashlib
 import io
 import zipfile
@@ -28,6 +31,8 @@ EXTENSIONS_DOCUMENT = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
 }
 TYPES_OFFICE = frozenset(EXTENSIONS_DOCUMENT) - {"application/pdf"}
+#: Types déjà en texte : décodés tels quels, sans conversion.
+TYPES_TEXTE = frozenset({"text/plain", "text/csv", "text/markdown", "application/json"})
 CARACTERES_MAX = 300_000
 #: Une archive Office qui se décompresserait au-delà de cette taille est refusée (bombe de décompression).
 TAILLE_DECOMPRESSEE_MAX = 2 * 1024 * 1024 * 1024
@@ -92,17 +97,22 @@ async def convertir_documents(messages: Sequence[Message], textes: TextesExtrait
         for partie in message.content:
             source = getattr(partie, "source", None)
             mime = str(getattr(source, "mime_type", "")).lower()
-            if getattr(partie, "type", "") != "document" or mime not in EXTENSIONS_DOCUMENT:
+            if getattr(partie, "type", "") != "document" or (
+                mime not in EXTENSIONS_DOCUMENT and mime not in TYPES_TEXTE
+            ):
                 contenu.append(partie)
                 continue
             valeur = str(getattr(source, "value", ""))
             empreinte = hashlib.sha256(mime.encode() + b"\x00" + valeur.encode()).hexdigest()
             texte = textes.lire(empreinte)
             if texte is None:
-                import base64
-
                 donnees = base64.b64decode(valeur)
-                texte = await asyncio.to_thread(extraire_texte, donnees, mime)
+                if (
+                    mime in TYPES_TEXTE
+                ):  # texte, CSV, Markdown, JSON : déjà du texte, aucun bloc ``file`` pour le modèle
+                    texte = donnees.decode("utf-8", errors="replace").strip()
+                else:
+                    texte = await asyncio.to_thread(extraire_texte, donnees, mime)
                 textes.retenir(empreinte, texte)
             if not texte:
                 contenu.append(
