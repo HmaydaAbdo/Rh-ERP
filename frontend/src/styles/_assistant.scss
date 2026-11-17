@@ -203,6 +203,8 @@ html .espace-assistant-discussion {
   // avec des marges latérales confortables plutôt qu'une colonne étroite.
   [class*='cpk:max-w-3xl'] {
     max-width: none;
+    // Marges latérales : le fil et la saisie ne touchent plus les bords gauche et droit de l'espace.
+    padding-inline: clamp(1rem, 6vw, 6rem);
   }
 
   // Défilement : fondus en haut et en bas, barre fine qui se révèle au survol (le contenu glisse sous le bord au lieu d'être coupé).

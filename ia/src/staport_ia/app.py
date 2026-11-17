@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from staport_ia.agent import creer_agent
 from staport_ia.agui import AccesErp, AccesHttp, FabriqueAgent, Routage, demander_arret, routeur_agui
+from staport_ia.bureautique import complement_bureautique
 from staport_ia.capacites import routeur_capacites
 from staport_ia.competences import semer_competences
 from staport_ia.config import Settings, get_settings
@@ -59,6 +60,7 @@ def fabrique_reelle(config: Settings, espaces: BaseStore) -> FabriqueAgent:
             store=espaces,
             repli=repli,
             sous_agents=config.sous_agents,
+            dossier_bureautique=config.bureautique_dossier if complement_bureautique(config) else None,
         )
 
     return fabriquer
@@ -97,7 +99,9 @@ def cycle_ia(
                     # Les fichiers d'espace par identité sont dans le Store de la même mémoire (PostgreSQL).
                     app.state.fabrique = fabrique or fabrique_reelle(config, ouverte.store)
                     app.state.routage = routage or Routeur().adomaines
-                    app.state.acces = acces or AccesHttp(client, str(config.erp_api_url))
+                    app.state.acces = acces or AccesHttp(
+                        client, str(config.erp_api_url), complement_bureautique(config)
+                    )
                     yield
 
     return cycle

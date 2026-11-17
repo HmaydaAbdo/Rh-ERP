@@ -10,6 +10,7 @@ from typing import Any
 from doubles import appel, modele, outil
 
 from staport_ia.agent import ResultatDomaine, creer_agent, sous_agents_par_domaine
+from staport_ia.bureautique import OUTILS_BUREAUTIQUE
 from staport_ia.competences import charger
 from staport_ia.config import Settings
 
@@ -23,7 +24,10 @@ def _outils() -> list[Any]:
 def test_chaque_domaine_a_son_sous_agent_avec_ses_seuls_outils_et_une_sortie_structuree() -> None:
     sous_agents: list[Any] = list(sous_agents_par_domaine(_outils()))
 
-    assert {s["name"] for s in sous_agents} == set(charger())
+    # Les domaines de documents n'ont pas d'outil dans le catalogue de l'ERP : pas de sous-agent sans outils.
+    assert {s["name"] for s in sous_agents} == {
+        n for n, c in charger().items() if not set(c.outils) <= OUTILS_BUREAUTIQUE
+    }
     for sous_agent in sous_agents:
         assert {o.name for o in sous_agent["tools"]} == set(charger()[sous_agent["name"]].outils)
         assert sous_agent["response_format"] is ResultatDomaine

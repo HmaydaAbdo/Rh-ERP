@@ -20,6 +20,7 @@ Staport Intelligence, la plateforme d'IA de Staport : assistant, serveur MCP, é
 | [Routage LiteLLM](routage-litellm.md) | Groupes de modèles officiels par capacité |
 | [Les trois mémoires](les-trois-memoires.md) | État du fil, mémoire inter-fils (consentement, oubli, expiration), contexte d'exécution, reprise du flux |
 | [Pièces jointes et dictée](pieces-jointes-et-voix.md) | Whisper local sur CPU, pièces jointes contrôlées par le serveur, conditions avant activation |
+| [Documents générés par l'agent](documents-generes-par-agent.md) | Word, PowerPoint et Excel créés par l'agent via deux serveurs MCP locaux, rangés dans l'espace de l'utilisateur |
 | [Vues libres](vues-libres.md) | Interface générative ouverte : iframe isolée, zéro porte, aucun réseau, toujours active pour tous |
 | [Contrat de production](contrat-de-production.md) | Cycle de vie de CopilotKit, budget de taille, inspecteur coupé |
 | [Déploiement des modes](deploiement-des-modes.md) | Modes M0 à M4 par domaine : état réel, porte à six preuves, revue par domaine |
