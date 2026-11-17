@@ -370,7 +370,7 @@ services:
       # Dictée (KAN-93) : Whisper local sur CPU (service stt), API compatible OpenAI ; l'audio ne quitte pas les serveurs.
       # Vider STT_URL retire le micro de la discussion.
       STT_URL: ${STT_URL-http://stt:8000}
-      STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-small}
+      STT_MODELE: ${STT_MODELE:-Systran/faster-whisper-base}
       # Les conversations sans échange depuis ce nombre de jours sont supprimées (liste, historique), comme dans le service IA.
       CONVERSATION_JOURS: ${IA_CONVERSATION_JOURS:-30}
       # Authentification de chaque requête de l'assistant auprès de l'API (/auth/me), par le réseau runtime-auth-net.
@@ -464,6 +464,14 @@ services:
     restart: unless-stopped
     environment:
       WHISPER__INFERENCE_DEVICE: cpu
+      # Vitesse (recette du 2026-11-17 : 54 s pour 3 s de voix après 5 min d'inactivité, 6 s pour 6 s de voix modèle
+      # chargé). `int8` : le type par défaut (float16) n'est pas géré par un processeur ; `TTL=-1` : le modèle reste en
+      # mémoire (par défaut il se décharge après 300 s et se recharge en 34 s) ; `CPU_THREADS` : 0 = valeur de la bibliothèque
+      # (4). Mesure du 2026-11-17 (modèle base, 3 s de voix, 16 cœurs logiques) : 4 threads 2,6 s, 8 threads 2,0 s, 10 threads
+      # 5,8 s, 16 threads 7,5 s : ne pas dépasser le nombre de cœurs physiques (la moitié des cœurs logiques en général).
+      WHISPER__COMPUTE_TYPE: ${STT_COMPUTE_TYPE:-int8}
+      WHISPER__TTL: "-1"
+      WHISPER__CPU_THREADS: ${STT_CPU_THREADS:-0}
     volumes:
       - stt_models:/home/ubuntu/.cache/huggingface/hub
     healthcheck:
@@ -480,14 +488,15 @@ services:
 
   # Téléchargement du modèle de dictée au démarrage : Speaches 0.8.x ne précharge rien (PRELOAD_MODELS n'existe pas), sans
   # modèle installé la transcription répond 404 et le micro ne fait rien. Ce service appelle l'API officielle d'installation
-  # d'un modèle ; il est sans effet (rapide) quand le modèle est déjà dans le volume stt_models, puis s'arrête.
+  # d'un modèle ; il est sans effet (rapide) quand le modèle est déjà dans le volume stt_models, puis le charge en mémoire
+  # (`/api/ps`) pour que la première dictée n'attende pas le chargement, et s'arrête.
   stt-modele:
     image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
     restart: "no"
     depends_on:
       stt:
         condition: service_healthy
-    entrypoint: ["curl", "--fail", "--silent", "--show-error", "--max-time", "1800", "--retry", "5", "--retry-delay", "10", "--retry-all-errors", "-X", "POST", "http://stt:8000/v1/models/${STT_MODELE:-Systran/faster-whisper-small}"]
+    entrypoint: ["curl", "--fail", "--silent", "--show-error", "--max-time", "1800", "--retry", "5", "--retry-delay", "10", "--retry-all-errors", "-X", "POST", "http://stt:8000/v1/models/${STT_MODELE:-Systran/faster-whisper-base}", "--next", "--fail", "--silent", "--show-error", "--max-time", "300", "-X", "POST", "http://stt:8000/api/ps/${STT_MODELE:-Systran/faster-whisper-base}"]
     cap_drop: ["ALL"]
     security_opt:
       - no-new-privileges:true

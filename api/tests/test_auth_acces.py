@@ -557,6 +557,12 @@ def test_une_ecriture_de_fichier_de_l_agent_est_journalisee_avec_le_jeton_agent_
     hors_memoire = {**memoire, "chemin": "/autre/AGENTS.md"}
     assert plateforme.client.post(route, headers=_bearer(agent), json=hors_memoire).status_code == 400
     assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 2
+    # Les documents Word, Excel, PowerPoint et PDF créés par l'agent : jusqu'à 25 Mo, outils de création seulement.
+    document = {"chemin": "/espace/documents/Paie.xlsx", "taille": 5_000_000, "outil": "export_workbook"}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=document).status_code == 204
+    trop_gros = {**document, "taille": 26_214_401}
+    assert plateforme.client.post(route, headers=_bearer(agent), json=trop_gros).status_code == 400
+    assert len(plateforme.journal.de(nom, Action.ECRITURE_FICHIER_AGENT)) == 3
 
 
 def test_le_jeton_agent_est_refuse_si_le_droit_est_retire_ou_le_compte_desactive(

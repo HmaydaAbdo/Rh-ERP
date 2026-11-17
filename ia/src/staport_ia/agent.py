@@ -57,6 +57,7 @@ from staport_ia.competences import (
     resolveur,
     semer_competences_memoire,
 )
+from staport_ia.documents import LectureDocuments
 from staport_ia.fichiers import FICHIER_MEMOIRE, MemoireFraiche, QuotaEspace
 from staport_ia.garde_sortie import garde_sortie
 from staport_ia.question import poser_question
@@ -398,6 +399,7 @@ def creer_agent(
     intergiciels: list[AgentMiddleware[Any, Any]] = [
         CopilotKitMiddleware(a2ui_params=_parametres_a2ui()),  # pyright: ignore[reportArgumentType]
         SurfacesResultats(),
+        LectureDocuments(),  # le modèle lit le texte des documents joints, le fil garde le fichier
         TodoListMiddleware(),
         # Tolérance aux pannes d'outil (middlewares officiels) : reprise des coupures transitoires seulement
         # (`ToolRetryMiddleware`), puis l'échec devient un message que le modèle explique (`ToolErrorMiddleware`).

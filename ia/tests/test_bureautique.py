@@ -28,6 +28,7 @@ from staport_ia.bureautique import (
 )
 from staport_ia.config import Settings
 from staport_ia.fichiers import _contenu, _taille  # pyright: ignore[reportPrivateUsage]
+from staport_ia.pdf import rendre_pdf
 
 ALICE = "alice"
 CLASSEUR = b"PK\x03\x04 un classeur xlsx"
@@ -77,6 +78,7 @@ async def _passe(retour: ToolMessage) -> Any:
 def test_un_nom_de_classeur_perd_ses_dossiers_et_ses_caracteres_speciaux() -> None:
     assert nom_sur("../../etc/passwd", ".xlsx") == "passwd.xlsx"
     assert nom_sur("C:\\Users\\x\\Paie octobre 2026.xlsx", ".xlsx") == "Paie_octobre_2026.xlsx"
+    assert nom_sur("Procédure d'accueil", ".docx") == "Procedure_d_accueil.docx"
     assert nom_sur("", ".xlsx", "classeur") == "classeur.xlsx"
     assert nom_sur("....", ".docx") == "document.docx"
     assert len(nom_sur("a" * 500, ".xlsx")) <= 65
@@ -296,9 +298,11 @@ def _config(**champs: Any) -> Settings:
 
 
 def test_sans_adresse_ni_cle_aucun_outil_de_documents_n_est_propose() -> None:
-    assert complement_bureautique(_config()) is None
-    assert complement_bureautique(_config(bureautique_office_url="http://office:8958/mcp")) is None
-    assert complement_bureautique(_config(bureautique_cle="c" * 16)) is None
+    # Valeurs explicites : le test ne doit pas dépendre des variables IA_BUREAUTIQUE_* de la machine.
+    vide: dict[str, Any] = {"bureautique_cle": None, "bureautique_office_url": None, "bureautique_excel_url": None}
+    assert complement_bureautique(_config(**vide)) is None
+    assert complement_bureautique(_config(**{**vide, "bureautique_office_url": "http://office:8958/mcp"})) is None
+    assert complement_bureautique(_config(**{**vide, "bureautique_cle": "c" * 16})) is None
 
 
 def test_avec_une_adresse_et_une_cle_les_outils_sont_proposes() -> None:
@@ -331,4 +335,64 @@ async def test_seuls_les_outils_de_la_liste_blanche_sont_exposes_et_un_serveur_e
 
     outils = await outils_bureautique("http://office:8958/mcp", "http://excel:8017/mcp", "c" * 16)
 
-    assert [o.name for o in outils] == ["create_word_from_markdown"]
+    # Le PDF est rendu par le service lui-même : il reste, quelle que soit la panne des serveurs.
+    assert [o.name for o in outils] == ["create_word_from_markdown", "create_pdf_from_markdown"]
+
+
+# --- PDF ---------------------------------------------------------------------------------------------
+
+
+async def test_le_pdf_est_range_dans_l_espace_sans_entrer_dans_le_contexte_du_modele() -> None:
+    store = InMemoryStore()
+    octets = b"%PDF-1.7 un pdf"
+    message = ToolMessage(
+        content="PDF créé.",
+        tool_call_id="a1",
+        name="create_pdf_from_markdown",
+        artifact={"pdf": octets, "nom": "../Consignes de sécurité.pdf"},
+    )
+    middleware = Bureautique(ALICE, "/documents")
+    signaux: list[tuple[str, int, str]] = []
+
+    async def signaler(chemin: str, taille: int, outil: str) -> None:
+        signaux.append((chemin, taille, outil))
+
+    jeton = SIGNALEUR_ECRITURE.set(signaler)
+    try:
+
+        async def handler(_requete: Any) -> ToolMessage:
+            return message
+
+        retour = await middleware.awrap_tool_call(Requete(_appel("create_pdf_from_markdown"), store), handler)
+    finally:
+        SIGNALEUR_ECRITURE.reset(jeton)
+
+    assert isinstance(retour, ToolMessage)
+    assert "Fichier prêt : Consignes_de_securite.pdf" in str(retour.content)
+    element = await store.aget((ALICE, "espace"), "/documents/Consignes_de_securite.pdf")
+    assert element is not None
+    assert base64.b64decode(element.value["content"]) == octets
+    assert signaux == [("/espace/documents/Consignes_de_securite.pdf", len(octets), "create_pdf_from_markdown")]
+
+
+async def test_un_pdf_sans_artefact_est_signale_en_erreur() -> None:
+    async def handler(_requete: Any) -> ToolMessage:
+        return ToolMessage(content="PDF créé.", tool_call_id="a1", name="create_pdf_from_markdown")
+
+    retour = await Bureautique(ALICE, "/documents").awrap_tool_call(
+        Requete(_appel("create_pdf_from_markdown"), InMemoryStore()), handler
+    )
+    assert isinstance(retour, ToolMessage)
+    assert retour.status == "error"
+
+
+def test_le_rendu_pdf_produit_un_pdf_et_refuse_tout_chargement_externe() -> None:
+    texte = (
+        "Texte avec **gras**.\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n<img src='file:///etc/passwd'>\n\n"
+        "![x](http://exemple.invalid/x.png)"
+    )
+    try:
+        pdf = rendre_pdf("Consignes", texte)
+    except OSError:  # Pango absent (poste Windows sans GTK) : vérifié en CI et dans l'image Docker
+        pytest.skip("WeasyPrint indisponible sur ce poste")
+    assert pdf.startswith(b"%PDF")

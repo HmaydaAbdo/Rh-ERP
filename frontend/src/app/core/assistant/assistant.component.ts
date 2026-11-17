@@ -11,6 +11,8 @@ import { ThemeService } from '../theme/theme.service';
 import { CarteOutilComponent } from './carte-outil.component';
 import { contexteEcran } from './ecran-assistant';
 import { EspaceAssistantComponent } from './espace-assistant.component';
+import { DocumentGenereAssistantComponent } from './document-genere-assistant.component';
+import { OUTILS_DOCUMENT } from './document-genere-assistant';
 import { ExportPaieAssistantComponent } from './export-paie-assistant.component';
 import { OUTIL_EXPORT_PAIE } from './export-paie-assistant';
 
@@ -59,6 +61,11 @@ export class AssistantComponent {
       args: z.record(z.string(), z.unknown()),
       component: ExportPaieAssistantComponent
     });
+
+    // Les documents que l'agent crée (Word, PowerPoint, Excel, PDF) : un bouton de téléchargement par fichier.
+    for (const name of OUTILS_DOCUMENT) {
+      registerRenderToolCall({ name, args: z.record(z.string(), z.unknown()), component: DocumentGenereAssistantComponent });
+    }
 
     // Rendu universel (`*`) des consultations d'outils (KAN-87) : une carte au titre français, jamais le nom technique ;
     // le rendu du classeur de paie, enregistré par son nom, garde la priorité.

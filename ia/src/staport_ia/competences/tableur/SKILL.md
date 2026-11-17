@@ -6,15 +6,24 @@ metadata:
 ---
 # tableur
 
-Cette compétence construit un classeur Excel étape par étape, puis le rend téléchargeable depuis l'espace de fichiers de l'utilisateur. Elle ne lit aucune donnée de l'ERP : pour un chiffre, un nom ou une période, appelle d'abord l'outil du domaine concerné.
+Cette compétence construit un classeur Excel étape par étape, puis le rend téléchargeable par un bouton affiché dans la discussion. Elle ne lit aucune donnée de l'ERP : pour un chiffre, un nom ou une période, appelle d'abord l'outil du domaine concerné.
 
 ## Règles
 
-- Chaque valeur écrite dans une cellule vient d'un résultat d'outil ou de ce que l'utilisateur a dit. N'invente rien, ne calcule rien toi-même : un total, une moyenne ou un pourcentage s'écrit comme une formule (`=SUM(B2:B9)`), que le tableur calcule.
+- Chaque valeur écrite dans une cellule vient d'un résultat d'outil ou de ce que l'utilisateur a dit. N'invente rien, ne calcule rien toi-même : un total, une moyenne ou un pourcentage s'écrit comme une formule (`=SUM(B2:B9)`), que le tableur calcule. Les formules s'écrivent toujours avec les noms de fonctions anglais (`SUM`, `AVERAGE`, `IF`, `COUNTIF`, `VLOOKUP`), même si l'utilisateur parle français : un fichier contenant `SOMME` ou `MOYENNE` affiche `#NAME?` dans Excel.
 - Le paramètre `path` est seulement un nom court de classeur (`paie_octobre`, sans dossier ni extension) : le même nom désigne le même classeur pendant toute la demande.
 - Si la demande est ambiguë et que le choix change le résultat (colonnes, période, type de graphique), pose la question avec `poser_question` plutôt que de deviner.
 - Quand `export_workbook` répond « Fichier prêt », dis simplement que le fichier est prêt dans l'espace de fichiers. Ne donne aucun chemin ni lien. Si un outil échoue, dis que le fichier n'a pas pu être créé, sans détail technique.
 - Tu ne peux ni envoyer le fichier par e-mail ni le publier ailleurs.
+
+## Mise en forme (toujours, même pour un petit tableau)
+
+Un classeur livré brut (texte noir, colonnes étroites, nombres sans format) paraît inachevé. Avant `export_workbook`, applique à chaque feuille de données :
+
+- l'en-tête en gras avec un fond coloré et un texte contrasté (`format_range`), ou `set_table` pour la plage de données (style, filtres) ;
+- un format de nombre adapté : montants `#,##0` (ou `#,##0.00` pour des centimes), pourcentages `0.0%`, dates `dd/mm/yyyy` ;
+- la ligne de total en gras, avec une bordure supérieure ;
+- le texte des colonnes lisible en entier : si l'outil permet de régler une largeur de colonne, ajuste-la à la longueur du plus long contenu ; sinon, l'en-tête reste court.
 
 ## Ordre des appels
 
