@@ -36,24 +36,17 @@ describe('RaisonnementAssistantComponent', () => {
     expect(bouton(element).getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('une fois terminée : repliée, avec la durée, et dépliable par l’utilisateur', () => {
+  it('une fois terminée : plus affichée dans le fil', () => {
     const { fixture, ref, element } = creer('Je consulte les indicateurs de paie.', true);
+    expect(element.classList.contains('hidden')).toBe(false);
     ref.setInput('isRunning', false);
     fixture.detectChanges();
-
-    expect(element.textContent).toContain('Réflexion de moins d’une seconde');
-    expect(element.textContent).not.toContain('Je consulte');
-    expect(bouton(element).getAttribute('aria-expanded')).toBe('false');
-
-    bouton(element).click();
-    fixture.detectChanges();
-    expect(element.textContent).toContain('Je consulte les indicateurs de paie.');
-    expect(bouton(element).getAttribute('aria-expanded')).toBe('true');
+    expect(element.textContent?.trim()).toBe('');
   });
 
   it('terminée et sans texte : rien n’est affiché', () => {
     const { element } = creer('', false);
-    expect(element.classList.contains('hidden')).toBe(true);
+    expect(element.textContent?.trim()).toBe('');
   });
 
   it('sans texte : pas de repli', () => {
