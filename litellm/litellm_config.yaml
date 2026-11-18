@@ -40,7 +40,7 @@ model_list:
       model: gemini/gemini-3.5-flash-lite
       api_key: os.environ/GEMINI_API_KEY
       weight: 5
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 3
       tags: [simple, ocr, "id:gemini-3.5-flash-lite"]
 
@@ -103,7 +103,7 @@ model_list:
       model: gemini/gemma-4-26b-a4b-it
       api_key: os.environ/GEMINI_API_KEY
       weight: 4
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 2
       tags: [simple, "id:gemini-gemma-4-26b"]
 
@@ -165,7 +165,7 @@ model_list:
       api_key: os.environ/GROQ_API_KEY
       weight: 5
       rpm: 30
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 4
       tags: [simple, "id:groq-gpt-oss-20b"]
 
@@ -207,7 +207,7 @@ model_list:
       api_key: os.environ/MISTRAL_API_KEY
       weight: 3
       rpm: 30
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 1
       tags: [simple, medium, default, "id:mistral-ministral-14b"]
 
@@ -442,7 +442,7 @@ model_list:
       model: cloudflare/@cf/zai-org/glm-4.7-flash
       api_key: os.environ/CLOUDFLARE_API_KEY
       weight: 2
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 2
       tags: [simple, "id:cloudflare-glm-47-flash"]
 
@@ -467,7 +467,7 @@ model_list:
       api_key: os.environ/OPENROUTER_API_KEY
       weight: 1
       rpm: 20
-      timeout: 60
+      timeout: 10
       max_parallel_requests: 1
       tags: [simple, medium, ocr, default, "id:openrouter-gemma-4-31b-free"]
 
@@ -528,7 +528,7 @@ model_list:
       api_key: os.environ/LLM7_API_KEY
       weight: 2
       rpm: 60
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 2
       tags: [simple, "id:llm7-gpt-oss-20b"]
 
@@ -583,7 +583,7 @@ model_list:
       api_key: os.environ/COHERE_API_KEY
       weight: 1
       rpm: 4
-      timeout: 30
+      timeout: 10
       max_parallel_requests: 1
       tags: [simple, "id:cohere-command-r7b"]
 

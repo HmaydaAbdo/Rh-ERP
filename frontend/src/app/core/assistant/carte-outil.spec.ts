@@ -71,4 +71,9 @@ describe('CarteOutilComponent', () => {
     const element = await creer({ name: 'write_todos', status: 'complete', args: {}, result: 'ok' });
     expect(element.querySelector('details')).toBeNull();
   });
+
+  it('n’affiche pas de consultation pour les étapes de construction d’un classeur Excel', async () => {
+    const element = await creer({ name: 'format_range', status: 'complete', args: {}, result: 'ok' });
+    expect(element.querySelector('details')).toBeNull();
+  });
 });
