@@ -31,6 +31,9 @@ INTERNE = {
     "copilotkit:emit-tool-calls": False,
 }
 
+#: Délai d'un appel interne (résumé) avant de retomber sur un autre déploiement de la passerelle.
+DELAI_INTERNE_SECONDES = 10.0
+
 
 def modele(
     settings: Settings,
@@ -51,8 +54,12 @@ def modele(
         model_kwargs={
             "extra_body": {"metadata": {"tags": [tache.value]}},
         },
-        request_timeout=settings.llm_timeout_seconds,
-        max_retries=0,
+        # Appels d'intergiciel (résumé) : un fournisseur lent (30 s mesurés le 2026-11-18, médiane 1,4 s) bloquait le
+        # tour. Délai court, puis deux nouvelles tentatives (exception à KAN-33, réservée à ces appels).
+        request_timeout=min(settings.llm_timeout_seconds, DELAI_INTERNE_SECONDES)
+        if interne
+        else settings.llm_timeout_seconds,
+        max_retries=2 if interne else 0,
         streaming=not interne,
         metadata=INTERNE if interne else None,
     )

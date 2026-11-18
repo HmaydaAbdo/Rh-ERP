@@ -45,6 +45,8 @@ def test_un_modele_interne_ne_diffuse_rien_dans_le_fil() -> None:
     chat = modele(_settings(), Tache.SIMPLE, interne=True)
     assert chat.max_tokens is None
     assert not chat.streaming
+    # Délai court et reprises : un fournisseur lent ne bloque plus le tour ; le modèle de réponse ne rejoue pas.
+    assert chat.request_timeout == 10.0 and chat.max_retries == 2
     assert chat.metadata is not None
     assert (
         chat.metadata.items()
