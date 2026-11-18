@@ -27,12 +27,15 @@ const ENTETE_UTILISATEUR = 'x-staport-utilisateur-verifie';
 // Les skills épinglés par Deep Agents sont des messages utilisateur `<skill name=…>` ajoutés à l'état du fil : ils sont
 // destinés au modèle, pas à l'utilisateur. `ag-ui-langgraph` ne transmet pas le marqueur `lc_source` qui les distingue
 // (signalement amont à faire) ; en attendant, le middleware officiel d'AG-UI les retire de l'instantané des messages.
-const estSkillEpingle = (message) => message.role === 'user' && typeof message.content === 'string' && message.content.startsWith('<skill name=');
+// Même cas pour le résumé de conversation du `SummarizationMiddleware` : un message utilisateur en anglais, destiné au modèle.
+const PREFIXES_INTERNES = ['<skill name=', 'Here is a summary of the conversation to date:'];
+export const estMessageInterne = (message) =>
+  message.role === 'user' && typeof message.content === 'string' && PREFIXES_INTERNES.some((prefixe) => message.content.startsWith(prefixe));
 const masquerSkills = (input, next) =>
   next.run(input).pipe(
     map((evenement) =>
       evenement.type === EventType.MESSAGES_SNAPSHOT
-        ? { ...evenement, messages: evenement.messages.filter((message) => !estSkillEpingle(message)) }
+        ? { ...evenement, messages: evenement.messages.filter((message) => !estMessageInterne(message)) }
         : evenement
     )
   );
@@ -65,7 +68,7 @@ class AgentServiceIa extends HttpAgent {
 }
 
 /**
- * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string } }} options
+ * @param {{ urlAgent: string, urlApi: string, cheminBase?: string, journal?: Pick<Console, 'error'>, stt?: { url: string, modele: string, langue?: string, prompt?: string } }} options
  * @returns {{ app: import('express').Express, purger?: (jours: number) => number, fermer: () => void }}
  */
 export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt }) {
@@ -101,7 +104,11 @@ export function creerApp({ urlAgent, urlApi, cheminBase, journal = console, stt 
           transcriptionService: new TranscriptionServiceOpenAI({
             openai: new OpenAI({ baseURL: `${stt.url}/v1`, apiKey: 'service-local' }),
             model: stt.modele,
-            ...(stt.langue ? { language: stt.langue } : {})
+            ...(stt.langue ? { language: stt.langue } : {}),
+            // Paramètres officiels du service : le vocabulaire du métier guide l'orthographe (Word, Excel, chantier) et la
+            // température 0 rend la transcription déterministe, sans mots inventés sur un modèle petit.
+            ...(stt.prompt ? { prompt: stt.prompt } : {}),
+            temperature: 0
           })
         }
       : {}),

@@ -327,6 +327,9 @@ services:
       OTEL_SERVICE_NAME: staport-intelligence-ia
       OTEL_EXPORTER_OTLP_ENDPOINT: http://phoenix:6006
       OTEL_EXPORTER_OTLP_HEADERS: authorization=Bearer ${PHOENIX_ADMIN_SECRET:?PHOENIX_ADMIN_SECRET est obligatoire (voir .env.example)}
+      # Les spans de l'agent portent beaucoup d'attributs (messages, outils) : la limite par défaut (128) les tronquait et inondait le journal.
+      OTEL_ATTRIBUTE_COUNT_LIMIT: "1024"
+      OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT: "1024"
       # Contenus conservés en clair dans Phoenix (décision du propriétaire, 2026-11-04) : conversations, arguments et résultats
       # d'outils servent à analyser ce qui s'est passé et à améliorer l'agent. Phoenix reste privé (127.0.0.1, connexion obligatoire).
       OPENINFERENCE_HIDE_INPUTS: "false"
