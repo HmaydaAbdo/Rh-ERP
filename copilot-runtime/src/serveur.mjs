@@ -2,6 +2,8 @@
 import { creerApp } from './app.mjs';
 
 const port = Number(process.env.PORT ?? 4100);
+// Vocabulaire du métier donné au modèle de dictée (paramètre `prompt`) : Word, Excel et PowerPoint ne sont plus transcrits « worth » ou « excelle ».
+const PROMPT_DICTEE = 'Staport Intelligence : paie, heures supplémentaires, chantier, STC, fichier Word, Excel, PowerPoint, PDF, en-tête.';
 
 function obligatoire(nom) {
   const valeur = process.env[nom];
@@ -17,7 +19,7 @@ const { app, purger } = creerApp({
   cheminBase: process.env.THREADS_DB_PATH,
   // Dictée (KAN-93) : Whisper local compatible OpenAI ; absent, le micro n'est pas proposé.
   stt: process.env.STT_URL
-    ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-base', langue: process.env.STT_LANGUE ?? 'fr' }
+    ? { url: process.env.STT_URL.replace(/\/$/, ''), modele: process.env.STT_MODELE ?? 'Systran/faster-whisper-base', langue: process.env.STT_LANGUE ?? 'fr', prompt: process.env.STT_PROMPT ?? PROMPT_DICTEE }
     : undefined
 });
 // Expiration des conversations inactives (KAN-82), au démarrage puis chaque jour ; même durée que la mémoire du service IA.

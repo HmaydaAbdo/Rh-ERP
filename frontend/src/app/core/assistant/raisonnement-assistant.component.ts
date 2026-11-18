@@ -14,7 +14,8 @@ import { dureeReflexion } from './raisonnement-assistant';
 @Component({
   selector: 'app-raisonnement-assistant',
   imports: [CopilotChatAssistantMessageRenderer, LucideChevronRight, LucideSparkles],
-  host: { class: 'my-1 block' },
+  // Une réflexion sans texte, terminée, n'apporte rien : elle n'est pas affichée (elle encombrait le fil).
+  host: { '[class.my-1]': 'visible()', '[class.block]': 'visible()', '[class.hidden]': '!visible()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="raisonnement rounded-md border border-border bg-surface-alt text-sm text-muted">
@@ -49,6 +50,7 @@ export class RaisonnementAssistantComponent {
   protected readonly enCours = computed(() => this.isRunning() && this.derniere());
   protected readonly texte = computed(() => this.message().content ?? '');
   protected readonly avecTexte = computed(() => this.texte().length > 0);
+  protected readonly visible = computed(() => this.avecTexte() || this.enCours());
 
   /** Ouvert pendant la réflexion ; replié ensuite, sauf si l'utilisateur a basculé la carte lui-même. */
   protected readonly ouvert = linkedSignal<boolean, boolean>({

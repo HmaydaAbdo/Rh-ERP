@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import Database from 'better-sqlite3';
-import { creerApp } from '../src/app.mjs';
+import { creerApp, estMessageInterne } from '../src/app.mjs';
 
 const UTILISATEURS = {
   'jeton-1': { id: 1, permissionsEffectives: ['IA_UTILISER'] },
@@ -396,19 +396,25 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
   let appStt;
   let baseStt;
   const requetesWhisper = [];
+  const corpsWhisper = [];
 
   before(async () => {
     whisper = createServer((requete, reponse) => {
       requetesWhisper.push({ url: requete.url, type: requete.headers['content-type'] ?? '' });
-      requete.resume();
-      requete.on('end', () => reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ text: 'bonjour la paie' })));
+      let corps = '';
+      requete.setEncoding('latin1');
+      requete.on('data', (morceau) => (corps += morceau));
+      requete.on('end', () => {
+        corpsWhisper.push(corps);
+         reponse.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ text: 'bonjour la paie' }));
+      });
     });
     await new Promise((ok) => whisper.listen(0, '127.0.0.1', ok));
     const creation = creerApp({
       urlAgent: `http://127.0.0.1:${agent.address().port}/agui`,
       urlApi: `http://127.0.0.1:${api.address().port}`,
       journal: { error: () => {} },
-      stt: { url: `http://127.0.0.1:${whisper.address().port}`, modele: 'Systran/faster-whisper-base', langue: 'fr' }
+      stt: { url: `http://127.0.0.1:${whisper.address().port}`, modele: 'Systran/faster-whisper-base', langue: 'fr', prompt: 'vocabulaire du métier : Word, Excel' }
     });
     appStt = creation.app.listen(0, '127.0.0.1');
     await new Promise((ok) => appStt.once('listening', ok));
@@ -452,6 +458,10 @@ describe('dictée (KAN-93) : transcription officielle vers un Whisper local comp
     assert.equal((await reponse.json()).text, 'bonjour la paie');
     assert.equal(requetesWhisper.length, 1);
     assert.match(requetesWhisper[0].url, /\/v1\/audio\/transcriptions$/);
+    // Réglages officiels de la dictée : langue, vocabulaire du métier et température 0.
+    assert.match(corpsWhisper[0], /name="language"\s+fr/);
+    assert.match(corpsWhisper[0], /name="prompt"\s+vocabulaire du m/);
+    assert.match(corpsWhisper[0], /name="temperature"\s+0\s/);
   });
 
   test('sans service de transcription configuré, la dictée est refusée', async () => {
@@ -600,5 +610,15 @@ describe('routes du service IA relayées au navigateur (KAN-87, KAN-84, KAN-267)
     const recu = await reponse.json();
     assert.deepEqual([reponse.status, recu.methode, recu.url], [200, 'PUT', '/memoire']);
     assert.equal(JSON.parse(recu.corps).contenu, 'Je préfère les tableaux.');
+  });
+});
+
+describe('messages internes masqués du fil', () => {
+  test('le résumé de conversation et les skills épinglés ne sont pas affichés ; un vrai message l’est', () => {
+    const user = (content) => ({ role: 'user', content });
+    assert.equal(estMessageInterne(user('Here is a summary of the conversation to date:\n\n## SESSION INTENT')), true);
+    assert.equal(estMessageInterne(user('<skill name="paie">…</skill>')), true);
+    assert.equal(estMessageInterne(user('Bonjour')), false);
+    assert.equal(estMessageInterne({ role: 'assistant', content: 'Here is a summary of the conversation to date:' }), false);
   });
 });
