@@ -51,6 +51,11 @@ describe('RaisonnementAssistantComponent', () => {
     expect(bouton(element).getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('terminée et sans texte : rien n’est affiché', () => {
+    const { element } = creer('', false);
+    expect(element.classList.contains('hidden')).toBe(true);
+  });
+
   it('sans texte : pas de repli', () => {
     const { element } = creer('', true);
     expect(bouton(element).disabled).toBe(true);

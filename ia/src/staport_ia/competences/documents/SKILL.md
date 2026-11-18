@@ -19,7 +19,7 @@ Cette compétence produit un fichier que l'utilisateur télécharge avec un bout
 
 ## Quel outil
 
-- Note, compte rendu, courrier, rapport : `create_word_from_markdown`. Le texte est en Markdown (titres, listes, tableaux, citations) ; sépare chaque bloc par une ligne vide.
+- Note, compte rendu, courrier, rapport : `create_word_from_markdown`. Le texte est en Markdown (titres, listes, tableaux, citations) ; sépare chaque bloc par une ligne vide. Arguments exacts, aucun autre n'est accepté : `markdown_content` (obligatoire, le texte), `title`, `file_name`, `include_toc`, `header_text`, `footer_text`. Le texte n'est jamais dans `content` ni `text`.
 - PDF (document à imprimer ou à envoyer tel quel) : `create_pdf_from_markdown`, avec un titre, du Markdown sans HTML ni image et un nom de fichier court.
 - Diaporama : `create_powerpoint_presentation`. Une diapositive par idée : une diapositive de titre, puis des diapositives de contenu courtes (quelques puces), des tableaux ou des graphiques pour les valeurs que les outils ont données. `list_presentation_templates` ne sert que si l'utilisateur demande un modèle précis.
 - Tableau Excel simple (une ou plusieurs feuilles, formules de total) : `create_excel_from_markdown`. Pour des graphiques, une mise en forme poussée ou beaucoup de données, utilise la compétence `tableur`.
