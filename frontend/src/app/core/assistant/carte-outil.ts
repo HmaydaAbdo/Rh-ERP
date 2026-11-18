@@ -13,7 +13,15 @@ export const OUTILS_SANS_CARTE: ReadonlySet<string> = new Set([
   'read_file',
   'write_file',
   'edit_file',
-  'copilotkitSuggest'
+  'copilotkitSuggest',
+  // Étapes de construction d'un classeur Excel : l'utilisateur voit le bouton de téléchargement, pas six « consultations ».
+  'create_workbook',
+  'write_range',
+  'format_range',
+  'set_table',
+  'create_chart',
+  'add_conditional_format',
+  'export_workbook'
 ]);
 
 export type EtatConsultation = 'en-cours' | 'terminee' | 'refusee' | 'echec';

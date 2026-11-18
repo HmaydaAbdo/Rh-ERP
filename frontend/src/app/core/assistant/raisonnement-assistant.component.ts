@@ -14,10 +14,12 @@ import { dureeReflexion } from './raisonnement-assistant';
 @Component({
   selector: 'app-raisonnement-assistant',
   imports: [CopilotChatAssistantMessageRenderer, LucideChevronRight, LucideSparkles],
-  // Une réflexion sans texte, terminée, n'apporte rien : elle n'est pas affichée (elle encombrait le fil).
+  // Une réflexion n'est montrée que pendant qu'elle se déroule : terminées, elles s'empilaient (27 cartes dans une conversation
+  // de recette), toutes datées « moins d'une seconde », et leur texte brut mêle anglais et français.
   host: { '[class.my-1]': 'visible()', '[class.block]': 'visible()', '[class.hidden]': '!visible()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (visible()) {
     <div class="raisonnement rounded-md border border-border bg-surface-alt text-sm text-muted">
       <button
         type="button"
@@ -38,6 +40,7 @@ import { dureeReflexion } from './raisonnement-assistant';
         </div>
       }
     </div>
+    }
   `
 })
 export class RaisonnementAssistantComponent {
@@ -50,7 +53,7 @@ export class RaisonnementAssistantComponent {
   protected readonly enCours = computed(() => this.isRunning() && this.derniere());
   protected readonly texte = computed(() => this.message().content ?? '');
   protected readonly avecTexte = computed(() => this.texte().length > 0);
-  protected readonly visible = computed(() => this.avecTexte() || this.enCours());
+  protected readonly visible = computed(() => this.enCours());
 
   /** Ouvert pendant la réflexion ; replié ensuite, sauf si l'utilisateur a basculé la carte lui-même. */
   protected readonly ouvert = linkedSignal<boolean, boolean>({
