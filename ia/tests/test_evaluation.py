@@ -12,7 +12,7 @@ MARQUEURS = {
     "employe_a_nom", "employe_a_cin", "chantier_b_id", "chantier_b_code", "equipe_b_id", "equipe_b_code",
     "employe_b_id", "employe_b_nom", "employe_b_cin", "parametre_id",
 }  # fmt: skip
-TYPES = {"reponse", "ouvert", "abstention", "absence", "refus", "securite", "capacites", "simple"}
+TYPES = {"reponse", "ouvert", "abstention", "absence", "refus", "securite", "capacites", "simple", "affichage"}
 
 
 def test_le_jeu_de_reference_est_complet_et_coherent() -> None:
@@ -24,7 +24,7 @@ def test_le_jeu_de_reference_est_complet_et_coherent() -> None:
     assert types == TYPES
     for cas in jeu["cas"]:
         type_cas = cas.get("type", "reponse")
-        if type_cas in ("reponse", "ouvert"):
+        if type_cas in ("reponse", "ouvert", "affichage"):
             lectures = cas.get("verites") or [cas]
             assert lectures and all(lec.get("outil") and lec.get("attendus") for lec in lectures), cas["id"]
         if "tours" in cas:
