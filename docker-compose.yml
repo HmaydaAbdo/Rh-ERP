@@ -14,6 +14,7 @@
 
 services:
   postgres:
+    container_name: erp-rh-postgres
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     command:
       - postgres
@@ -68,6 +69,7 @@ services:
       retries: 10
 
   backup:
+    container_name: erp-rh-backup
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-backup:${BACKUP_IMAGE_TAG:?BACKUP_IMAGE_TAG est obligatoire}
     # Démarré par défaut, comme tous les services : `docker compose pull && docker compose up -d` suffit.
     restart: unless-stopped
@@ -109,6 +111,7 @@ services:
       retries: 3
 
   postgres-log-retention:
+    container_name: erp-rh-postgres-log-retention
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-postgres:${POSTGRES_IMAGE_TAG:?POSTGRES_IMAGE_TAG est obligatoire}
     # Rétention des journaux pgAudit, démarrée par défaut avec la sauvegarde.
     restart: unless-stopped
@@ -132,6 +135,7 @@ services:
       retries: 3
 
   api:
+    container_name: erp-rh-api
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-api:${API_IMAGE_TAG:-latest}
     restart: unless-stopped
     # Arrêt en douceur (KAN-39) : le run en cours termine son étape et enregistre son point de reprise.
@@ -201,6 +205,7 @@ services:
       - "127.0.0.1:${API_PORT}:8080"
 
   frontend:
+    container_name: erp-rh-frontend
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-frontend:${FRONTEND_IMAGE_TAG:?FRONTEND_IMAGE_TAG est obligatoire}
     restart: unless-stopped
     depends_on:
@@ -230,6 +235,7 @@ services:
 
   # Documentation (site statique Docusaurus, voir site/). Aucune dépendance : ni base ni backend.
   docs:
+    container_name: erp-rh-docs
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-docs:${DOCS_IMAGE_TAG:-latest}
     restart: unless-stopped
     networks:
@@ -248,6 +254,7 @@ services:
   # Démarrés par défaut avec le reste de la pile. Chaque conteneur ne reçoit que ses propres variables du
   # .env racine unique ; IA_ENABLED=false coupe l'assistant sans arrêter l'ERP.
   litellm:
+    container_name: erp-rh-litellm
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-litellm:${LITELLM_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
@@ -283,6 +290,7 @@ services:
       - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
 
   ia:
+    container_name: erp-rh-ia
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-ia:${IA_IMAGE_TAG:-latest}
     restart: unless-stopped
     # Arrêt en douceur (KAN-39) : le run en cours termine son étape et enregistre son point de reprise.
@@ -358,6 +366,7 @@ services:
   # Runtime CopilotKit officiel (site/docs/ia, T16) : seul point d'entrée de l'assistant pour le navigateur (relayé par
   # nginx). Il applique le middleware A2UI et relaie l'agent AG-UI du service IA avec le jeton de l'utilisateur.
   copilot-runtime:
+    container_name: erp-rh-copilot-runtime
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-copilot-runtime:${COPILOT_RUNTIME_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
@@ -406,6 +415,7 @@ services:
   # joint (INSTREAM) avant tout modèle. Les signatures se mettent à jour seules (freshclam) ; le premier démarrage les
   # télécharge (quelques minutes, ~1 Go de RAM). Pas encore prêt, il fait refuser les pièces jointes (échec fermé).
   antivirus:
+    container_name: erp-rh-antivirus
     image: clamav/clamav:${CLAMAV_IMAGE_TAG:-1.5.4}
     restart: unless-stopped
     environment:
@@ -430,6 +440,7 @@ services:
   # Documents Word et PowerPoint de l'agent : mcp-ms-office-documents (MIT), image épinglée par empreinte. Aucune exécution
   # de code ni accès Internet (réseau docs-net interne) ; le fichier produit arrive dans le volume docs_sortie.
   mcp-office:
+    container_name: erp-rh-mcp-office
     image: georgx22/mcp-office-docs@sha256:94fb2e12f30bec1dca83eb2c58fd7cfb8f04da5f2a3506b94219d8b6197078e8
     restart: unless-stopped
     environment:
@@ -445,6 +456,7 @@ services:
   # Classeurs Excel de l'agent : excel-mcp-server (MIT) fixé en version exacte (excel-mcp/Dockerfile) ; les classeurs vivent
   # dans une mémoire volatile, l'export les renvoie à l'agent qui les range dans l'espace de l'utilisateur.
   mcp-excel:
+    container_name: erp-rh-mcp-excel
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-mcp-excel:${MCP_EXCEL_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
@@ -463,6 +475,7 @@ services:
   # compte ni envoi d'audio à un tiers. Joignable par le seul runtime CopilotKit. Le modèle est téléchargé une fois (cache
   # dans le volume stt_models) ; seul ce service sort vers Hugging Face pour cela.
   stt:
+    container_name: erp-rh-stt
     image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
     restart: unless-stopped
     environment:
@@ -494,6 +507,7 @@ services:
   # d'un modèle ; il est sans effet (rapide) quand le modèle est déjà dans le volume stt_models, puis le charge en mémoire
   # (`/api/ps`) pour que la première dictée n'attende pas le chargement, et s'arrête.
   stt-modele:
+    container_name: erp-rh-stt-modele
     image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-0.8.3-cpu}
     restart: "no"
     depends_on:
@@ -509,6 +523,7 @@ services:
   # Phoenix (Arize) : traces OpenTelemetry de l'assistant, du clic à la base (site/docs/ia, T18). Un seul conteneur, traces
   # conservées sans limite dans la base `phoenix` du PostgreSQL de l'ERP ; interface sur 127.0.0.1 seulement, connexion obligatoire.
   phoenix:
+    container_name: erp-rh-phoenix
     image: ${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME est obligatoire}/staport-intelligence-phoenix:${PHOENIX_IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
