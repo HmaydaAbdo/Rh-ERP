@@ -1,13 +1,13 @@
-"""PDF des mouvements d'un mois : sortants, entrants ou les deux, triés par chantier puis par période.
+"""PDF des mouvements d'un mois : sortants, entrants ou les deux, triés par ordre alphabétique.
 
 Première page : cartes KPI. Ensuite un tableau de sortants et un tableau d'entrants, sans regroupement : les lignes
-sont triées par chantier (codes dans l'ordre naturel des nombres : C57, C108, C205 ; « sans chantier » en dernier) puis
-par période (dernier bulletin du sortant, dernière paie avant ce mois pour l'entrant), enfin par nom. Les filtres sont
-ceux de l'écran (`mouvements.correspond`) ; montants, jours et observation n'apparaissent qu'avec le droit `PAIE_READ`.
-Tout texte issu des données passe par `html.escape`.
+sont triées par ordre alphabétique du nom (le chantier n'est qu'une colonne), puis par période en cas d'égalité. Les
+filtres sont ceux de l'écran (`mouvements.correspond`) ; montants, jours et observation n'apparaissent qu'avec le droit
+`PAIE_READ`. Tout texte issu des données passe par `html.escape`.
 """
 
 import re
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -111,17 +111,23 @@ def _periode(valeur: int | None) -> tuple[bool, int]:
     return (valeur is None, valeur or 0)
 
 
+def _nom(nom_prenom: str) -> str:
+    """Clé alphabétique insensible à la casse et aux accents (Émile après Eric, avant Fatima)."""
+    decompose = unicodedata.normalize("NFD", nom_prenom.casefold())
+    return "".join(c for c in decompose if not unicodedata.combining(c))
+
+
 def _libelle_chantier(code: str | None, designation: str | None) -> str:
     return " — ".join(x for x in (code, designation) if x) or SANS_CHANTIER
 
 
 def _tri_sortants(sorties: Sequence[EmployeeSortieReponse]) -> list[EmployeeSortieReponse]:
-    return sorted(sorties, key=lambda s: (cle_chantier(s.chantier), _periode(s.derniere_paie), s.nom_prenom.lower()))
+    return sorted(sorties, key=lambda s: (_nom(s.nom_prenom), _periode(s.derniere_paie), cle_chantier(s.chantier)))
 
 
 def _tri_entrants(entrants: Sequence[EmployeeEntrantReponse]) -> list[EmployeeEntrantReponse]:
     return sorted(
-        entrants, key=lambda e: (cle_chantier(e.chantier), _periode(e.derniere_paie_precedente), e.nom_prenom.lower())
+        entrants, key=lambda e: (_nom(e.nom_prenom), _periode(e.derniere_paie_precedente), cle_chantier(e.chantier))
     )
 
 
