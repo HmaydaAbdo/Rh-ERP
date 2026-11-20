@@ -1,4 +1,4 @@
-"""PDF des mouvements du mois : gabarit HTML (chantiers, KPI, échappement, droits) et routes de téléchargement.
+"""PDF des mouvements du mois : gabarit HTML (tri, KPI, échappement, droits) et routes de téléchargement.
 
 Le rendu WeasyPrint lui-même est remplacé par un double ; la page rendue se vérifie dans l'image Linux (Pango absent
 sous Windows, voir `conventions/lecons.md`).
@@ -93,21 +93,50 @@ def _mouvements(avec_paie: bool = True, comparable: bool = True) -> Mouvements:
     )
 
 
-def test_le_pdf_regroupe_par_chantier_dans_l_ordre_naturel_avec_les_kpi_d_abord() -> None:
+def test_le_pdf_trie_par_nom_sans_regrouper_avec_les_kpi_d_abord() -> None:
     html = mouvements_pdf.construire_html(_mouvements(), MAINTENANT)
 
     assert "Mouvements — mars 2026" in html and "Édité le 02/04/2026 à 09:05" in html
-    assert html.index('class="kpis"') < html.index('class="chantier')
-    ordre = [html.index(c) for c in ("C57 —", "C108 —", "C205 —", "Sans chantier")]
-    assert ordre == sorted(ordre), "C57, C108, C205 puis « sans chantier »"
+    assert html.index('class="kpis"') < html.index('class="liste')
+    assert 'class="chantier' not in html and html.count("<h2>") == 2, (
+        "un tableau par type, plus de chapitre par chantier"
+    )
+    sortants = html[html.index("<h2>Sortants") : html.index("<h2>Entrants")]
+    ordre = [sortants.index(c) for c in ("&lt;script&gt;", "Adam C57", "Zoe Sans")]
+    assert ordre == sorted(ordre), "alphabétique, pas C57 / C108 / sans chantier"
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html and "<script>" not in html
     solde = f"{mouvements_pdf.MOINS}1"  # 2 entrants moins 3 sortants
     assert f'<span class="lib">Solde net</span><span class="val">{solde}</span>' in html
     assert '<span class="lib">Effectif payé</span><span class="val">120</span>' in html
     assert "Masse entrante (DH)" in html and "Montant (DH)" in html
-    assert "Total · 1 entrant" in html and "Nouvelle embauche" in html and "Venant de" in html
-    assert html.count("Aucun entrant sur ce chantier.") == 2  # C108 et « sans chantier »
-    assert html.count("Aucun sortant sur ce chantier.") == 1  # C205
+    assert "Total · 2 entrants" in html and "Total · 3 sortants" in html
+    assert "Nouvelle embauche" in html and "Venant de" in html
+
+
+def test_les_lignes_se_trient_par_ordre_alphabetique_et_non_par_chantier() -> None:
+    sortants = mouvements_pdf._tri_sortants(  # pyright: ignore[reportPrivateUsage]
+        [
+            _sortie("Zed", "C1"),
+            _sortie("émile", "C205"),
+            _sortie("Bob", "C108", derniere_paie=202603),
+            _sortie("Bob", "C57", derniere_paie=202601),
+            _sortie("Alice", None),
+            _sortie("Eric", "C9"),
+        ]
+    )
+    assert [(s.nom_prenom, s.chantier) for s in sortants] == [
+        ("Alice", None),
+        ("Bob", "C57"),  # même nom : période 202601 avant 202603
+        ("Bob", "C108"),
+        ("émile", "C205"),  # sans accent, « emile » précède « eric »
+        ("Eric", "C9"),
+        ("Zed", "C1"),
+    ]
+
+    entrants = mouvements_pdf._tri_entrants(  # pyright: ignore[reportPrivateUsage]
+        [_entrant("Zoe", "C1"), _entrant("Adam", "C205"), _entrant("Mia", "C57")]
+    )
+    assert [e.nom_prenom for e in entrants] == ["Adam", "Mia", "Zoe"]
 
 
 def test_le_pdf_masque_les_montants_sans_droit_de_paie() -> None:
@@ -134,6 +163,7 @@ def test_le_pdf_explique_des_entrants_indisponibles_et_un_perimetre_vide() -> No
     )
     html = mouvements_pdf.construire_html(vide, MAINTENANT)
     assert "Entrants — mars 2026" in html and "Aucun mouvement pour ce périmètre." in html
+    assert "Aucun entrant." in html
 
 
 def test_le_pdf_des_sortants_seuls_donne_stc_autres_motifs_et_anciennete() -> None:
