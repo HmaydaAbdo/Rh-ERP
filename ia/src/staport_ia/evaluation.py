@@ -229,6 +229,7 @@ _ATTENDU = {
     "absence": "Indiquer que la donnée demandée est introuvable, sans inventer de valeur.",
     "capacites": "Décrire les capacités (paie, employés...) sans appeler d'outil ni nommer d'outil technique.",
     "simple": "Répondre brièvement et poliment, sans appeler d'outil.",
+    "affichage": "Donner les valeurs de la vérité et annoncer un graphique affiché à l'écran, sans créer de fichier.",
 }
 _ABSENCE = ("introuvable", "aucun", "n'existe", "pas trouve", "ne trouve", "inconnu", "pas de resultat")
 #: Seuils d'acceptation, fixés le 2026-11-03 après la première mesure (60 cas, 3 essais : 0,94 et 0,83) : un

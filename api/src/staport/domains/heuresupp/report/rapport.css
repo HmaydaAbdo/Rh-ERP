@@ -1,14 +1,18 @@
 /* Tableau du rapport des heures supplémentaires ; la page, le bandeau et le pied sont dans `common/report/paysage.css`. */
-table.heures { width: 802pt; border-collapse: collapse; font-size: 8pt; }
+table.heures { width: 802pt; border-collapse: collapse; font-size: 12pt; }  /* texte 8pt + 4 */
 table.heures thead { display: table-header-group; }
 table.heures tr { page-break-inside: avoid; }
 table.heures th, table.heures td { padding: 5pt 4pt; border: 0.5pt solid #9a9a9a; white-space: nowrap; }
 table.heures td:not(.emargement) { font-weight: 600; }
 table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
 table.heures td.num, table.heures th.num { text-align: right; }
+/* Chiffres 8pt + 8 ; les en-têtes de colonnes numériques restent du texte (12pt). */
+table.heures td.num { font-size: 16pt; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
 /* Émargement : cellule vide ; le moteur de rendu compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
 table.heures th.emargement.signature, table.heures td.emargement.signature { width: 90pt; }
 table.heures th.emargement.signature_empreinte, table.heures td.emargement.signature_empreinte { width: 170pt; }
 table.heures td.emargement { height: 42pt; }
+/* Le titre de la colonne passe à la ligne : à 12pt, « Signature et empreinte » seul dépasserait les 170pt et la page. */
+table.heures th.emargement { white-space: normal; }
 .vide { margin-top: 30pt; font-size: 11pt; }

@@ -1,12 +1,13 @@
-"""PDF des mouvements d'un mois : sortants, entrants ou les deux, regroupés par chantier.
+"""PDF des mouvements d'un mois : sortants, entrants ou les deux, triés par ordre alphabétique.
 
-Première page : cartes KPI. Ensuite un chapitre par chantier (codes dans l'ordre naturel des nombres : C57, C108, C205),
-avec un tableau de sortants et un tableau d'entrants. Les filtres sont ceux de l'écran (`mouvements.correspond`) ;
-montants, jours et observation n'apparaissent qu'avec le droit `PAIE_READ`. Tout texte issu des données passe par
-`html.escape`.
+Première page : cartes KPI. Ensuite un tableau de sortants et un tableau d'entrants, sans regroupement : les lignes
+sont triées par ordre alphabétique du nom (le chantier n'est qu'une colonne), puis par période en cas d'égalité. Les
+filtres sont ceux de l'écran (`mouvements.correspond`) ; montants, jours et observation n'apparaissent qu'avec le droit
+`PAIE_READ`. Tout texte issu des données passe par `html.escape`.
 """
 
 import re
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -105,17 +106,35 @@ def _signe(n: int) -> str:
     return f"+{n}" if n > 0 else str(n).replace("-", MOINS)
 
 
-Groupe = tuple[str | None, list[EmployeeSortieReponse], list[EmployeeEntrantReponse]]
+def _periode(valeur: int | None) -> tuple[bool, int]:
+    """Période croissante ; l'absence de période ferme la liste du chantier."""
+    return (valeur is None, valeur or 0)
 
 
-def _chantiers(m: Mouvements) -> dict[str | None, Groupe]:
-    """Code du chantier -> (désignation, sortants, entrants) ; les sortants sans bulletin forment « sans chantier »."""
-    groupes: dict[str | None, Groupe] = {}
-    for sortie in m.sorties.sorties if m.sorties else []:
-        groupes.setdefault(sortie.chantier, (sortie.chantier_designation, [], []))[1].append(sortie)
-    for entrant in m.entrants.entrants if m.entrants else []:
-        groupes.setdefault(entrant.chantier, (entrant.chantier_designation, [], []))[2].append(entrant)
-    return dict(sorted(groupes.items(), key=lambda item: cle_chantier(item[0])))
+def _nom(nom_prenom: str) -> str:
+    """Clé alphabétique insensible à la casse et aux accents (Émile après Eric, avant Fatima)."""
+    decompose = unicodedata.normalize("NFD", nom_prenom.casefold())
+    return "".join(c for c in decompose if not unicodedata.combining(c))
+
+
+def _libelle_chantier(code: str | None, designation: str | None) -> str:
+    return " — ".join(x for x in (code, designation) if x) or SANS_CHANTIER
+
+
+def _tri_sortants(sorties: Sequence[EmployeeSortieReponse]) -> list[EmployeeSortieReponse]:
+    return sorted(sorties, key=lambda s: (_nom(s.nom_prenom), _periode(s.derniere_paie), cle_chantier(s.chantier)))
+
+
+def _tri_entrants(entrants: Sequence[EmployeeEntrantReponse]) -> list[EmployeeEntrantReponse]:
+    return sorted(
+        entrants, key=lambda e: (_nom(e.nom_prenom), _periode(e.derniere_paie_precedente), cle_chantier(e.chantier))
+    )
+
+
+def _nombre_chantiers(m: Mouvements) -> int:
+    return len(
+        {x.chantier for x in (*(m.sorties.sorties if m.sorties else []), *(m.entrants.entrants if m.entrants else []))}
+    )
 
 
 def _somme(valeurs: Sequence[Decimal | None]) -> Decimal | None:
@@ -128,7 +147,7 @@ def indicateurs(m: Mouvements) -> list[str]:
     sorties = m.sorties.sorties if m.sorties else []
     entrants = m.entrants.entrants if m.entrants else []
     comparable = m.entrants is None or m.entrants.comparable
-    chantiers = len({x.chantier for x in (*sorties, *entrants)})
+    chantiers = _nombre_chantiers(m)
     masse_sorties = _somme([s.montant_dernier_bulletin for s in sorties]) if m.avec_paie else None
     masse_entrees = _somme([e.montant_bulletin for e in entrants]) if m.avec_paie else None
     cartes: list[str] = []
@@ -193,6 +212,7 @@ def _table(colonnes: Sequence[tuple[str, str]], lignes: Sequence[Sequence[str]],
 
 def _tableau_sortants(sortants: Sequence[EmployeeSortieReponse], avec_paie: bool) -> str:
     colonnes = [
+        ("Chantier", ""),
         ("Nom et prénom", ""),
         ("CIN", ""),
         ("Fonction", ""),
@@ -204,6 +224,7 @@ def _tableau_sortants(sortants: Sequence[EmployeeSortieReponse], avec_paie: bool
     ]
     lignes = [
         [
+            _libelle_chantier(s.chantier, s.chantier_designation),
             s.nom_prenom,
             s.cin,
             _texte(s.fonction),
@@ -215,7 +236,7 @@ def _tableau_sortants(sortants: Sequence[EmployeeSortieReponse], avec_paie: bool
         ]
         for s in sortants
     ]
-    total = ["Total · " + _pluriel(len(sortants), "sortant", "sortants")] + [""] * 7
+    total = ["Total · " + _pluriel(len(sortants), "sortant", "sortants")] + [""] * 8
     if avec_paie:
         colonnes += [("Jours", "num"), ("Montant (DH)", "num"), ("Observation", "")]
         for ligne, s in zip(lignes, sortants, strict=True):
@@ -226,6 +247,7 @@ def _tableau_sortants(sortants: Sequence[EmployeeSortieReponse], avec_paie: bool
 
 def _tableau_entrants(entrants: Sequence[EmployeeEntrantReponse], avec_paie: bool) -> str:
     colonnes = [
+        ("Chantier", ""),
         ("Nom et prénom", ""),
         ("CIN", ""),
         ("Fonction", ""),
@@ -233,9 +255,11 @@ def _tableau_entrants(entrants: Sequence[EmployeeEntrantReponse], avec_paie: boo
         ("Type", ""),
         ("Embauche", ""),
         ("Venant de", ""),
+        ("Dernière paie", ""),
     ]
     lignes = [
         [
+            _libelle_chantier(e.chantier, e.chantier_designation),
             e.nom_prenom,
             e.cin,
             e.fonction,
@@ -243,10 +267,11 @@ def _tableau_entrants(entrants: Sequence[EmployeeEntrantReponse], avec_paie: boo
             LIBELLE_TYPE[e.type],
             _date(e.date_embauche),
             _texte(e.chantier_precedent),
+            afficher_periode(e.derniere_paie_precedente) if e.derniere_paie_precedente else "—",
         ]
         for e in entrants
     ]
-    total = ["Total · " + _pluriel(len(entrants), "entrant", "entrants")] + [""] * 6
+    total = ["Total · " + _pluriel(len(entrants), "entrant", "entrants")] + [""] * 8
     if avec_paie:
         colonnes += [("Jours", "num"), ("Montant (DH)", "num"), ("Observation", "")]
         for ligne, e in zip(lignes, entrants, strict=True):
@@ -255,31 +280,10 @@ def _tableau_entrants(entrants: Sequence[EmployeeEntrantReponse], avec_paie: boo
     return _table(colonnes, lignes, total)
 
 
-def _section_chantier(
-    code: str | None,
-    designation: str | None,
-    sortants: Sequence[EmployeeSortieReponse],
-    entrants: Sequence[EmployeeEntrantReponse],
-    m: Mouvements,
-) -> str:
-    titre = " — ".join(x for x in (code, designation) if x) or SANS_CHANTIER
-    compte: list[str] = []
-    if m.sorties is not None:
-        compte.append(_pluriel(len(sortants), "sortant", "sortants"))
-    if m.entrants is not None:
-        compte.append(_pluriel(len(entrants), "entrant", "entrants"))
-    resume = escape(" · ".join(compte))
-    corps: list[str] = [f'<h2>{escape(titre)} <span class="compte">· {resume}</span></h2>']
-    if m.sorties is not None:
-        corps.append("<h3>Sortants</h3>")
-        vide = '<p class="vide">Aucun sortant sur ce chantier.</p>'
-        corps.append(_tableau_sortants(sortants, m.avec_paie) if sortants else vide)
-    if m.entrants is not None:
-        corps.append("<h3>Entrants</h3>")
-        vide = '<p class="vide">Aucun entrant sur ce chantier.</p>'
-        corps.append(_tableau_entrants(entrants, m.avec_paie) if entrants else vide)
-    tient = " tient" if len(sortants) + len(entrants) <= 10 else ""
-    return f'<section class="chantier{tient}">{"".join(corps)}</section>'
+def _section(nom: str, nombre: int, resume: str, tableau: str, vide: str) -> str:
+    entete = f'<h2>{escape(nom)} <span class="compte">· {escape(resume)}</span></h2>'
+    corps = tableau if nombre else f'<p class="vide">{escape(vide)}</p>'
+    return f'<section class="liste">{entete}{corps}</section>'
 
 
 def titre(m: Mouvements) -> str:
@@ -293,7 +297,7 @@ def contexte(m: Mouvements) -> str:
         morceaux.append(_pluriel(m.sorties.nombre, "sortant", "sortants"))
     if m.entrants is not None and m.entrants.comparable:
         morceaux.append(_pluriel(m.entrants.nombre, "entrant", "entrants"))
-    morceaux.append(_pluriel(len(_chantiers(m)), "chantier", "chantiers"))
+    morceaux.append(_pluriel(_nombre_chantiers(m), "chantier", "chantiers"))
     return " · ".join(morceaux)
 
 
@@ -309,11 +313,30 @@ def construire_html(m: Mouvements, maintenant: datetime) -> str:
             '<p class="note">Entrants indisponibles : ce mois ou le mois civil précédent n\'a aucun bulletin de paie, '
             "on ne peut pas dire qui entre.</p>"
         )
-    groupes = _chantiers(m)
-    if not groupes:
+    sortants = _tri_sortants(m.sorties.sorties) if m.sorties else []
+    entrants = _tri_entrants(m.entrants.entrants) if m.entrants else []
+    if not sortants and not entrants:
         corps.append('<p class="note">Aucun mouvement pour ce périmètre.</p>')
-    for code, (designation, sortants, entrants) in groupes.items():
-        corps.append(_section_chantier(code, designation, sortants, entrants, m))
+    if m.sorties is not None:
+        corps.append(
+            _section(
+                "Sortants",
+                len(sortants),
+                _pluriel(len(sortants), "sortant", "sortants"),
+                _tableau_sortants(sortants, m.avec_paie),
+                "Aucun sortant.",
+            )
+        )
+    if m.entrants is not None and m.entrants.comparable:
+        corps.append(
+            _section(
+                "Entrants",
+                len(entrants),
+                _pluriel(len(entrants), "entrant", "entrants"),
+                _tableau_entrants(entrants, m.avec_paie),
+                "Aucun entrant.",
+            )
+        )
     return (
         f'<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>{escape(titre(m))}</title>'
         f"<style>{css}</style></head><body>{''.join(corps)}</body></html>"
