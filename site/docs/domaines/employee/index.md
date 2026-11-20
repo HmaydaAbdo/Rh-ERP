@@ -226,8 +226,8 @@ Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienne
 | `POST /employees/analytique` | `EMPLOYEE_READ` | Chiffres et tranches du périmètre; critères invalides `400` |
 | `POST /employees/sorties-mois` | `EMPLOYEE_READ` | Départs du mois, regroupés par motif, avec le détail de chaque départ : date d'embauche, ancienneté au départ, fonction, chantier, équipe, situation actuelle (sorti ou revenu en poste) et dernier bulletin à la date du départ. Salaire, type de salaire, jours, montant et observation du bulletin ne sont rendus qu'avec `PAIE_READ` ; la page **STC / Sortie** du portail les affiche |
 | `POST /employees/entrants-mois` | `EMPLOYEE_READ` | Entrants du mois : payés ce mois-ci mais pas le mois civil précédent (même définition que le rapport de paie et `/paie/effectifs`). Type `NOUVELLE_EMBAUCHE` (aucun bulletin antérieur) ou `RETOUR` (déjà payé auparavant). `comparable=false` et liste vide si le mois ou le précédent n'a aucun bulletin. Mêmes filtres que les sorties, plus `types`. Montants rendus avec `PAIE_READ` seulement ; page **Entrants** du portail |
-| `POST /employees/sorties-mois/pdf`, `POST /employees/entrants-mois/pdf` | `EMPLOYEE_EXPORT` | PDF A4 paysage du périmètre filtré : chiffres du mois en tête, liste triée par chantier puis par période (sans regroupement), pied « Page n/N ». Non audité (lecture) ; montants masqués sans `PAIE_READ` |
-| `POST /employees/mouvements-mois/pdf` | `EMPLOYEE_EXPORT` | PDF combiné des entrées et sorties du mois : cartes de synthèse (entrants, sortants, solde net, effectif payé, chantiers concernés, masses), puis un tableau de sortants et un tableau d'entrants, triés par chantier puis par période. Bouton « Mouvements du mois (PDF) » de la page Employés |
+| `POST /employees/sorties-mois/pdf`, `POST /employees/entrants-mois/pdf` | `EMPLOYEE_EXPORT` | PDF A4 paysage du périmètre filtré : chiffres du mois en tête, liste triée par ordre alphabétique du nom (sans regroupement par chantier), pied « Page n/N ». Non audité (lecture) ; montants masqués sans `PAIE_READ` |
+| `POST /employees/mouvements-mois/pdf` | `EMPLOYEE_EXPORT` | PDF combiné des entrées et sorties du mois : cartes de synthèse (entrants, sortants, solde net, effectif payé, chantiers concernés, masses), puis un tableau de sortants et un tableau d'entrants, triés par ordre alphabétique du nom. Bouton « Mouvements du mois (PDF) » de la page Employés |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` | `204`; absent `404`, fiche utilisée `409` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` | Multipart `file`; résultat `200`, fichier ou lignes invalides `400` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` | Modèle XLSX vierge |
@@ -374,8 +374,7 @@ Utiliser des données synthétiques; ne jamais copier des données personnelles 
 
 Les sortants viennent de la table `employe_sortie` ; les entrants se déduisent des bulletins (payé ce mois-ci, pas le mois civil
 précédent). Le rapport de paie garde son propre calcul des mouvements : un écart avec la liste des sortants est possible (par
-exemple une sortie saisie sans bulletin) et il est voulu. Les PDF ne regroupent plus : ils trient par chantier (ordre naturel C57 avant C108, « Sans
-chantier » en dernier) puis par période (dernier bulletin du sortant, dernière paie avant le mois de l'entrant), puis par nom ; l'écran reste un tableau à plat. Les filtres de l'écran (mois, nom, CIN, fonctions, chantiers, équipes,
+exemple une sortie saisie sans bulletin) et il est voulu. Les PDF ne regroupent pas par chantier : ils trient par ordre alphabétique du nom (sans tenir compte de la casse ni des accents), puis par période en cas d'égalité ; le chantier est une colonne. l'écran reste un tableau à plat. Les filtres de l'écran (mois, nom, CIN, fonctions, chantiers, équipes,
 motifs ou types) sont dans l'URL et sont exactement ceux envoyés au PDF. L'IA n'expose pas encore d'outil MCP pour les entrants :
 il demande le protocole d'évaluation des agents (à planifier).
 

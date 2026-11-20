@@ -93,7 +93,7 @@ def _mouvements(avec_paie: bool = True, comparable: bool = True) -> Mouvements:
     )
 
 
-def test_le_pdf_trie_par_chantier_puis_periode_sans_regrouper_avec_les_kpi_d_abord() -> None:
+def test_le_pdf_trie_par_nom_sans_regrouper_avec_les_kpi_d_abord() -> None:
     html = mouvements_pdf.construire_html(_mouvements(), MAINTENANT)
 
     assert "Mouvements — mars 2026" in html and "Édité le 02/04/2026 à 09:05" in html
@@ -102,8 +102,8 @@ def test_le_pdf_trie_par_chantier_puis_periode_sans_regrouper_avec_les_kpi_d_abo
         "un tableau par type, plus de chapitre par chantier"
     )
     sortants = html[html.index("<h2>Sortants") : html.index("<h2>Entrants")]
-    ordre = [sortants.index(c) for c in ("C57 —", "C108 —", "Sans chantier")]
-    assert ordre == sorted(ordre), "C57, C108 puis « sans chantier »"
+    ordre = [sortants.index(c) for c in ("&lt;script&gt;", "Adam C57", "Zoe Sans")]
+    assert ordre == sorted(ordre), "alphabétique, pas C57 / C108 / sans chantier"
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html and "<script>" not in html
     solde = f"{mouvements_pdf.MOINS}1"  # 2 entrants moins 3 sortants
     assert f'<span class="lib">Solde net</span><span class="val">{solde}</span>' in html
@@ -113,26 +113,30 @@ def test_le_pdf_trie_par_chantier_puis_periode_sans_regrouper_avec_les_kpi_d_abo
     assert "Nouvelle embauche" in html and "Venant de" in html
 
 
-def test_a_chantier_egal_les_lignes_se_trient_par_periode_puis_par_nom() -> None:
+def test_les_lignes_se_trient_par_ordre_alphabetique_et_non_par_chantier() -> None:
     sortants = mouvements_pdf._tri_sortants(  # pyright: ignore[reportPrivateUsage]
         [
-            _sortie("Zed", "C57", derniere_paie=202603),
-            _sortie("Sans periode", "C57", derniere_paie=None),
+            _sortie("Zed", "C1"),
+            _sortie("émile", "C205"),
+            _sortie("Bob", "C108", derniere_paie=202603),
             _sortie("Bob", "C57", derniere_paie=202601),
-            _sortie("Alice", "C57", derniere_paie=202603),
-            _sortie("Premier", "C9", derniere_paie=202612),
+            _sortie("Alice", None),
+            _sortie("Eric", "C9"),
         ]
     )
-    assert [s.nom_prenom for s in sortants] == ["Premier", "Bob", "Alice", "Zed", "Sans periode"]
+    assert [(s.nom_prenom, s.chantier) for s in sortants] == [
+        ("Alice", None),
+        ("Bob", "C57"),  # même nom : période 202601 avant 202603
+        ("Bob", "C108"),
+        ("émile", "C205"),  # sans accent, « emile » précède « eric »
+        ("Eric", "C9"),
+        ("Zed", "C1"),
+    ]
 
     entrants = mouvements_pdf._tri_entrants(  # pyright: ignore[reportPrivateUsage]
-        [
-            _entrant("Nouveau", "C57", derniere_paie_precedente=None),
-            _entrant("Recent", "C57", derniere_paie_precedente=202602),
-            _entrant("Ancien", "C57", derniere_paie_precedente=202511),
-        ]
+        [_entrant("Zoe", "C1"), _entrant("Adam", "C205"), _entrant("Mia", "C57")]
     )
-    assert [e.nom_prenom for e in entrants] == ["Ancien", "Recent", "Nouveau"]
+    assert [e.nom_prenom for e in entrants] == ["Adam", "Mia", "Zoe"]
 
 
 def test_le_pdf_masque_les_montants_sans_droit_de_paie() -> None:

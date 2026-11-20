@@ -1,5 +1,4 @@
-/* PDF des mouvements du mois : cartes KPI en première page, puis un tableau de sortants et un tableau d'entrants triés par chantier puis par
-   période. La page, le bandeau et le pied sont dans `common/report/paysage.css`. */
+/* PDF des mouvements du mois : cartes KPI en première page, puis un tableau de sortants et un tableau d'entrants triés par ordre alphabétique. La page, le bandeau et le pied sont dans `common/report/paysage.css`. */
 .kpis { width: 802pt; margin: 0 0 10pt 0; }
 .kpi { display: inline-block; width: 150pt; margin: 0 8pt 8pt 0; padding: 6pt 8pt; border: 0.8pt solid #8a8a8a; vertical-align: top; page-break-inside: avoid; }
 .kpi .lib { display: block; font-size: 8pt; color: #444; text-transform: uppercase; }
