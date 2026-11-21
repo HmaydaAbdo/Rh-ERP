@@ -171,13 +171,6 @@ async def paie_du_mois(s: AsyncSession, employee_id: int, periode: int) -> Paie 
     return (await s.execute(q)).scalar_one_or_none()
 
 
-async def de_la_personne(s: AsyncSession, employee_id: int, periode: int, chantier_id: int) -> list[HeureSupp]:
-    q = select(HeureSupp).where(
-        HeureSupp.employee_id == employee_id, HeureSupp.periode == periode, HeureSupp.chantier_id == chantier_id
-    )
-    return list((await s.execute(q)).scalars().all())
-
-
 async def toutes(s: AsyncSession, c: HeuresSuppRecherche, tri: tuple[tuple[str, bool], ...]) -> list[Fiche]:
     """Tout le périmètre dans le tri demandé, puis l'employé et l'identifiant (ordre stable du rapport)."""
     q = _filtrer(_base(), c)

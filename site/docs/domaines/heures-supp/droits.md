@@ -16,7 +16,7 @@ sidebar_position: 3
 | `GET /heures-supp/import/prerequis` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ` |
 | `POST /heures-supp/export/pdf` | `HEURES_SUP_READ` **et** `PAIE_READ` |
 | `GET /heures-supp/import/modele` | `HEURES_SUP_IMPORT` **et** `PAIE_READ` |
-| `POST /heures-supp/import/analyse`, `POST /heures-supp/import`, `POST /heures-supp/import/remplacement` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `EMPLOYEE_READ` |
+| `POST /heures-supp/import/analyse`, `POST /heures-supp/import` | `HEURES_SUP_IMPORT`, `PAIE_READ` et `EMPLOYEE_READ` |
 | `POST /heures-supp/import/corrections` | `HEURES_SUP_IMPORT`, `PAIE_READ`, `EMPLOYEE_WRITE` et `FUNCTION_READ` |
 | `heures_supp_periodes`, `heures_supp_indicateurs`, `heures_supp_rechercher` | `IA_UTILISER`, `HEURES_SUP_READ` et `PAIE_READ` |
 | `heures_supp_import_prerequis` | `IA_UTILISER`, `HEURES_SUP_IMPORT`, `PAIE_READ` et `CHANTIER_READ` |
