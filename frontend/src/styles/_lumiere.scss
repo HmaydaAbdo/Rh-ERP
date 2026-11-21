@@ -1,0 +1,40 @@
+// Lumière de l'application (décision du propriétaire, 2026-11-21, E24) : le traitement de l'espace assistant (aurore, verre dépoli,
+// halos, bouton à reflet) étendu à toute l'application, en thème sombre (champagne) comme en thème clair (bleu).
+// Les couleurs viennent des jetons `--lumiere-*` et `--bouton-*` de `_tokens.scss`. Rien ici ne porte l'information : décoratif seulement.
+
+// Fond : la toile du thème, éclairée d'une aurore en haut et de deux lueurs de coin. `html body` : plus prioritaire que le fond
+// de base de `styles.scss`, qui est émis après les partiels.
+html body {
+  background:
+    radial-gradient(70rem 32rem at 55% -12rem, var(--lumiere-aurore), transparent 70%),
+    radial-gradient(44rem 26rem at 100% 100%, var(--lumiere-coin), transparent 70%),
+    radial-gradient(34rem 22rem at 0% 80%, var(--lumiere-chaud), transparent 70%),
+    var(--color-canvas) fixed;
+}
+
+// Carte de page des écrans à vues : verre dépoli, liseré teinté, reflet fin en haut, halo à la place de l'ombre noire.
+.app-vues {
+  border-color: var(--lumiere-verre-bord);
+  background: var(--lumiere-verre);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: inset 0 1px 0 var(--lumiere-reflet), 0 24px 60px -28px var(--lumiere-halo);
+}
+
+// Rail de navigation : verre sombre.
+.app-sidebar {
+  background: var(--lumiere-sidebar);
+  backdrop-filter: blur(18px);
+}
+
+// Transparence réduite demandée par le système : verre remplacé par les surfaces pleines du thème.
+@media (prefers-reduced-transparency: reduce) {
+  .app-vues {
+    background: var(--color-surface);
+    backdrop-filter: none;
+  }
+
+  .app-sidebar {
+    background: var(--color-sidebar-bg);
+    backdrop-filter: none;
+  }
+}

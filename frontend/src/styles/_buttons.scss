@@ -27,16 +27,17 @@
     cursor: not-allowed;
   }
 
+  // Action principale : léger dégradé vertical, reflet fin en haut et halo (voir `--bouton-*` dans _tokens.scss).
   &--primary {
-    background: var(--color-primary);
+    background: linear-gradient(180deg, var(--bouton-haut), var(--bouton-bas));
     border-color: var(--color-primary);
     color: var(--color-primary-contrast);
-    box-shadow: var(--shadow-sm);
+    box-shadow: inset 0 1px 0 var(--bouton-reflet), 0 8px 22px -8px var(--bouton-halo);
 
     &:hover:not(:disabled):not([aria-disabled='true']) {
       background: var(--color-primary-hover);
       border-color: var(--color-primary-hover);
-      box-shadow: var(--shadow-md);
+      box-shadow: inset 0 1px 0 var(--bouton-reflet), 0 10px 26px -8px var(--bouton-halo);
     }
   }
 

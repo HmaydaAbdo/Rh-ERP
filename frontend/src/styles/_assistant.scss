@@ -153,26 +153,23 @@ html .espace-assistant-discussion {
   scrollbar-color: var(--color-border-strong) transparent;
 }
 
-// --- Espace Staport Intelligence : identité propre, verre mat et saphir (direction KAN-185, limitée à cet espace, KAN-102) ---
-// Jetons locaux : l'accent de l'IA est un saphir/indigo distinct de l'action de l'application ; couples vérifiés par axe (e2e).
+// --- Espace Staport Intelligence : verre mat et lumière, référence du traitement étendu à toute l'application (KAN-185, E24) ---
+// Les couleurs viennent désormais des jetons de l'application (`_tokens.scss`) : champagne en sombre, bleu en clair (décision du
+// propriétaire, 2026-11-21). Plus de teinte propre à l'espace : l'assistant et les modules métiers partagent la même identité.
 .espace-assistant {
-  --ia-accent: #4338ca;
-  --ia-accent-contrast: #ffffff;
-  --ia-aurore: color-mix(in srgb, #6366f1 22%, transparent);
+  --ia-accent: var(--color-primary);
+  --ia-accent-contrast: var(--color-primary-contrast);
+  --ia-aurore: var(--lumiere-aurore);
   --ia-verre: color-mix(in srgb, var(--color-surface) 72%, transparent);
   --ia-verre-bord: color-mix(in srgb, var(--color-border-strong) 55%, transparent);
-  --ia-halo: color-mix(in srgb, #6366f1 28%, transparent);
+  --ia-halo: var(--lumiere-halo);
   --assistant-accent: var(--ia-accent);
   --assistant-accent-soft: color-mix(in srgb, var(--ia-accent) 12%, transparent);
   --assistant-accent-contrast: var(--ia-accent-contrast);
 }
 
 :root[data-theme='dark'] .espace-assistant {
-  --ia-accent: #a5b4fc;
-  --ia-accent-contrast: #0f1330;
-  --ia-aurore: color-mix(in srgb, #6366f1 30%, transparent);
   --ia-verre: color-mix(in srgb, var(--color-surface) 62%, transparent);
-  --ia-halo: color-mix(in srgb, #818cf8 30%, transparent);
 }
 
 html .espace-assistant {
@@ -355,10 +352,15 @@ html .espace-assistant-discussion {
     color: var(--color-text);
   }
 
-  // Message de l'utilisateur : bulle saphir discrète.
+  // Message de l'utilisateur : bulle teintée de l'accent, léger dégradé, liseré fin, reflet en haut et halo diffus.
   .copilotKitUserMessage copilot-chat-user-message-renderer {
-    border: 1px solid color-mix(in srgb, var(--ia-accent) 35%, transparent);
-    background: color-mix(in srgb, var(--ia-accent) 14%, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--ia-accent) 42%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ia-accent) 16%, var(--color-surface)),
+      color-mix(in srgb, var(--ia-accent) 9%, var(--color-surface))
+    );
+    box-shadow: inset 0 1px 0 var(--lumiere-reflet), 0 8px 24px -12px var(--lumiere-halo);
   }
 
   // Réponse : l'étincelle de l'IA en repère (sans image : masque vectoriel).

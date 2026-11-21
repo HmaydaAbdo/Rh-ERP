@@ -29,25 +29,40 @@
   --color-border-strong: #8a877f;
   --color-border: #6b6962;
 
-  // Action : blanc cassé neutre, texte foncé dessus. Le lien reste souligné (voir _accessibility.scss) car sa teinte
-  // ne se distingue pas du texte courant.
-  --color-primary: #eceae3;
-  --color-primary-hover: #ffffff;
-  --color-primary-soft: #3a3937;
-  --color-primary-strong: #f5f4ef;
-  --color-primary-contrast: #1f1e1d;
-  --color-link: #f5f4ef;
-  --color-focus: #f5f4ef;
+  // Action : champagne clair, texte foncé dessus (décision du propriétaire, 2026-11-21 : l'accent premium de l'application
+  // et de l'assistant). Le lien reste souligné (voir _accessibility.scss).
+  --color-primary: #e8cf9c;
+  --color-primary-hover: #f3e2bb;
+  --color-primary-soft: #383122;
+  --color-primary-strong: #f3e2bb;
+  --color-primary-contrast: #1a1408;
+  --color-link: #e8cf9c;
+  --color-focus: #e8cf9c;
   --color-focus-soft: color-mix(in srgb, var(--color-focus) 14%, transparent);
 
   // Rail de navigation
   --color-sidebar-bg: #141413;
   --color-sidebar-text: #d6d3ca;
-  --color-sidebar-active-bg: #3a3937;
+  --color-sidebar-active-bg: #3a3326;
   --color-sidebar-active-text: #f5f4ef;
   --color-sidebar-hover-bg: #2b2a28;
   --color-sidebar-border: #3a3937;
-  --color-sidebar-accent: var(--color-sidebar-active-text);
+  --color-sidebar-accent: var(--color-primary);
+
+  // Lumière : aurore en haut, lueurs de coin, verre dépoli des panneaux, reflet, halo et bouton doré (même traitement que l'espace
+  // assistant, étendu à toute l'application ; voir styles/_lumiere.scss).
+  --lumiere-aurore: color-mix(in srgb, #d8b46a 22%, transparent);
+  --lumiere-coin: color-mix(in srgb, #e8cf9c 9%, transparent);
+  --lumiere-chaud: color-mix(in srgb, #c8923a 7%, transparent);
+  --lumiere-verre: color-mix(in srgb, #2b2a28 66%, transparent);
+  --lumiere-verre-bord: color-mix(in srgb, #e8cf9c 30%, #6b6962);
+  --lumiere-reflet: color-mix(in srgb, #e8cf9c 18%, transparent);
+  --lumiere-halo: color-mix(in srgb, #d8b46a 34%, transparent);
+  --lumiere-sidebar: color-mix(in srgb, #141413 72%, transparent);
+  --bouton-haut: #f1dfb6;
+  --bouton-bas: #dcc08a;
+  --bouton-reflet: rgba(255, 255, 255, 0.55);
+  --bouton-halo: color-mix(in srgb, #e8cf9c 55%, transparent);
 
   // Rail de navigation
 
@@ -158,7 +173,19 @@
   --color-sidebar-border: #374151;
   --color-sidebar-accent: var(--color-sidebar-active-text);
 
-  // ---- Rail de navigation ----
+  // ---- Lumière (thème clair : bleu, voir styles/_lumiere.scss) ----
+  --lumiere-aurore: color-mix(in srgb, #3b62d8 22%, transparent);
+  --lumiere-coin: color-mix(in srgb, #1e40af 8%, transparent);
+  --lumiere-chaud: color-mix(in srgb, #60a5fa 12%, transparent);
+  --lumiere-verre: color-mix(in srgb, #ffffff 74%, transparent);
+  --lumiere-verre-bord: color-mix(in srgb, #1e40af 24%, #a9b0bc);
+  --lumiere-reflet: rgba(255, 255, 255, 0.9);
+  --lumiere-halo: color-mix(in srgb, #1e40af 38%, transparent);
+  --lumiere-sidebar: color-mix(in srgb, #111827 94%, transparent);
+  --bouton-haut: #2a50c8;
+  --bouton-bas: #1e3a8a;
+  --bouton-reflet: rgba(255, 255, 255, 0.28);
+  --bouton-halo: color-mix(in srgb, #1e40af 55%, transparent);
 
   // ---- Statuts : texte sur fond teinté, contraste ≥ 7:1 ----
   --color-success: #14532d;
