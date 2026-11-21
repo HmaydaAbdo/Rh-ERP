@@ -142,6 +142,6 @@ conteneur.
 
 ## Intégration de code
 
-`main` contient les changements intégrés. Les changements passent par une pull request et les
-branches distantes de travail sont supprimées après leur fusion ; un travail repris après fusion
-repart de `main` à jour. La CI valide le commit avant la publication de son image.
+`main` contient les changements intégrés. Les changements se poussent directement sur `main`, sans pull request
+(décision du 2026-11-21) ; aucune branche de travail ne subsiste. La CI valide le commit avant la publication de son
+image.

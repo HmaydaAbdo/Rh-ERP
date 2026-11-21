@@ -70,12 +70,12 @@ Deux règles imposées par le propriétaire, sans exception :
   étape manuelle, aucun script à lancer à part, aucun profil à activer pour le fonctionnement normal. Les variables
   obligatoires sont documentées dans `.env.example`.
 
-- **Avertir le propriétaire avant chaque fusion vers `main` de ce qui change en production.** La production n'est pilotée
-  que par deux fichiers, `docker-compose.yml` et le fichier `.env` du serveur. Avant toute fusion vers `main`, comparer le diff de
-  la PR à `docker-compose.yml` et `.env.example`, et donner au propriétaire, dans la demande de fusion : les variables à
+- **Avertir le propriétaire avant chaque push vers `main` de ce qui change en production.** La production n'est pilotée
+  que par deux fichiers, `docker-compose.yml` et le fichier `.env` du serveur. Avant tout push vers `main`, comparer le diff
+  à `docker-compose.yml` et `.env.example`, et donner au propriétaire, avant le push : les variables à
   **ajouter**, **modifier** ou **retirer** dans le `.env` de production, les changements de ports, volumes, réseaux, images
   ou tags du compose, et les étapes de migration. S'il n'y a rien à changer, le dire explicitement (« aucun changement de
-  compose ni de `.env` »). Tout nouveau paramètre est ajouté à `.env.example` avec son commentaire dans la même PR.
+  compose ni de `.env` »). Tout nouveau paramètre est ajouté à `.env.example` avec son commentaire dans le même commit.
 - **Tout nouveau domaine est intégré à l'IA Staport Intelligence.** Dès sa conception, documenter ses cas d'usage IA et ses
   données autorisées dans `site/docs/ia`, puis exposer par MCP les capacités métier pertinentes à travers les façades
   publiques du domaine. Les outils respectent le RBAC, le périmètre, l'audit et les conventions MCP ; ils ne donnent
@@ -126,14 +126,14 @@ Deux règles imposées par le propriétaire, sans exception :
   propriétaire et sources officielles de l'IA sont dans [`site/docs/ia/principes-et-decisions.md`](site/docs/ia/principes-et-decisions.md) ; les versions
   verrouillées dans [`scripts/ia/verrous.txt`](scripts/ia/verrous.txt) (vérifiées en CI). Si le connecteur Jira est
   indisponible, le dire au propriétaire et reporter dans Jira dès son retour ; ne pas ouvrir de fichier de suivi.
-- **Une branche, une PR, une ou plusieurs tâches liées.** Une PR peut regrouper plusieurs tâches `KAN-n` d'un même lot
-  cohérent : branche `KAN-n-slug` (tâche principale), toutes les clés au début du titre de la PR, la clé concernée au
-  début de chaque message de commit. L'application gratuite « GitHub for Jira » relie alors branches, commits et PR aux
-  tâches. Chaque tâche du lot garde sa preuve en commentaire et passe en « Terminé(e) » à la fusion.
-- **Une tâche va jusqu'à « Terminé(e) » avant la suivante.** Le parcours complet est : branche, PR, les 4 contrôles requis
-  verts sur le dernier commit, fusion, branche supprimée, `main` à jour, ticket en « Terminé(e) » avec la preuve en
-  commentaire. Tant qu'il n'est pas achevé, on n'ouvre ni autre branche ni autre PR ; pendant l'attente de la CI, seules
-  la lecture et les mesures sans branche sont permises. Un ticket clos reste rouvrable si sa preuve est incomplète.
+- **Un commit sur `main`, une ou plusieurs tâches liées.** Un commit peut regrouper plusieurs tâches `KAN-n` d'un même lot
+  cohérent : la clé de la tâche principale (et celles du lot) au début du message de commit. L'application gratuite
+  « GitHub for Jira » relie alors les commits aux tâches. Chaque tâche du lot garde sa preuve en commentaire et passe en
+  « Terminé(e) » quand la CI de `main` est verte sur le dernier commit.
+- **Une tâche va jusqu'à « Terminé(e) » avant la suivante.** Le parcours complet est : commit, push sur `main`, les 4 contrôles
+  requis verts sur le dernier commit, images publiées, redéploiement (`pull`, `down`, `up`) et vérification réelle, ticket
+  en « Terminé(e) » avec la preuve en commentaire. Tant qu'il n'est pas achevé, on ne commence pas un autre ticket ; pendant
+  l'attente de la CI, seules la lecture et les mesures sont permises. Un ticket clos reste rouvrable si sa preuve est incomplète.
 - **Travail IA, épopée par épopée.** On avance dans l'ordre des épopées, on relit en entier la documentation officielle
   concernée à l'entrée de chaque épopée (§ 3 de `site/docs/ia/principes-et-decisions.md`), et on ne supprime ni fichier, ni branche, ni donnée
   en dehors du périmètre de la tâche en cours sans l'accord du propriétaire. Les versions IA suivent la dernière stable
@@ -155,14 +155,13 @@ autorisations déjà données restent valables dans leur périmètre ; une modif
 nouvellement proposée demande son accord avant application.
 
 `CLAUDE.md` renvoie à cette même porte d'entrée : Claude et Codex appliquent les mêmes règles.
-La CI n'est lancée ou relancée que sur demande explicite du propriétaire. Si un push la déclenche
-automatiquement, conserver le lot prêt en local jusqu'à cette demande.
+La CI n'est relancée que sur demande explicite du propriétaire. Le push direct sur `main` la lance une fois
+(autorisé par la décision du 2026-11-21).
 
-La branche distante `main` est protégée : aucune mise à jour directe ou forcée de `main` n'est permise.
-Tout changement destiné à `main` passe par une pull request ciblant `main`. Mettre à jour la branche
-head de la PR existante lorsqu'il y en a une; sinon, créer une branche de travail et une PR. Ne pas
-contourner les contrôles de protection. La livraison et la fusion suivent
-[`conventions/workflow.md`](conventions/workflow.md).
+**Push direct sur `main`, sans pull request (décision du propriétaire, 2026-11-21).** Les changements se commitent sur
+`main` et se poussent directement (`git push origin main`) ; aucune branche de travail ni PR. Aucune mise à jour forcée de
+`main`. La CI tourne une fois, sur `main`, après le push ; un commit qui la casse se corrige par un nouveau commit. La
+livraison suit [`conventions/workflow.md`](conventions/workflow.md).
 
 ---
 

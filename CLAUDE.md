@@ -16,15 +16,16 @@ Pour reprendre et mener une tâche :
    contrôles. Avant de céder le travail, mettre à jour la tâche Jira (statut, preuve, prochaine action en commentaire) :
    il n'y a pas de handoff markdown.
 
-La CI est lancée ou relancée uniquement sur demande explicite du propriétaire. Un push qui la
-déclencherait automatiquement attend également cette demande ; garder le travail prêt en local.
+La CI n'est relancée que sur demande explicite du propriétaire. Le push direct sur `main` la lance une fois
+(autorisé par la décision du 2026-11-21).
 
 Appliquer la **boucle Ralph** d'[AGENTS.md](AGENTS.md), détaillée dans
 [`conventions/workflow.md`](conventions/workflow.md) : poursuivre les étapes autorisées jusqu'à
 la fin prouvée de la demande ; un résultat partiel ne justifie pas de rendre la main.
-La branche distante `main` est protégée : ne jamais y pousser directement ni forcer sa mise à jour.
-Publier les changements destinés à `main` sur la branche head de la PR existante, ou ouvrir une PR
-ciblant `main` si aucune n'existe. Respecter les contrôles requis et la routine définie dans
+**Push direct sur `main`, sans pull request (décision du propriétaire, 2026-11-21).** On commite sur `main` et on pousse
+(`git push origin main`) : aucune branche de travail ni PR n'est créée. Ne jamais forcer la mise à jour de `main`
+(`--force`). La CI tourne une seule fois, sur `main`, après le push ; un commit qui la casse se corrige en avant, par un
+nouveau commit. Les contrôles locaux (hooks pre-commit, tests ciblés) passent avant chaque push. Routine définie dans
 [`conventions/workflow.md`](conventions/workflow.md).
 
 Principes d'ingénierie (décision du 2026-11-03), à appliquer dès l'ouverture d'une tâche : abstraction à sa place (c'est à

@@ -36,11 +36,11 @@ dépôt**. En cas de conflit, `AGENTS.md`, les conventions et les décisions du 
    commandes et peuvent ajouter un workflow CI. Les instructions du dépôt sont maintenues par nous, une seule fois.
 3. **Le propriétaire décide.** Les portes de revue s'emploient sur demande, pour une conception d'épopée ou d'architecture
    (en plus de la présentation des options et de la recommandation exigée par `workflow.md`), jamais pour un correctif.
-4. **CI et PR : l'Auto-fix de l'application, pas `/pr-shepherd`.** La CI n'est lancée que sur demande explicite et
-   l'Auto-fix (`set_monitor`) surveille la PR : ne pas lancer la boucle de surveillance de l'outil.
+4. **CI : pas de `/pr-shepherd`.** La CI n'est lancée que sur demande explicite (le push direct sur `main` la lance une
+   fois) : ne pas lancer la boucle de surveillance de l'outil.
 5. **Aucune délégation externe sans accord.** Envoyer du code ou des données à Codex CLI ou Gemini CLI sort du dépôt :
    uniquement avec l'accord du propriétaire, gratuit et sans donnée RH ni secret (CNDP).
-6. **Le travail reste sur la branche et la PR uniques** de `workflow.md` ; l'outil ne crée ni branche ni worktree de plus.
+6. **Le travail se fait sur `main`** (push direct, `workflow.md`) ; l'outil ne crée ni branche ni worktree de plus.
 
 ## Ce que nous en reprenons
 

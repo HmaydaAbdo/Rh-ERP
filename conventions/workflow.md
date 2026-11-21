@@ -16,7 +16,7 @@ s'appliquer ; la persistance n'accorde aucune autorisation supplémentaire.
 
 **Un ticket à 100 % avant le suivant (décision du 2026-11-21).** On ne passe à un autre ticket que lorsque le
 ticket courant est terminé : les défauts trouvés pendant sa revue sont corrigés dans la foulée (tâche Jira,
-branche, PR), les changements sont poussés et fusionnés, les images sont construites et publiées, la pile est
+commit), les changements sont poussés sur `main`, les images sont construites et publiées, la pile est
 redéployée (`pull`, `down`, `up`), le ticket est vérifié en réel et toutes les preuves demandées sont consignées.
 Alors seulement il se ferme. Jamais de statut « Terminé » avec des preuves « non faites ».
 
@@ -137,31 +137,31 @@ validation supplémentaire dans chaque domaine.
 
 ## 5. Livrer et rendre compte
 
-La branche distante `main` est protégée : ne jamais y pousser directement ou forcer sa mise à jour.
-Tout changement qui vise `main` passe par une PR ciblant `main`. Si une PR existe déjà pour le
-chantier, pousser les commits sur sa branche head et mettre cette PR à jour; sinon, créer une branche
-de travail et ouvrir une PR. Respecter les contrôles de protection.
+**Push direct sur `main`, sans pull request (décision du propriétaire, 2026-11-21).** On commite sur `main` et on pousse
+directement ; aucune branche de travail ni PR. Ne jamais forcer la mise à jour de `main`. La CI tourne une seule fois,
+sur `main`, après le push (le propriétaire a retiré la protection de branche et la double CI) ; les contrôles locaux
+(hooks pre-commit, tests ciblés) passent avant le push, car un commit qui casse la CI est déjà sur `main` et se corrige
+par un nouveau commit.
 
 1. Relire le diff et vérifier que code, tests, documentation et décisions approuvées concordent.
-2. Si le commit et le push sont autorisés, enregistrer le lot cohérent sur la branche prévue et mettre
-   à jour la PR concernée avec le comportement final et les preuves utiles. Exclure secrets, fichiers
+2. Si le commit et le push sont autorisés, enregistrer le lot cohérent sur `main` et pousser ; consigner le
+   comportement final et les preuves utiles dans le ticket Jira. Exclure secrets, fichiers
    générés et modifications étrangères au lot ; conserver le travail local préexistant.
-3. **Lancer ou relancer la CI uniquement sur demande explicite du propriétaire.** Si le push
-   déclenche automatiquement une CI et que cette demande n'a pas été donnée, conserver le commit
-   prêt en local. Une autorisation générale de commit/push ne vaut pas une demande de CI.
+3. **Lancer ou relancer la CI uniquement sur demande explicite du propriétaire.** Le push direct sur `main` lance la
+   CI une fois (autorisé par la décision du 2026-11-21) ; toute relance attend la demande du propriétaire.
    Lorsque la CI est demandée, vérifier les contrôles requis sur le **dernier commit poussé** et
    attendre leurs résultats. Une ancienne CI verte ne valide pas un nouveau commit. Diagnostiquer
    les échecs et préparer les corrections sans affaiblir les contrôles ; toute relance attend la
    demande du propriétaire.
-4. **Avant toute fusion vers `main`, annoncer ce qui change en production** : la production n'est pilotée que par
-   `docker-compose.yml` et le `.env` du serveur. Comparer la PR à ces deux fichiers et à `.env.example`, puis lister les
+4. **Avant tout push vers `main`, annoncer ce qui change en production** : la production n'est pilotée que par
+   `docker-compose.yml` et le `.env` du serveur. Comparer le diff à ces deux fichiers et à `.env.example`, puis lister les
    variables à ajouter, modifier ou retirer, les ports, volumes, réseaux, images et tags modifiés et les étapes de migration,
    ou écrire « aucun changement de compose ni de `.env` ».
 5. Présenter le résultat local pour revue avec le statut exact des contrôles. Lorsque la CI n'a pas
    été demandée, indiquer qu'elle reste à exécuter. La livraison validée par CI exige les contrôles
    requis verts sur le dernier commit. Appliquer l'autorisation
-   de fusion donnée par le propriétaire ; lorsqu'il demande à revoir d'abord, attendre son retour.
-6. Après une fusion autorisée, vérifier `main`, les branches locales et distantes et l'état du dépôt.
+   de push donnée par le propriétaire ; lorsqu'il demande à revoir d'abord, attendre son retour.
+6. Après un push autorisé, vérifier `main`, les branches locales et distantes et l'état du dépôt.
    Appliquer le nettoyage de branches demandé uniquement aux branches concernées ; préserver les
    chantiers séparés expressément conservés. Le déploiement suit son autorisation et sa procédure.
 7. Donner un bilan autonome : résultat, vérifications locales, CI, observations navigateur, statut
