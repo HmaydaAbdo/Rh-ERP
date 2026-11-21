@@ -16,7 +16,10 @@ interface Colonne {
 type Ligne = Record<string, unknown>;
 
 /** Au-delà de ce nombre de lignes, le tableau se pagine (le défilement virtualisé maison est remplacé par la pagination). */
-const LIGNES_PAR_PAGE = 20;
+// KAN-317 : dans le fil, un tableau de 20 lignes dépassait la hauteur de l'écran et noyait la réponse (et les graphiques
+// demandés plus bas). Le fil en montre 8 par page ; le plein écran en montre 20.
+const LIGNES_PAR_PAGE_FIL = 8;
+const LIGNES_PAR_PAGE_PLEIN_ECRAN = 20;
 
 /**
  * Tableau de données du catalogue ERP (surface A2UI) : le tableau AG Grid de l'application (`stp-table` : tri, clavier,
@@ -75,8 +78,8 @@ const LIGNES_PAR_PAGE = 20;
         [value]="affichees()"
         [columns]="colonnesTable()"
         [label]="titre() ?? 'Tableau de données'"
-        [paginated]="affichees().length > lignesParPage"
-        [rows]="lignesParPage"
+        [paginated]="affichees().length > lignesParPage()"
+        [rows]="lignesParPage()"
         [reorderable]="false"
         emptyMessage="Aucune ligne ne correspond à la recherche."
       >
@@ -98,9 +101,9 @@ export class A2uiDataTableComponent extends CatalogComponent<typeof DataTableApi
   protected readonly titre = computed(() => this.props().title?.value());
   protected readonly legende = computed(() => this.props().caption?.value());
 
-  protected readonly lignesParPage = LIGNES_PAR_PAGE;
   protected readonly recherche = signal('');
   protected readonly pleinEcran = signal(false);
+  protected readonly lignesParPage = computed(() => (this.pleinEcran() ? LIGNES_PAR_PAGE_PLEIN_ECRAN : LIGNES_PAR_PAGE_FIL));
   // Les lignes sont littérales ou liées au modèle de données de la surface (`{ path }`) : le rendu résout la liaison.
   protected readonly lignes = computed<Ligne[]>(() => {
     const valeur = this.props().rows?.value();

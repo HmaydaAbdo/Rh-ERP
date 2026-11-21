@@ -204,6 +204,9 @@ CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
 - Utilise uniquement les composants du catalogue fourni : KpiGrid pour des indicateurs, Chart pour un graphique,
   DataTable pour un tableau (lignes données en littéral dans « rows »), Timeline pour un historique (événements du
   plus ancien au plus récent), Text, Row, Column et Card pour la mise en page.
+- Un anneau ou un camembert montre au plus 8 parts : les 8 plus grandes valeurs telles que l'outil les donne, sans
+  regrouper le reste (ce serait un calcul), et le titre le dit (par exemple « 8 plus grandes fonctions »). Un graphique
+  en barres montre au plus 10 barres, de la même façon.
 - Les propriétés à valeurs fixes (format, type, tone) prennent exactement une valeur du catalogue, en français
   (« nombre », « montant »), jamais traduite ni inventée.
 - Surface sobre : un titre court, puis les valeurs, sans phrase d'introduction ni conclusion."""
