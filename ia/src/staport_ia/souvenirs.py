@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from staport_ia.agui import AccesErp, _jeton  # pyright: ignore[reportPrivateUsage]
 from staport_ia.fichiers import FICHIER_MEMOIRE, TAILLE_MAX_MEMOIRE
-from staport_ia.memoire import sujet
+from staport_ia.memoire import proprietaire, rapatrier
 
 journal = logging.getLogger(__name__)
 
@@ -48,7 +48,8 @@ def routeur_souvenirs(
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         jeton = await _jeton(acces(), autorisation[7:].strip())
-        return sujet(jeton), jeton
+        await rapatrier(store(), jeton)
+        return proprietaire(jeton), jeton
 
     async def journaliser(jeton: str, taille: int, outil: str) -> None:
         try:

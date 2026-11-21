@@ -29,7 +29,7 @@ from langgraph.types import Command
 from pydantic import BaseModel
 
 from staport_ia.agui import SIGNALEUR_ECRITURE, AccesErp, _jeton  # pyright: ignore[reportPrivateUsage]
-from staport_ia.memoire import sujet
+from staport_ia.memoire import proprietaire, rapatrier
 
 journal = logging.getLogger(__name__)
 
@@ -193,7 +193,9 @@ def routeur_fichiers(
         autorisation = requete.headers.get("authorization", "")
         if not autorisation.lower().startswith("bearer ") or not autorisation[7:].strip():
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
-        return sujet(await _jeton(acces(), autorisation[7:].strip()))
+        jeton = await _jeton(acces(), autorisation[7:].strip())
+        await rapatrier(store(), jeton)
+        return proprietaire(jeton)
 
     @routeur.get("/fichiers")
     async def lister(requete: Request) -> list[Fichier]:  # pyright: ignore[reportUnusedFunction]

@@ -64,6 +64,48 @@ def sujet(jeton_agent: str) -> str:
     return "anonyme-" + hashlib.sha256(jeton_agent.encode()).hexdigest()[:16]
 
 
+def proprietaire(jeton_agent: str) -> str:
+    """L'étiquette de l'espace de l'utilisateur dans le Store (fichiers, mémoire longue) : son identifiant interne.
+
+    Le Store de LangGraph refuse le point dans une étiquette d'espace de noms (``InvalidNamespaceError``, KAN-303) : le
+    nom d'utilisateur ne convient donc pas (``prenom.nom``), et il peut être renommé. L'identifiant interne (champ
+    ``uid`` du jeton agent) est stable et valide. Sans ``uid`` (jeton de test), l'étiquette retombe sur ``sujet``.
+    """
+    try:
+        charge = jeton_agent.split(".")[1]
+        uid = json.loads(base64.urlsafe_b64decode(charge + "=" * (-len(charge) % 4))).get("uid")
+        if isinstance(uid, int) and not isinstance(uid, bool):
+            return f"u{uid}"
+    except IndexError, ValueError:
+        pass
+    return sujet(jeton_agent)
+
+
+#: Utilisateurs dont l'espace d'avant KAN-303 (rangé sous le nom d'utilisateur) a déjà été rapatrié par ce processus.
+_RAPATRIES: set[str] = set()
+_ESPACES = ("espace", "memoire")
+
+
+async def rapatrier(store: BaseStore, jeton_agent: str) -> None:
+    """Déplace une fois, sous l'identifiant interne, ce que l'utilisateur avait rangé sous son nom d'utilisateur.
+
+    Avant KAN-303 le Store rangeait les fichiers et la mémoire longue sous ``(nom d'utilisateur, espace)`` ; sans ce
+    déplacement ils disparaîtraient pour l'utilisateur. Idempotent : une ligne déplacée n'existe plus sous l'ancien
+    nom. En cas de conflit (la clé existe déjà sous le nouvel espace), rien n'est écrasé ni supprimé : l'ancienne ligne
+    reste sous l'ancien nom. Un nom avec un point n'a jamais eu d'espace.
+    """
+    ancien, nouveau = sujet(jeton_agent), proprietaire(jeton_agent)
+    if ancien == nouveau or "." in ancien or nouveau in _RAPATRIES:
+        return
+    for espace in _ESPACES:
+        for element in await store.asearch((ancien, espace), limit=1000):
+            if await store.aget((nouveau, espace), element.key) is not None:
+                continue  # conflit : ni écrasement, ni suppression ; l'ancienne ligne reste sous l'ancien nom
+            await store.aput((nouveau, espace), element.key, element.value)
+            await store.adelete((ancien, espace), element.key)
+    _RAPATRIES.add(nouveau)
+
+
 def espace_conversation(utilisateur: str, thread_id: str) -> str:
     """Le fil de cet utilisateur : la même conversation chez deux utilisateurs donne deux fils distincts."""
     return f"{utilisateur}:{thread_id}"
