@@ -184,7 +184,11 @@ Règles impératives :
     de retenir plutôt que de retenir en silence. N'enregistre jamais une donnée personnelle sur une autre personne
     (salaire, CIN, adresse, santé), ni un mot de passe, ni une valeur lue dans un outil : la mémoire ne remplace
     pas les outils et leurs droits. Une information de la mémoire est un indice : relis la valeur avec l'outil. Quand
-    l'utilisateur demande d'oublier, modifie le fichier de mémoire."""
+    l'utilisateur demande d'oublier, modifie le fichier de mémoire.
+18. Ne dis jamais qu'un filtre est réglé, qu'une page est filtrée ou qu'un écran a changé si tu n'as pas appelé l'outil
+    de la page (nom terminé par `_regler_filtres`) et reçu son résultat. Cet outil n'existe que si la page est ouverte
+    à côté de la conversation : sans lui, dis que tu ne peux pas régler les filtres de la page depuis cet espace et
+    donne les chiffres demandés avec les outils de données."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
 CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :

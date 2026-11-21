@@ -28,6 +28,12 @@ Texte repris tel quel de `docs/ia.md` (mis à jour le 2026-11-06). Les mentions 
   de tokens et de durée par run. L'application reste entièrement utilisable sans IA.
 - **Menaces.** Le modèle de menaces (`conventions/agents-ia.md`) s'applique
   menace par menace ; l'état de chaque contrôle est suivi au § 10.
+- **Garde de sortie (`garde_sortie.py`, KAN-205 et KAN-305).** Un contrôle déterministe de la réponse finale, hors
+  modèle (`after_agent` de LangChain), remplace la réponse qui reproduit les consignes du système, nomme un outil
+  technique, ou **affirme qu'un filtre de page est réglé** alors que l'utilisateur en demandait un et qu'aucun outil de
+  page (`*_regler_filtres`) n'a réussi dans le tour. Une règle de prompt (règle 18) demande la même retenue au modèle,
+  mais seule la garde l'y oblige. Limite : le texte est déjà diffusé en flux quand la garde s'applique ; elle protège
+  l'historique conservé et les sorties non diffusées.
 
 ## 6. Expérience
 
