@@ -11,8 +11,11 @@ Ne restent ici que deux protections qu'aucun framework ne fournit :
   générique (l'intégration y recopie le texte de l'exception).
 """
 
+import asyncio
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
+import time
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Generator, Sequence
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Protocol, cast
 
@@ -37,6 +40,40 @@ from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_e
 from staport_ia.pieces_jointes import Analyseur, FichiersVerifies, verifier_pieces_jointes
 
 journal = logging.getLogger(__name__)
+
+#: Borne de la préparation d'un run (pièces jointes, échange de jeton, catalogue MCP, contexte, routage), avant le
+#: premier octet du flux (KAN-301). Chaque appel HTTP a déjà son délai (30 s) ; cette borne couvre ce qu'aucun délai
+#: ne voit, comme une étape qui n'envoie aucune requête : au-delà, l'utilisateur reçoit une indisponibilité, jamais
+#: une attente sans fin.
+DELAI_PREPARATION_SECONDES = 60.0
+#: Au-delà de cette durée totale, les durées par étape sont consignées au journal même sans dépasser la borne.
+SEUIL_PREPARATION_LENTE_SECONDES = 10.0
+
+
+class _EtapesPreparation:
+    """Le nom de l'étape en cours et la durée de chacune : de quoi nommer l'étape lente d'une préparation bloquée."""
+
+    def __init__(self) -> None:
+        self.courante = "démarrage"
+        self.durees: dict[str, float] = {}
+        self._debut = time.monotonic()
+
+    @contextmanager
+    def etape(self, nom: str) -> Generator[None]:
+        self.courante = nom
+        debut = time.monotonic()
+        try:
+            yield
+        finally:
+            self.durees[nom] = time.monotonic() - debut
+
+    @property
+    def total(self) -> float:
+        return time.monotonic() - self._debut
+
+    def resume(self) -> str:
+        return ", ".join(f"{nom} {duree:.1f} s" for nom, duree in self.durees.items()) or "aucune étape terminée"
+
 
 MESSAGE_REDEMARRAGE = "Le service redémarre : votre conversation est conservée, renvoyez votre message dans un instant."
 ERREUR_PUBLIQUE = "L'assistant est momentanément indisponible. Réessayez ou ouvrez l'écran classique."
@@ -318,6 +355,7 @@ def routeur_agui(
     routage: Callable[[], Routage] | None = None,
     pieces_jointes: Callable[[], bool] = lambda: False,
     analyseur: Callable[[], Analyseur | None] = lambda: None,
+    delai_preparation: float | None = None,
 ) -> APIRouter:
     routeur = APIRouter()
     verifies = FichiersVerifies()
@@ -331,37 +369,61 @@ def routeur_agui(
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Connexion requise.")
         verifier_question(entree)
 
-        await verifier_pieces_jointes(entree.messages, pieces_jointes(), analyseur(), verifies)
-        try:
-            # Vérifie que chaque document se lit et remplit le cache ; le modèle lira le texte (LectureDocuments),
-            # le fil garde le fichier d'origine pour l'affichage.
-            await convertir_documents(entree.messages, TEXTES)
-        except Exception as erreur:  # format illisible malgré une signature correcte
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce document n'a pas pu être lu.") from erreur
         erp = acces()
-        jeton = await _jeton(erp, autorisation[7:].strip())
-        outils = await _outils(erp, jeton)
-        texte_contexte = await _contexte(erp, jeton)
-        encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
-        # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu A2UI du
-        # runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
-        # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris tel quel.
-        fil = espace_conversation(sujet(jeton), entree.thread_id)
-        # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le navigateur.
-        # Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte rien.
-        # Le contexte d'écran du navigateur est un indice : le serveur le revérifie et le réécrit (ecran.py, KAN-83).
-        contexte_ecran = contexte_verifie(entree.context)
-        if est_reprise(entree):
-            entree_serveur = entree.model_copy(update={"state": {}, "thread_id": fil, "context": contexte_ecran})
-        else:
-            epinglees = await routage()(texte_question(entree), outils) if routage else []
-            entree_serveur = entree.model_copy(
-                update={
-                    "state": {"pinned_skills": epinglees},
-                    "thread_id": fil,
-                    "context": contexte_ecran,
-                }
+        etapes = _EtapesPreparation()
+        try:
+            async with asyncio.timeout(DELAI_PREPARATION_SECONDES if delai_preparation is None else delai_preparation):
+                with etapes.etape("pièces jointes"):
+                    await verifier_pieces_jointes(entree.messages, pieces_jointes(), analyseur(), verifies)
+                    try:
+                        # Vérifie que chaque document se lit et remplit le cache ; le modèle lira le texte
+                        # (LectureDocuments), le fil garde le fichier d'origine pour l'affichage.
+                        await convertir_documents(entree.messages, TEXTES)
+                    except Exception as erreur:  # format illisible malgré une signature correcte
+                        raise HTTPException(
+                            status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce document n'a pas pu être lu."
+                        ) from erreur
+                with etapes.etape("échange de jeton"):
+                    jeton = await _jeton(erp, autorisation[7:].strip())
+                with etapes.etape("catalogue MCP"):
+                    outils = await _outils(erp, jeton)
+                with etapes.etape("contexte MCP"):
+                    texte_contexte = await _contexte(erp, jeton)
+                # L'état envoyé par le navigateur n'est pas une source de confiance ; les outils qu'il déclare (rendu
+                # A2UI du runtime CopilotKit) sont exécutés côté client, jamais par le serveur.
+                # Le fil est celui de cet utilisateur : l'identifiant de conversation du navigateur n'est jamais pris
+                # tel quel.
+                fil = espace_conversation(sujet(jeton), entree.thread_id)
+                # Les compétences épinglées sont choisies ici, hors modèle, jamais prises de l'état envoyé par le
+                # navigateur. Une reprise garde l'état du fil (compétences déjà épinglées) : le navigateur n'y apporte
+                # rien. Le contexte d'écran du navigateur est un indice : le serveur le revérifie et le réécrit
+                # (ecran.py, KAN-83).
+                contexte_ecran = contexte_verifie(entree.context)
+                if est_reprise(entree):
+                    entree_serveur = entree.model_copy(
+                        update={"state": {}, "thread_id": fil, "context": contexte_ecran}
+                    )
+                else:
+                    with etapes.etape("routage des compétences"):
+                        epinglees = await routage()(texte_question(entree), outils) if routage else []
+                    entree_serveur = entree.model_copy(
+                        update={
+                            "state": {"pinned_skills": epinglees},
+                            "thread_id": fil,
+                            "context": contexte_ecran,
+                        }
+                    )
+        except TimeoutError:
+            journal.error(
+                "Préparation du run abandonnée après %.0f s, à l'étape « %s » (étapes terminées : %s)",
+                etapes.total,
+                etapes.courante,
+                etapes.resume(),
             )
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Assistant IA indisponible.") from None
+        if etapes.total > SEUIL_PREPARATION_LENTE_SECONDES:
+            journal.warning("Préparation du run lente : %.1f s (%s)", etapes.total, etapes.resume())
+        encodeur = EventEncoder(accept=requete.headers.get("accept") or "text/event-stream")
 
         suggestion_sans_etat = requete.headers.get("x-staport-stateless-suggestion") == "true"
 

@@ -1,6 +1,8 @@
 """Point d'entrée AG-UI avec le faux modèle de LangChain et API simulée : flux officiel, refus HTTP et pannes."""
 
+import asyncio
 import json
+import time
 from collections.abc import Sequence
 from typing import Any, cast
 
@@ -14,6 +16,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.memory import InMemoryStore
 from litellm.exceptions import BadRequestError
 
+from staport_ia import agui
 from staport_ia.agent import SYSTEME, creer_agent
 from staport_ia.agui import MESSAGE_BLOQUE, FabriqueAgent, demander_arret
 from staport_ia.app import creer_app
@@ -179,6 +182,60 @@ def test_les_refus_sont_des_erreurs_http_avant_tout_flux(
 
     assert reponse.status_code == attendu
     assert not acces.jetons_agent  # aucun catalogue demandé
+
+
+class AccesQuiNeRepondPlus(AccesSimule):
+    """Une étape qui n'envoie aucune requête et ne rend jamais la main : aucun délai HTTP ne la voit (KAN-301)."""
+
+    def __init__(self, etape: str, duree: float = 3600.0) -> None:
+        super().__init__([outil("paie_indicateurs", INDICATEURS)])
+        self._etape = etape
+        self._duree = duree
+
+    async def jeton_agent(self, jeton_connexion: str) -> str:
+        if self._etape == "jeton":
+            await asyncio.sleep(self._duree)
+        return await super().jeton_agent(jeton_connexion)
+
+    async def outils(self, jeton_agent: str) -> Sequence[BaseTool]:
+        if self._etape == "catalogue":
+            await asyncio.sleep(self._duree)
+        return await super().outils(jeton_agent)
+
+
+@pytest.mark.parametrize(
+    ("etape", "libelle"),
+    [("jeton", "échange de jeton"), ("catalogue", "catalogue MCP")],
+)
+def test_une_preparation_qui_ne_repond_plus_est_bornee_et_nomme_l_etape(
+    etape: str, libelle: str, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """KAN-301 : une préparation bloquée donne 503 dans la borne (et non une attente sans fin) ; le journal nomme
+    l'étape en cours."""
+    monkeypatch.setattr(agui, "DELAI_PREPARATION_SECONDES", 0.3)
+    acces = AccesQuiNeRepondPlus(etape)
+
+    debut = time.monotonic()
+    with caplog.at_level("ERROR", logger="staport_ia.agui"):
+        reponse = _poster(_masse(), acces, _corps())
+
+    assert reponse.status_code == 503
+    assert reponse.json()["detail"] == "Assistant IA indisponible."
+    assert time.monotonic() - debut < 5
+    assert f"à l'étape « {libelle} »" in caplog.text
+
+
+def test_une_preparation_lente_mais_dans_la_borne_aboutit_et_consigne_les_durees(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(agui, "SEUIL_PREPARATION_LENTE_SECONDES", 0.05)
+    acces = AccesQuiNeRepondPlus("catalogue", duree=0.2)
+
+    with caplog.at_level("WARNING", logger="staport_ia.agui"):
+        reponse = _poster(_masse(), acces, _corps())
+
+    assert reponse.status_code == 200 and _lire(reponse.text)[-1]["type"] == EventType.RUN_FINISHED
+    assert "Préparation du run lente" in caplog.text and "catalogue MCP 0." in caplog.text
 
 
 @pytest.mark.parametrize("question", [None, "   "])
