@@ -8,6 +8,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of } from 'rxjs';
 
+import { EtatVue, EtatVueLocal } from '@shared/etat-vue/etat-vue';
 import { AUCUN_FILTRE } from '../filtres/paie-filtres';
 import { PaiePeriodeResume } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
@@ -159,5 +160,36 @@ describe('PaieVuesComponent', () => {
         expect(url).toContain('nom=ali');
         expect(url).toContain('chantierIds=3');
         expect(composant['filtres']()).toEqual(expect.objectContaining({ periode: '2026-08', nomPrenom: 'ali', chantierIds: [3] }));
+    });
+});
+
+describe('PaieVuesComponent avec un état de vue local (dans la conversation)', () => {
+    it("lit et écrit les filtres dans son état, sans toucher à l'URL", async () => {
+        const service = {
+            listerPeriodes: vi.fn().mockReturnValue(of(PERIODES)),
+            rechercherChantiers: vi.fn().mockReturnValue(of([]))
+        } as unknown as MockedObject<PaieService>;
+        const etat = new EtatVueLocal({ periode: '2026-07', nom: 'ali', chantierIds: '3' });
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([{ path: 'paie', component: VueFactice }]),
+                provideHttpClient(withXhr()),
+                provideHttpClientTesting(),
+                NotificationService,
+                { provide: PaieService, useValue: service },
+                { provide: EtatVue, useValue: etat }
+            ]
+        });
+        await TestBed.inject(Router).navigateByUrl('/paie?periode=2026-01');
+        const fixture = TestBed.createComponent(PaieVuesComponent);
+        const composant = fixture.componentInstance;
+
+        expect(composant['filtres']()).toEqual({ ...AUCUN_FILTRE, periode: '2026-07', nomPrenom: 'ali', chantierIds: [3] });
+
+        composant['appliquer']({ ...AUCUN_FILTRE, periode: '2026-08', cin: 'AB1' });
+
+        expect(composant['filtres']()).toEqual({ ...AUCUN_FILTRE, periode: '2026-08', cin: 'AB1' });
+        expect(etat.params().get('cin')).toBe('AB1');
+        expect(TestBed.inject(Router).url).toBe('/paie?periode=2026-01');
     });
 });

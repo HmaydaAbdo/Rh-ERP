@@ -1,10 +1,11 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, contentChild, DestroyRef, EnvironmentInjector, inject, input, OnInit, runInInjectionContext, signal, TemplateRef } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { Params, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, finalize, forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { EtatVue } from '../../../shared/etat-vue/etat-vue';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EquipeReferenceService } from '../../../shared/reference-data/equipe-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
@@ -74,8 +75,7 @@ export class CartesPerimetreComponent implements OnInit {
   private readonly chantiers = inject(ChantierReferenceService);
   private readonly equipes = inject(EquipeReferenceService);
   private readonly fonctions = inject(FunctionReferenceService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly etat = inject(EtatVue);
   private readonly destroyRef = inject(DestroyRef);
   private readonly environmentInjector = inject(EnvironmentInjector);
 
@@ -104,7 +104,7 @@ export class CartesPerimetreComponent implements OnInit {
   );
   private readonly fichesDansCartes = computed(() => this.voitEmployes() && !this.module().sansEffectifFichesDansCartes);
 
-  private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
+  private readonly params = this.etat.params;
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
 
   /** Mois de paie du module, du plus récent au plus ancien (avec `PAIE_READ`). */
@@ -488,7 +488,7 @@ export class CartesPerimetreComponent implements OnInit {
   }
 
   private naviguer(parametres: Params): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: parametres, queryParamsHandling: 'merge' });
+    this.etat.modifier(parametres);
   }
 
   /** Charge le libellé des étapes qu'on ne connaît pas encore (lien direct, retour navigateur) ; en cas d'échec, un libellé neutre. */

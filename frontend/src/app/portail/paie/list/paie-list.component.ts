@@ -1,16 +1,17 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { distinctUntilChanged, finalize, map, skip, Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+import { finalize, Subscription } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { EtatVue } from '../../../shared/etat-vue/etat-vue';
 import { CollectionTableComponent, CollectionTableConfig } from '../../../shared/ui/collection-table/collection-table.component';
 import { ConfirmDialogService, NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ColumnState } from '../../../shared/table/table-columns';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { TableCellDirective, TableLazyLoadEvent, TableRowActionsDirective } from '../../../shared/ui/table/table.component';
-import { lireFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
+import { lireFiltres, memesFiltres, PaieFiltres, versCriteres } from '../filtres/paie-filtres';
 import { Paie } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
 
@@ -57,7 +58,7 @@ export class PaieListComponent {
   private readonly confirmationService = inject(ConfirmDialogService);
   private readonly messageService = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
+  private readonly etat = inject(EtatVue);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -72,7 +73,7 @@ export class PaieListComponent {
   protected readonly deletingId = signal<number | null>(null);
 
   /** Filtres de la barre commune, lus dans l'URL (voir `filtres/paie-filtres.ts`). */
-  private filtres: PaieFiltres = lireFiltres(this.route.snapshot.queryParamMap);
+  private filtres: PaieFiltres = lireFiltres(this.etat.params());
 
   /** Première ligne de la page affichée, liée au tableau pour qu'un changement de filtres le ramène à la première page. */
   protected readonly first = signal(0);
@@ -83,18 +84,17 @@ export class PaieListComponent {
   private rechercheEnCours?: Subscription;
 
   constructor() {
-    // La première émission est celle de l'URL déjà lue ci-dessus : le premier chargement vient du tableau (`onLazyLoad`).
-    this.route.queryParamMap
-      .pipe(
-        map(lireFiltres),
-        skip(1),
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((filtres) => {
+    // Le premier chargement vient du tableau (`onLazyLoad`) : les filtres déjà lus ci-dessus ne relancent pas la recherche.
+    effect(() => {
+      const filtres = lireFiltres(this.etat.params());
+      untracked(() => {
+        if (memesFiltres(filtres, this.filtres)) {
+          return;
+        }
         this.filtres = filtres;
         this.onSearch();
       });
+    });
   }
 
   protected onLazyLoad(event: TableLazyLoadEvent): void {

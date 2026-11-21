@@ -1,11 +1,12 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, ParamMap, Params, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ParamMap, Params, RouterLink } from '@angular/router';
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 import { catchError, combineLatest, distinctUntilChanged, finalize, forkJoin, map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { EtatVue } from '../../../shared/etat-vue/etat-vue';
 import { ThemeService } from '../../../core/theme/theme.service';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
@@ -106,8 +107,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   private readonly chantiers = inject(ChantierReferenceService);
   private readonly equipes = inject(EquipeReferenceService);
   private readonly fonctions = inject(FunctionReferenceService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly etat = inject(EtatVue);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly libelles = LIBELLES_DIMENSIONS;
@@ -191,7 +191,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   protected readonly voitEmployes = computed(() => this.authService.hasPermission('EMPLOYEE_READ') && (this.module().sourcesAnalytique?.includes('EMPLOYEE') ?? true));
   protected readonly voitHeuresSupp = computed(() => this.authService.hasPermission('HEURES_SUP_READ') && !!this.module().critereHeuresSupp && (this.module().sourcesAnalytique?.includes('HEURES_SUP') ?? false));
 
-  private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
+  private readonly params = this.etat.params;
   protected readonly perimetre = computed(() => lirePerimetre(this.params()));
   protected readonly ordreSources = computed(() => this.module().ordreAnalytique ?? ['PAIE', 'EMPLOYEE'] as const);
   protected readonly mois = signal<string[]>([]);
@@ -717,7 +717,7 @@ export class AnalytiquePerimetreComponent implements OnInit {
   }
 
   private naviguer(parametres: Params, remplacer = false): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: parametres, queryParamsHandling: 'merge', replaceUrl: remplacer });
+    this.etat.modifier(parametres, { remplacer });
   }
 
   private idsQualite(value: string | null): number[] {

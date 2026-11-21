@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
-import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { EtatVue } from '../../../shared/etat-vue/etat-vue';
 import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
@@ -45,7 +44,7 @@ export class PaieCartesComponent {
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(NotificationService);
-  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private readonly params = inject(EtatVue).params;
   private readonly cartes = viewChild.required(CartesPerimetreComponent);
 
   readonly suppression = signal<Suppression | null>(null);
