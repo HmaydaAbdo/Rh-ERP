@@ -6,7 +6,6 @@ import { of, throwError } from 'rxjs';
 import { ChantierReferenceService } from '../../../shared/reference-data/chantier-reference.service';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.component';
 import { PaieService } from '../../paie/services/paie.service';
 import { HeuresSuppImportAnalyse, HeuresSuppImportResult } from '../models/heures-supp.model';
@@ -41,7 +40,6 @@ interface ImportApi {
   resultat: WritableSignal<HeuresSuppImportResult | null>;
   erreur: WritableSignal<string | null>;
   chargement: WritableSignal<boolean>;
-  peutRemplacer(): boolean;
   creations: WritableSignal<Record<number, { dateNaissance: string; dateEmbauche: string; fonctionId: number; salaire: number}>>;
   alignements: WritableSignal<number[]>;
   valeurSalaire(numero: number): number | null;
@@ -62,7 +60,6 @@ interface ImportApi {
   analyser(): void;
   corriger(): void;
   importer(): void;
-  demanderRemplacement(): void;
   basculerAlignement(id: number): void;
 }
 
@@ -78,16 +75,14 @@ describe('HeuresSuppImportComponent', () => {
   let fixture: ReturnType<typeof TestBed.createComponent<HeuresSuppImportComponent>>;
   let api: ImportApi;
   let service: Record<string, ReturnType<typeof vi.fn>>;
-  let confirmation: { confirm: ReturnType<typeof vi.fn> };
   let chantierReference: { fetchById: ReturnType<typeof vi.fn> };
   let employeeReference: { fetchById: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     service = {
       verifierPrerequis: vi.fn(), forfaitsPrecedents: vi.fn().mockReturnValue(of([])),
-      analyserImport: vi.fn(), corrigerImport: vi.fn(), importer: vi.fn(), remplacer: vi.fn()
+      analyserImport: vi.fn(), corrigerImport: vi.fn(), importer: vi.fn()
     };
-    confirmation = { confirm: vi.fn() };
     chantierReference = { fetchById: vi.fn().mockReturnValue(of({ id: 4, code: 'C4', designation: 'Site', nom: null, actif: true })) };
     employeeReference = { fetchById: vi.fn().mockReturnValue(of({ id: 7, nomPrenom: 'Salma Alaoui', cin: 'AB123', displayLabel: 'Salma Alaoui — AB123' })) };
     TestBed.configureTestingModule({
@@ -96,7 +91,6 @@ describe('HeuresSuppImportComponent', () => {
         provideRouter([]),
         { provide: HeuresSuppService, useValue: service },
         { provide: PaieService, useValue: { listerPeriodes: () => of([{ periode: '2026-09' }, { periode: '2026-10' }]) } },
-        { provide: ConfirmDialogService, useValue: confirmation },
         { provide: ChantierReferenceService, useValue: chantierReference },
         { provide: EmployeeReferenceService, useValue: employeeReference },
         { provide: FunctionReferenceService, useValue: {} }
@@ -149,7 +143,7 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.etape()).toBe(4);
 
     service['importer'].mockReturnValue(of({ periode: '2026-10', chantierId: 4, lignesHeures: 1, lignesZero: 0,
-      forfaitsSeuls: 0, remplacements: 0, heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 }));
+      forfaitsSeuls: 0, heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 }));
     const boutonImporter = [...document.body.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent.includes('Confirmer l’import')) as HTMLButtonElement;
     boutonImporter.click();
     fixture.detectChanges();
@@ -168,15 +162,7 @@ describe('HeuresSuppImportComponent', () => {
     expect(service['importer']).not.toHaveBeenCalled();
   });
 
-  it('autorise le remplacement uniquement pour les doublons d’import', () => {
-    expect(api.peutRemplacer()).toBe(false);
-    api.analyse.set({ ...ANALYSE, erreurs: ['Une ligne existe déjà pour ce mois.'] });
-    expect(api.peutRemplacer()).toBe(true);
-    api.analyse.set({ ...ANALYSE, erreurs: ['Le salaire est invalide.'] });
-    expect(api.peutRemplacer()).toBe(false);
-  });
-
-  it('gère les champs de correction, l’alignement et le remplacement du fichier', () => {
+  it('gère les champs de correction et l’alignement du fichier', () => {
     expect(api.valeurSalaire(2)).toBeNull();
     api.creations.set({ 2: { dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01', fonctionId: 8, salaire: 4000 } });
     expect(api.valeurSalaire(2)).toBe(4000);
@@ -368,7 +354,7 @@ describe('HeuresSuppImportComponent', () => {
     api.choisirChantier(4);
     api.analyse.set(ANALYSE);
     const resultat = { periode: '2026-10', chantierId: 4, lignesHeures: 1, lignesZero: 0, forfaitsSeuls: 0,
-      remplacements: 0, heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 };
+      heuresTotales: 2, montantTotalDh: 20, stcTotalDh: 0, forfaitTotalDh: 0, netTotalDh: 20 };
     service['importer'].mockReturnValue(of(resultat));
 
     api.importer();
@@ -403,24 +389,12 @@ describe('HeuresSuppImportComponent', () => {
     expect(api.chargement()).toBe(false);
   });
 
-  it('confirme un remplacement audité, peut basculer les alignements et relaie les erreurs serveur', () => {
-    api.periode.set('2026-10');
-    api.fichier.set(new File(['xlsx'], 'heures.xlsx'));
-    api.choisirChantier(4);
-    api.forfaits.set([{ cin: 'AB123', nomPrenom: 'Salma Alaoui', montantDh: 500 }]);
+  it('peut basculer les alignements et n’offre aucun remplacement d’une ligne existante', () => {
     api.analyse.set({ ...ANALYSE, pret: false, erreurs: ['Une ligne existe déjà pour ce mois.'] });
     api.basculerAlignement(7);
     expect(api.alignements()).toEqual([7]);
     api.basculerAlignement(7);
     expect(api.alignements()).toEqual([]);
-
-    api.demanderRemplacement();
-    const demande = confirmation.confirm.mock.calls[0]?.[0] as { accept: () => void };
-    service['remplacer'].mockReturnValue(throwError(() => ({ error: { message: 'Remplacement refusé.' } })));
-    demande.accept();
-
-    expect(service['remplacer']).toHaveBeenCalledWith(expect.any(File), '2026-10', 4, [{ cin: 'AB123', montantDh: 500 }]);
-    expect(api.erreur()).toBe('Remplacement refusé.');
-    expect(api.chargement()).toBe(false);
+    expect(document.body.textContent).not.toContain('Remplacer');
   });
 });

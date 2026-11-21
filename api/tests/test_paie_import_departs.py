@@ -184,7 +184,6 @@ def test_import_enregistre_les_departs_confirmes_et_repasse_les_retours_actifs(
     assert reponse.json() == {
         "periode": jeu.periode,
         "crees": 3,
-        "misAJour": 0,
         "departs": 2,
         "retours": 1,
         "fonctionsCreees": 0,
@@ -443,7 +442,7 @@ def _classeur_mois(jeu: Jeu, lignes: list[tuple[str, int, int, str | None]]) -> 
     return sortie.getvalue()
 
 
-def test_reimporter_un_mois_existant_met_a_jour_ses_bulletins_et_les_heures_supplementaires(
+def test_reimporter_un_mois_existant_est_refuse_sans_toucher_aux_bulletins_ni_aux_heures_supplementaires(
     plateforme: Plateforme, connecter: Callable[[str, str], dict[str, Any]], jeu: Jeu
 ) -> None:
     entetes = _entetes(connecter)
@@ -467,15 +466,12 @@ def test_reimporter_un_mois_existant_met_a_jour_ses_bulletins_et_les_heures_supp
         corrige = _classeur_mois(jeu, [("A", 20, 800, "STC"), ("B", 22, 1000, None)])
 
         analyse = _analyser(plateforme, entetes, jeu, corrige).json()
-        assert analyse["blocagesPeriode"] == []
-        assert [c["code"] for c in analyse["controlesPeriode"]] == ["MOIS_MIS_A_JOUR"]
-        assert "met à jour 2 bulletin(s) existant(s)" in analyse["controlesPeriode"][0]["message"]
-        assert analyse["departs"] == [] and analyse["retours"] == []
+        assert [c["code"] for c in analyse["blocagesPeriode"]] == ["MOIS_DEJA_IMPORTE"]
+        assert "n'écrase jamais un bulletin" in analyse["blocagesPeriode"][0]["message"]
 
         reponse = _importer(plateforme, entetes, jeu, corrige, [])
 
-        assert reponse.status_code == 200, reponse.text
-        assert (reponse.json()["crees"], reponse.json()["misAJour"]) == (0, 2)
+        assert reponse.status_code == 400, reponse.text
         with plateforme.moteur.connect() as c:
             bulletin = c.execute(
                 text("SELECT id, nombre_jours_travailles, salaire_total, observation FROM paie WHERE id = :b"),
@@ -485,21 +481,14 @@ def test_reimporter_un_mois_existant_met_a_jour_ses_bulletins_et_les_heures_supp
                 text("SELECT est_stc_ou_sortie, stc_dh, forfait, net_a_payer FROM heures_supp WHERE paie_id = :b"),
                 {"b": bulletin_a},
             ).one()
-            nombre = c.execute(
-                text("SELECT count(*) FROM paie WHERE employee_id = ANY(:e) AND periode = :p"),
-                {"e": jeu.employes, "p": jeu.periode_numerique},
-            ).scalar_one()
-            depart = c.execute(
-                text("SELECT motif FROM employe_sortie WHERE employee_id = :e AND periode = :p"),
+            departs = c.execute(
+                text("SELECT count(*) FROM employe_sortie WHERE employee_id = :e AND periode = :p"),
                 {"e": jeu.present, "p": jeu.periode_numerique},
             ).scalar_one()
-        assert tuple(bulletin) == (bulletin_a, 20, 800, "STC")  # même bulletin, mis à jour sur place
-        assert nombre == 2  # aucun doublon
-        # les heures supplémentaires suivent : STC = montant, forfait interdit en STC, net recalculé
-        assert tuple(heures) == (True, 150, None, 0)
-        assert depart == "STC"
-        assert _statut(plateforme, jeu.present) == ("INACTIF", None)
-        assert _statut(plateforme, jeu.stc)[0] == "ACTIF"
+        assert tuple(bulletin) == (bulletin_a, 26, 1000, None)  # bulletin inchangé
+        assert tuple(heures) == (False, 0, 50, 200)  # heures supplémentaires inchangées
+        assert departs == 0
+        assert _statut(plateforme, jeu.present)[0] == "ACTIF"
     finally:
         with plateforme.moteur.begin() as c:
             c.execute(text("DELETE FROM heures_supp WHERE employee_id = :e"), {"e": jeu.present})

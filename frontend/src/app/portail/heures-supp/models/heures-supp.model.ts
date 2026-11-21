@@ -107,7 +107,6 @@ export interface HeuresSuppImportResult {
   lignesHeures: number;
   lignesZero: number;
   forfaitsSeuls: number;
-  remplacements: number;
   heuresTotales: number;
   montantTotalDh: number;
   stcTotalDh: number;

@@ -48,13 +48,12 @@ relation entre Montant, STC et Net à payer) sont imposées par les contraintes 
 | `POST /heures-supp/import/analyse` | Lit le fichier et les forfaits sans écrire ; retourne lignes, erreurs, calculs et indicateur `pret`. |
 | `POST /heures-supp/import/corrections` | Crée les fiches manquantes demandées et renvoie l'analyse actualisée. |
 | `POST /heures-supp/import` | Enregistre atomiquement un lot validé. |
-| `POST /heures-supp/import/remplacement` | Remplace explicitement les lignes existantes du mois et du chantier ; opération auditée. |
 
 Les routes de lecture exposent les réponses `HeureSuppResponseDto` (identité/CIN, fonction, chantier, période,
 salaire de référence, type, S/H, P/H, Montant, marqueur STC/sortie, STC, Forfait, Net à payer) et
 `HeuresSuppAnalytiqueDto` (effectif, lignes avec heures, heures, Montant, STC, Forfait et Net à payer, répartitions et définitions).
 Les réponses monétaires sont en DH ; les périodes API sont `aaaa-MM`. L'analyse et le résultat final distinguent
-les lignes importées, les zéros conservés, les forfaits seuls, remplacements, heures et totaux par grandeur. Les
+les lignes importées, les zéros conservés, les forfaits seuls, heures et totaux par grandeur. Les
 permissions endpoint par endpoint sont décrites dans [RBAC](droits.md).
 
 Les routes `/heures-supp`, `/heures-supp/cartes` et `/heures-supp/analytique` gardent les filtres dans l'URL.
@@ -106,7 +105,7 @@ Depuis l'écran dédié, les utilisateurs autorisés peuvent ajouter une ligne m
 
 Les trois vues utilisent `app-collection-shell` pour leur titre, leurs onglets, leurs actions et leurs filtres, et `app-collection-table` pour la liste. La barre de filtres reprend la classe partagée `app-toolbar` déjà employée par Paie et Employés; le nom et le CIN se synchronisent après une courte pause de saisie. La vue Cartes suit les niveaux mois → chantier → équipe → fonction ; chaque carte affiche une action de suppression groupée lorsque l'utilisateur possède `HEURES_SUP_PURGE`. La confirmation décrit le périmètre et exige la saisie du nombre exact de lignes. Les vues Cartes et Analytique réutilisent les composants communs de `portail/perimetre/`; leur configuration de domaine transporte aussi les filtres CIN et nom vers la liste du cockpit de recherche. Les contrôles disponibles dans le catalogue Staport (sélecteurs, nombres, dates, mois, dialogues, boutons, tableau et export PDF) sont réutilisés; seul le récapitulatif statique de l'étape de contrôle utilise le style partagé prévu pour les petits tableaux non interactifs.
 
-Un doublon pour le même employé, le même mois et le même chantier est refusé par défaut ; le remplacement possède une action et une trace d'audit distinctes. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. Les suppressions groupées depuis Cartes utilisent `HEURES_SUP_PURGE`, présentent le nombre et le périmètre, et demandent la saisie du nombre exact. Le serveur verrouille les lignes ciblées, compare le nombre dans la transaction et audite l'opération avant de supprimer ; filtres de recherche et périmètre de carte s'appliquent tous deux. La purge d'un mois reste disponible depuis le Tabulaire et couvre tous les chantiers du mois. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
+Un doublon pour le même employé, le même mois et le même chantier est refusé : un import n'écrase jamais une ligne existante (décision du 2026-11-21), il n'existe aucune route de remplacement. Une ligne peut être modifiée sous contrôle de version ou supprimée à l'unité. Les suppressions groupées depuis Cartes utilisent `HEURES_SUP_PURGE`, présentent le nombre et le périmètre, et demandent la saisie du nombre exact. Le serveur verrouille les lignes ciblées, compare le nombre dans la transaction et audite l'opération avant de supprimer ; filtres de recherche et périmètre de carte s'appliquent tous deux. La purge d'un mois reste disponible depuis le Tabulaire et couvre tous les chantiers du mois. Un employé marqué STC/sortie ne peut avoir de forfait pour ce mois, tous chantiers confondus.
 
 ### Classeur reçu
 

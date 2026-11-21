@@ -1,6 +1,6 @@
 """Assistant d'import mensuel par chantier.
 
-Analyse sans écriture, corrections explicites des fiches, import atomique par mois et chantier, remplacement explicite.
+Analyse sans écriture, corrections explicites des fiches, import atomique par mois et chantier, sans remplacement.
 """
 
 from dataclasses import dataclass, field
@@ -104,7 +104,7 @@ async def _prerequis_ou_echec(s: AsyncSession, periode: int, chantier_id: int) -
         raise HeuresSuppInvalide(prerequis.message or PAIE_ABSENTE)
 
 
-async def _charger(s: AsyncSession, d: _Dossier, periode: int, chantier_id: int, remplacement: bool) -> None:
+async def _charger(s: AsyncSession, d: _Dossier, periode: int, chantier_id: int) -> None:
     employe = await _employe_par_cin(s, d.cin)
     if employe is None:
         d.erreurs.append("aucune fiche employé ne correspond à ce CIN ; créez la fiche avant de relancer l'analyse.")
@@ -125,8 +125,11 @@ async def _charger(s: AsyncSession, d: _Dossier, periode: int, chantier_id: int,
             )
         else:
             d.salaire_horaire = calcul.salaire_horaire(employe.salaire, TypeSalaire(employe.type_salaire))
-    if not remplacement and await repository.existe(s, employe.id, periode, chantier_id):
-        d.erreurs.append("une ligne existe déjà pour ce mois et ce chantier ; confirmez son remplacement explicite.")
+    if await repository.existe(s, employe.id, periode, chantier_id):
+        d.erreurs.append(
+            "une ligne existe déjà pour ce mois et ce chantier ; un import ne la remplace jamais "
+            "(modifiez-la depuis l'écran Heures supplémentaires)."
+        )
     if d.stc_ou_sortie and await repository.forfait_sur_autre_chantier(s, employe.id, periode, chantier_id):
         d.erreurs.append(
             "un forfait existe déjà pour cet employé sur un autre chantier pendant le mois marqué STC/sortie."
@@ -148,7 +151,6 @@ async def _dossiers(
     periode: int,
     chantier_id: int,
     forfaits: dict[str, Decimal],
-    remplacement: bool,
 ) -> dict[str, _Dossier]:
     dossiers: dict[str, _Dossier] = {}
     rattaches: set[str] = set()
@@ -156,7 +158,7 @@ async def _dossiers(
         cle = _cle(ligne.cin)
         d = _Dossier(ligne.numero_ligne, ligne.cin, ligne.heures, ligne)
         dossiers[cle] = d
-        await _charger(s, d, periode, chantier_id, remplacement)
+        await _charger(s, d, periode, chantier_id)
         if cle in forfaits:
             d.forfait = forfaits[cle]
             rattaches.add(cle)
@@ -166,7 +168,7 @@ async def _dossiers(
             continue
         d = dossiers.setdefault(cin, _Dossier(0, cin, None, None))
         d.forfait = montant
-        await _charger(s, d, periode, chantier_id, remplacement)
+        await _charger(s, d, periode, chantier_id)
         _verifier_forfait(d)
     return dossiers
 
@@ -177,12 +179,11 @@ async def _analyser(
     periode: int,
     chantier_id: int,
     forfaits: dict[str, Decimal],
-    remplacement: bool,
     lignes_zero: int,
     total_lignes: int,
 ) -> ImportAnalyse:
     await _prerequis_ou_echec(s, periode, chantier_id)
-    dossiers = await _dossiers(s, lignes, periode, chantier_id, forfaits, remplacement)
+    dossiers = await _dossiers(s, lignes, periode, chantier_id, forfaits)
     erreurs: list[str] = []
     resultats: list[ImportLigne] = []
     for d in dossiers.values():
@@ -269,7 +270,6 @@ class ServiceImportHeuresSupp:
                 periode,
                 chantier_id,
                 _normaliser_forfaits(forfaits),
-                False,
                 fichier.lignes_zero,
                 fichier.total_lignes,
             )
@@ -343,7 +343,6 @@ class ServiceImportHeuresSupp:
                 periode,
                 chantier_id,
                 _normaliser_forfaits(forfaits),
-                False,
                 fichier.lignes_zero,
                 fichier.total_lignes,
             )
@@ -357,36 +356,7 @@ class ServiceImportHeuresSupp:
         chantier_id: int,
         forfaits: ImportForfaits | None,
     ) -> ImportResultat:
-        return await self._enregistrer(s, nom, contenu, periode, chantier_id, forfaits, remplacement=False)
-
-    async def remplacer(
-        self,
-        s: AsyncSession,
-        nom: str | None,
-        contenu: bytes,
-        periode: int,
-        chantier_id: int,
-        forfaits: ImportForfaits | None,
-    ) -> ImportResultat:
-        return await self._enregistrer(s, nom, contenu, periode, chantier_id, forfaits, remplacement=True)
-
-    async def _enregistrer(
-        self,
-        s: AsyncSession,
-        nom: str | None,
-        contenu: bytes,
-        periode: int,
-        chantier_id: int,
-        forfaits: ImportForfaits | None,
-        *,
-        remplacement: bool,
-    ) -> ImportResultat:
-        action = self._auditeur.auditer(
-            s,
-            "HEURES_SUP_REMPLACEMENT" if remplacement else "HEURES_SUP_IMPORT",
-            TypeOperation.UPDATE if remplacement else TypeOperation.CREATE,
-            "HeureSupp",
-        )
+        action = self._auditeur.auditer(s, "HEURES_SUP_IMPORT", TypeOperation.CREATE, "HeureSupp")
         async with s.begin(), action as cible:
             cible.perimetre.update(_description(nom, contenu, periode, chantier_id))
             cible.perimetre["forfaits"] = 0 if forfaits is None else len(forfaits.forfaits)
@@ -399,7 +369,6 @@ class ServiceImportHeuresSupp:
                 periode,
                 chantier_id,
                 par_cin,
-                remplacement,
                 fichier.lignes_zero,
                 fichier.total_lignes,
             )
@@ -409,12 +378,11 @@ class ServiceImportHeuresSupp:
                     + " ".join(analyse.erreurs)
                     + " Corrigez les lignes puis relancez l'analyse."
                 )
-            resultat = await self._ecrire(s, fichier, periode, chantier_id, par_cin, remplacement)
+            resultat = await self._ecrire(s, fichier, periode, chantier_id, par_cin)
             cible.perimetre.update(
                 {
                     "heures": resultat.lignes_heures,
                     "forfaitsSeuls": resultat.forfaits_seuls,
-                    "remplacements": resultat.remplacements,
                     "netTotalDh": float(resultat.net_total_dh),
                 }
             )
@@ -428,25 +396,20 @@ class ServiceImportHeuresSupp:
         periode: int,
         chantier_id: int,
         forfaits: dict[str, Decimal],
-        remplacement: bool,
     ) -> ImportResultat:
-        dossiers = await _dossiers(s, fichier.lignes, periode, chantier_id, forfaits, remplacement)
+        dossiers = await _dossiers(s, fichier.lignes, periode, chantier_id, forfaits)
         nouvelles: list[HeureSupp] = []
-        remplacements = forfaits_seuls = 0
+        forfaits_seuls = 0
         heures_totales = montant_total = stc_total = forfait_total = net_total = calcul.ZERO
         for d in dossiers.values():
             employe = d.employe
             if employe is None or d.paie_id is None:
                 raise HeuresSuppInvalide("L'import est bloqué : une fiche ou un bulletin a disparu pendant l'import.")
-            for existante in await repository.de_la_personne(s, employe.id, periode, chantier_id):
-                if not remplacement:
-                    raise HeuresSuppInvalide(
-                        f"Une ligne existe déjà pour le CIN {employe.cin} sur ce mois et ce chantier. "
-                        "Utilisez l'action explicite de remplacement après vérification."
-                    )
-                await s.delete(existante)
-                remplacements += 1
-            await s.flush()
+            if await repository.existe(s, employe.id, periode, chantier_id):
+                raise HeuresSuppInvalide(
+                    f"Une ligne existe déjà pour le CIN {employe.cin} sur ce mois et ce chantier : "
+                    "un import ne la remplace jamais."
+                )
             montant = (
                 calcul.ZERO
                 if d.heures is None or d.salaire_horaire is None
@@ -494,7 +457,6 @@ class ServiceImportHeuresSupp:
             lignes_heures=len(fichier.lignes),
             lignes_zero=fichier.lignes_zero,
             forfaits_seuls=forfaits_seuls,
-            remplacements=remplacements,
             heures_totales=heures_totales,
             montant_total_dh=montant_total,
             stc_total_dh=stc_total,

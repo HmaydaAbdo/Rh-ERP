@@ -75,10 +75,6 @@ export class HeuresSuppService {
     return this.http.post<HeuresSuppImportResult>(`${this.baseUrl}/import`, data, { params: { periode, chantierId } });
   }
 
-  remplacer(file: File, periode: string, chantierId: number, forfaits: HeuresSuppImportForfait[] = []): Observable<HeuresSuppImportResult> {
-    return this.http.post<HeuresSuppImportResult>(`${this.baseUrl}/import/remplacement`, this.importForm(file, forfaits), { params: { periode, chantierId } });
-  }
-
   private importForm(file: File, forfaits: HeuresSuppImportForfait[]): FormData {
     const data = new FormData(); data.append('file', file);
     if (forfaits.length) data.append('forfaits', JSON.stringify({ forfaits }));

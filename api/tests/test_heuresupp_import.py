@@ -153,7 +153,7 @@ def test_l_analyse_signale_les_ecarts_les_inconnus_et_les_forfaits(
     assert (seul["montantDh"], seul["heuresSupplementaires"], seul["salaireHoraireDh"]) == (0.0, None, None)
 
 
-def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
+def test_import_ecrit_atomiquement_audite_puis_refuse_de_remplacer_une_ligne_existante(
     plateforme: Plateforme, entetes: dict[str, str], jeu: Jeu
 ) -> None:
     cins = _cins(plateforme, jeu)
@@ -161,7 +161,7 @@ def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
 
     importe = _appel(plateforme, entetes, "", contenu, jeu, forfaits={"forfaits": [{"cin": cins[0], "montantDh": 30}]})
     doublon = _appel(plateforme, entetes, "", contenu, jeu)
-    remplace = _appel(plateforme, entetes, "/remplacement", contenu, jeu)
+    remplace = _appel(plateforme, entetes, "/remplacement", contenu, jeu)  # la route n'existe plus
 
     assert importe.status_code == 200, importe.text
     assert importe.json() == {
@@ -170,7 +170,6 @@ def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
         "lignesHeures": 3,
         "lignesZero": 0,
         "forfaitsSeuls": 0,
-        "remplacements": 0,
         "heuresTotales": 6.0,
         "montantTotalDh": 144.0,
         "stcTotalDh": 114.0,
@@ -186,9 +185,8 @@ def test_import_ecrit_atomiquement_audite_puis_se_bloque_sans_remplacement(
     assert doublon.status_code == 400
     assert doublon.json()["message"].startswith(BLOQUE)
     assert "une ligne existe déjà pour ce mois et ce chantier" in doublon.json()["message"]
-    assert (remplace.status_code, remplace.json()["remplacements"]) == (200, 3)
+    assert remplace.status_code in (404, 405)
     assert _lignes_en_base(plateforme, jeu) == 3
-    assert _journal(plateforme, "HEURES_SUP_REMPLACEMENT")["type_operation"] == "UPDATE"
 
 
 def test_un_forfait_seul_est_importe_et_une_analyse_bloquee_n_ecrit_rien(

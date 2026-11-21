@@ -104,7 +104,7 @@ describe('HeuresSuppService', () => {
     request.flush(new Blob(['modele']));
   });
 
-  it('envoie les corrections explicites et distingue import et remplacement', () => {
+  it('envoie les corrections explicites puis l’import, sans route de remplacement', () => {
     const file = new File(['xlsx'], 'heures.xlsx');
     service.corrigerImport(file, '2026-10', 4, { aligner: [{ employeId: 7 }], creer: [] }).subscribe();
     const corrections = http.expectOne((req) => req.url.endsWith('/import/corrections'));
@@ -113,7 +113,6 @@ describe('HeuresSuppService', () => {
 
     service.importer(file, '2026-10', 4).subscribe();
     http.expectOne((req) => req.url === 'heures-supp/import').flush({ lignesHeures: 1 });
-    service.remplacer(file, '2026-10', 4).subscribe();
-    http.expectOne((req) => req.url.endsWith('/import/remplacement')).flush({ remplacements: 1 });
+    expect('remplacer' in service).toBe(false);
   });
 });

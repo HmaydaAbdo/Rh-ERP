@@ -179,7 +179,6 @@ class ImportResultat(ModeleApi):
     lignes_heures: int
     lignes_zero: int
     forfaits_seuls: int
-    remplacements: int
     heures_totales: Nombre
     montant_total_dh: Nombre
     stc_total_dh: Nombre
