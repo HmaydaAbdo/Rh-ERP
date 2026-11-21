@@ -12,7 +12,7 @@ sidebar_position: 14
 | Fonctions | `POST /functions/import` | `FUNCTION_IMPORT` | [function/README.md](function/index.md) |
 | Employés | `POST /employees/import` | `EMPLOYEE_IMPORT` | [employee/README.md](employee/index.md) |
 | Paie | assistant : `POST /paie/import/analyse`, `/paie/import/corrections`, `/paie/import` (`?periode=aaaa-MM`) | `PAIE_IMPORT` (+ `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE`) | [paie/README.md](paie/index.md), « Import Excel (assistant) » |
-| Heures supplémentaires | assistant par mois et chantier : `/heures-supp/import/*` | `HEURES_SUP_IMPORT` + `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE` | Classeur `Nom`, `Prenom`, `CIN`, `Funct`, `HS`; lignes HS=0 conservées et comptées; valeur HS vide bloquante. [README](heures-supp/index.md) |
+| Heures supplémentaires | assistant par mois et chantier : `/heures-supp/import/*` | `HEURES_SUP_IMPORT` + `PAIE_READ` ; corrections : + `EMPLOYEE_WRITE` | Classeur `Nom`, `Prenom`, `CIN`, `Funct`, `HS`; lignes HS=0 conservées et comptées; valeur HS vide bloquante; jamais de remplacement. [README](heures-supp/index.md) |
 
 Il n'existe pas d'import pour les chantiers (alimentés par la [synchronisation ERP](chantier/index.md)).
 
@@ -30,7 +30,7 @@ encore**. Toute modification d'une donnée existante se fait depuis l'interface.
 | Équipes | Code et libellé | Ligne rejetée si le code ou le libellé existe (équipe modifiable depuis l'écran Équipes) |
 | Fonctions | Libellé | Ligne rejetée (« Fonction déjà existante ») |
 | Employés | CIN | Ligne rejetée (« Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés) ») |
-| Paie | Employé (CIN) + période | Ligne rejetée (« Un bulletin existe déjà pour cet employé sur cette période (à modifier depuis l'écran Paie) ») |
+| Paie | Employé (CIN) + période | Mois bloqué en entier (`MOIS_DEJA_IMPORTE`, à modifier depuis l'écran Paie) |
 
 Pour **ré-importer un mois de paie**, supprimer d'abord les bulletins concernés depuis l'écran Paie.
 
@@ -45,8 +45,13 @@ salaire y est proposé selon le seuil de 500. Un salaire nul exige l'action dist
 conserver 0 ». Un bulletin déjà présent reste refusé. Les départs et STC ne sont pas déduits
 automatiquement. Voir [Paie](./paie/index.md).
 
-**Exception — Heures supplémentaires** : un doublon employé + mois + chantier bloque l'import par défaut. Le remplacement
-de données déjà importées n'est possible qu'après une action explicite de l'utilisateur dans l'assistant et reste audité.
+**Heures supplémentaires** (décision du 2026-11-21) : un doublon employé + mois + chantier bloque l'import, sans aucune
+action de remplacement. Une ligne existante se modifie ou se supprime depuis l'écran Heures supplémentaires.
+
+**Paie — mois déjà importé** (décision du 2026-11-21) : si un employé du fichier a déjà un bulletin sur la période, l'analyse
+bloque le mois (`MOIS_DEJA_IMPORTE`) et rien n'est écrit : ni bulletin, ni fiche, ni heures supplémentaires liées. Pour
+réimporter, supprimer d'abord les bulletins concernés ; pour corriger, modifier le bulletin depuis l'écran Paie. Un mois
+plus ancien que la dernière paie importée reste bloqué (`MOIS_ANTERIEUR_AU_DERNIER`).
 
 ### 2. Tout ou rien (atomique)
 

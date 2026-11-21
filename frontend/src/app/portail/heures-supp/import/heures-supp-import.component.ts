@@ -18,7 +18,6 @@ import { ChantierReferenceService } from '../../../shared/reference-data/chantie
 import { ChantierReference } from '../../../shared/reference-data/chantier-reference.model';
 import { EmployeeReferenceOption, EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
 import { FunctionReferenceService } from '../../../shared/reference-data/function-reference.service';
-import { ConfirmDialogService } from '../../../shared/ui/feedback/feedback.service';
 import { HeuresSuppCreationEmploye, HeuresSuppImportAnalyse, HeuresSuppImportForfait, HeuresSuppImportResult } from '../models/heures-supp.model';
 import { libellePeriode } from '../../paie/paie-format';
 import { PaieService } from '../../paie/services/paie.service';
@@ -81,14 +80,9 @@ export class HeuresSuppImportComponent {
   protected readonly resultat = signal<HeuresSuppImportResult | null>(null);
   protected readonly erreur = signal<string | null>(null);
   protected readonly chargement = signal(false);
-  protected readonly peutRemplacer = computed(() => {
-    const erreurs = this.analyse()?.erreurs ?? [];
-    return erreurs.length > 0 && erreurs.every((message) => message.includes('existe déjà'));
-  });
   private readonly creations = signal<Record<number, BrouillonCreation>>({});
   private readonly alignements = signal<number[]>([]);
   private readonly service = inject(HeuresSuppService);
-  private readonly confirmation = inject(ConfirmDialogService);
   private readonly paie = inject(PaieService);
   private readonly router = inject(Router);
 
@@ -194,19 +188,6 @@ export class HeuresSuppImportComponent {
     const file = this.fichier(); const id = this.chantierId(); const analyse = this.analyse(); if (!file || !id || !analyse?.pret) return;
     const forfaits = this.lireForfaits();
     this.lancer(this.service.importer(file, this.periode(), id, forfaits), (resultat) => this.resultat.set(resultat));
-  }
-  protected demanderRemplacement(): void {
-    this.confirmation.confirm({
-      header: 'Remplacer les heures déjà importées ?',
-      message: `Les lignes existantes du chantier ${this.chantierLibelle()} pour ${this.periode()} seront remplacées par ce classeur. Cette action est enregistrée dans le journal d’audit.`,
-      acceptLabel: 'Remplacer', rejectLabel: 'Annuler', accept: () => this.remplacer()
-    });
-  }
-  private remplacer(): void {
-    const file = this.fichier(); const id = this.chantierId();
-    if (!file || !id) return;
-    const forfaits = this.lireForfaits();
-    this.lancer(this.service.remplacer(file, this.periode(), id, forfaits), (resultat) => this.resultat.set(resultat));
   }
 
   /** Reprend les forfaits du dernier mois du chantier, une seule fois par chantier ; l'échec n'empêche pas l'import. */
