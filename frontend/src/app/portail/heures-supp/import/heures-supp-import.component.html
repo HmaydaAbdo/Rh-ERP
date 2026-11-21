@@ -141,7 +141,6 @@
           @case (4) {
             @if (analyse(); as a) {
               <span class="app-wizard__boutons-fin">
-                @if (peutRemplacer()) { <button stp-button variant="danger" type="button" [loading]="chargement()" (click)="demanderRemplacement()">Remplacer les lignes existantes</button> }
                 @if (!a.pret) { <button stp-button variant="secondary" type="button" [loading]="chargement()" (click)="corriger()">Enregistrer les corrections puis réanalyser</button> }
                 <button stp-button icon="upload" type="button" [disabled]="!a.pret" [loading]="chargement()" (click)="importer()">Confirmer l’import</button>
               </span>

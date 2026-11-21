@@ -243,27 +243,6 @@ async def importer(
     )
 
 
-@imports.post(
-    "/remplacement",
-    dependencies=[Depends(exiger("HEURES_SUP_IMPORT")), Depends(exiger("PAIE_READ")), Depends(exiger("EMPLOYEE_READ"))],
-)
-async def remplacer(
-    file: Fichier,
-    cible: Cible,
-    session: Session,
-    contexte: Contexte,
-    forfaits: Annotated[str | None, Form()] = None,
-) -> ImportResultat:
-    return await contexte.import_heures_supp.remplacer(
-        session,
-        file.filename,
-        await file.read(),
-        _periode(cible.periode),
-        cible.chantier_id,
-        _partie(ImportForfaits, forfaits),
-    )
-
-
 @imports.get("/modele", dependencies=[Depends(exiger("HEURES_SUP_IMPORT")), Depends(exiger("PAIE_READ"))])
 async def modele() -> StreamingResponse:
     return StreamingResponse(
