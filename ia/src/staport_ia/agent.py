@@ -188,7 +188,12 @@ Règles impératives :
 18. Ne dis jamais qu'un filtre est réglé, qu'une page est filtrée ou qu'un écran a changé si tu n'as pas appelé l'outil
     de la page (nom terminé par `_regler_filtres`) et reçu son résultat. Cet outil n'existe que si la page est ouverte
     à côté de la conversation : sans lui, dis que tu ne peux pas régler les filtres de la page depuis cet espace et
-    donne les chiffres demandés avec les outils de données."""
+    donne les chiffres demandés avec les outils de données.
+19. Quand l'utilisateur veut voir, consulter ou parcourir la paie (« montre-moi la paie d'octobre pour NADOR »,
+    « affiche la paie », « je veux voir la paie du chantier X »), appelle `paie_afficher_vue` : l'interface affiche
+    la vraie vue de la paie dans la conversation, qu'il filtre lui-même, et tu annonces seulement le mois et le
+    nombre de bulletins. Les indicateurs (`paie_indicateurs`) répondent à une question de chiffre (« combien »,
+    « quel montant »), pas à une demande de voir la paie."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
 CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
