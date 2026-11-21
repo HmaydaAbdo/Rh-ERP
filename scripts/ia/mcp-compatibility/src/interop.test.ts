@@ -37,7 +37,7 @@ test("initialise une révision commune et découvre les capacités", () => {
 test("découvre le catalogue d'outils de l'application", async () => {
   const result = await client.listTools({}, timeout);
   const noms = result.tools.map((tool) => tool.name);
-  assert.equal(noms.length, 32);
+  assert.equal(noms.length, 33);
   for (const attendu of ["systeme_identite", "paie_indicateurs", "employes_rechercher", "chantier_rechercher", "accueil_lire"]) {
     assert.ok(noms.includes(attendu), `outil absent : ${attendu}`);
   }
