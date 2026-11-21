@@ -46,4 +46,4 @@ npm frontend typescript 6.0.3
 npm copilot-runtime @copilotkit/runtime 1.88.0
 seuil resume_jetons 40000
 seuil resume_messages 12
-seuil outils_mcp 32
+seuil outils_mcp 33

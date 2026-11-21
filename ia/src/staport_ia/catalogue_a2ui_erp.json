@@ -71,6 +71,21 @@
       },
       "required": ["component", "items"]
     },
+    "VuePage": {
+      "type": "object",
+      "description": "Vue de page intégrée : la vraie page du domaine (barre de filtres et tableau), manipulable dans la conversation. Posée par l'outil de la page, jamais composée à la main.",
+      "properties": {
+        "component": { "const": "VuePage" },
+        "domaine": { "type": "string", "enum": ["paie"] },
+        "vue": { "type": "string", "enum": ["tabulaire"] },
+        "parametres": {
+          "type": "object",
+          "description": "Filtres de départ, au format des paramètres d'URL de la page (periode, nom, cin, chantierIds, equipeIds, fonctionIds).",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "required": ["component", "domaine", "vue"]
+    },
     "Chart": {
       "type": "object",
       "description": "Graphique : barres, courbe ou anneau. Plusieurs séries se choisissent par des onglets.",

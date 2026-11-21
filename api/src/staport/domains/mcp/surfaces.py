@@ -93,6 +93,28 @@ def surface(
     }
 
 
+def surface_vue(outil: str, domaine: str, nom_vue: str, parametres: dict[str, str]) -> dict[str, Any]:
+    """`{"a2ui_operations": [...]}` d'une vue de page intégrée dans la conversation (KAN-307, composant `VuePage`).
+
+    La surface ne porte ni donnée ni ligne : seulement le domaine, la vue et les filtres de départ (les paramètres
+    d'URL de la page). C'est le navigateur qui monte la vraie vue, avec le jeton de l'utilisateur : ses droits et ses
+    chiffres sont ceux de la page."""
+    identifiant = f"vue-{outil.replace('_', '-')}-{uuid.uuid4().hex[:8]}"
+    composant: dict[str, Any] = {
+        "id": "root",
+        "component": "VuePage",
+        "domaine": domaine,
+        "vue": nom_vue,
+        "parametres": parametres,
+    }
+    return {
+        CLE_OPERATIONS: [
+            {"version": "v0.9", "createSurface": {"surfaceId": identifiant, "catalogId": CATALOGUE_ERP}},
+            {"version": "v0.9", "updateComponents": {"surfaceId": identifiant, "components": [composant]}},
+        ]
+    }
+
+
 def avec_surface(
     resultat: dict[str, Any],
     outil: str,

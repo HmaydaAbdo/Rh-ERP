@@ -46,6 +46,7 @@ export interface CollectionTableConfig {
         [totalRecords]="totalRecords()"
         [loading]="loading()"
         [columns]="columnState().visible"
+        [rowActionsVisible]="rowActionsVisible()"
         [(first)]="first"
         (lazyLoad)="lazyLoad.emit($event)"
         (columnsReorder)="columnState().onReorder($event)"
@@ -78,6 +79,8 @@ export class CollectionTableComponent<T extends object> {
   readonly totalRecords = input(0);
   readonly loading = input(false);
   readonly erreur = input<string | null>(null);
+  /** Faux : la colonne des actions de ligne n'est pas affichée (vue intégrée dans la conversation, en lecture). */
+  readonly rowActionsVisible = input(true);
   readonly reessayer = output<void>();
   readonly first = model(0);
   readonly lazyLoad = output<TableLazyLoadEvent>();

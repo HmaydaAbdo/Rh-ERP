@@ -41,7 +41,7 @@ from staport.domains.mcp.formats import (
     texte,
     vue,
 )
-from staport.domains.mcp.surfaces import Colonne, avec_surface
+from staport.domains.mcp.surfaces import Colonne, avec_surface, surface_vue
 from staport.domains.mcp.telemetrie import outil
 from staport.domains.paie.periode import afficher_periode
 from staport.domains.paie.schemas import (
@@ -676,6 +676,52 @@ def enregistrer(
             C_BULLETINS,
             legende_periode=True,
         )
+
+    @serveur.tool(
+        name="paie_afficher_vue",
+        title="Afficher la vue de la paie",
+        annotations=LECTURE_SEULE,
+        description=(
+            "Affiche dans la conversation la vue de la paie de l'application (barre de filtres et tableau des "
+            "bulletins), déjà réglée sur un mois et un périmètre : l'utilisateur peut ensuite changer les filtres, "
+            "trier et parcourir les pages lui-même, sans te redemander. À utiliser quand l'utilisateur veut voir, "
+            "consulter ou parcourir la paie (« montre-moi la paie d'octobre pour NADOR »). Rend le mois affiché et le "
+            "nombre de bulletins, que tu peux annoncer ; ne recopie aucune ligne. Pour un chiffre ou un total, "
+            "utiliser `paie_indicateurs` ; pour la paie d'une personne, `paie_bulletins_rechercher`."
+        ),
+    )
+    @outil("paie_afficher_vue", "PAIE_READ", nombre_de_total)
+    async def paie_afficher_vue(  # pyright: ignore[reportUnusedFunction]
+        periode: Periode = None,
+        nom: Annotated[str | None, Field(max_length=150, description="Nom et/ou prénom de l'employé, partiel.")] = None,
+        cin: Annotated[str | None, Field(max_length=30, description="CIN de l'employé, partiel.")] = None,
+        chantierIds: Chantiers = None,
+        equipeIds: Equipes = None,
+        fonctionIds: Fonctions = None,
+    ) -> dict[str, Any]:
+        chantiers, equipes, fonctions = ids(chantierIds), ids(equipeIds), ids(fonctionIds)
+        nom_recherche, cin_recherche = texte(nom), texte(cin)
+        async with fabrique()() as session:
+            courant = await mois_de_paie(session, periode)
+            resultats = await contexte().paies.rechercher_bulletins(
+                session,
+                _criteres(courant, chantiers, equipes, fonctions, nom_recherche, cin_recherche),
+                0,
+                1,
+                TRI_BULLETIN[TriBulletin.NOM],
+                True,
+            )
+        parametres = parametres_url(chantiers, equipes, fonctions, courant)
+        if nom_recherche:
+            parametres["nom"] = nom_recherche
+        if cin_recherche:
+            parametres["cin"] = cin_recherche
+        return {
+            "periode": afficher_periode(courant),
+            "total": resultats.page.total_elements,
+            "vue": vue("paie", "tabulaire", parametres),
+            **surface_vue("paie_afficher_vue", "paie", "tabulaire", parametres),
+        }
 
     @serveur.tool(
         name="rapport_preparer",

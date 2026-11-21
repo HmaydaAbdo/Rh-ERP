@@ -51,9 +51,22 @@ export const PROPRIETES_TIMELINE = z.object({
   )
 });
 
+/**
+ * Vue de page intégrée (KAN-307) : la vraie page d'un domaine, filtres compris, dans la conversation. L'agent n'en pose que
+ * le domaine, la vue et les filtres de départ (mêmes paramètres que l'URL de la page) ; les données, les droits et le
+ * comportement sont ceux de la page.
+ */
+export const PROPRIETES_VUE_PAGE = z.object({
+  weight: z.number().optional(),
+  domaine: z.enum(['paie']),
+  vue: z.enum(['tabulaire']),
+  parametres: z.record(z.string(), z.string()).optional()
+});
+
 export const DESCRIPTIONS = {
   DataTable: 'Tableau de données : tri, recherche et plein écran.',
   KpiGrid: "Grille d'indicateurs clés.",
   Chart: 'Graphique en barres, courbe ou anneau.',
-  Timeline: 'Frise chronologique : événements datés, du plus ancien au plus récent.'
+  Timeline: 'Frise chronologique : événements datés, du plus ancien au plus récent.',
+  VuePage: 'Vue de page intégrée : la vraie page du domaine (filtres et tableau), manipulable dans la conversation.'
 } as const;

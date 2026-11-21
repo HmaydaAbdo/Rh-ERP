@@ -32,6 +32,8 @@ from test_mcp import (  # pyright: ignore[reportPrivateUsage]
     admin,  # noqa: F401  # pyright: ignore[reportUnusedImport]
 )
 
+from staport.domains.mcp.surfaces import CATALOGUE_ERP
+
 M1, M2, M3, M4, M5 = 209601, 209602, 209603, 209604, 209605
 S1, S2, S4 = "2096-01", "2096-02", "2096-04"
 
@@ -158,6 +160,7 @@ OUTILS_PORTES: dict[str, tuple[tuple[str, ...], dict[str, Any]]] = {
     "paie_mouvements": (("PAIE_READ",), {}),
     "paie_qualite": (("PAIE_READ",), {"periode": S2}),
     "paie_bulletins_rechercher": (("PAIE_READ",), {"periode": S2}),
+    "paie_afficher_vue": (("PAIE_READ",), {"periode": S2}),
     "rapport_preparer": (("PAIE_EXPORT", "PAIE_READ"), {"periode": S2}),
     "paie_export_preparer": (("PAIE_EXPORT", "PAIE_READ"), {"periode": S2}),
     "heures_supp_periodes": (("HEURES_SUP_READ", "PAIE_READ"), {}),
@@ -170,11 +173,11 @@ OUTILS_PORTES: dict[str, tuple[tuple[str, ...], dict[str, Any]]] = {
 }
 
 
-def test_le_catalogue_compte_les_32_outils_en_lecture_seule(
+def test_le_catalogue_compte_les_33_outils_en_lecture_seule(
     plateforme: Plateforme, admin: tuple[str, str, int]
 ) -> None:
     outils = {o["name"]: o for o in _rpc(plateforme, admin[0], "tools/list").json()["result"]["tools"]}
-    assert len(outils) == 32
+    assert len(outils) == 33
     assert set(OUTILS_PORTES) <= set(outils)
     for nom in OUTILS_PORTES:
         outil = outils[nom]
@@ -677,6 +680,32 @@ def test_la_recherche_de_bulletins_se_trie_et_se_pagine(
     assert vide["bulletins"] == [] and vide["total"] == 0
     for arguments in ({"limite": 0}, {"limite": 21}, {"page": -1}, {"tri": "AGE"}):
         assert _appel(plateforme, jeton, "paie_bulletins_rechercher", **arguments)["isError"] is True
+
+
+def test_la_vue_de_la_paie_est_affichee_par_une_surface_sans_donnee(
+    plateforme: Plateforme, admin: tuple[str, str, int], donnees: Donnees
+) -> None:
+    jeton = admin[0]
+    resultat = _donnees(
+        _appel(plateforme, jeton, "paie_afficher_vue", nom="Bravo " + donnees.marque, **_perimetre(donnees), periode=S2)
+    )
+    assert (resultat["periode"], resultat["total"]) == (S2, 1)
+    parametres = resultat["vue"]["parametres"]
+    assert parametres["periode"] == S2 and parametres["nom"] == "Bravo " + donnees.marque
+    operations = resultat["a2ui_operations"]
+    assert operations[0]["createSurface"]["catalogId"] == CATALOGUE_ERP
+    composant = operations[1]["updateComponents"]["components"][0]
+    assert composant == {
+        "id": "root",
+        "component": "VuePage",
+        "domaine": "paie",
+        "vue": "tabulaire",
+        "parametres": parametres,
+    }
+    assert len(operations) == 2  # aucun modèle de données : ni bulletin ni salaire dans la surface
+    sans_mois = _donnees(_appel(plateforme, jeton, "paie_afficher_vue"))
+    assert sans_mois["periode"] and sans_mois["vue"]["parametres"]["periode"] == sans_mois["periode"]
+    assert _appel(plateforme, jeton, "paie_afficher_vue", periode="pas-un-mois")["isError"] is True
 
 
 def test_le_rapport_est_prepare_sans_fichier_et_exige_l_export(

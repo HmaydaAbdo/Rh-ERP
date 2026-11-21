@@ -134,7 +134,7 @@ def test_le_catalogue_expose_les_outils_en_lecture_seule(plateforme: Plateforme,
         "chantier_rechercher",
         "chantier_fiche",
     } <= set(outils)
-    assert len(outils) == 32  # le détail des outils métier est vérifié dans test_mcp_outils_metier.py
+    assert len(outils) == 33  # le détail des outils métier est vérifié dans test_mcp_outils_metier.py
     for outil in outils.values():
         assert outil["annotations"]["readOnlyHint"] is True and outil["annotations"]["destructiveHint"] is False
         assert outil["annotations"]["idempotentHint"] is True and outil["annotations"]["openWorldHint"] is False
