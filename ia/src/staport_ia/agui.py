@@ -31,11 +31,12 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import RunControl
+from langgraph.store.base import BaseStore
 from langgraph.types import Durability
 
 from staport_ia.documents import TEXTES, convertir_documents
 from staport_ia.ecran import contexte_verifie
-from staport_ia.memoire import espace_conversation, sujet
+from staport_ia.memoire import espace_conversation, proprietaire, rapatrier, sujet
 from staport_ia.outils import EchangeRefuse, contexte_erp, jeton_agent, outils_erp, titres_erp
 from staport_ia.pieces_jointes import Analyseur, FichiersVerifies, verifier_pieces_jointes
 
@@ -356,6 +357,7 @@ def routeur_agui(
     pieces_jointes: Callable[[], bool] = lambda: False,
     analyseur: Callable[[], Analyseur | None] = lambda: None,
     delai_preparation: float | None = None,
+    store: Callable[[], BaseStore] | None = None,
 ) -> APIRouter:
     routeur = APIRouter()
     verifies = FichiersVerifies()
@@ -385,6 +387,9 @@ def routeur_agui(
                         ) from erreur
                 with etapes.etape("échange de jeton"):
                     jeton = await _jeton(erp, autorisation[7:].strip())
+                if store is not None:
+                    with etapes.etape("espace de l'utilisateur"):
+                        await rapatrier(store(), jeton)
                 with etapes.etape("catalogue MCP"):
                     outils = await _outils(erp, jeton)
                 with etapes.etape("contexte MCP"):
@@ -439,7 +444,7 @@ def routeur_agui(
                     outils,
                     memoire() if memoire and not suggestion_sans_etat else None,
                     entree.thread_id,
-                    sujet(jeton),
+                    proprietaire(jeton),
                     texte_contexte,
                 ):
                     yield encodeur.encode(evenement)

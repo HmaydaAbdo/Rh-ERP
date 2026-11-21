@@ -14,6 +14,12 @@ autorisation indispensable non encore donnée. Présenter alors les faits, les d
 la décision nécessaire. Les règles de sécurité, production, CI et livraison continuent de
 s'appliquer ; la persistance n'accorde aucune autorisation supplémentaire.
 
+**Un ticket à 100 % avant le suivant (décision du 2026-11-21).** On ne passe à un autre ticket que lorsque le
+ticket courant est terminé : les défauts trouvés pendant sa revue sont corrigés dans la foulée (tâche Jira,
+branche, PR), les changements sont poussés et fusionnés, les images sont construites et publiées, la pile est
+redéployée (`pull`, `down`, `up`), le ticket est vérifié en réel et toutes les preuves demandées sont consignées.
+Alors seulement il se ferme. Jamais de statut « Terminé » avec des preuves « non faites ».
+
 Cette routine s'applique à chaque tâche du dépôt, dans le périmètre demandé par le propriétaire.
 Elle organise l'application des conventions ; les exigences détaillées restent dans leurs documents
 de référence. `AGENTS.md` en est la porte d'entrée.

@@ -153,6 +153,7 @@ def routeur_ia(app: FastAPI, config: Settings) -> APIRouter:
             routage=lambda: app.state.routage,
             pieces_jointes=lambda: config.pieces_jointes,
             analyseur=lambda: getattr(app.state, "analyseur", None),
+            store=lambda: app.state.store,
         )
     )
 
