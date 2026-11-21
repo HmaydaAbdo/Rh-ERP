@@ -364,8 +364,11 @@ html .espace-assistant-discussion {
   }
 
   // Réponse : l'étincelle de l'IA en repère (sans image : masque vectoriel).
+  // KAN-315 : la hauteur minimale réserve la place du repère. Un message sans texte (seulement la carte d'un outil) restait plus bas
+  // que le repère, qui chevauchait alors le repère du message suivant ou le titre d'une surface.
   .copilotKitAssistantMessage {
     position: relative;
+    min-block-size: 2rem;
     padding-inline-start: 2.25rem;
 
     &::before {

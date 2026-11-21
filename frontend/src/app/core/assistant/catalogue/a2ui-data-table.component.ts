@@ -82,10 +82,12 @@ const LIGNES_PAR_PAGE = 20;
       >
         <ng-template stpCell let-ligne let-col="col">
           @if (colonneDe(col.field); as colonne) {
-            @if (colonne.bar && maximum(colonne) > 0) {
-              <span class="app-datagrid__bar-value" [style.width.%]="largeur(ligne[colonne.key], colonne)"></span>
-            }
             <span class="app-datagrid__value">{{ texte(ligne[colonne.key], colonne) }}</span>
+            @if (colonne.bar && maximum(colonne) > 0) {
+              <span class="app-datagrid__bar-track" aria-hidden="true">
+                <span class="app-datagrid__bar-value" [style.width.%]="largeur(ligne[colonne.key], colonne)"></span>
+              </span>
+            }
           }
         </ng-template>
       </stp-table>

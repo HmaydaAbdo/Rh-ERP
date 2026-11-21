@@ -65,10 +65,19 @@
 }
 .app-datagrid__grid { min-height: 0; flex: 1; overflow: auto; }
 .app-datagrid__value { position: relative; overflow: hidden; text-overflow: ellipsis; color: var(--color-text); }
+// Barre de proportion (KAN-314) : un fin rail sous la valeur, jamais derrière elle (elle se lisait comme un surlignage du texte).
+// La part de la plus grande valeur de la colonne remplit le rail depuis le début ; décoratif, la valeur reste dans le texte.
+.app-datagrid__bar-track {
+  display: block;
+  height: 0.25rem;
+  margin-block-start: var(--space-xs);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-border-strong) 30%, transparent);
+  overflow: hidden;
+}
 .app-datagrid__bar-value {
-  position: absolute;
-  inset-block: 0.5rem;
-  inset-inline-end: var(--space-md);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 55%, transparent), var(--color-primary));
 }
