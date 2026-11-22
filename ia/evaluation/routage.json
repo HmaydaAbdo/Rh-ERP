@@ -429,6 +429,26 @@
     "employes",
     "referentiels"
    ]
+  },
+  {
+   "question": "montre-moi la paie d'octobre 2026",
+   "outils": [
+    "paie_afficher_vue"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie-bulletins-rapports"
+   ]
+  },
+  {
+   "question": "affiche le tableau de la paie du mois avec ses filtres",
+   "outils": [
+    "paie_afficher_vue"
+   ],
+   "type": "direct",
+   "domaines": [
+    "paie-bulletins-rapports"
+   ]
   }
  ]
 }
