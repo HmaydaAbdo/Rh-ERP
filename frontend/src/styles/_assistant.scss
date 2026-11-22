@@ -588,3 +588,40 @@ html .espace-assistant {
 app-surface-a2ui-francais copilot-a2ui-recovery {
   display: none;
 }
+
+// Vue de page intégrée à la conversation (KAN-307) : les filtres et le tableau forment UNE carte, pas deux blocs empilés
+// (retour du propriétaire : « c'est un seul composant »). Un seul cadre ; un filet sépare la barre de filtres du tableau.
+.app-vue-integree {
+  display: block;
+  min-width: 0;
+}
+.app-vue-integree__page {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+
+  .app-toolbar {
+    margin-bottom: 0;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .app-collection-table__surface {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app-table-bar {
+    padding-inline: var(--space-md);
+  }
+
+  .ag-root-wrapper {
+    border: 0;
+    border-radius: 0;
+  }
+}
