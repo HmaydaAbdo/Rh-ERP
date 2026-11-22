@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Params } from '@angular/router';
 
@@ -8,7 +8,9 @@ import { PaieAnalytiqueComponent } from '../analytique/paie-analytique.component
 import { PaieCartesComponent } from '../cartes/paie-cartes.component';
 import { lireFiltres, PaieFiltres, versParametres } from '../filtres/paie-filtres';
 import { PaieFiltresComponent } from '../filtres/paie-filtres.component';
+import { PaieActionsComponent } from '../actions/paie-actions.component';
 import { PaieListComponent } from '../list/paie-list.component';
+import { PaieActualisationService } from '../services/paie-actualisation.service';
 import { PaieService } from '../services/paie.service';
 
 /** Les trois vues de la page de la paie (mêmes noms que les onglets de `paie-vues.component.ts`). */
@@ -29,34 +31,40 @@ const VUES: VueOnglet[] = [
  * refusée) et mêmes chiffres. Seul l'état change : chaque instance fournit son `EtatVueLocal`, initialisé par les
  * filtres de départ que l'agent a posés (`depart`, mêmes paramètres que l'URL de la page) et par la vue de départ
  * (`vue`). Filtrer ou changer de vue ne passe ni par l'URL ni par l'agent, et plusieurs vues coexistent. Comme sur la
- * page, l'analytique veut un mois : la barre ne propose pas de l'effacer. Lecture seule : les actions de ligne et
- * d'en-tête qui quittent la conversation arrivent avec KAN-309 et KAN-310 (aucune suppression en groupe ici).
+ * page, l'analytique veut un mois : la barre ne propose pas de l'effacer. Les actions d'en-tête Importer et Exporter sont
+ * celles de la page (mêmes droits, même audit, KAN-309) ; un import recharge toutes les vues de la conversation. Les actions qui
+ * quittent la conversation (Nouveau bulletin, actions de ligne) arrivent avec KAN-310 (aucune suppression en groupe ici).
  */
 @Component({
   selector: 'app-paie-vue-integree',
-  imports: [PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
+  imports: [PaieActionsComponent, PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
   providers: [{ provide: EtatVue, useFactory: () => new EtatVueLocal() }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-vue-integree' },
   template: `
     @if (prete()) {
       <section class="app-vue-integree__page" aria-label="Page de la paie">
-        <app-vue-switcher label="Vue de la paie" [vues]="vues" [local]="true" [actuelle]="vueCourante()" (choisie)="choisir($event)" />
+        <div class="app-vue-integree__entete">
+          <app-vue-switcher label="Vue de la paie" [vues]="vues" [local]="true" [actuelle]="vueCourante()" (choisie)="choisir($event)" />
+          <app-paie-actions [integree]="true" [periodes]="periodes()" />
+        </div>
         <app-paie-filtres
           [periodes]="periodes()"
           [value]="filtres()"
           [moisRequis]="vueCourante() === 'analytique'"
           (valueChange)="appliquer($event)"
         />
-        @switch (vueCourante()) {
-          @case ('cartes') {
-            <app-paie-cartes [lectureSeule]="true" />
-          }
-          @case ('analytique') {
-            <app-paie-analytique [integree]="true" />
-          }
-          @default {
-            <app-paie-list [lectureSeule]="true" />
+        @if (vueAffichee()) {
+          @switch (vueCourante()) {
+            @case ('cartes') {
+              <app-paie-cartes [lectureSeule]="true" />
+            }
+            @case ('analytique') {
+              <app-paie-analytique [integree]="true" />
+            }
+            @default {
+              <app-paie-list [lectureSeule]="true" />
+            }
           }
         }
       </section>
@@ -69,8 +77,10 @@ export class PaieVueIntegreeComponent {
   /** Vue affichée au départ ; l'utilisateur en change ensuite avec le sélecteur. */
   readonly vue = input<VuePaie>('tabulaire');
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly etat = inject(EtatVue);
   private readonly paieService = inject(PaieService);
+  private readonly actualisation = inject(PaieActualisationService);
 
   protected readonly vues = VUES;
   /** Mois qui contiennent de la paie, pour griser les autres dans la barre. */
@@ -79,6 +89,8 @@ export class PaieVueIntegreeComponent {
   protected readonly vueCourante = signal<VuePaie>('tabulaire');
   /** Les filtres de départ sont posés avant de créer la vue : elle lit ses filtres à sa création. */
   protected readonly prete = signal(false);
+  /** Faux le temps d'un tour d'écran pour recréer la vue après un import : elle recharge ses données. */
+  protected readonly vueAffichee = signal(true);
 
   constructor() {
     effect(() => {
@@ -92,9 +104,27 @@ export class PaieVueIntegreeComponent {
         }
       });
     });
+    this.chargerPeriodes();
+    // Un import réussi, ici ou dans une autre vue de la conversation : mois de la barre et vue affichée se rechargent.
+    let derniere = this.actualisation.version();
+    effect(() => {
+      const version = this.actualisation.version();
+      if (version === derniere) {
+        return;
+      }
+      derniere = version;
+      untracked(() => {
+        this.chargerPeriodes();
+        this.vueAffichee.set(false);
+        setTimeout(() => this.vueAffichee.set(true));
+      });
+    });
+  }
+
+  private chargerPeriodes(): void {
     this.paieService
       .listerPeriodes()
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((periodes) => this.periodes.set(periodes.map((p) => p.periode)));
   }
 

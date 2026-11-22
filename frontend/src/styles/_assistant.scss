@@ -602,9 +602,24 @@ app-surface-a2ui-francais copilot-a2ui-recovery {
   background: var(--color-surface);
 
   // Sélecteur de vue (Tabulaire, Cartes, Analytique) : l'en-tête de la carte, ses onglets posés sur le filet
+  .app-vue-integree__entete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: 0 var(--space-md) var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
   app-vue-switcher {
     padding-inline: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
+  }
+
+  // Importer et Exporter à droite des onglets ; sous le téléphone ils prennent la largeur (règle de l'en-tête de liste)
+  app-paie-actions {
+    margin-left: auto;
+    padding-left: var(--space-md);
   }
 
   .app-toolbar {

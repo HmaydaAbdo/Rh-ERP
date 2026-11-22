@@ -8,6 +8,7 @@ import { MenuAction } from '../../../shared/ui/menu/menu-button.component';
 import { SplitButtonComponent } from '../../../shared/ui/menu/split-button.component';
 import { PaieExportWizardComponent } from '../export/paie-export-wizard.component';
 import { PaieImportWizardComponent } from '../import/paie-import-wizard.component';
+import { PaieActualisationService } from '../services/paie-actualisation.service';
 import { PaieService } from '../services/paie.service';
 
 /**
@@ -27,11 +28,14 @@ export class PaieActionsComponent {
   readonly periodes = input<string[]>([]);
   /** Des bulletins ont été importés : la vue affichée doit se recharger. */
   readonly importe = output<void>();
+  /** Dans la conversation : pas de « Nouveau bulletin » (il quitte la conversation, voir KAN-310). */
+  readonly integree = input(false);
 
   private readonly paieService = inject(PaieService);
   private readonly authService = inject(AuthService);
+  private readonly actualisation = inject(PaieActualisationService);
 
-  protected readonly canWrite = computed(() => this.authService.hasPermission('PAIE_WRITE') && this.authService.hasPermission('EMPLOYEE_WRITE'));
+  protected readonly canWrite = computed(() => !this.integree() && this.authService.hasPermission('PAIE_WRITE') && this.authService.hasPermission('EMPLOYEE_WRITE'));
   /** L'assistant analyse le fichier en le comparant aux fiches (salaires compris) : il demande aussi la lecture de la paie. */
   protected readonly canImport = computed(() => this.authService.hasPermission('PAIE_IMPORT') && this.authService.hasPermission('PAIE_READ'));
   protected readonly canExport = computed(() => this.authService.hasPermission('PAIE_EXPORT'));
@@ -52,6 +56,12 @@ export class PaieActionsComponent {
       }
     }
   ];
+
+  /** Un import réussi : la vue de cette page se recharge, et toutes les vues de la conversation avec elle. */
+  protected surImport(): void {
+    this.actualisation.signaler();
+    this.importe.emit();
+  }
 
   protected onDownloadTemplate(): void {
     this.downloadingTemplate.set(true);

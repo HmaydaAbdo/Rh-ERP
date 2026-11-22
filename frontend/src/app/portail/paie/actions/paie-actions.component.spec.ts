@@ -7,6 +7,7 @@ import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
+import { PaieActualisationService } from '../services/paie-actualisation.service';
 import { PaieService } from '../services/paie.service';
 import { PaieActionsComponent } from './paie-actions.component';
 
@@ -62,6 +63,29 @@ describe('PaieActionsComponent', () => {
         expect(libelles).toContain('Exporter');
         expect(libelles).toContain('Importer');
         expect(libelles).toContain('Nouveau bulletin');
+    });
+
+    it('dans la conversation, garde Exporter et Importer mais pas « Nouveau bulletin » (il quitte la conversation)', async () => {
+        await creer(['PAIE_EXPORT', 'PAIE_IMPORT', 'PAIE_READ', 'PAIE_WRITE', 'EMPLOYEE_WRITE']);
+        fixture.componentRef.setInput('integree', true);
+        fixture.detectChanges();
+
+        const libelles = boutons();
+        expect(libelles).toContain('Exporter');
+        expect(libelles).toContain('Importer');
+        expect(libelles).not.toContain('Nouveau bulletin');
+    });
+
+    it('un import réussi prévient la page et lève le signal d’actualisation des vues de la conversation', async () => {
+        const composant = await creer(['PAIE_IMPORT', 'PAIE_READ']);
+        const actualisation = TestBed.inject(PaieActualisationService);
+        const importe = vi.fn();
+        composant.importe.subscribe(importe);
+
+        composant['surImport']();
+
+        expect(importe).toHaveBeenCalledOnce();
+        expect(actualisation.version()).toBe(1);
     });
 
     it('ne montre aucun bouton sans permission', async () => {

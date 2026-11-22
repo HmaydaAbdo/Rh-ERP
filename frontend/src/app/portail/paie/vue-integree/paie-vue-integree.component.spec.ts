@@ -11,6 +11,7 @@ import { of } from 'rxjs';
 import { Page } from '../../../shared/models/page.model';
 import { AUCUN_FILTRE } from '../filtres/paie-filtres';
 import { Paie, PaiePeriodeResume } from '../models/paie.model';
+import { PaieActualisationService } from '../services/paie-actualisation.service';
 import { PaieService } from '../services/paie.service';
 import { PaieVueIntegreeComponent } from './paie-vue-integree.component';
 
@@ -114,6 +115,45 @@ describe('PaieVueIntegreeComponent (la vue de la paie dans la conversation)', ()
 
     expect(page.querySelector('app-paie-list app-collection-table')).not.toBeNull();
     expect(page.querySelector('.stp-table__actions-header')).toBeNull();
+  });
+
+  describe('import (KAN-309)', () => {
+    it('recharge toutes les vues de la conversation et les mois de la barre après un import réussi', async () => {
+      const { fixture } = await monter();
+      const recherchesAvant = recherches().length;
+      const periodesAvant = vi.mocked(service.listerPeriodes).mock.calls.length;
+
+      TestBed.inject(PaieActualisationService).signaler();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(recherches().length - recherchesAvant).toBe(2);
+      expect(vi.mocked(service.listerPeriodes).mock.calls.length - periodesAvant).toBe(2);
+      expect(fixture.nativeElement.querySelectorAll('app-paie-list')).toHaveLength(2);
+    });
+
+    it("garde les filtres de chaque vue quand elle se recharge", async () => {
+      const { fixture, vues } = await monter();
+
+      TestBed.inject(PaieActualisationService).signaler();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(vues[0]['filtres']().nomPrenom).toBe('ali');
+      expect(recherches().at(-1)).toEqual(expect.objectContaining({ periode: '2026-07' }));
+    });
+
+    it("ne montre ni Importer ni Exporter sans les droits, et jamais « Nouveau bulletin »", async () => {
+      const { page } = await monter();
+
+      expect(page.querySelectorAll('app-paie-actions')).toHaveLength(2);
+      expect(page.querySelector('app-paie-actions button')).toBeNull();
+    });
   });
 
   describe('sélecteur de vue (KAN-308)', () => {
