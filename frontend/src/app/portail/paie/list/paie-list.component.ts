@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
@@ -35,8 +35,10 @@ const CONFIGURATION_TABLE_PAIE: CollectionTableConfig = {
 })
 export class PaieListComponent {
   protected readonly tableConfiguration = CONFIGURATION_TABLE_PAIE;
-  /** Vrai dans la conversation de l'assistant : aucune action de ligne (voir, modifier, supprimer) ne quitte la conversation. */
+  /** Vrai dans la conversation de l'assistant : seul « Modifier » reste (en fenêtre de dialogue) ; voir et supprimer quittent la conversation. */
   readonly lectureSeule = input(false);
+  /** Dans la conversation, « Modifier » ne navigue pas : il demande l'ouverture du formulaire en fenêtre de dialogue (KAN-310). */
+  readonly modifier = output<number>();
   protected readonly columns = new ColumnState([
     { field: 'nomPrenom', header: 'Nom & prénom', sortField: 'employee.nomPrenom', cellClass: 'font-semibold', minWidth: 200 },
     { field: 'fonction', header: 'Fonction', sortField: 'fonction.libelle', minWidth: 170 },
@@ -119,6 +121,10 @@ export class PaieListComponent {
   }
 
   protected onEdit(paie: Paie): void {
+    if (this.lectureSeule()) {
+      this.modifier.emit(paie.id);
+      return;
+    }
     this.router.navigate(['/paie', paie.id, 'edit']);
   }
 

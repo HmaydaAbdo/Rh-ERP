@@ -148,11 +148,42 @@ describe('PaieVueIntegreeComponent (la vue de la paie dans la conversation)', ()
       expect(recherches().at(-1)).toEqual(expect.objectContaining({ periode: '2026-07' }));
     });
 
-    it("ne montre ni Importer ni Exporter sans les droits, et jamais « Nouveau bulletin »", async () => {
+    it("ne montre ni Importer ni Exporter sans les droits, et jamais d’action sans droit (KAN-310)", async () => {
       const { page } = await monter();
 
       expect(page.querySelectorAll('app-paie-actions')).toHaveLength(2);
       expect(page.querySelector('app-paie-actions button')).toBeNull();
+    });
+  });
+
+  describe('formulaire en fenêtre de dialogue (KAN-310)', () => {
+    it("ouvre « Nouveau bulletin » ou « Modifier » dans la conversation, sans toucher à l'URL", async () => {
+      const { fixture, vues } = await monter();
+      const url = TestBed.inject(Router).url;
+
+      vues[0]['ouvrirFormulaire'](null);
+      fixture.detectChanges();
+      expect(vues[0]['formulaireOuvert']()).toBe(true);
+      expect(vues[0]['paieEnEdition']()).toBeNull();
+
+      vues[0]['ouvrirFormulaire'](8);
+      expect(vues[0]['paieEnEdition']()).toBe(8);
+      expect(vues[1]['formulaireOuvert']()).toBe(false);
+      expect(TestBed.inject(Router).url).toBe(url);
+    });
+
+    it('recharge toutes les vues de la conversation quand un bulletin est enregistré', async () => {
+      const { fixture } = await monter();
+      const avant = recherches().length;
+
+      fixture.nativeElement.querySelector('app-paie-form-dialog');
+      TestBed.inject(PaieActualisationService).signaler();
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(recherches().length - avant).toBe(2);
     });
   });
 

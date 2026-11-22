@@ -6,7 +6,11 @@
     <stp-split-button label="Importer" icon="upload" moreLabel="Autres actions d’import" [items]="menuImport" (clicked)="showImportDialog.set(true)"></stp-split-button>
   }
   @if (canWrite()) {
-    <button stp-button icon="plus" type="button" routerLink="/paie/new">Nouveau bulletin</button>
+    @if (integree()) {
+      <button stp-button icon="plus" type="button" (click)="nouveau.emit()">Nouveau bulletin</button>
+    } @else {
+      <button stp-button icon="plus" type="button" routerLink="/paie/new">Nouveau bulletin</button>
+    }
   }
 </div>
 

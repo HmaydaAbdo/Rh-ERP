@@ -48,7 +48,11 @@ describe('PaieFormComponent', () => {
     fixture.detectChanges();
   }
 
-  async function afficher(id?: string, chargement: Observable<Paie> = of(BULLETIN)): Promise<void> {
+  async function afficher(
+    id?: string,
+    chargement: Observable<Paie> = of(BULLETIN),
+    avant?: (f: ComponentFixture<PaieFormComponent>) => void
+  ): Promise<void> {
     service = {
       getById: vi.fn().mockReturnValue(chargement),
       create: vi.fn().mockReturnValue(of({ id: 40 })),
@@ -68,6 +72,7 @@ describe('PaieFormComponent', () => {
     });
     navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     fixture = TestBed.createComponent(PaieFormComponent);
+    avant?.(fixture);
     await stabiliser();
   }
 
@@ -88,7 +93,10 @@ describe('PaieFormComponent', () => {
     await stabiliser();
   }
 
-  afterEach(() => document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove()));
+  afterEach(() => {
+    document.querySelectorAll('.cdk-overlay-container > *').forEach((e) => e.remove());
+    sessionStorage.clear();
+  });
 
   describe('création', () => {
     it('présente trois sections et sept champs obligatoires', async () => {
@@ -253,6 +261,116 @@ describe('PaieFormComponent', () => {
       expect(navigation).not.toHaveBeenCalled();
       expect(formulaire()().dirty()).toBe(false);
       expect(TestBed.inject(NotificationService).notifications()).toEqual([]);
+    });
+  });
+
+  describe('dans la conversation (KAN-310)', () => {
+    const integre = (f: ComponentFixture<PaieFormComponent>) => f.componentRef.setInput('integre', true);
+    const CLE = 'staport-paie-brouillon';
+
+    it("n'a ni en-tête ni lien de retour, et son Annuler ne navigue pas", async () => {
+      await afficher(undefined, of(BULLETIN), integre);
+      const annule = vi.fn();
+      fixture.componentInstance.annule.subscribe(annule);
+
+      expect(racine().querySelector('h1')).toBeNull();
+      expect(racine().querySelector('a.app-back')).toBeNull();
+      const bouton = Array.from(racine().querySelectorAll('.app-form__actions button')).find((b) => b.textContent?.trim() === 'Annuler') as HTMLButtonElement;
+      bouton.click();
+
+      expect(annule).toHaveBeenCalledOnce();
+      expect(navigation).not.toHaveBeenCalled();
+    });
+
+    it('signale le bulletin créé au parent au lieu de naviguer, et efface le brouillon', async () => {
+      await afficher(undefined, of(BULLETIN), integre);
+      const enregistre = vi.fn();
+      fixture.componentInstance.enregistre.subscribe(enregistre);
+      await remplirObligatoires();
+      expect(sessionStorage.getItem(CLE)).not.toBeNull();
+
+      await envoyer();
+
+      expect(service.create).toHaveBeenCalledOnce();
+      expect(enregistre).toHaveBeenCalledWith({ id: 40 });
+      expect(navigation).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(CLE)).toBeNull();
+    });
+
+    it('affiche les erreurs de validation sans rien envoyer ni émettre', async () => {
+      await afficher(undefined, of(BULLETIN), integre);
+      const enregistre = vi.fn();
+      fixture.componentInstance.enregistre.subscribe(enregistre);
+
+      await envoyer();
+
+      expect(service.create).not.toHaveBeenCalled();
+      expect(enregistre).not.toHaveBeenCalled();
+      expect(erreurs().join(' ')).toContain("L'employé est obligatoire.");
+    });
+
+    it('garde un brouillon de la saisie et le reprend à la réouverture', async () => {
+      await afficher(undefined, of(BULLETIN), integre);
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(false);
+      await remplirObligatoires();
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(true);
+      fixture.destroy();
+      TestBed.resetTestingModule();
+
+      await afficher(undefined, of(BULLETIN), integre);
+
+      expect(racine().querySelector('stp-message')?.textContent).toContain('brouillon');
+      expect(formulaire().salaireTotal().value()).toBe(4350);
+      expect(formulaire().periode().value()).toEqual(new Date(2026, 7, 1));
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(true);
+    });
+
+    it('efface le brouillon sur demande et repart d’un formulaire vide', async () => {
+      await afficher(undefined, of(BULLETIN), integre);
+      await remplirObligatoires();
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      await afficher(undefined, of(BULLETIN), integre);
+
+      (racine().querySelector('stp-message button') as HTMLButtonElement).click();
+      await stabiliser();
+
+      expect(sessionStorage.getItem(CLE)).toBeNull();
+      expect(racine().querySelector('stp-message')).toBeNull();
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(false);
+    });
+
+    it('ignore un brouillon abîmé', async () => {
+      sessionStorage.setItem(CLE, '{"salaireTotal":"abc","periode":"2026-13","observation":42}');
+
+      await afficher(undefined, of(BULLETIN), integre);
+
+      expect(racine().querySelector('stp-message')).toBeNull();
+      expect(formulaire().salaireTotal().value()).toBeNull();
+    });
+
+    it('charge le bulletin à modifier par l’entrée, sans brouillon, et signale la modification', async () => {
+      sessionStorage.setItem(CLE, '{"salaireTotal":999}');
+      await afficher(undefined, of(BULLETIN), (f) => {
+        f.componentRef.setInput('integre', true);
+        f.componentRef.setInput('paieIdEntree', 8);
+      });
+      const enregistre = vi.fn();
+      fixture.componentInstance.enregistre.subscribe(enregistre);
+
+      expect(service.getById).toHaveBeenCalledWith(8);
+      expect(formulaire().salaireTotal().value()).toBe(4350);
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(false);
+      formulaire().observation().value.set('Autre');
+      formulaire().observation().markAsDirty();
+      expect(fixture.componentInstance.saisieNonEnregistree()).toBe(true);
+
+      await envoyer();
+
+      expect(service.update).toHaveBeenCalledWith(8, expect.objectContaining({ observation: 'Autre', version: 0 }));
+      expect(enregistre).toHaveBeenCalledOnce();
+      expect(navigation).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(CLE)).toBe('{"salaireTotal":999}');
     });
   });
 

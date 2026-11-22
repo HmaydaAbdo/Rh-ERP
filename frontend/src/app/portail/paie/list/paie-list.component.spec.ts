@@ -2,7 +2,7 @@ import type { MockedObject } from "vitest";
 import { provideHttpClient, withXhr } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationService } from '@shared/ui/feedback/feedback.service';
 import { of, Subject, throwError } from 'rxjs';
@@ -58,6 +58,20 @@ describe('PaieListComponent — filtres de la barre commune', () => {
             chantierIds: undefined,
             equipeIds: undefined
         });
+    });
+
+    it('dans la conversation, « Modifier » demande le formulaire en fenêtre au lieu de naviguer (KAN-310)', async () => {
+        const fixture = TestBed.createComponent(PaieListComponent);
+        fixture.componentRef.setInput('lectureSeule', true);
+        fixture.detectChanges();
+        const modifier = vi.fn();
+        fixture.componentInstance.modifier.subscribe(modifier);
+        const navigation = vi.spyOn(TestBed.inject(Router), 'navigate');
+
+        fixture.componentInstance['onEdit']({ id: 8 } as Paie);
+
+        expect(modifier).toHaveBeenCalledWith(8);
+        expect(navigation).not.toHaveBeenCalled();
     });
 
     it('applique tous les filtres de l\'URL à la première recherche', async () => {

@@ -9,6 +9,7 @@ import { PaieCartesComponent } from '../cartes/paie-cartes.component';
 import { lireFiltres, PaieFiltres, versParametres } from '../filtres/paie-filtres';
 import { PaieFiltresComponent } from '../filtres/paie-filtres.component';
 import { PaieActionsComponent } from '../actions/paie-actions.component';
+import { PaieFormDialogComponent } from '../form/paie-form-dialog.component';
 import { PaieListComponent } from '../list/paie-list.component';
 import { PaieActualisationService } from '../services/paie-actualisation.service';
 import { PaieService } from '../services/paie.service';
@@ -32,12 +33,13 @@ const VUES: VueOnglet[] = [
  * filtres de départ que l'agent a posés (`depart`, mêmes paramètres que l'URL de la page) et par la vue de départ
  * (`vue`). Filtrer ou changer de vue ne passe ni par l'URL ni par l'agent, et plusieurs vues coexistent. Comme sur la
  * page, l'analytique veut un mois : la barre ne propose pas de l'effacer. Les actions d'en-tête Importer et Exporter sont
- * celles de la page (mêmes droits, même audit, KAN-309) ; un import recharge toutes les vues de la conversation. Les actions qui
- * quittent la conversation (Nouveau bulletin, actions de ligne) arrivent avec KAN-310 (aucune suppression en groupe ici).
+ * celles de la page (mêmes droits, même audit, KAN-309) ; un import ou un enregistrement recharge toutes les vues de la
+ * conversation. « Nouveau bulletin » et « Modifier » ouvrent le formulaire de la page en fenêtre de dialogue (KAN-310) ; voir
+ * et supprimer un bulletin quittent la conversation et n'y sont pas (aucune suppression, aucune suppression en groupe).
  */
 @Component({
   selector: 'app-paie-vue-integree',
-  imports: [PaieActionsComponent, PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
+  imports: [PaieActionsComponent, PaieFormDialogComponent, PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
   providers: [{ provide: EtatVue, useFactory: () => new EtatVueLocal() }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-vue-integree' },
@@ -46,7 +48,7 @@ const VUES: VueOnglet[] = [
       <section class="app-vue-integree__page" aria-label="Page de la paie">
         <div class="app-vue-integree__entete">
           <app-vue-switcher label="Vue de la paie" [vues]="vues" [local]="true" [actuelle]="vueCourante()" (choisie)="choisir($event)" />
-          <app-paie-actions [integree]="true" [periodes]="periodes()" />
+          <app-paie-actions [integree]="true" [periodes]="periodes()" (nouveau)="ouvrirFormulaire(null)" />
         </div>
         <app-paie-filtres
           [periodes]="periodes()"
@@ -63,10 +65,11 @@ const VUES: VueOnglet[] = [
               <app-paie-analytique [integree]="true" />
             }
             @default {
-              <app-paie-list [lectureSeule]="true" />
+              <app-paie-list [lectureSeule]="true" (modifier)="ouvrirFormulaire($event)" />
             }
           }
         }
+        <app-paie-form-dialog [(ouvert)]="formulaireOuvert" [paieId]="paieEnEdition()" (enregistre)="actualisation.signaler()" />
       </section>
     }
   `
@@ -80,7 +83,7 @@ export class PaieVueIntegreeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly etat = inject(EtatVue);
   private readonly paieService = inject(PaieService);
-  private readonly actualisation = inject(PaieActualisationService);
+  protected readonly actualisation = inject(PaieActualisationService);
 
   protected readonly vues = VUES;
   /** Mois qui contiennent de la paie, pour griser les autres dans la barre. */
@@ -91,6 +94,9 @@ export class PaieVueIntegreeComponent {
   protected readonly prete = signal(false);
   /** Faux le temps d'un tour d'écran pour recréer la vue après un import : elle recharge ses données. */
   protected readonly vueAffichee = signal(true);
+  /** Formulaire de bulletin en fenêtre de dialogue (KAN-310) : ouvert, et bulletin modifié (`null` : nouveau bulletin). */
+  protected readonly formulaireOuvert = signal(false);
+  protected readonly paieEnEdition = signal<number | null>(null);
 
   constructor() {
     effect(() => {
@@ -130,6 +136,11 @@ export class PaieVueIntegreeComponent {
 
   protected appliquer(filtres: PaieFiltres): void {
     this.etat.modifier(versParametres(filtres));
+  }
+
+  protected ouvrirFormulaire(paieId: number | null): void {
+    this.paieEnEdition.set(paieId);
+    this.formulaireOuvert.set(true);
   }
 
   protected choisir(vue: string): void {

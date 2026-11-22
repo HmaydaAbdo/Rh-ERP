@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { disabled, form, FormField, FormRoot, max, maxLength, min, required } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -19,7 +19,9 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { MonthInputComponent } from '../../../shared/ui/month-input/month-input.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
+import { Paie } from '../models/paie.model';
 import { PaieService } from '../services/paie.service';
+import { BrouillonPaie, ecrireBrouillon, effacerBrouillon, lireBrouillon } from './paie-brouillon';
 
 function toPeriodeString(date: Date | null): string | undefined {
   if (!date) {
@@ -66,7 +68,20 @@ interface PaieSaisie {
   templateUrl: './paie-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+/**
+ * Formulaire de bulletin de paie : écran de la page (`/paie/new`, `/paie/:id/edit`) ou, avec `integre`, contenu de la fenêtre de
+ * dialogue de la conversation (KAN-310, voir `PaieFormDialogComponent`) : le même composant, sans copie. Dans la conversation,
+ * pas d'en-tête ni de navigation : l'enregistrement et l'annulation sont signalés au parent (`enregistre`, `annule`), la
+ * création garde un brouillon dans le navigateur et le parent peut demander si une saisie reste à enregistrer.
+ */
 export class PaieFormComponent {
+  /** Vrai dans la fenêtre de dialogue de la conversation. */
+  readonly integre = input(false);
+  /** Bulletin à modifier dans la fenêtre de dialogue ; absent : création. Sur la page, l'identifiant vient de l'URL. */
+  readonly paieIdEntree = input<number | null>(null);
+  readonly enregistre = output<Paie>();
+  readonly annule = output<void>();
+
   private readonly paieService = inject(PaieService);
   protected readonly employeeReferenceService = inject(EmployeeReferenceService);
   protected readonly functionReferenceService = inject(FunctionReferenceService);
@@ -82,6 +97,8 @@ export class PaieFormComponent {
   protected readonly isEditMode = computed(() => this.paieId() !== null);
   protected readonly loading = signal(false);
   protected readonly erreurChargement = signal(false);
+  /** Un brouillon a été remis dans le formulaire à l'ouverture (création dans la conversation). */
+  protected readonly brouillonRestaure = signal(false);
 
   private readonly modele = signal<PaieSaisie>({
     employeeId: null,
@@ -139,6 +156,91 @@ export class PaieFormComponent {
       const id = Number(idParam);
       this.paieId.set(id);
       this.charger();
+    }
+    effect(() => {
+      const id = this.paieIdEntree();
+      const integre = this.integre();
+      untracked(() => {
+        if (id !== null) {
+          this.paieId.set(id);
+          this.charger();
+        } else if (integre && this.paieId() === null) {
+          this.restaurerBrouillon();
+        }
+      });
+    });
+    // Création dans la conversation : la saisie est gardée en brouillon tant qu'elle n'est pas enregistrée.
+    effect(() => {
+      const saisie = this.modele();
+      if (this.integre() && !this.isEditMode()) {
+        untracked(() => (this.estVide(saisie) ? effacerBrouillon() : ecrireBrouillon(this.versBrouillon(saisie))));
+      }
+    });
+  }
+
+  /** Vrai quand la fermeture perdrait de la saisie : champs modifiés (modification) ou formulaire non vide (création). */
+  saisieNonEnregistree(): boolean {
+    return this.isEditMode() ? this.form().dirty() : !this.estVide(this.modele());
+  }
+
+  /** Efface la saisie et le brouillon (abandon voulu). */
+  abandonner(): void {
+    effacerBrouillon();
+    this.modele.set(this.saisieVide());
+    this.form().reset();
+    this.brouillonRestaure.set(false);
+  }
+
+  protected effacerBrouillonRestaure(): void {
+    this.abandonner();
+  }
+
+  private saisieVide(): PaieSaisie {
+    return {
+      employeeId: null,
+      periode: null,
+      fonctionId: null,
+      chantierId: null,
+      equipeId: null,
+      nombreJoursTravailles: null,
+      joursRecuperationOuvrable: null,
+      joursRecuperationDimanche: null,
+      salaireMensuel: null,
+      primeRoulageOrdinaire: null,
+      primeRoulageDimanche: null,
+      salaireTotal: null,
+      observation: ''
+    };
+  }
+
+  private estVide(saisie: PaieSaisie): boolean {
+    return Object.values(saisie).every((valeur) => valeur === null || valeur === '');
+  }
+
+  private versBrouillon(saisie: PaieSaisie): BrouillonPaie {
+    return { ...saisie, periode: toPeriodeString(saisie.periode) ?? null };
+  }
+
+  private restaurerBrouillon(): void {
+    const brouillon = lireBrouillon();
+    if (!brouillon) {
+      return;
+    }
+    const vide = this.saisieVide();
+    const restaure = { ...vide } as Record<string, unknown>;
+    for (const cle of Object.keys(vide) as (keyof PaieSaisie)[]) {
+      const valeur = brouillon[cle];
+      if (cle === 'periode') {
+        restaure[cle] = typeof valeur === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(valeur) ? fromPeriodeString(valeur) : null;
+      } else if (cle === 'observation') {
+        restaure[cle] = typeof valeur === 'string' ? valeur.slice(0, 255) : '';
+      } else {
+        restaure[cle] = typeof valeur === 'number' && Number.isFinite(valeur) ? valeur : null;
+      }
+    }
+    if (!this.estVide(restaure as unknown as PaieSaisie)) {
+      this.modele.set(restaure as unknown as PaieSaisie);
+      this.brouillonRestaure.set(true);
     }
   }
 
@@ -206,6 +308,13 @@ export class PaieFormComponent {
       life: 4000
     });
     this.form().reset();
+    if (this.integre()) {
+      if (id === null) {
+        effacerBrouillon();
+      }
+      this.enregistre.emit(paie);
+      return;
+    }
     this.router.navigate(['/paie', paie.id]);
   }
 }

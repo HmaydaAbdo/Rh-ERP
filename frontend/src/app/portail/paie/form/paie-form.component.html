@@ -1,8 +1,10 @@
 <div class="paie-form app-page app-page--wide">
-  <a routerLink="/paie" class="app-back"><stp-icon name="arrow-left" /> Paie</a>
-  <div class="app-page__header">
-    <h1>{{ isEditMode() ? 'Modifier le bulletin' : 'Nouveau bulletin de paie' }}</h1>
-  </div>
+  @if (!integre()) {
+    <a routerLink="/paie" class="app-back"><stp-icon name="arrow-left" /> Paie</a>
+    <div class="app-page__header">
+      <h1>{{ isEditMode() ? 'Modifier le bulletin' : 'Nouveau bulletin de paie' }}</h1>
+    </div>
+  }
 
   @if (loading()) {
     <stp-message text="Chargement du bulletin…" />
@@ -13,6 +15,12 @@
   } @else {
   @if (isEditMode()) {
     <stp-message severity="info" text="L'employé et la période ne sont pas modifiables après création — un bulletin est un document historique." class="mb-6"></stp-message>
+  }
+
+  @if (brouillonRestaure()) {
+    <stp-message severity="info" text="Votre saisie précédente a été reprise (brouillon gardé dans ce navigateur)." class="mb-6">
+      <button stp-button variant="text" type="button" (click)="effacerBrouillonRestaure()">Effacer le brouillon</button>
+    </stp-message>
   }
 
   <form [formRoot]="form" class="app-form__grid app-form__grid--3">
@@ -125,7 +133,11 @@
     </div>
 
     <div class="app-form__actions">
-      <a stp-button variant="text" routerLink="/paie">Annuler</a>
+      @if (integre()) {
+        <button stp-button variant="text" type="button" (click)="annule.emit()">Annuler</button>
+      } @else {
+        <a stp-button variant="text" routerLink="/paie">Annuler</a>
+      }
       <button stp-button type="submit" [loading]="form().submitting()">{{ isEditMode() ? 'Enregistrer' : 'Créer' }}</button>
     </div>
   </form>

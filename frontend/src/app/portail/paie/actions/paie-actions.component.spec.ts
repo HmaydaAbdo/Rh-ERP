@@ -65,7 +65,7 @@ describe('PaieActionsComponent', () => {
         expect(libelles).toContain('Nouveau bulletin');
     });
 
-    it('dans la conversation, garde Exporter et Importer mais pas « Nouveau bulletin » (il quitte la conversation)', async () => {
+    it('dans la conversation, « Nouveau bulletin » demande le formulaire en fenêtre au lieu de naviguer (KAN-310)', async () => {
         await creer(['PAIE_EXPORT', 'PAIE_IMPORT', 'PAIE_READ', 'PAIE_WRITE', 'EMPLOYEE_WRITE']);
         fixture.componentRef.setInput('integree', true);
         fixture.detectChanges();
@@ -73,7 +73,14 @@ describe('PaieActionsComponent', () => {
         const libelles = boutons();
         expect(libelles).toContain('Exporter');
         expect(libelles).toContain('Importer');
-        expect(libelles).not.toContain('Nouveau bulletin');
+        expect(libelles).toContain('Nouveau bulletin');
+        const nouveau = vi.fn();
+        fixture.componentInstance.nouveau.subscribe(nouveau);
+        const bouton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.app-page__actions button')).find((b) => b.textContent?.trim() === 'Nouveau bulletin')!;
+        bouton.click();
+
+        expect(nouveau).toHaveBeenCalledOnce();
+        expect((fixture.nativeElement as HTMLElement).querySelector('a[routerLink], [ng-reflect-router-link]')).toBeNull();
     });
 
     it('un import réussi prévient la page et lève le signal d’actualisation des vues de la conversation', async () => {

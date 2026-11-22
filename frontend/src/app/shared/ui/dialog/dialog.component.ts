@@ -31,6 +31,11 @@ export class DialogComponent {
   readonly closable = input(true);
   /** `end` : tiroir collé au bord droit, sur toute la hauteur (ex. détail d'une entrée du journal). */
   readonly placement = input<'center' | 'end'>('center');
+  /**
+   * Garde de fermeture (bouton Fermer, Échap, `close()`) : rend `false`, ou une promesse de `false`, pour garder la fenêtre
+   * ouverte (ex. saisie non enregistrée à confirmer). Une fermeture par le parent (`open` mis à `false`) n'est pas gardée.
+   */
+  readonly avantFermeture = input<(() => boolean | Promise<boolean>) | null>(null);
   /** Émis à chaque fermeture (bouton, Échap ou parent). */
   readonly closed = output<void>();
 
@@ -47,7 +52,16 @@ export class DialogComponent {
   }
 
   close(): void {
-    this.open.set(false);
+    const garde = this.avantFermeture();
+    if (!garde) {
+      this.open.set(false);
+      return;
+    }
+    void Promise.resolve(garde()).then((fermer) => {
+      if (fermer) {
+        this.open.set(false);
+      }
+    });
   }
 
   private attach(): void {

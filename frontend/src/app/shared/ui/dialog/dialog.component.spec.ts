@@ -8,7 +8,7 @@ import { DialogComponent } from './dialog.component';
   imports: [DialogComponent],
   template: `
     <button id="declencheur" type="button" (click)="ouvert.set(true)">Ouvrir</button>
-    <stp-dialog header="Résultat de l'import" width="520px" [placement]="placement()" [closable]="fermable()" [(open)]="ouvert" (closed)="fermetures.update((n) => n + 1)">
+    <stp-dialog header="Résultat de l'import" width="520px" [placement]="placement()" [closable]="fermable()" [avantFermeture]="garde()" [(open)]="ouvert" (closed)="fermetures.update((n) => n + 1)">
       <p id="contenu">Corps du dialogue</p>
       <div stpDialogFooter><button id="pied" type="button">Valider</button></div>
     </stp-dialog>
@@ -17,6 +17,7 @@ import { DialogComponent } from './dialog.component';
 class DialogueTestComponent {
   readonly ouvert = signal(false);
   readonly fermable = signal(true);
+  readonly garde = signal<(() => boolean | Promise<boolean>) | null>(null);
   readonly placement = signal<'center' | 'end'>('center');
   readonly fermetures = signal(0);
 }
@@ -76,6 +77,26 @@ describe('DialogComponent', () => {
     panneau()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
 
+    expect(fixture.componentInstance.ouvert()).toBe(false);
+  });
+
+  it('garde de fermeture : refusée, la fenêtre reste ouverte (bouton et Échap) ; acceptée, elle se ferme', async () => {
+    const fixture = afficher();
+    const accord = { valeur: false };
+    fixture.componentInstance.garde.set(() => Promise.resolve(accord.valeur));
+    await ouvrir(fixture);
+
+    (panneau()!.querySelector('button[aria-label="Fermer"]') as HTMLButtonElement).click();
+    panneau()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.ouvert()).toBe(true);
+    expect(fixture.componentInstance.fermetures()).toBe(0);
+
+    accord.valeur = true;
+    (panneau()!.querySelector('button[aria-label="Fermer"]') as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
     expect(fixture.componentInstance.ouvert()).toBe(false);
   });
 
