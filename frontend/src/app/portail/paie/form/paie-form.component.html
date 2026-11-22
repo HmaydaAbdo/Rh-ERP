@@ -1,4 +1,5 @@
-<div class="paie-form app-page app-page--wide">
+<!-- Dans la fenêtre de dialogue, le cadre est celui de la fenêtre : pas de second cadre autour du formulaire -->
+<div class="paie-form" [class.app-page]="!integre()" [class.app-page--wide]="!integre()">
   @if (!integre()) {
     <a routerLink="/paie" class="app-back"><stp-icon name="arrow-left" /> Paie</a>
     <div class="app-page__header">

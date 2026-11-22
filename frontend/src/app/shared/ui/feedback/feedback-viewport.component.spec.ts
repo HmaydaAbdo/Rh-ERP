@@ -32,6 +32,24 @@ describe('FeedbackViewportComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 
+  it('pose la confirmation et les notifications dans la couche supérieure : elles passent au-dessus des fenêtres du CDK (KAN-310)', async () => {
+    const fixture = TestBed.createComponent(FeedbackViewportComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const pile = fixture.nativeElement.querySelector('.feedback-stack') as HTMLElement;
+    expect(pile.matches(':popover-open')).toBe(true);
+
+    confirmation.confirm({ header: 'Fermer ?', message: 'Saisie non enregistrée.' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const fond = fixture.nativeElement.querySelector('.feedback-dialog-backdrop') as HTMLElement;
+    expect(fond.matches(':popover-open')).toBe(true);
+
+    confirmation.reject();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.feedback-dialog-backdrop')).toBeNull();
+  });
+
   it('rend une confirmation modale avec focus piégé et la ferme sur Échap', () => {
     const fixture = TestBed.createComponent(FeedbackViewportComponent);
     confirmation.confirm({ header: 'Quitter ?', message: 'Vos changements seront perdus.' });

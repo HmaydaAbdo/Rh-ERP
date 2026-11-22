@@ -18,7 +18,7 @@ import { PaieFormComponent } from './paie-form.component';
   imports: [DialogComponent, PaieFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <stp-dialog [header]="titre()" width="min(64rem, 100%)" [(open)]="ouvert" [avantFermeture]="garde">
+    <stp-dialog [header]="titre()" width="min(64rem, calc(100vw - 2rem))" [(open)]="ouvert" [avantFermeture]="garde">
       @if (ouvert()) {
         <app-paie-form
           [integre]="true"

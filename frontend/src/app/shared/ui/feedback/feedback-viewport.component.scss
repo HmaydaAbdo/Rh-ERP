@@ -1,4 +1,12 @@
 .feedback-stack {
+  // `popover` (couche supérieure) : on neutralise la feuille de style du navigateur pour les popovers
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  height: auto;
+  background: transparent;
+  color: inherit;
   position: fixed;
   z-index: 1000;
   inset: var(--space-md) var(--space-md) auto auto;
@@ -43,6 +51,14 @@
 }
 
 .feedback-dialog-backdrop {
+  margin: 0;
+  border: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  color: inherit;
   position: fixed;
   z-index: 1100;
   inset: 0;
