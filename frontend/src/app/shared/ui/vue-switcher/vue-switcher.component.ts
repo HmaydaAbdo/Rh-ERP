@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { IconComponent } from '../icon/icon.component';
@@ -8,6 +8,8 @@ export interface VueOnglet {
   libelle: string;
   icone: string;
   lien: string;
+  /** Identifiant de la vue en mode local (voir `local`) ; sans objet pour un sélecteur de routes. */
+  cle?: string;
 }
 
 /**
@@ -22,15 +24,27 @@ export interface VueOnglet {
   template: `
     <nav class="vue-switcher" [attr.aria-label]="label()">
       @for (vue of vues(); track vue.lien; let premiere = $first) {
-        <a
-          [routerLink]="vue.lien"
-          queryParamsHandling="preserve"
-          routerLinkActive="vue-switcher__lien--active"
-          [routerLinkActiveOptions]="{ exact: premiere }"
-          class="vue-switcher__lien"
-        >
-          <stp-icon [name]="vue.icone" /> {{ vue.libelle }}
-        </a>
+        @if (local()) {
+          <button
+            type="button"
+            class="vue-switcher__lien"
+            [class.vue-switcher__lien--active]="vue.cle === actuelle()"
+            [attr.aria-current]="vue.cle === actuelle() ? 'page' : null"
+            (click)="choisie.emit(vue.cle ?? vue.lien)"
+          >
+            <stp-icon [name]="vue.icone" /> {{ vue.libelle }}
+          </button>
+        } @else {
+          <a
+            [routerLink]="vue.lien"
+            queryParamsHandling="preserve"
+            routerLinkActive="vue-switcher__lien--active"
+            [routerLinkActiveOptions]="{ exact: premiere }"
+            class="vue-switcher__lien"
+          >
+            <stp-icon [name]="vue.icone" /> {{ vue.libelle }}
+          </a>
+        }
       }
     </nav>
   `,
@@ -55,10 +69,14 @@ export interface VueOnglet {
       gap: var(--space-xs);
       padding: var(--space-sm) var(--space-md);
       margin-bottom: -1px;
+      border: 0;
       border-bottom: 2px solid transparent;
+      background: none;
+      font: inherit;
       font-size: var(--text-base);
       color: var(--color-text-muted);
       text-decoration: none;
+      cursor: pointer;
       transition: color var(--duration-fast), border-color var(--duration-fast);
     }
 
@@ -92,4 +110,10 @@ export interface VueOnglet {
 export class VueSwitcherComponent {
   readonly label = input.required<string>();
   readonly vues = input.required<VueOnglet[]>();
+  /** Mode local (vue intégrée à la conversation) : des boutons qui changent la vue sans toucher à l'URL ni au routeur. */
+  readonly local = input(false);
+  /** La vue affichée, en mode local. */
+  readonly actuelle = input<string | null>(null);
+  /** La vue choisie, en mode local. */
+  readonly choisie = output<string>();
 }

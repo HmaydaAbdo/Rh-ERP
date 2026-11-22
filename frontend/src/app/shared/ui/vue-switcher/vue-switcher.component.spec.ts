@@ -59,4 +59,44 @@ describe('VueSwitcherComponent', () => {
 
     expect(liens[1].getAttribute('href')).toBe('/module/cartes?nom=ali&chantierIds=3');
   });
+
+  describe('mode local (vue intégrée à la conversation)', () => {
+    const VUES_LOCALES: VueOnglet[] = VUES.map((v, i) => ({ ...v, cle: ['tabulaire', 'cartes', 'analytique'][i] }));
+
+    function afficherLocal(actuelle: string) {
+      TestBed.configureTestingModule({ providers: [provideRouter([])] });
+      const fixture = TestBed.createComponent(VueSwitcherComponent);
+      fixture.componentRef.setInput('label', 'Vue du module');
+      fixture.componentRef.setInput('vues', VUES_LOCALES);
+      fixture.componentRef.setInput('local', true);
+      fixture.componentRef.setInput('actuelle', actuelle);
+      fixture.detectChanges();
+      const boutons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+      return { fixture, boutons };
+    }
+
+    it('rend des boutons et aucun lien : le routeur n’est pas touché', () => {
+      const { fixture, boutons } = afficherLocal('cartes');
+
+      expect(boutons.map((b) => b.textContent?.trim())).toEqual(['Tabulaire', 'Cartes', 'Analytique']);
+      expect(fixture.nativeElement.querySelectorAll('a')).toHaveLength(0);
+    });
+
+    it('met en avant la vue actuelle, et seulement elle', () => {
+      const { boutons } = afficherLocal('cartes');
+
+      expect(boutons.map((b) => b.classList.contains('vue-switcher__lien--active'))).toEqual([false, true, false]);
+      expect(boutons.map((b) => b.getAttribute('aria-current'))).toEqual([null, 'page', null]);
+    });
+
+    it('annonce la vue choisie', () => {
+      const { fixture, boutons } = afficherLocal('tabulaire');
+      const choix: string[] = [];
+      fixture.componentInstance.choisie.subscribe((cle) => choix.push(cle));
+
+      boutons[2].click();
+
+      expect(choix).toEqual(['analytique']);
+    });
+  });
 });

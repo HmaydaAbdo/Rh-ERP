@@ -8,7 +8,7 @@ ligne d'audit : le span du décorateur `@outil` diagnostique l'appel.
 from collections.abc import Callable
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -52,6 +52,9 @@ from staport.domains.paie.schemas import (
     TriComparaison,
     TriRepartition,
 )
+
+_vue_proposee = vue  # `vue` est aussi le nom d'un paramètre de `paie_afficher_vue`
+VuePaie = Literal["tabulaire", "cartes", "analytique"]
 
 BULLETINS = 20
 LIGNES = 20
@@ -682,10 +685,12 @@ def enregistrer(
         title="Afficher la vue de la paie",
         annotations=LECTURE_SEULE,
         description=(
-            "Affiche dans la conversation la vue de la paie de l'application (barre de filtres et tableau des "
-            "bulletins), déjà réglée sur un mois et un périmètre : l'utilisateur peut ensuite changer les filtres, "
-            "trier et parcourir les pages lui-même, sans te redemander. À utiliser quand l'utilisateur veut voir, "
-            "consulter ou parcourir la paie (« montre-moi la paie d'octobre pour NADOR »). Rend le mois affiché et le "
+            "Affiche dans la conversation la page de la paie de l'application (sélecteur de vue, barre de filtres et "
+            "vue), déjà réglée sur un mois et un périmètre : l'utilisateur peut ensuite changer les filtres et de "
+            "vue, trier et parcourir les pages lui-même, sans te redemander. `vue` choisit la vue de départ : "
+            "`tabulaire` (les bulletins, par défaut), `cartes` (la paie par mois, chantier, équipe, fonction) ou "
+            "`analytique` (les graphiques d'analyse). À utiliser quand l'utilisateur veut voir, consulter ou "
+            "parcourir la paie (« montre-moi la paie d'octobre pour NADOR »). Rend le mois affiché et le "
             "nombre de bulletins, que tu peux annoncer ; ne recopie aucune ligne. Un chantier, une équipe ou une "
             "fonction nommé se passe par son identifiant (cherché d'abord) : sans lui, la vue montre toute la paie du "
             "mois. Pour un chiffre ou un total, "
@@ -700,6 +705,7 @@ def enregistrer(
         chantierIds: Chantiers = None,
         equipeIds: Equipes = None,
         fonctionIds: Fonctions = None,
+        vue: Annotated[VuePaie, Field(description="Vue de départ : tabulaire, cartes ou analytique.")] = "tabulaire",
     ) -> dict[str, Any]:
         chantiers, equipes, fonctions = ids(chantierIds), ids(equipeIds), ids(fonctionIds)
         nom_recherche, cin_recherche = texte(nom), texte(cin)
@@ -721,8 +727,8 @@ def enregistrer(
         return {
             "periode": afficher_periode(courant),
             "total": resultats.page.total_elements,
-            "vue": vue("paie", "tabulaire", parametres),
-            **surface_vue("paie_afficher_vue", "paie", "tabulaire", parametres),
+            "vue": _vue_proposee("paie", vue, parametres),
+            **surface_vue("paie_afficher_vue", "paie", vue, parametres),
         }
 
     @serveur.tool(

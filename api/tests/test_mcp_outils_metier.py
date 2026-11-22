@@ -706,6 +706,13 @@ def test_la_vue_de_la_paie_est_affichee_par_une_surface_sans_donnee(
     sans_mois = _donnees(_appel(plateforme, jeton, "paie_afficher_vue"))
     assert sans_mois["periode"] and sans_mois["vue"]["parametres"]["periode"] == sans_mois["periode"]
     assert _appel(plateforme, jeton, "paie_afficher_vue", periode="pas-un-mois")["isError"] is True
+    # KAN-308 : la vue de départ se choisit (cartes, analytique) ; mêmes filtres de départ, même surface sans donnée
+    for nom_vue in ("cartes", "analytique"):
+        choisie = _donnees(_appel(plateforme, jeton, "paie_afficher_vue", periode=S2, vue=nom_vue))
+        assert choisie["vue"]["vue"] == nom_vue
+        assert choisie["a2ui_operations"][1]["updateComponents"]["components"][0]["vue"] == nom_vue
+        assert choisie["vue"]["parametres"]["periode"] == S2
+    assert _appel(plateforme, jeton, "paie_afficher_vue", periode=S2, vue="tableau-secret")["isError"] is True
 
 
 def test_le_rapport_est_prepare_sans_fichier_et_exige_l_export(

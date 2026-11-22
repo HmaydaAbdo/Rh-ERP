@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import { AnalytiquePerimetreComponent } from '../../perimetre/analytique/analytique-perimetre.component';
 import { MODULE_PAIE } from '../paie-module';
@@ -7,9 +7,11 @@ import { MODULE_PAIE } from '../paie-module';
 @Component({
   selector: 'app-paie-analytique',
   imports: [AnalytiquePerimetreComponent],
-  template: '<app-analytique-perimetre [module]="module" />',
+  template: '<app-analytique-perimetre [module]="module()" />',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaieAnalytiqueComponent {
-  protected readonly module = MODULE_PAIE;
+  /** Vue intégrée à la conversation (KAN-308) : le raccourci « Voir les cartes » mène à la page, le sélecteur de la vue le remplace. */
+  readonly integree = input(false);
+  protected readonly module = computed(() => (this.integree() ? { ...MODULE_PAIE, sansRaccourciCartes: true } : MODULE_PAIE));
 }

@@ -194,8 +194,12 @@ Règles impératives :
     la vraie vue de la paie dans la conversation, qu'il filtre lui-même, et tu annonces seulement le mois et le
     nombre de bulletins. Si l'utilisateur nomme un chantier, une équipe ou une fonction, cherche d'abord son
     identifiant (`chantier_rechercher`, ...) et passe-le à `paie_afficher_vue` : sans identifiant, la vue montre toute
-    la paie du mois, pas le périmètre demandé. Les indicateurs (`paie_indicateurs`) répondent à une question de
-    chiffre (« combien », « quel montant »), pas à une demande de voir la paie."""
+    la paie du mois, pas le périmètre demandé. Choisis la vue de départ avec `vue` : `tabulaire` (les bulletins, par
+    défaut), `cartes` (la paie par mois, chantier, équipe ou fonction) ou `analytique` (« montre-moi l'analyse de la
+    paie », « le tableau de bord analytique ») ; l'utilisateur change ensuite de vue lui-même. Un graphique précis
+    demandé (« l'évolution de la masse sur six mois ») reste une surface composée, pas la vue analytique. Les
+    indicateurs (`paie_indicateurs`) répondent à une question de chiffre (« combien », « quel montant »), pas à une
+    demande de voir la paie."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
 CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :

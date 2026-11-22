@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { finalize } from 'rxjs';
 
@@ -47,6 +47,8 @@ export class PaieCartesComponent {
   private readonly params = inject(EtatVue).params;
   private readonly cartes = viewChild.required(CartesPerimetreComponent);
 
+  /** Vue intégrée à la conversation : lecture seule, la suppression en groupe n'y est pas proposée (KAN-308). */
+  readonly lectureSeule = input(false);
   readonly suppression = signal<Suppression | null>(null);
   readonly suppressionEnCours = signal(false);
   private readonly saisieConfirmation = signal({ nombre: '' });
@@ -59,7 +61,7 @@ export class PaieCartesComponent {
 
   /** La suppression en groupe a sa permission propre : supprimer un bulletin (PAIE_DELETE) ne suffit pas. */
   canPurge(): boolean {
-    return this.authService.hasPermission('PAIE_PURGE');
+    return !this.lectureSeule() && this.authService.hasPermission('PAIE_PURGE');
   }
 
   /** Une carte se supprime si elle compte des bulletins ; les bulletins sans équipe ne se ciblent pas ainsi (l'API ne sait pas les isoler). */

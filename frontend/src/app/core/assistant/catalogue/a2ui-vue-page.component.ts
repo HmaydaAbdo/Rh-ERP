@@ -15,11 +15,12 @@ import { VuePageApi } from './api-catalogue';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (domaine() === 'paie') {
-      <app-paie-vue-integree [depart]="depart()" />
+      <app-paie-vue-integree [depart]="depart()" [vue]="vue()" />
     }
   `
 })
 export class A2uiVuePageComponent extends CatalogComponent<typeof VuePageApi> {
   protected readonly domaine = computed(() => this.props().domaine?.value());
+  protected readonly vue = computed(() => this.props().vue?.value() ?? 'tabulaire');
   protected readonly depart = computed(() => (this.props().parametres?.value() ?? {}) as Record<string, string>);
 }

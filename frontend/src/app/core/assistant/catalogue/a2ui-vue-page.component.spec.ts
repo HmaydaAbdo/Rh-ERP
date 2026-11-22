@@ -70,6 +70,24 @@ describe('VuePage du catalogue ERP (KAN-307)', () => {
     expect(vi.mocked(service.search).mock.calls[0][0]).toEqual(expect.objectContaining({ periode: '2026-10', nomPrenom: 'NADOR' }));
   });
 
+  it.each([
+    ['cartes', 'app-paie-cartes'],
+    ['analytique', 'app-paie-analytique']
+  ])('monte la vue de départ demandée par l’agent : %s (KAN-308)', async (vue, element) => {
+    const { page } = await monter(surface(`v-${vue}`, { domaine: 'paie', vue, parametres: { periode: '2026-10' } }));
+
+    expect(page.querySelector(`app-paie-vue-integree ${element}`)).not.toBeNull();
+    expect(page.querySelector('app-paie-vue-integree app-paie-list')).toBeNull();
+    expect(page.querySelector('app-paie-vue-integree app-vue-switcher button[aria-current="page"]')).not.toBeNull();
+  });
+
+  it('refuse une vue que le catalogue ne connaît pas', async () => {
+    const { page, hote } = await monter(surface('v3', { domaine: 'paie', vue: 'secrete' }));
+
+    expect(page.querySelector('app-paie-vue-integree')).toBeNull();
+    expect(hote.erreurs).toHaveLength(1);
+  });
+
   it('refuse un domaine que le catalogue ne connaît pas', async () => {
     const { page, hote } = await monter(surface('v2', { domaine: 'secret', vue: 'tabulaire' }));
 

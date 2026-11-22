@@ -601,6 +601,12 @@ app-surface-a2ui-francais copilot-a2ui-recovery {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 
+  // Sélecteur de vue (Tabulaire, Cartes, Analytique) : l'en-tête de la carte, ses onglets posés sur le filet
+  app-vue-switcher {
+    padding-inline: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+  }
+
   .app-toolbar {
     margin-bottom: 0;
     border: 0;

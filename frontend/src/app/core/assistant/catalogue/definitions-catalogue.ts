@@ -59,7 +59,7 @@ export const PROPRIETES_TIMELINE = z.object({
 export const PROPRIETES_VUE_PAGE = z.object({
   weight: z.number().optional(),
   domaine: z.enum(['paie']),
-  vue: z.enum(['tabulaire']),
+  vue: z.enum(['tabulaire', 'cartes', 'analytique']),
   parametres: z.record(z.string(), z.string()).optional()
 });
 

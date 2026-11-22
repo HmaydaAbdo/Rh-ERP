@@ -115,4 +115,52 @@ describe('PaieVueIntegreeComponent (la vue de la paie dans la conversation)', ()
     expect(page.querySelector('app-paie-list app-collection-table')).not.toBeNull();
     expect(page.querySelector('.stp-table__actions-header')).toBeNull();
   });
+
+  describe('sélecteur de vue (KAN-308)', () => {
+    async function choisir(fixture: Awaited<ReturnType<typeof monter>>['fixture'], numero: number, vue: number): Promise<void> {
+      const boutons = fixture.nativeElement.querySelectorAll('app-paie-vue-integree')[numero].querySelectorAll('app-vue-switcher button');
+      (boutons[vue] as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('propose Tabulaire, Cartes et Analytique, la vue de départ étant la vue active', async () => {
+      const { page } = await monter();
+
+      const boutons = Array.from(page.querySelectorAll('app-paie-vue-integree')[0].querySelectorAll('app-vue-switcher button'));
+      expect(boutons.map((b) => b.textContent?.trim())).toEqual(['Tabulaire', 'Cartes', 'Analytique']);
+      expect(boutons.map((b) => b.getAttribute('aria-current'))).toEqual(['page', null, null]);
+    });
+
+    it('change de vue dans la conversation seulement : ni l’URL de la page ni l’autre vue ne bougent', async () => {
+      const { fixture, page } = await monter();
+      const url = TestBed.inject(Router).url;
+
+      await choisir(fixture, 0, 1);
+
+      const premiere = page.querySelectorAll('app-paie-vue-integree')[0];
+      expect(premiere.querySelector('app-paie-cartes')).not.toBeNull();
+      expect(premiere.querySelector('app-paie-list')).toBeNull();
+      expect(page.querySelectorAll('app-paie-list')).toHaveLength(1);
+      expect(TestBed.inject(Router).url).toBe(url);
+    });
+
+    it('garde les filtres en changeant de vue', async () => {
+      const { fixture, vues } = await monter();
+
+      await choisir(fixture, 0, 2);
+
+      expect(vues[0]['filtres']().nomPrenom).toBe('ali');
+      expect(vues[0]['filtres']().periode).toBe('2026-08');
+    });
+
+    it('ne propose aucune suppression en groupe dans les cartes', async () => {
+      const { fixture, page } = await monter();
+
+      await choisir(fixture, 0, 1);
+
+      expect(page.querySelector('app-paie-cartes [aria-label^="Supprimer les bulletins"]')).toBeNull();
+    });
+  });
 });
