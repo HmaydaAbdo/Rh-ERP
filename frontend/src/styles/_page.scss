@@ -383,6 +383,13 @@
       margin-inline-start: 0;
       align-self: stretch;
       padding-block: var(--space-sm);
+
+      // L'hôte du composant d'actions prend toute la largeur : sans cela il se cale sur son contenu et un bouton long
+      // (« Mouvements du mois (PDF) ») sort de son cadre.
+      > * {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
     }
   }
 }

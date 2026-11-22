@@ -69,6 +69,12 @@
       grid-column: 1 / -1;
     }
 
+    // Trois actions : les deux premières sur toute la largeur aussi (un libellé long ne tient pas dans une demi-largeur)
+    > :first-child:nth-last-child(3),
+    > :nth-child(2):nth-last-child(2) {
+      grid-column: 1 / -1;
+    }
+
     .stp-split-button {
       display: flex;
       width: 100%;
