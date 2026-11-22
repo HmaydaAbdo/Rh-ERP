@@ -64,6 +64,9 @@
   &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
 }
 .app-datagrid__grid { min-height: 0; flex: 1; overflow: auto; }
+// Valeur et rail empilés, centrés dans la hauteur de ligne : sans interligne serré, la grille donne à la valeur un interligne de la
+// hauteur de la ligne et le rail sort de la cellule, où il est coupé.
+.app-datagrid__cell { display: flex; flex-direction: column; justify-content: center; min-width: 0; line-height: 1.25; }
 .app-datagrid__value { position: relative; overflow: hidden; text-overflow: ellipsis; color: var(--color-text); }
 // Barre de proportion (KAN-314) : un fin rail sous la valeur, jamais derrière elle (elle se lisait comme un surlignage du texte).
 // La part de la plus grande valeur de la colonne remplit le rail depuis le début ; décoratif, la valeur reste dans le texte.
