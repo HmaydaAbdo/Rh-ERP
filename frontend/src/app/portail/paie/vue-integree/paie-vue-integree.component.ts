@@ -49,8 +49,8 @@ const VUES: VueOnglet[] = [
       <section class="app-vue-integree__page" aria-label="Page de la paie">
         <div class="app-vue-integree__entete">
           <app-vue-switcher label="Vue de la paie" [vues]="vues" [local]="true" [actuelle]="vueCourante()" (choisie)="choisir($event)" />
+          <button stp-button variant="text" icon="maximize-2" type="button" class="app-vue-integree__agrandir" (click)="agrandir()">Agrandir</button>
           <app-paie-actions [integree]="true" [periodes]="periodes()" (nouveau)="ouvrirFormulaire(null)" />
-          <button stp-button variant="secondary" icon="maximize-2" type="button" class="app-vue-integree__agrandir" (click)="agrandir()">Agrandir</button>
         </div>
         <app-paie-filtres
           [periodes]="periodes()"

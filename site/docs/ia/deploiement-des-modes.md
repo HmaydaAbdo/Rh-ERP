@@ -54,6 +54,21 @@ Un domaine est « validé » dans un mode quand les six preuves sont consignées
 
 Les seuils (utilité, latence, coût) sont fixés par le propriétaire du domaine ; le développement n'en invente aucun.
 
+## La page de la paie dans la conversation : revue d'interface et de droits (2026-11-22, KAN-312)
+
+La vraie page de la paie (filtres, trois vues, Importer, Exporter, formulaires en fenêtre, « Agrandir ») vit dans la conversation (épopée E23). Preuves de la porte d'activation relevées en navigateur réel sur la pile déployée, avec des comptes de test créés puis supprimés :
+
+| Preuve | Résultat |
+|---|---|
+| Droits négatifs, compte sans `PAIE_READ` | `/paie` redirige vers « Accès refusé » ; l'assistant répond « droit PAIE_READ manquant » et n'affiche aucune vue |
+| Droits négatifs, compte avec `PAIE_READ` seul | la vue s'affiche, sans Importer, Exporter, Nouveau bulletin ni Modifier ; seul « Agrandir » s'ajoute aux onglets |
+| Argument inconnu | vue inconnue ou mois mal formé refusés par l'outil `paie_afficher_vue` (test `test_mcp_outils_metier.py`) |
+| Clavier et lecteur d'écran | région « Page de la paie », aucun bouton sans nom, focus visible (contour de 2 px) ; fenêtres : focus piégé, Échap, focus rendu au déclencheur |
+| États | vide (0 bulletin), erreur serveur (notification), refus (message de l'assistant) |
+| Téléphone (390 px) et thèmes clair et sombre | aucun défilement horizontal, vue lisible dans les deux thèmes |
+
+Les seuils de poids de rendu, de latence et de coût ne sont pas retenus pour ce domaine (décision du propriétaire, 2026-11-22).
+
 ## Suivi
 
 Une sous-tâche Jira par domaine, sous KAN-101, porte ces preuves. M4 (vues libres) est inclus dans chaque revue de domaine ; ses garde-fous (isolation, politique de contenu, audit, jeu adverse) sont décrits dans [Vues libres](vues-libres.md).
