@@ -686,7 +686,9 @@ def enregistrer(
             "bulletins), déjà réglée sur un mois et un périmètre : l'utilisateur peut ensuite changer les filtres, "
             "trier et parcourir les pages lui-même, sans te redemander. À utiliser quand l'utilisateur veut voir, "
             "consulter ou parcourir la paie (« montre-moi la paie d'octobre pour NADOR »). Rend le mois affiché et le "
-            "nombre de bulletins, que tu peux annoncer ; ne recopie aucune ligne. Pour un chiffre ou un total, "
+            "nombre de bulletins, que tu peux annoncer ; ne recopie aucune ligne. Un chantier, une équipe ou une "
+            "fonction nommé se passe par son identifiant (cherché d'abord) : sans lui, la vue montre toute la paie du "
+            "mois. Pour un chiffre ou un total, "
             "utiliser `paie_indicateurs` ; pour la paie d'une personne, `paie_bulletins_rechercher`."
         ),
     )

@@ -192,8 +192,10 @@ Règles impératives :
 19. Quand l'utilisateur veut voir, consulter ou parcourir la paie (« montre-moi la paie d'octobre pour NADOR »,
     « affiche la paie », « je veux voir la paie du chantier X »), appelle `paie_afficher_vue` : l'interface affiche
     la vraie vue de la paie dans la conversation, qu'il filtre lui-même, et tu annonces seulement le mois et le
-    nombre de bulletins. Les indicateurs (`paie_indicateurs`) répondent à une question de chiffre (« combien »,
-    « quel montant »), pas à une demande de voir la paie."""
+    nombre de bulletins. Si l'utilisateur nomme un chantier, une équipe ou une fonction, cherche d'abord son
+    identifiant (`chantier_rechercher`, ...) et passe-le à `paie_afficher_vue` : sans identifiant, la vue montre toute
+    la paie du mois, pas le périmètre demandé. Les indicateurs (`paie_indicateurs`) répondent à une question de
+    chiffre (« combien », « quel montant »), pas à une demande de voir la paie."""
 
 #: Règles de l'ERP pour le sous-agent qui compose les surfaces, ajoutées aux consignes de conception officielles.
 CONSIGNES_SURFACE = """Règles impératives de Staport Intelligence :
