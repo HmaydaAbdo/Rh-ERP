@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Params } from '@angular/router';
+import { Params, Router } from '@angular/router';
 
 import { EtatVue, EtatVueLocal } from '../../../shared/etat-vue/etat-vue';
 import { VueOnglet, VueSwitcherComponent } from '../../../shared/ui/vue-switcher/vue-switcher.component';
@@ -8,6 +8,7 @@ import { PaieAnalytiqueComponent } from '../analytique/paie-analytique.component
 import { PaieCartesComponent } from '../cartes/paie-cartes.component';
 import { lireFiltres, PaieFiltres, versParametres } from '../filtres/paie-filtres';
 import { PaieFiltresComponent } from '../filtres/paie-filtres.component';
+import { ButtonComponent } from '../../../shared/ui/button/button.directive';
 import { PaieActionsComponent } from '../actions/paie-actions.component';
 import { PaieFormDialogComponent } from '../form/paie-form-dialog.component';
 import { PaieListComponent } from '../list/paie-list.component';
@@ -39,7 +40,7 @@ const VUES: VueOnglet[] = [
  */
 @Component({
   selector: 'app-paie-vue-integree',
-  imports: [PaieActionsComponent, PaieFormDialogComponent, PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
+  imports: [ButtonComponent, PaieActionsComponent, PaieFormDialogComponent, PaieFiltresComponent, PaieListComponent, PaieCartesComponent, PaieAnalytiqueComponent, VueSwitcherComponent],
   providers: [{ provide: EtatVue, useFactory: () => new EtatVueLocal() }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-vue-integree' },
@@ -49,6 +50,7 @@ const VUES: VueOnglet[] = [
         <div class="app-vue-integree__entete">
           <app-vue-switcher label="Vue de la paie" [vues]="vues" [local]="true" [actuelle]="vueCourante()" (choisie)="choisir($event)" />
           <app-paie-actions [integree]="true" [periodes]="periodes()" (nouveau)="ouvrirFormulaire(null)" />
+          <button stp-button variant="secondary" icon="maximize-2" type="button" class="app-vue-integree__agrandir" (click)="agrandir()">Agrandir</button>
         </div>
         <app-paie-filtres
           [periodes]="periodes()"
@@ -83,6 +85,7 @@ export class PaieVueIntegreeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly etat = inject(EtatVue);
   private readonly paieService = inject(PaieService);
+  private readonly router = inject(Router);
   protected readonly actualisation = inject(PaieActualisationService);
 
   protected readonly vues = VUES;
@@ -141,6 +144,22 @@ export class PaieVueIntegreeComponent {
   protected ouvrirFormulaire(paieId: number | null): void {
     this.paieEnEdition.set(paieId);
     this.formulaireOuvert.set(true);
+  }
+
+  /**
+   * « Agrandir » (KAN-311) : ouvre la vraie page de la paie, dans la même vue et avec les mêmes filtres (paramètres d'URL).
+   * L'état de navigation `depuisAssistant` fait afficher « Retour à la conversation » sur la page ; le retour du navigateur
+   * ramène aussi à la conversation, dont le fil est repris (`FilAssistant`).
+   */
+  protected agrandir(): void {
+    const queryParams: Params = {};
+    const params = this.etat.params();
+    for (const cle of params.keys) {
+      const valeurs = params.getAll(cle);
+      queryParams[cle] = valeurs.length > 1 ? valeurs : valeurs[0];
+    }
+    const lien = this.vueCourante() === 'tabulaire' ? '/paie' : `/paie/${this.vueCourante()}`;
+    void this.router.navigate([lien], { queryParams, state: { depuisAssistant: true } });
   }
 
   protected choisir(vue: string): void {

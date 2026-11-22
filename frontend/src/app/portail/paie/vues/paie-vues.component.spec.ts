@@ -128,6 +128,20 @@ describe('PaieVuesComponent', () => {
         }
     });
 
+    it("n'affiche « Retour à la conversation » que si la page vient d'« Agrandir » (KAN-311)", async () => {
+        await harness.navigateByUrl('/paie', PaieVuesComponent);
+        expect((harness.routeNativeElement as HTMLElement).querySelector('.app-retour-conversation')).toBeNull();
+    });
+
+    it("affiche « Retour à la conversation » quand la page vient d'« Agrandir » (KAN-311)", async () => {
+        await TestBed.inject(Router).navigateByUrl('/paie/cartes', { state: { depuisAssistant: true } });
+        harness.fixture.detectChanges();
+
+        const lien = (harness.fixture.nativeElement as HTMLElement).querySelector('a.app-retour-conversation');
+        expect(lien?.getAttribute('href')).toBe('/assistant');
+        expect(lien?.textContent).toContain('Retour à la conversation');
+    });
+
     it('recrée la vue affichée après un import, et recharge les mois', async () => {
         const composant = await harness.navigateByUrl('/paie', PaieVuesComponent);
         const appels = vi.mocked(service.listerPeriodes).mock.calls.length;

@@ -77,6 +77,19 @@ describe('PaieVueIntegreeComponent (la vue de la paie dans la conversation)', ()
     );
   });
 
+  it("« Agrandir » ouvre la page de la paie dans la même vue, avec les mêmes filtres (KAN-311)", async () => {
+    const { vues, page } = await monter();
+    const navigation = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const bouton = page.querySelector<HTMLButtonElement>('app-paie-vue-integree .app-vue-integree__agrandir')!;
+
+    bouton.click();
+    expect(navigation).toHaveBeenCalledWith(['/paie'], { queryParams: { periode: '2026-08', nom: 'ali' }, state: { depuisAssistant: true } });
+
+    vues[1]['choisir']('analytique');
+    page.querySelectorAll<HTMLButtonElement>('.app-vue-integree__agrandir')[1].click();
+    expect(navigation).toHaveBeenLastCalledWith(['/paie/analytique'], { queryParams: { periode: '2026-07', chantierIds: '3,4' }, state: { depuisAssistant: true } });
+  });
+
   it("ignore une valeur de départ invalide (mois mal formé, identifiant non entier)", async () => {
     const fixture = TestBed.createComponent(HoteComponent);
     fixture.componentInstance.premiere = { periode: '2026-13', chantierIds: 'abc,-2' };

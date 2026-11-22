@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { registerFrontendTool } from '@copilotkit/angular';
 
 import { AuthService } from '../../../core/auth/services/auth.service';
 import { EtatVue } from '../../../shared/etat-vue/etat-vue';
+import { IconComponent } from '../../../shared/ui/icon/icon.component';
 
 import { CollectionShellComponent, CollectionShellConfig } from '../../../shared/ui/collection-shell/collection-shell.component';
 import { PaieActionsComponent } from '../actions/paie-actions.component';
@@ -32,7 +33,7 @@ const CONFIGURATION_PAIE: CollectionShellConfig = {
  */
 @Component({
   selector: 'app-paie-vues',
-  imports: [CollectionShellComponent, PaieActionsComponent, PaieFiltresComponent],
+  imports: [CollectionShellComponent, IconComponent, PaieActionsComponent, PaieFiltresComponent, RouterLink],
   templateUrl: './paie-vues.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -48,6 +49,9 @@ export class PaieVuesComponent {
   protected readonly filtres = computed<PaieFiltres>(() => lireFiltres(this.etat.params()));
   /** L'analytique a besoin d'un mois : la barre ne propose pas de l'effacer. */
   protected readonly moisRequis = signal(false);
+  /** Page ouverte par « Agrandir » depuis la conversation (KAN-311) : un lien ramène à la conversation, dont le fil est repris. */
+  protected readonly depuisAssistant =
+    inject(Router).currentNavigation()?.extras.state?.['depuisAssistant'] === true || history.state?.depuisAssistant === true;
   /** Faux le temps d'un tour d'écran pour recréer la vue affichée (voir `rafraichirVue`). */
   protected readonly vueAffichee = signal(true);
 
