@@ -103,3 +103,34 @@ def test_un_tour_avec_appel_d_outil_n_est_pas_controle() -> None:
         tool_calls=[{"id": "c1", "name": "paie_indicateurs", "args": {}}],
     )
     assert _appliquer(avec_appel) is None
+
+
+def _competence_epinglee() -> HumanMessage:
+    """Le routage ajoute les compétences épinglées au fil comme des messages humains, après la question."""
+    return HumanMessage(
+        content="<skill>La vraie vue, filtres compris ; ne dis jamais avoir réglé un filtre.</skill>",
+        additional_kwargs={"lc_source": "pinned_skill"},
+    )
+
+
+def test_une_competence_epinglee_n_est_pas_la_question_de_l_utilisateur() -> None:
+    """KAN-312 : « L'assistant d'export est réglé sur ce mois » (rapport) n'est pas un filtre de page."""
+    garde = garde_sortie(["rapport_preparer"])
+    etat = _etat(
+        HumanMessage(content="Prépare-moi le rapport de la paie d'octobre 2026"),
+        _competence_epinglee(),
+        ToolMessage(content="ok", name="rapport_preparer", tool_call_id="t0", status="success"),  # pyright: ignore[reportArgumentType]
+        AIMessage(content="Le rapport est préparé. L'assistant d'export est réglé sur ce mois.", id="fin"),
+    )
+    assert garde.after_agent(etat, None) is None  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def test_la_demande_de_filtre_reste_attrapee_malgre_les_competences_epinglees() -> None:
+    garde = garde_sortie(["paie_indicateurs"])
+    etat = _etat(
+        HumanMessage(content="Filtre la paie sur octobre 2026."),
+        _competence_epinglee(),
+        AIMessage(content="J'ai filtré la page sur octobre 2026.", id="fin"),
+    )
+    maj = garde.after_agent(etat, None)  # pyright: ignore[reportAttributeAccessIssue]
+    assert maj is not None and maj["messages"][0].content == REPONSE_FILTRE_NON_REGLE

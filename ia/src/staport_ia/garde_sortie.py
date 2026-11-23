@@ -46,9 +46,15 @@ def affirme_un_filtre_non_regle(question: str, reponse: str, outils_reussis: Ite
     )
 
 
+def _question_utilisateur(message: AnyMessage) -> bool:
+    """Un message humain écrit par l'utilisateur : les compétences épinglées par le routage sont ajoutées au fil sous
+    la même forme (``lc_source`` = ``pinned_skill``) sans être sa question (KAN-312 : elles parlent de filtres)."""
+    return isinstance(message, HumanMessage) and message.additional_kwargs.get("lc_source") != "pinned_skill"
+
+
 def _tour(messages: Sequence[AnyMessage]) -> tuple[str, list[str]]:
     """La dernière question de l'utilisateur et les outils réussis depuis (le tour en cours)."""
-    depuis = max((i for i, m in enumerate(messages) if isinstance(m, HumanMessage)), default=-1)
+    depuis = max((i for i, m in enumerate(messages) if _question_utilisateur(m)), default=-1)
     question = messages[depuis].text if depuis >= 0 else ""
     reussis = [m.name or "" for m in messages[depuis + 1 :] if isinstance(m, ToolMessage) and m.status != "error"]
     return question, reussis
