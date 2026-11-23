@@ -62,3 +62,24 @@ Aujourd'hui le projet n'utilise que MarkItDown (`ia/pyproject.toml`) ; Docling n
 - KAN-293 (découpage) : ajouter la comparaison « arbre de structure à deux niveaux » face au découpage plat.
 - KAN-294 (récupération) : ajouter PageIndex et RAPTOR aux candidats ; GraphRAG reste conditionnel.
 - KAN-298 (décision) : ajouter la gestion des versions (section 1) et le volet « Connaissances » aux tâches de construction.
+
+## 6. Premier essai de Docling sur le corpus (2026-11-23, amorce de KAN-290)
+
+Docling 2.151.1, Python 3.12, **CPU seul**, réglages par défaut (détection de mise en page, structure des tableaux, RapidOCR), sur quelques pages de chaque document. Un essai, pas un banc d'essai : aucune fidélité n'est mesurée contre une transcription de référence, les durées sont celles d'une seule exécution sur ce poste, et le premier passage inclut le chargement des modèles.
+
+| Document | Pages | Secondes par page | Résultat |
+|---|---|---|---|
+| Code du travail, français (pages 1 à 15) | 15 | 14,9 | Texte courant propre ; 21 titres ; chaque article (`Article 2`, `Article 3`…) est détecté comme titre |
+| Circulaire DGI 737 (pages 1 à 10) | 10 | 5,7 | Texte lisible, 22 titres ; 1 seul tableau reconnu (un exemple chiffré) : les tableaux du barème sont à tester sur les pages concernées |
+| Recueil CNSS, arabe (pages 1 à 5) | 5 | 5,7 | Texte arabe lu correctement, 3 tableaux (index) ; deux images (couverture) |
+| Code du travail, arabe (pages 20 à 24), **lecture du texte intégré** | 5 | 4,0 | 18 titres `المادة N` ; mots dans le bon ordre ; **espaces parasites à l'intérieur des mots** (« يم ك ن ») |
+| Même PDF, **OCR EasyOCR arabe forcé** | 5 | 85,2 | **Ordre des mots brouillé et lettres perdues** : inutilisable pour citer un article |
+
+**Conséquences (à confirmer au banc d'essai) :**
+
+- Le « texte illisible » de `pdftotext` sur le PDF arabe du Code du travail n'est pas un problème de scan : Docling relit la couche de texte et obtient un texte lisible. L'OCR est ici **moins bon** que la couche intégrée et vingt fois plus lent : à ne pas utiliser sur ce document.
+- Les espaces à l'intérieur des mots dégraderaient une recherche lexicale (BM25) en arabe ; à mesurer, et à comparer à une normalisation du texte ou à une autre source (par exemple la copie du Code du travail du CNCLT).
+- Le PDF français a un titre dupliqué lettre par lettre (« L LO OI I N N° °6 65 5… ») : artefact de la couche de texte du titre ; sans effet sur les articles.
+- Livre, titre et article sortent **au même niveau** de titre : pour un index en arbre à deux niveaux, la hiérarchie doit être reconstruite (le modèle de niveaux de titres de Docling est à essayer) ; `Titre III : … Article 9` est aussi parfois fusionné dans un seul titre.
+- À 15 s par page sur CPU, le Code du travail complet en français (environ 200 pages) prendrait de l'ordre de 50 minutes, sans GPU : acceptable pour une importation en tâche de fond avec avancement visible, pas pour une réponse en direct.
+- Non testés : le recueil CNSS au-delà de la page 5, les tableaux de barèmes, les pages numérisées, `docling-serve`, le modèle de vision (VLM) de Docling.
