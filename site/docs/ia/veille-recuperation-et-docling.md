@@ -209,3 +209,34 @@ Modèle `PaddlePaddle/PaddleOCR-VL-1.6` (0,9 milliard de paramètres, licence Ap
 **Suite possible :** variante quantifiée (`PaddleOCR-VL-1.6-GGUF` avec `llama.cpp`), pipeline officiel de PaddleOCR (analyse de page) ou GPU ; puis mesure sur les 3 pages et sur de vrais scans avec une mesure d'ordre et de mots (pas seulement le rappel). Tant que cela n'est pas fait, la règle des sections 9 et 10 reste : validation humaine pour tout texte arabe issu d'un scan.
 
 **Non testés :** MinerU, LightOnOCR.
+
+## 12. MinerU 4.2.3 et LightOnOCR-3-0.8B (2026-11-23)
+
+Deux moteurs de plus pour clore l'inventaire de la section 10, sur les mêmes pages en scan simulé (page 80 arabe du Code du travail, barème de l'article 73 du CGI), même machine (CPU).
+
+### MinerU 4.2.3 (`mineru` sur PyPI, serveur local `mineru server start`)
+
+La version 4 a une interface nouvelle (`mineru parse --tier ...`). **Seul le niveau `flash` fonctionne en local** : les niveaux `basic`, `standard` et `advanced` répondent « Local parse-server is disabled. Use --tier flash or --remote » et passent par le service distant mineru.net, donc par le nuage, ce que nous n'avons pas essayé. Le niveau `flash` produit du Markdown en quelques secondes.
+
+| Page | Résultat |
+|---|---|
+| Barème CGI en scan (français) | **11 valeurs sur 11**, ligne d'exonération comprise, notes de bas de page séparées ; défauts d'espacement (« signaléà », « sur oud'après ») |
+| Page 80 arabe en scan | **quasi vide** : « aal », les numéros d'article 270 à 273 et « 80 », **sans erreur ni avertissement** |
+
+Le second résultat est la perte silencieuse que la chaîne de la section 8 doit attraper : le contrôle du rappel des caractères ou le détecteur d'encre aurait signalé la page. Le niveau `flash` n'est pas retenu pour l'arabe numérisé ; les niveaux supérieurs restent à évaluer s'ils sont admis (service distant).
+
+### LightOnOCR-3-0.8B (Apache-2.0, `transformers` 5.24, famille 0,8 B / 1 B / 4 B)
+
+Le plus récent de la famille (LightOnOCR-2-1B est dépassé). `float32`, CPU, bande de tête de la page 80 (même découpage que pour PaddleOCR-VL).
+
+| Mesure | Résultat |
+|---|---|
+| Vitesse | **environ 10 s par jeton** (205 jetons en 2 055 s) ; en `bfloat16` la page entière n'avait rien rendu après plus d'une heure ; page complète en `float32` arrêtée après environ une heure sans résultat |
+| Texte de la bande (300 caractères hors espaces) | rappel des caractères 100 %, ordre 90,4 % sur la fenêtre de référence alignée ; « الولادة », « الأجير » et « أيًا » lus correctement |
+| Structure | l'en-tête de page est enveloppé dans un tableau HTML (`<table>`) que la page ne contient pas : à filtrer |
+
+Même verdict que pour PaddleOCR-VL : fidèle sur un échantillon d'une seule bande, mais inexploitable sur ce CPU. Le 4 B (le plus précis selon la fiche) serait encore plus lent. LightOn annonce une adaptation à l'arabe par réglage fin (juin 2026), non publiée comme modèle testable ici ; la fiche du modèle de base liste des langues latines.
+
+### Bilan des six moteurs sur l'arabe numérisé
+
+Aucun n'est certifiable seul : les moteurs rapides (EasyOCR, Tesseract, RapidOCR, MinerU flash) perdent ou déforment du texte, les modèles de vision (GraniteDocling, PaddleOCR-VL, LightOnOCR) sont fidèles mais de 5 à 10 s par jeton sans GPU. La décision d'architecture reste : texte intégré en priorité, contrôle de rappel, double lecture et validation humaine pour les scans arabes, avec un GPU ou un service d'inférence à chiffrer avant d'industrialiser la lecture par modèle de vision.
