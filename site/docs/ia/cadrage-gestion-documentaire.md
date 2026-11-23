@@ -50,7 +50,7 @@ Latence, poids et coût sont **hors périmètre** de l'étude (décision du 2026
 - **Étiquettes.** Pour chaque question : document source, page, article, réponse attendue en une phrase, type (fait, tableau, comparaison, multi-articles), langue.
 - **Règle d'établissement.** Les étiquettes sont écrites à partir du texte du document, jamais générées puis acceptées sans relecture ; un échantillon est relu par le propriétaire.
 - **Format.** Un fichier JSON Lines versionné dans le dépôt, à côté des tests de l'agent (E20), avec la liste des documents sources et leur empreinte.
-- **État.** Le gabarit est fixé ici ; **le jeu lui-même n'est pas encore constitué** : trois documents sont rapatriés (voir plus bas), les textes CNSS, AMO et IR officiels manquent encore.
+- **État (2026-11-23).** Jeu constitué : [`ia/evaluation/rag_questions.jsonl`](../../../ia/evaluation/rag_questions.jsonl) (319 questions) et `ia/evaluation/rag_sources.json` (sept documents, SHA-256, statistiques). Répartition : 276 en français, 43 en arabe (dont des questions arabes sur des textes français) ; 271 avec réponse (215 faits, 29 tableaux, 20 calculs, 6 listes, 1 multi-articles) et 48 sans réponse (15,0 %). **Chaque citation est retrouvée dans le texte de la page indiquée** (0 non trouvée) ; l'arabe vient de la couche texte lue par Docling, comparée sans espaces (espaces parasites dans les mots). Les pièges de version sont posés (Code du travail FR 2011 contre AR 2026, circulaires 733 de 2023 et 737 de 2026). **Écarts connus** : pas de question « comparaison » et un seul « multi-articles » (une seule page par question dans le format actuel) ; aucune question en mélange français-arabe dans une même phrase ; les questions sans réponse n'ont pas de citation par construction ; **échantillon à relire par le propriétaire**.
 
 ## Documents rapatriés (2026-11-23, accord du propriétaire)
 
@@ -86,7 +86,7 @@ Le recueil CNSS ne donne que 2 600 caractères de texte sur ses 5 premières pag
 
 ## Ce qui reste à faire pour clore E14.A1
 
-1. Obtenir les textes officiels de la CNSS, de l'AMO et du barème de l'IR en vigueur (voir ci-dessus).
-2. Écrire les 200 à 300 questions étiquetées et en faire relire un échantillon.
+1. (Fait pour le recueil CNSS, la loi 65-00 et la circulaire 737.) Le communiqué CNSS sur l'assiette reste à capturer.
+2. Faire relire un échantillon des questions par le propriétaire ; compléter comparaisons et multi-articles (citations à plusieurs pages).
 3. Fixer les seuils des métriques de lecture après un premier passage.
 4. Consigner le tout dans Jira (KAN-289) ; les bancs d'essai peuvent alors démarrer.

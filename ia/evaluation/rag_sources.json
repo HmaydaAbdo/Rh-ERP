@@ -1,0 +1,75 @@
+{
+ "version": 1,
+ "description": "Jeu de référence RAG (KAN-289) : questions étiquetées sur le corpus public. Chaque citation est vérifiée dans le texte de la page indiquée (page_pdf, index 1 du PDF) ; les questions sans réponse (type absent, document null) attendent un refus motivé. Le texte arabe vient de la couche texte lue par Docling (espaces parasites : comparaison sans espaces). Pièges de version : Code du travail FR 2011 contre AR 2026, NC733 (2023) contre NC737 (2026).",
+ "sources": {
+  "code-travail-fr-adala-consolide.pdf": {
+   "titre": "Code du travail (FR, consolidé 2011)",
+   "langues": "fr",
+   "sha256": "91c67dd23c5a2d9aa01c997542ed547b4077135c2528baf74e2a385ea5dfc8f3",
+   "octets": 1515526
+  },
+  "code-travail-ar-adala-2026.pdf": {
+   "titre": "Code du travail (AR, 2026)",
+   "langues": "ar",
+   "sha256": "dda82c7bb74f36cc2754ebb56ee218fa7a92b21bb99e902a29e5f9e57144d8ba",
+   "octets": 2643620
+  },
+  "dgi-cgi-2026-fr.pdf": {
+   "titre": "Code général des impôts 2026",
+   "langues": "fr",
+   "sha256": "28f85c69b2601f98c968895bc904c0978af39a946e60699311040823a3b03022",
+   "octets": 6450849
+  },
+  "dgi-note-circulaire-737-lf2026.pdf": {
+   "titre": "Note circulaire DGI 737 (LF 2026)",
+   "langues": "fr",
+   "sha256": "678db3a9ba73d85027cffe888c1b714783bd11459a9d7a7385bf027ce0434d22",
+   "octets": 1273627
+  },
+  "note-circulaire-733-lf2023.pdf": {
+   "titre": "Note circulaire DGI 733 (LF 2023)",
+   "langues": "fr",
+   "sha256": "c6946daa9b360accc1cb7fe1a3d3d695bb197e5189b305748d36bf74dbd2ad34",
+   "octets": 1620763
+  },
+  "loi-65-00-amo-cnss.pdf": {
+   "titre": "Loi 65-00 (AMO)",
+   "langues": "fr",
+   "sha256": "5ca5b27eda1708d8533c65ca988c0ce40673782f7d9ec79d74583a99bb82ecaf",
+   "octets": 419776
+  },
+  "cnss-recueil-textes-regime-general-2026-01.pdf": {
+   "titre": "Recueil CNSS régime général 2026-01 (FR/AR)",
+   "langues": "fr+ar",
+   "sha256": "d538562b1b8c134f9f5eb36d391c24433823628c3be67aa86b4e94989fa80132",
+   "octets": 3710396
+  }
+ },
+ "stats": {
+  "total": 319,
+  "par_langue": {
+   "fr": 276,
+   "ar": 43
+  },
+  "par_type": {
+   "fait": 215,
+   "multi": 1,
+   "liste": 6,
+   "tableau": 29,
+   "calcul": 20,
+   "absent": 48
+  },
+  "par_document": {
+   "code-travail-fr-adala-consolide.pdf": 125,
+   "dgi-cgi-2026-fr.pdf": 47,
+   "dgi-note-circulaire-737-lf2026.pdf": 12,
+   "note-circulaire-733-lf2023.pdf": 15,
+   "loi-65-00-amo-cnss.pdf": 21,
+   "cnss-recueil-textes-regime-general-2026-01.pdf": 35,
+   "code-travail-ar-adala-2026.pdf": 16,
+   "(sans réponse)": 48
+  },
+  "part_sans_reponse_pct": 15.0
+ },
+ "fichier_questions": "rag_questions.jsonl"
+}
