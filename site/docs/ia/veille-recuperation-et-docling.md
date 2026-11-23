@@ -83,3 +83,24 @@ Docling 2.151.1, Python 3.12, **CPU seul**, réglages par défaut (détection de
 - Livre, titre et article sortent **au même niveau** de titre : pour un index en arbre à deux niveaux, la hiérarchie doit être reconstruite (le modèle de niveaux de titres de Docling est à essayer) ; `Titre III : … Article 9` est aussi parfois fusionné dans un seul titre.
 - À 15 s par page sur CPU, le Code du travail complet en français (environ 200 pages) prendrait de l'ordre de 50 minutes, sans GPU : acceptable pour une importation en tâche de fond avec avancement visible, pas pour une réponse en direct.
 - Non testés : le recueil CNSS au-delà de la page 5, les tableaux de barèmes, les pages numérisées, `docling-serve`, le modèle de vision (VLM) de Docling.
+
+## 7. Essai complémentaire : tableaux, scans, service HTTP, modèle de vision (2026-11-23)
+
+Même poste (CPU seul), mêmes versions (docling 2.151.1, docling-serve 1.38.2). Référence : pages 118 et 119 du Code général des impôts 2026 (article 73 : barème de l'IR en liste, puis tableau des droits complémentaires), dont la valeur exacte a été relevée dans le texte intégré du PDF. Les « scans » sont des **simulations** (page rendue en image, légère rotation, flou) : un seul exemplaire par cas, pas une mesure sur de vrais scans.
+
+| Essai | Résultat |
+|---|---|
+| Tableau des droits complémentaires (texte intégré) | **8 lignes sur 8 exactes**, 3 colonnes |
+| Barème de l'IR (texte intégré) | 6 lignes sur 6 présentes avec leurs taux et seuils |
+| Scan du tableau, 100 dpi, OCR français | 16 valeurs sur 16 retrouvées (valeurs seules ; structure en tableau reconnue) |
+| Scan du barème, 150 dpi, OCR français (RapidOCR/EasyOCR), 56 s | **9 valeurs sur 11** : la ligne « jusqu'à 40 000 dirhams est exonérée » et le seuil 100.000 sont perdus ; mots déplacés (« qui ») |
+| Même scan, modèle de vision GraniteDocling (transformers, CPU), 393 s | **11 valeurs sur 11**, ordre correct, barème complet |
+| `docling-serve` (HTTP, `POST /v1/convert/file`, `page_range`) | Même texte que la bibliothèque (4 856 caractères), 19 s pour 2 pages (traitement 14 s) |
+
+**Conséquences (à confirmer au banc d'essai) :**
+
+- Sur les PDF avec texte intégré, qui sont la grande majorité de notre corpus, la lecture est exacte pour les tableaux testés et rapide (4 à 6 s par page). C'est le chemin par défaut.
+- Sur un scan, l'OCR classique peut **perdre une ligne entière** sans signal d'erreur : sur un barème, un seuil manquant fausse un calcul. Un document numérisé ne doit donc pas entrer dans la base de connaissances sans contrôle (par exemple : lecture par le modèle de vision, ou contrôle des totaux et des seuils, ou validation humaine pour les textes à chiffres).
+- Le modèle de vision est le plus fidèle sur ce scan mais environ sept fois plus lent que l'OCR et soixante-dix fois plus que le texte intégré : réservé aux pages sans texte intégré, en tâche de fond, ou à un GPU.
+- `docling-serve` est utilisable tel quel pour isoler la lecture dans un service : l'ingestion appelle une API plutôt que d'embarquer Docling (et ses modèles, 1,2 Go d'environnement) dans le service de l'agent.
+- Limites : une page par cas, scans simulés, aucune mesure sur des scans réels ni sur l'arabe numérisé, durée mesurée sur une seule exécution.
