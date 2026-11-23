@@ -191,3 +191,21 @@ Pages 30, 80 et 150 du Code du travail arabe (texte intégré, donc vérité ter
 3. **Ne pas passer par l'OCR quand une source avec texte intégré existe.** Pour les textes officiels arabes déjà publiés avec couche de texte (cas du Code du travail), le texte intégré est l'entrée par défaut : exact, 4 s par page, sans OCR. L'OCR arabe n'est utile que pour les documents réellement numérisés (courriers, contrats signés).
 4. **Piste à tester :** EasyOCR en direct (meilleur compromis ici) contre le modèle de vision en double lecture, avec un lexique arabe pour détecter les mots inexistants (lettres inversées ou mal lues), puis revue humaine des seuls mots douteux ; à comparer à PaddleOCR-VL, MinerU et LightOnOCR, non testés (installation lourde).
 5. **Pas testé :** PaddleOCR-VL, MinerU, LightOnOCR, un GPU, de vrais scans arabes, les chiffres arabes-indiens, le texte mélangé français et arabe.
+
+## 11. PaddleOCR-VL-1.6 sur l'arabe numérisé : très fidèle sur l'échantillon, inutilisable à cette vitesse sur CPU (2026-11-23)
+
+Modèle `PaddlePaddle/PaddleOCR-VL-1.6` (0,9 milliard de paramètres, licence Apache-2.0, 1,8 Go, `transformers` 5.24, CPU, fp32), invite `OCR:`, sur la page 80 du Code du travail arabe en scan simulé (même image que la section 10), découpée en bandes aux lignes blanches. La fiche du modèle annonce « en, zh, multilingual » sans citer l'arabe. **Échantillon : une seule bande sur quatre, 253 caractères, un seul passage.**
+
+| Mesure | Résultat |
+|---|---|
+| Durée de la bande | **796 s pour 161 jetons**, soit environ 5 s par jeton ; la page complète prendrait de l'ordre d'une heure |
+| Première tentative (page entière en 4 bandes, 900 jetons maximum) | arrêtée après environ 50 min sans résultat |
+| Mots que le modèle de vision de Docling inversait | **lus correctement** : « الولادة », « الأجير », « الثلاثة » |
+| Erreurs sur les 253 caractères | **une** : « أيا كان » lu « أي كان » (alif final manquant) ; le reste de l'écart avec la référence vient de la référence et du découpage en bandes |
+| Ligne d'en-tête de la page | lue (« المملكة المغربية ») alors que la référence l'exclut |
+
+**Lecture prudente :** sur ce seul extrait, c'est le moteur le plus fidèle des cinq essayés pour l'arabe, sans inversion de ligatures. Mais une bande, c'est trop peu pour conclure, la vitesse mesurée (5 s par jeton) est probablement due à une configuration CPU non optimisée (fp32, pas de quantification), et le modèle n'a pas été testé sur les pages 30 et 150 ni sur de vrais scans.
+
+**Suite possible :** variante quantifiée (`PaddleOCR-VL-1.6-GGUF` avec `llama.cpp`), pipeline officiel de PaddleOCR (analyse de page) ou GPU ; puis mesure sur les 3 pages et sur de vrais scans avec une mesure d'ordre et de mots (pas seulement le rappel). Tant que cela n'est pas fait, la règle des sections 9 et 10 reste : validation humaine pour tout texte arabe issu d'un scan.
+
+**Non testés :** MinerU, LightOnOCR.
