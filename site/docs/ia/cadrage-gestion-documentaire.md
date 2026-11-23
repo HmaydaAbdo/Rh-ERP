@@ -62,6 +62,17 @@ Dossier local hors dépôt : `Desktop\Badia\corpus-rag-public`. Seules les réf�
 | `code-travail-ar-adala-2026.pdf` | adala.justice.gov.ma, مدونة الشغل (dahir 1.03.194, loi 65.99), arabe, version annoncée comme mise à jour en juillet 2026 | 2 643 620 o | `dda82c7bb74f36cc2754ebb56ee218fa7a92b21bb99e902a29e5f9e57144d8ba` |
 | `note-circulaire-733-lf2023.pdf` | Note circulaire DGI n° 733 (loi de finances 2023), copie hébergée par ecoactu.ma | 1 620 763 o | `c6946daa9b360accc1cb7fe1a3d3d695bb197e5189b305748d36bf74dbd2ad34` |
 
+Ajoutés ensuite le même jour, téléchargés depuis les sites officiels (cnss.ma, tax.gov.ma) avec un navigateur piloté :
+
+| Fichier | Source | Taille | SHA-256 |
+|---|---|---|---|
+| `cnss-recueil-textes-regime-general-2026-01.pdf` | cnss.ma, Réglementation : recueil des textes juridiques du régime général (7 janvier 2026) | 3 710 396 o | `d538562b1b8c134f9f5eb36d391c24433823628c3be67aa86b4e94989fa80132` |
+| `loi-65-00-amo-cnss.pdf` | cnss.ma, Réglementation : loi 65-00 (AMO) | 419 776 o | `5ca5b27eda1708d8533c65ca988c0ce40673782f7d9ec79d74583a99bb82ecaf` |
+| `dgi-note-circulaire-737-lf2026.pdf` | tax.gov.ma : note circulaire n° 737, mesures fiscales de la loi de finances 2026 | 1 273 627 o | `678db3a9ba73d85027cffe888c1b714783bd11459a9d7a7385bf027ce0434d22` |
+| `dgi-cgi-2026-fr.pdf` | tax.gov.ma : Code général des impôts 2026 (français) | 6 450 849 o | `28f85c69b2601f98c968895bc904c0978af39a946e60699311040823a3b03022` |
+
+Le recueil CNSS ne donne que 2 600 caractères de texte sur ses 5 premières pages : une partie est probablement en images, à traiter par OCR (KAN-290). Le guide employeur CNSS avec taux et plafonds n'existe pas en PDF officiel : les taux se trouvent dans le recueil et dans le communiqué sur l'assiette de cotisations (1er octobre 2025), publié en page web sur cnss.ma.
+
 **Constats de départ (extraction de texte brute, `pdftotext`) :**
 
 - Les PDF français ont une couche de texte exploitable.
