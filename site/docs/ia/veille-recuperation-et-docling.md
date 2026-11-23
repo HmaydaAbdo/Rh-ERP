@@ -92,15 +92,48 @@ Même poste (CPU seul), mêmes versions (docling 2.151.1, docling-serve 1.38.2).
 |---|---|
 | Tableau des droits complémentaires (texte intégré) | **8 lignes sur 8 exactes**, 3 colonnes |
 | Barème de l'IR (texte intégré) | 6 lignes sur 6 présentes avec leurs taux et seuils |
-| Scan du tableau, 100 dpi, OCR français | 16 valeurs sur 16 retrouvées (valeurs seules ; structure en tableau reconnue) |
-| Scan du barème, 150 dpi, OCR français (RapidOCR/EasyOCR), 56 s | **9 valeurs sur 11** : la ligne « jusqu'à 40 000 dirhams est exonérée » et le seuil 100.000 sont perdus ; mots déplacés (« qui ») |
+| Scan du tableau, 100 dpi, **EasyOCR** français forcé | 16 valeurs sur 16 retrouvées, mais le détecteur de la section 8 signale 11 % d'encre non lue (notes de bas de page manquantes) |
+| Scan du barème, 150 dpi, **EasyOCR** français forcé, 56 s | **9 valeurs sur 11** : la ligne « jusqu'à 40 000 dirhams est exonérée » et le seuil 100.000 sont perdus ; mots déplacés (« qui ») |
+| Mêmes scans, **RapidOCR** (moteur par défaut de Docling), 6 à 23 s | Barème : **11 valeurs sur 11** ; tableau : 1,8 % d'encre non lue. **Correction :** le « 9 sur 11 » ci-dessus venait d'EasyOCR, que j'avais forcé, et non du moteur par défaut |
 | Même scan, modèle de vision GraniteDocling (transformers, CPU), 393 s | **11 valeurs sur 11**, ordre correct, barème complet |
 | `docling-serve` (HTTP, `POST /v1/convert/file`, `page_range`) | Même texte que la bibliothèque (4 856 caractères), 19 s pour 2 pages (traitement 14 s) |
 
 **Conséquences (à confirmer au banc d'essai) :**
 
 - Sur les PDF avec texte intégré, qui sont la grande majorité de notre corpus, la lecture est exacte pour les tableaux testés et rapide (4 à 6 s par page). C'est le chemin par défaut.
-- Sur un scan, l'OCR classique peut **perdre une ligne entière** sans signal d'erreur : sur un barème, un seuil manquant fausse un calcul. Un document numérisé ne doit donc pas entrer dans la base de connaissances sans contrôle (par exemple : lecture par le modèle de vision, ou contrôle des totaux et des seuils, ou validation humaine pour les textes à chiffres).
+- Sur un scan, un OCR peut **perdre une ligne entière** sans signal d'erreur (EasyOCR l'a fait ; le moteur par défaut, RapidOCR, non, sur ce seul exemple) : sur un barème, un seuil manquant fausse un calcul. Un document numérisé ne doit donc pas entrer dans la base de connaissances sans contrôle (par exemple : lecture par le modèle de vision, ou contrôle des totaux et des seuils, ou validation humaine pour les textes à chiffres).
 - Le modèle de vision est le plus fidèle sur ce scan mais environ sept fois plus lent que l'OCR et soixante-dix fois plus que le texte intégré : réservé aux pages sans texte intégré, en tâche de fond, ou à un GPU.
 - `docling-serve` est utilisable tel quel pour isoler la lecture dans un service : l'ingestion appelle une API plutôt que d'embarquer Docling (et ses modèles, 1,2 Go d'environnement) dans le service de l'agent.
 - Limites : une page par cas, scans simulés, aucune mesure sur des scans réels ni sur l'arabe numérisé, durée mesurée sur une seule exécution.
+
+## 8. Lecture sans perte silencieuse : exigence de production et première défense (2026-11-23)
+
+**Exigence du propriétaire :** rien ne doit être raté dans les documents indexés, et aucune erreur ne doit passer sans signal. Aucun lecteur (Docling, OCR, modèle de vision) ne garantit à lui seul de ne rien perdre ; la garantie vient de **contrôles indépendants du lecteur** et d'une règle : **un document n'est activé que si ses contrôles passent**, sinon il reste en quarantaine pour validation humaine.
+
+### Défense 1 (prototypée) : encre de la page non couverte
+
+Principe : on rend chaque page en image, on repère les pixels sombres, on retire ceux qui tombent dans la boîte d'un élément lu (texte, tableau, image, avec marge), et on mesure ce qui reste. Une zone d'encre sans texte associé est une perte probable. Le contrôle ne dépend d'aucun moteur de lecture.
+
+| Lecture | Valeurs clés | Encre non couverte | Zones suspectes |
+|---|---|---|---|
+| Page de référence (vecteur, EasyOCR) | 11/11 | 3,4 % | 4 (en-tête, pied de page) |
+| Scan barème, RapidOCR, échelle 1 ou 2 | 11/11 | 1,4 % | 3 (en-tête, numéro de page) |
+| Scan barème, EasyOCR | 9/11 | **11,4 %** | 7, dont une de 33 px de haut et 3 638 px d'encre au milieu de la page (la ligne perdue) |
+| Scan tableau, RapidOCR | | 1,8 % | 2 (pied de page) |
+| Scan tableau, EasyOCR | | **11,1 %** | 5, dont une de 133 px de haut (notes de bas de page perdues) |
+
+Lecture : le détecteur sépare nettement les lectures saines (1 à 3 %, zones seulement en marge) des lectures avec perte (11 %, grandes zones dans le corps de la page). Il a aussi trouvé une perte (notes de bas de page) que le contrôle par valeurs clés ne voyait pas. **Seuil de départ proposé** (à calibrer sur plus de pages) : alerte si plus de 5 % d'encre n'est pas couverte, ou si une zone de plus de 800 px d'encre se trouve hors des marges haute et basse.
+
+Limites : prototype sur 4 pages dont 2 scans simulés ; les pieds de page et en-têtes donnent de petites zones à exclure ; le contrôle voit l'encre manquante, pas un mot mal lu.
+
+### Chaîne cible (à valider au banc d'essai et en E14.A10)
+
+1. **Texte intégré d'abord.** Si la page a une couche de texte fiable, on la lit directement (exact sur les tableaux testés, 4 à 6 s par page).
+2. **Contrôle de couverture sur chaque page** (défense 1). Pour un PDF à texte intégré, on compare aussi le texte lu au texte intégré brut (caractères, nombres).
+3. **Contrôles de structure pour les textes juridiques :** suite des numéros d'articles sans trou ni doublon ; sous-totaux et tranches de barèmes cohérents ; renvois (« article X ») qui pointent vers un article existant.
+4. **Double lecture sur les pages à risque** (scans, pages avec chiffres) : deux lecteurs indépendants (OCR et modèle de vision) ; tout écart sur un nombre, un seuil ou un article envoie la page en revue.
+5. **Quarantaine et validation humaine :** le volet « Connaissances » montre côte à côte l'image de la page et le texte lu, avec les zones suspectes surlignées ; le document n'est activé qu'après validation, et la version précédente reste active jusque-là.
+6. **Traçabilité :** image de chaque page, document lu sans perte, résultats des contrôles et nom du validateur conservés avec la version.
+7. **Évaluation continue :** les pages contrôlées enrichissent le jeu de référence ; la porte de non-régression en CI rejoue la lecture.
+
+Ce que cette chaîne **ne garantit pas** : un mot mal lu qui ne change ni l'encre ni la structure. Pour les chiffres (barèmes, taux, plafonds), la double lecture et la validation humaine sont le filet ; ce risque résiduel est à mesurer, pas à déclarer nul.
