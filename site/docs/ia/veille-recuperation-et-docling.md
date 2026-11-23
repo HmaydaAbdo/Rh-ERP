@@ -137,3 +137,35 @@ Limites : prototype sur 4 pages dont 2 scans simulés ; les pieds de page et en-
 7. **Évaluation continue :** les pages contrôlées enrichissent le jeu de référence ; la porte de non-régression en CI rejoue la lecture.
 
 Ce que cette chaîne **ne garantit pas** : un mot mal lu qui ne change ni l'encre ni la structure. Pour les chiffres (barèmes, taux, plafonds), la double lecture et la validation humaine sont le filet ; ce risque résiduel est à mesurer, pas à déclarer nul.
+
+## 9. Calibration du contrôle sur 25 pages (2026-11-23) : ce qui tient et ce qui ne tient pas
+
+Lot : 18 pages à texte intégré (Code du travail français p. 30 à 190, circulaire DGI 737 p. 20 à 60, Code général des impôts p. 118 à 400, recueil CNSS arabe p. 20 à 120, Code du travail arabe p. 30 à 150) et 7 scans simulés (150 dpi, flou, légère rotation). Vérité terrain : la couche de texte de la page d'origine (`pdfium`). Docling 2.151.1, CPU, RapidOCR par défaut pour les scans. Un seul lot, un seul tirage aléatoire des retraits : à refaire avant de fixer des seuils.
+
+**Contrôle A : rappel des caractères par rapport à la couche de texte du PDF** (multiensemble de caractères hors espaces et hors balisage Markdown, donc insensible à l'ordre et aux espaces parasites de l'arabe).
+
+| Mesure (pages à texte intégré) | Résultat |
+|---|---|
+| Rappel observé | de 97,5 % à 99,9 % (CGI : 97,5 à 98,1 % ; circulaire : 98,7 à 99,1 % ; autres : plus de 99,4 %) |
+| Fausses alertes au seuil de 97 % | **0 sur 18** |
+| Retraits volontaires d'un élément de 60 caractères ou plus, détectés | **88 sur 90** ; les 2 manqués sont sur une page arabe à éléments courts |
+
+Le rappel de base varie selon le document (le CGI reste vers 98 % : pieds de page et numéros de notes exclus par Docling). Le seuil doit donc être **relatif au document** (par exemple : chute de plus de 1,5 point sous la médiane du document), pas un 97 % fixe, qui laisse passer la perte d'un petit élément sur un document à rappel élevé.
+
+**Contrôle B : encre non couverte** (section 8), avec règle corrigée (traits longs et fins ignorés, marges haute et basse exclues) :
+
+| Mesure | Résultat |
+|---|---|
+| Pages à texte intégré | **fausses alertes sur 11 pages sur 18** : en-têtes courants, cadres et éléments décoratifs récurrents ; inutilisable tel quel sur ces pages, le contrôle A est meilleur |
+| Retraits volontaires, sur les 9 pages sans alerte de base | 45 sur 45 détectés |
+| Scans français (6) | alerte sur 4, dont 2 à rappel réel de 99,7 à 99,9 % (**fausses alertes**), et **aucune alerte sur le scan du CGI p. 200 dont le rappel réel est de 95,3 %** |
+| Scan arabe | alerte (rappel réel 6,7 %) : correct |
+
+**Rappel réel de l'OCR sur les scans (vérité terrain) :** français 95,3 à 99,9 % selon la page (CGI p. 200 : 95,3 % ; circulaire p. 20 : 96,6 %) ; **arabe : 6,7 %**, le moteur par défaut ne lit pas l'arabe. Ce rappel mélange pertes et lettres mal lues (accents, ligatures) : il ne dit pas combien de lignes manquent, seulement que l'écart est réel.
+
+**Ce que cela change :**
+
+1. **Texte intégré : le contrôle A est adopté comme contrôle de départ** (0 fausse alerte, 98 % des retraits détectés), avec seuil relatif au document. Le contrôle B n'est pas retenu pour ces pages.
+2. **Scans : aucun des deux contrôles ne suffit seul.** Le contrôle B donne trop de fausses alertes et en manque une ; le contrôle A n'existe pas sans texte intégré. Un scan reste donc **toujours soumis à double lecture (OCR et modèle de vision) et à validation humaine** avant activation ; la section 8 est maintenue sur ce point, et le contrôle B sert seulement à **surligner** les zones à regarder, pas à décider.
+3. **Arabe numérisé : bloquant.** Aucun moteur testé ne le lit (EasyOCR : ordre brouillé ; RapidOCR par défaut : 6,7 %). Tant qu'un moteur n'est pas validé sur l'arabe (modèle de vision, PaddleOCR-VL, MinerU, LightOnOCR, ou texte intégré d'une autre source), un document arabe sans texte intégré **ne peut pas être activé**.
+4. À mesurer encore : de vrais scans (pas des simulations), le seuil relatif sur plus de documents, le rappel des chiffres seuls (nombres, pourcentages), une comparaison OCR contre modèle de vision page par page.
