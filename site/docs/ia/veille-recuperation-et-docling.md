@@ -169,3 +169,25 @@ Le rappel de base varie selon le document (le CGI reste vers 98 % : pieds de pag
 2. **Scans : aucun des deux contrôles ne suffit seul.** Le contrôle B donne trop de fausses alertes et en manque une ; le contrôle A n'existe pas sans texte intégré. Un scan reste donc **toujours soumis à double lecture (OCR et modèle de vision) et à validation humaine** avant activation ; la section 8 est maintenue sur ce point, et le contrôle B sert seulement à **surligner** les zones à regarder, pas à décider.
 3. **Arabe numérisé : bloquant.** Aucun moteur testé ne le lit (EasyOCR : ordre brouillé ; RapidOCR par défaut : 6,7 %). Tant qu'un moteur n'est pas validé sur l'arabe (modèle de vision, PaddleOCR-VL, MinerU, LightOnOCR, ou texte intégré d'une autre source), un document arabe sans texte intégré **ne peut pas être activé**.
 4. À mesurer encore : de vrais scans (pas des simulations), le seuil relatif sur plus de documents, le rappel des chiffres seuls (nombres, pourcentages), une comparaison OCR contre modèle de vision page par page.
+
+## 10. Arabe numérisé : comparaison de moteurs sur 3 pages (2026-11-23)
+
+Pages 30, 80 et 150 du Code du travail arabe (texte intégré, donc vérité terrain connue : le texte lu par Docling sans OCR, espaces retirés), rendues en image à 200 dpi avec flou et légère rotation (**scans simulés**), lues sur CPU. Mesures : *rappel* = part des caractères de référence retrouvés (insensible à l'ordre) ; *ordre* = ressemblance de séquence avec la référence (sensible à l'ordre et aux lettres inversées). Un seul passage, trois pages : indicatif.
+
+| Moteur | Rappel | Ordre | Temps par page | Remarque |
+|---|---|---|---|---|
+| EasyOCR **en direct** (`ar`, mode paragraphe) | 96,7 à 97,8 % | 93,5 à 95,5 % | 45 à 69 s | Lit aussi l'en-tête de la page ; confusions de lettres à points (« وذارة » pour « وزارة ») |
+| Tesseract 5.4, modèle `ara` (`tessdata_fast`), `--psm 6` | 84,1 à 97,2 % | 88,8 à 94,0 % | environ 1 s | Très rapide, mais rappel irrégulier selon la page ; ponctuation lue comme lettres (« عنهاء » pour « عنها، ») |
+| RapidOCR avec reconnaissance arabe via Docling (`iso:ar`) | 69,8 à 91,1 % | 80,2 à 93,3 % | 7 à 48 s | Le plus faible |
+| GraniteDocling (modèle de vision), page 80 seulement | 100 % | 96,2 % | 223 s | **Inverse systématiquement les lettres dans les ligatures lam-alef** (« الوالدة » pour « الولادة », « األجير » pour « الأجير », « الثالثة » pour « الثلاثة ») : mêmes caractères, mots faux ; le rappel de 100 % **masque** ce défaut, seul l'ordre le montre |
+| Référence de comparaison : EasyOCR **via Docling** (section 6) | non mesuré | brouillé | 85 s | Le brouillage des mots vient de l'assemblage par Docling, pas d'EasyOCR |
+
+**Accord entre deux lecteurs indépendants :** EasyOCR et Tesseract s'accordent à 96,3 %, 89,0 % et 90,6 % sur les trois pages ; la qualité réelle du plus faible (Tesseract) est de 94,0 %, 89,7 % et 88,8 % : l'accord suit la qualité du lecteur le plus faible sur ces trois pages. Il signale qu'**un des deux se trompe**, pas lequel, et pas où. Trois pages ne permettent pas de fixer un seuil.
+
+**Conclusions (à confirmer sur plus de pages et de vrais scans) :**
+
+1. **Aucun moteur testé n'est certifiable seul pour l'arabe numérisé** : EasyOCR mélange des lettres à points, Tesseract perd jusqu'à 16 % des caractères, le modèle de vision inverse des ligatures. La règle de la section 9 est confirmée : validation humaine obligatoire pour tout texte arabe issu d'un scan.
+2. **Le rappel de caractères ne suffit pas pour l'arabe** : il faut une mesure d'ordre (ou de mots), sinon une lecture avec des lettres inversées passe pour parfaite.
+3. **Ne pas passer par l'OCR quand une source avec texte intégré existe.** Pour les textes officiels arabes déjà publiés avec couche de texte (cas du Code du travail), le texte intégré est l'entrée par défaut : exact, 4 s par page, sans OCR. L'OCR arabe n'est utile que pour les documents réellement numérisés (courriers, contrats signés).
+4. **Piste à tester :** EasyOCR en direct (meilleur compromis ici) contre le modèle de vision en double lecture, avec un lexique arabe pour détecter les mots inexistants (lettres inversées ou mal lues), puis revue humaine des seuls mots douteux ; à comparer à PaddleOCR-VL, MinerU et LightOnOCR, non testés (installation lourde).
+5. **Pas testé :** PaddleOCR-VL, MinerU, LightOnOCR, un GPU, de vrais scans arabes, les chiffres arabes-indiens, le texte mélangé français et arabe.
