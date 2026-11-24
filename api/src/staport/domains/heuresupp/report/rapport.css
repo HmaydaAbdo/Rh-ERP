@@ -1,18 +1,29 @@
-/* Tableau du rapport des heures supplémentaires ; la page, le bandeau et le pied sont dans `common/report/paysage.css`. */
-table.heures { width: 802pt; border-collapse: collapse; font-size: 12pt; }  /* texte 8pt + 4 */
+/* Tableau du rapport des heures supplémentaires ; la page, le bandeau et le pied sont dans `common/report/paysage.css`.
+   Mise en page fixe : toutes les colonnes tiennent dans les 802pt de la page, aucune ne déborde. Les colonnes numériques et
+   l'émargement ont une largeur imposée ; Employé, CIN et Fonction se partagent le reste et passent à la ligne si besoin. */
+table.heures { width: 802pt; table-layout: fixed; border-collapse: collapse; font-size: 10pt; }
 table.heures thead { display: table-header-group; }
 table.heures tr { page-break-inside: avoid; }
-table.heures th, table.heures td { padding: 5pt 4pt; border: 0.5pt solid #9a9a9a; white-space: nowrap; }
+table.heures th, table.heures td { padding: 4pt 3pt; border: 0.5pt solid #9a9a9a; overflow-wrap: break-word; }
 table.heures td:not(.emargement) { font-weight: 600; }
-table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; }
-table.heures td.num, table.heures th.num { text-align: right; }
-/* Chiffres 8pt + 8 ; les en-têtes de colonnes numériques restent du texte (12pt). */
-table.heures td.num { font-size: 16pt; }
+table.heures th { background: #e6e6e6; font-weight: bold; text-align: left; vertical-align: bottom; }
+table.heures td { vertical-align: middle; }
+table.heures td.num, table.heures th.num { text-align: right; white-space: nowrap; }
+table.heures th.num { white-space: normal; }
+table.heures td.num { font-size: 12pt; }
+/* Largeurs (pt) : Employé, CIN, Fonction, Heures, S/H, Montant, STC, Forfait, Net à payer. */
+table.heures th:nth-child(1) { width: 140pt; }
+table.heures th:nth-child(2) { width: 66pt; }
+table.heures th:nth-child(4) { width: 44pt; }
+table.heures th:nth-child(5) { width: 38pt; }
+table.heures th:nth-child(6) { width: 52pt; }
+table.heures th:nth-child(7) { width: 46pt; }
+table.heures th:nth-child(8) { width: 52pt; }
+table.heures th:nth-child(9) { width: 60pt; }
 table.heures tr.total td { font-weight: bold; background: #f0f0f0; }
-/* Émargement : cellule vide ; le moteur de rendu compte les 24pt de hauteur padding compris (14pt + 2 x 5pt ici). */
-table.heures th.emargement.signature, table.heures td.emargement.signature { width: 90pt; }
-table.heures th.emargement.signature_empreinte, table.heures td.emargement.signature_empreinte { width: 170pt; }
-table.heures td.emargement { height: 42pt; }
-/* Le titre de la colonne passe à la ligne : à 12pt, « Signature et empreinte » seul dépasserait les 170pt et la page. */
+/* Émargement : cellule vide, assez haute pour signer ; Fonction prend le reste de la largeur. */
+table.heures th.emargement.signature { width: 100pt; }
+table.heures th.emargement.signature_empreinte { width: 140pt; }
 table.heures th.emargement { white-space: normal; }
+table.heures td.emargement { height: 26pt; }
 .vide { margin-top: 30pt; font-size: 11pt; }
