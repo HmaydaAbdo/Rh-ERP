@@ -46,30 +46,31 @@
   }
  },
  "stats": {
-  "total": 319,
+  "total": 338,
   "par_langue": {
-   "fr": 276,
-   "ar": 43
+   "fr": 294,
+   "ar": 44
   },
   "par_type": {
    "fait": 215,
-   "multi": 1,
+   "multi": 10,
    "liste": 6,
    "tableau": 29,
    "calcul": 20,
-   "absent": 48
+   "absent": 51,
+   "comparaison": 7
   },
   "par_document": {
    "code-travail-fr-adala-consolide.pdf": 125,
-   "dgi-cgi-2026-fr.pdf": 47,
-   "dgi-note-circulaire-737-lf2026.pdf": 12,
-   "note-circulaire-733-lf2023.pdf": 15,
-   "loi-65-00-amo-cnss.pdf": 21,
-   "cnss-recueil-textes-regime-general-2026-01.pdf": 35,
+   "dgi-cgi-2026-fr.pdf": 49,
+   "dgi-note-circulaire-737-lf2026.pdf": 16,
+   "note-circulaire-733-lf2023.pdf": 19,
+   "loi-65-00-amo-cnss.pdf": 23,
+   "cnss-recueil-textes-regime-general-2026-01.pdf": 39,
    "code-travail-ar-adala-2026.pdf": 16,
-   "(sans réponse)": 48
+   "(sans réponse)": 51
   },
-  "part_sans_reponse_pct": 15.0
+  "part_sans_reponse_pct": 15.1
  },
  "fichier_questions": "rag_questions.jsonl"
 }
