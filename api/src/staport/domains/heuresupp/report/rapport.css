@@ -27,3 +27,5 @@ table.heures th.emargement.signature_empreinte { width: 140pt; }
 table.heures th.emargement { white-space: normal; }
 table.heures td.emargement { height: 26pt; }
 .vide { margin-top: 30pt; font-size: 11pt; }
+/* Nombre d'heures et S/H : en-tête et chiffres centrés. */
+table.heures th:nth-child(4), table.heures td:nth-child(4), table.heures th:nth-child(5), table.heures td:nth-child(5) { text-align: center; }
