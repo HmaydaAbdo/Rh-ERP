@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import texte_canonique
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.schemas import Page, creer_page
@@ -247,7 +248,7 @@ class ServiceChantier:
         action = self._auditeur.auditer(s, "CHANTIER_SYNCHRONISATION", TypeOperation.CREATE, "Chantier")
         async with s.begin(), action as cible:
             for ligne in lignes:
-                code = str(ligne.get("code") or "").strip()
+                code = texte_canonique(ligne.get("code"))
                 if not code:
                     ignores += 1
                     continue

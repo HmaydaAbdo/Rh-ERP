@@ -92,7 +92,7 @@ class Jeu:
 @pytest.fixture
 def jeu(plateforme: Plateforme) -> Iterator[Jeu]:
     """Trois employés (et un bulletin chacun) aux valeurs deux à deux différentes ; le rang 1 n'a pas d'équipe."""
-    m = uuid.uuid4().hex[:8]
+    m = uuid.uuid4().hex[:8].upper()
     lignes: list[Ligne] = [
         {
             "nomPrenom": f"Charlie {m}",
@@ -299,7 +299,7 @@ def test_paie_tri_par_defaut_d_angular_et_filtre_sur_l_employe_avec_tri_imbrique
 
 
 def test_chantiers_tries_par_chaque_colonne_de_l_interface(plateforme: Plateforme, connecter: Any) -> None:
-    m = uuid.uuid4().hex[:8]
+    m = uuid.uuid4().hex[:8].upper()
     donnees: list[Ligne] = [
         {"code": f"c{m}", "nom": f"nb{m}", "designation": f"dc{m}", "nature": "DEPOT", "afficherSurCarte": True},
         {"code": f"a{m}", "nom": f"nc{m}", "designation": f"da{m}", "nature": "AO", "afficherSurCarte": False},

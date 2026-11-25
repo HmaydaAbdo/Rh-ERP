@@ -6,8 +6,9 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BeforeValidator, Field
 
+from staport.domains.common.cles import Cin
 from staport.domains.common.montant import arrondir_si_nombre
-from staport.domains.common.schemas import ModeleApi, Nombre, NonVide
+from staport.domains.common.schemas import ModeleApi, Nombre
 from staport.domains.employee.models import TypeSalaire
 from staport.domains.paie.periode import PeriodePaie
 
@@ -187,7 +188,7 @@ class ImportResultat(ModeleApi):
 
 
 class ImportForfait(ModeleApi):
-    cin: Annotated[NonVide, Field(max_length=30)]
+    cin: Annotated[Cin, Field(max_length=30)]
     montant_dh: Forfait
 
 

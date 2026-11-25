@@ -31,7 +31,7 @@ def test_import_employee_xlsx_est_atomique(plateforme: Plateforme, connecter: An
         json={"code": "IMP-1", "designation": "Chantier import", "nature": "AO", "afficherSurCarte": False},
     ).json()
     assert fonction["id"] and chantier["id"]
-    valide = _xlsx([[date(2024, 1, 2), "Ali Import", "CIN-IMP-1", "Conducteur import", "IMP-1", date(1990, 1, 2)]])
+    valide = _xlsx([[date(2024, 1, 2), "Ali Import", "CINIMP1", "Conducteur import", "IMP-1", date(1990, 1, 2)]])
     resultat = plateforme.client.post(
         "/employees/import",
         headers=headers,
@@ -41,8 +41,8 @@ def test_import_employee_xlsx_est_atomique(plateforme: Plateforme, connecter: An
     assert resultat.json()["crees"] == 1
     invalide = _xlsx(
         [
-            [date(2024, 1, 2), "Dup", "CIN-IMP-1", "Conducteur import", "IMP-1", date(1990, 1, 2)],
-            [date(2024, 1, 2), "Erreur", "CIN-IMP-2", "Inconnue", "IMP-1", date(1990, 1, 2)],
+            [date(2024, 1, 2), "Dup", "CINIMP1", "Conducteur import", "IMP-1", date(1990, 1, 2)],
+            [date(2024, 1, 2), "Erreur", "CINIMP2", "Inconnue", "IMP-1", date(1990, 1, 2)],
         ]
     )
     rejet = plateforme.client.post(
@@ -109,7 +109,7 @@ def test_la_reponse_imbrique_fonction_chantier_et_equipe(plateforme: Plateforme,
     ).json()
     corps = {
         "nomPrenom": "Imbrique Employe",
-        "cin": "CIN-IMB-1",
+        "cin": "CINIMB1",
         "dateNaissance": "1990-01-02",
         "dateEmbauche": "2024-01-02",
         "fonctionId": fonction["id"],
@@ -171,7 +171,7 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         json={"code": "SOR-1", "designation": "Chantier sorties", "nature": "AO", "afficherSurCarte": False},
     ).json()
     ids: list[int] = []
-    for nom, cin in (("Zoe Sortie", "CIN-SOR-1"), ("Adam Sortie", "CIN-SOR-2")):
+    for nom, cin in (("Zoe Sortie", "CINSOR1"), ("Adam Sortie", "CINSOR2")):
         corps = {
             "nomPrenom": nom,
             "cin": cin,
@@ -198,8 +198,8 @@ def test_sorties_du_mois_nomment_l_employe_et_comptent_les_motifs(plateforme: Pl
         "nombre": 2,
         "parMotif": {"ABANDON": 1, "NON_PRECISE": 1},
         "sorties": [
-            _sortie_attendue(ids[1], "Adam Sortie", "CIN-SOR-2", "NON_PRECISE", fonction["id"]),
-            _sortie_attendue(ids[0], "Zoe Sortie", "CIN-SOR-1", "ABANDON", fonction["id"]),
+            _sortie_attendue(ids[1], "Adam Sortie", "CINSOR2", "NON_PRECISE", fonction["id"]),
+            _sortie_attendue(ids[0], "Zoe Sortie", "CINSOR1", "ABANDON", fonction["id"]),
         ],
     }
     assert vide.json() == {"periode": "2097-04", "nombre": 0, "parMotif": {}, "sorties": []}

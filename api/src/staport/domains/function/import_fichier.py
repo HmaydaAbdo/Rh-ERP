@@ -8,6 +8,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import texte_canonique
 from staport.domains.common.fichier import decrire_fichier, texte_cellule
 
 from . import repository
@@ -36,7 +37,7 @@ def _libelles_du_fichier(contenu: bytes) -> list[tuple[int, str]]:
         classeur = load_workbook(BytesIO(contenu), read_only=True, data_only=True)
         try:
             lignes = [
-                (numero, texte_cellule(cellules[0] if cellules else None).strip())
+                (numero, texte_canonique(texte_cellule(cellules[0] if cellules else None)))
                 for numero, cellules in enumerate(classeur.worksheets[0].iter_rows(values_only=True), start=1)
                 if numero > 1
             ]

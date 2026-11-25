@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from staport.domains.common.cles import cle
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.recherche import ECHAPPEMENT, motif_contient
 
@@ -17,11 +18,13 @@ async def par_id(session: AsyncSession, identifiant: int) -> Equipe | None:
 async def existe(session: AsyncSession, code: str, libelle: str, sauf_id: int | None = None) -> tuple[bool, bool]:
     filtres = [] if sauf_id is None else [Equipe.id != sauf_id]
     code_existe = (
-        await session.execute(select(func.count()).select_from(Equipe).where(Equipe.code == code, *filtres))
+        await session.execute(
+            select(func.count()).select_from(Equipe).where(func.upper(Equipe.code) == cle(code), *filtres)
+        )
     ).scalar_one() > 0
     libelle_existe = (
         await session.execute(
-            select(func.count()).select_from(Equipe).where(func.lower(Equipe.libelle) == libelle.lower(), *filtres)
+            select(func.count()).select_from(Equipe).where(func.upper(Equipe.libelle) == cle(libelle), *filtres)
         )
     ).scalar_one() > 0
     return code_existe, libelle_existe

@@ -10,6 +10,7 @@ from typing import Any, cast
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
+from staport.domains.common.cles import CIN_REGLE, cin_canonique, cin_valide
 from staport.domains.common.fichier import texte_cellule
 from staport.domains.common.montant import arrondir_montant
 
@@ -144,9 +145,11 @@ def _lire_feuille(feuille: Worksheet) -> Fichier:
         heures = _nombre(cellules[heures_c], f"{feuille.cell(row=numero, column=heures_c + 1).coordinate}")
         if heures is not None and heures == 0:
             zeros += 1
-        nom_prenom, cin = _texte(cellules[nom_c]), _texte(cellules[cin_c])
+        nom_prenom, cin = _texte(cellules[nom_c]), cin_canonique(cellules[cin_c])
         if not nom_prenom or not cin:
             raise HeuresSuppInvalide(f"Ligne {numero} : Nom et prénom, CIN et HS sont requis.")
+        if not cin_valide(cin):
+            raise HeuresSuppInvalide(f"Ligne {numero} : CIN invalide ({cin}). {CIN_REGLE}")
         if heures is None:
             raise HeuresSuppInvalide(f"Ligne {numero} : HS manquant.")
         if cin.upper() in cins:

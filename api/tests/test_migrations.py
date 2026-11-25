@@ -53,7 +53,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0011_identifiants_canoniques"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -113,7 +113,10 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
+        assert (
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0011_identifiants_canoniques"
+        )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
@@ -194,7 +197,10 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
+        assert (
+            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == "0011_identifiants_canoniques"
+        )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         # Les rôles existants sont conservés ; seul CHARGE_RH (révision 0010) s'ajoute.
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant + 1
@@ -455,4 +461,96 @@ def test_la_revision_0010_reprend_un_role_et_un_compte_deja_crees(creer_base: Ca
             c.execute(text("SELECT count(*) FROM role_permission_aud WHERE role_id = :r"), {"r": role}).scalar_one()
             == len(PERMISSIONS_CHARGE_RH) - 1
         )
+    moteur.dispose()
+
+
+def test_la_revision_0011_fusionne_les_doublons_et_pose_les_identifiants_canoniques(
+    creer_base: Callable[[str], str],
+) -> None:
+    """Cas réels du 06/11/2026 (KAN-319) : CIN avec espace, CIN abîmé par Excel, fonction à double espace."""
+    url = creer_base("identifiants_canoniques")
+    command.upgrade(_config(url), "0010_role_charge_rh")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        f_ok = c.execute(text("INSERT INTO fonction (libelle) VALUES ('OP. COMPACTEUR') RETURNING id")).scalar_one()
+        f_dbl = c.execute(text("INSERT INTO fonction (libelle) VALUES ('OP.  COMPACTEUR') RETURNING id")).scalar_one()
+        chantier = c.execute(text("INSERT INTO chantier (code) VALUES ('service  mines') RETURNING id")).scalar_one()
+
+        def employe(nom: str, cin: str, statut: str, fonction: int) -> int:
+            return c.execute(
+                text(
+                    "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
+                    "statut) VALUES (:n, :cin, '1995-08-04', '2025-05-06', :f, :c, :s) RETURNING id"
+                ),
+                {"n": nom, "cin": cin, "f": fonction, "c": chantier if statut == "ACTIF" else None, "s": statut},
+            ).scalar_one()
+
+        def bulletin(employe_id: int, periode: int) -> None:
+            c.execute(
+                text(
+                    "INSERT INTO paie (employee_id, periode, fonction_id, chantier_id, nombre_jours_travailles, "
+                    "salaire_mensuel, salaire_total) VALUES (:e, :p, :f, :c, 26, 120, 120)"
+                ),
+                {"e": employe_id, "p": periode, "f": f_ok, "c": chantier},
+            )
+
+        ancien = employe("BENNANI  OMAR", "XY 100200", "INACTIF", f_ok)
+        nouveau = employe("BENNANI  OMAR", "XY100200", "ACTIF", f_dbl)
+        bulletin(ancien, 202609)
+        bulletin(nouveau, 202610)
+        c.execute(
+            text("INSERT INTO employe_sortie (employee_id, periode, motif) VALUES (:e, 202610, 'NON_PRECISE')"),
+            {"e": ancien},
+        )
+        bon = employe("DIALLO MAMADOU", "900000000001", "INACTIF", f_ok)
+        abime = employe("DIALLO MAMADOU", "9.00000E+11", "ACTIF", f_ok)
+        bulletin(bon, 202610)
+        minuscule = employe("AUTRE", "qw708000", "ACTIF", f_ok)
+    moteur.dispose()
+
+    command.upgrade(_config(url), "head")
+
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        restants = dict(c.execute(text("SELECT id, cin FROM employe")).all())
+        assert restants == {nouveau: "XY100200", abime: "900000000001", minuscule: "QW708000"}
+        paies = c.execute(text("SELECT employee_id, periode FROM paie ORDER BY 1, 2")).all()
+        assert sorted(paies) == sorted([(nouveau, 202609), (nouveau, 202610), (abime, 202610)])
+        assert c.execute(text("SELECT count(*) FROM employe_sortie")).scalar_one() == 0  # faux départ retiré
+        assert c.execute(text("SELECT id, libelle FROM fonction")).all() == [(f_ok, "OP. COMPACTEUR")]
+        assert c.execute(text("SELECT fonction_id FROM employe WHERE id = :i"), {"i": nouveau}).scalar_one() == f_ok
+        assert c.execute(text("SELECT code FROM chantier")).scalar_one() == "service mines"
+        actions = dict(
+            c.execute(
+                text(
+                    "SELECT action, nombre_elements FROM audit_journal "
+                    "WHERE perimetre ->> 'migration' = '0011_identifiants_canoniques'"
+                )
+            ).all()
+        )
+        assert actions == {
+            "EMPLOYE_FUSION": 2,
+            "FONCTION_FUSION": 1,
+            "EMPLOYE_MODIFICATION": 1,
+            "REFERENTIEL_NORMALISATION": 1,
+        }
+        assert c.execute(text("SELECT count(*) FROM employe_aud WHERE revtype = 2")).scalar_one() == 2
+        assert c.execute(text("SELECT count(*) FROM fonction_aud WHERE revtype = 2")).scalar_one() == 1
+        valides = dict(
+            c.execute(text("SELECT conname, convalidated FROM pg_constraint WHERE conname LIKE 'ck_%_canonique'")).all()
+        )
+        assert valides == dict.fromkeys(
+            (
+                "ck_employe_cin_canonique",
+                "ck_fonction_libelle_canonique",
+                "ck_equipe_code_canonique",
+                "ck_equipe_libelle_canonique",
+                "ck_chantier_code_canonique",
+            ),
+            True,
+        )
+    with pytest.raises(Exception, match="ck_employe_cin_canonique"), moteur.begin() as c:
+        c.execute(text("UPDATE employe SET cin = 'XY 100200' WHERE id = :i"), {"i": nouveau})
+    with pytest.raises(Exception, match="ck_fonction_libelle_canonique"), moteur.begin() as c:
+        c.execute(text("INSERT INTO fonction (libelle) VALUES ('OP.  NOUVEAU')"))
     moteur.dispose()

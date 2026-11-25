@@ -216,3 +216,28 @@ def test_un_import_est_refuse_tant_que_le_fichier_contient_des_erreurs(
 
     assert reponse.status_code == 400
     assert "Réanalysez-le." in reponse.json()["message"]
+
+
+def test_un_cin_ecrit_autrement_retrouve_sa_fiche_et_un_cin_abime_est_refuse(
+    plateforme: Plateforme, entetes: dict[str, str]
+) -> None:
+    """KAN-319 : « zs 4501 » est la fiche ZS4501 (pas un nouvel employé) ; « 9.00000E+11 » n'est jamais une fiche."""
+    from sqlalchemy import text
+
+    with plateforme.moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('Canon KAN319') RETURNING id")).scalar_one()
+        chantier = c.execute(text("INSERT INTO chantier (code) VALUES ('CANON-319') RETURNING id")).scalar_one()
+        c.execute(
+            text(
+                "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id) "
+                "VALUES ('Canon Connu', 'ZS4501', '1990-01-01', '2020-01-01', :f, :c)"
+            ),
+            {"f": fonction, "c": chantier},
+        )
+    lignes = [_ligne("Canon Connu", " zs  4501 "), _ligne("Canon Abime", "9.00000E+11")]
+    analyse = _poster(plateforme, entetes, ANALYSE, files=_fichier(_classeur(lignes)), data={"periode": PERIODE}).json()
+
+    assert [i["cin"] for i in analyse["cinInconnus"]] == []
+    erreurs_cin = [e for e in analyse["erreurs"] if e["champ"] == "cin"]
+    assert [(e["numeroLigne"], e["valeur"]) for e in erreurs_cin] == [(5, "9.00000E+11")]
+    assert "lettres et des chiffres" in erreurs_cin[0]["raison"]

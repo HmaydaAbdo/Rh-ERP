@@ -2,12 +2,13 @@ from typing import Annotated
 
 from pydantic import Field
 
-from staport.domains.common.schemas import ModeleApi, NonVide, Page
+from staport.domains.common.cles import TexteCanonique
+from staport.domains.common.schemas import ModeleApi, Page
 
 
 class EquipeCreationRequete(ModeleApi):
-    code: Annotated[NonVide, Field(max_length=50)]
-    libelle: Annotated[NonVide, Field(max_length=100)]
+    code: Annotated[TexteCanonique, Field(max_length=50)]
+    libelle: Annotated[TexteCanonique, Field(max_length=100)]
 
 
 class EquipeModificationRequete(EquipeCreationRequete):

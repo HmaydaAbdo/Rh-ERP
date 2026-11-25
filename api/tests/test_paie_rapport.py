@@ -396,7 +396,7 @@ def test_cartes_kpi_augmentent_de_hauteur_si_un_texte_depasse() -> None:
 def test_requete_evolution_agrege_sous_les_filtres_et_omet_les_mois_absents(
     plateforme: Plateforme, monkeypatch: Any
 ) -> None:
-    suffixe = uuid4().hex[:10]
+    suffixe = uuid4().hex[:10].upper()
     fonction = Fonction(libelle=f"Rapport {suffixe}")
     chantier = Chantier(code=f"R{suffixe}", nom="Chantier rapport")
     equipe = Equipe(code=f"E{suffixe}", libelle=f"Équipe {suffixe}")

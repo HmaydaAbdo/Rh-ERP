@@ -51,7 +51,7 @@ class Donnees:
 
 @pytest.fixture
 def donnees(plateforme: Plateforme) -> Iterator[Donnees]:
-    marque = uuid.uuid4().hex[:8]
+    marque = uuid.uuid4().hex[:8].upper()
     aujourd_hui = date.today()
     with plateforme.moteur.begin() as c:
         libelles = [f"Fonction {marque} {rang}" for rang in (1, 2)]

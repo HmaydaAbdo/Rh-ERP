@@ -273,8 +273,7 @@ def test_les_fichiers_invalides_sont_refuses_avec_les_messages_du_contrat(
         (
             _classeur([["A", cin, 1], ["B", cin.lower(), 2]]),
             "heures.xlsx",
-            f"Ligne 3 : CIN dupliqué dans le fichier ({cin.lower()}). "
-            "Corrigez ou regroupez les heures sur une seule ligne.",
+            f"Ligne 3 : CIN dupliqué dans le fichier ({cin}). Corrigez ou regroupez les heures sur une seule ligne.",
         ),
         (
             _classeur([["A", cin, -1]]),
@@ -312,7 +311,7 @@ def test_deux_forfaits_pour_un_meme_cin_sont_refuses(plateforme: Plateforme, ent
     reponse = _appel(plateforme, entetes, "/analyse", _fichier_standard(plateforme, jeu), jeu, forfaits=forfaits)
 
     assert reponse.status_code == 400
-    assert reponse.json()["message"] == f"Un seul forfait par CIN peut être saisi dans ce lot : {cin.lower()}"
+    assert reponse.json()["message"] == f"Un seul forfait par CIN peut être saisi dans ce lot : {cin}"
     refuse = _appel(
         plateforme,
         entetes,

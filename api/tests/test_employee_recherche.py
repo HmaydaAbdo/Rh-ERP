@@ -16,7 +16,7 @@ def jeu(plateforme: Plateforme, connecter: Any) -> dict[str, Any]:
     """Une fonction, un chantier, une équipe et trois employés : avec équipe, sans équipe, puis inactif."""
     entetes = _auth(connecter)
     client = plateforme.client
-    suffixe = uuid.uuid4().hex[:6]
+    suffixe = uuid.uuid4().hex[:6].upper()
     fonction = client.post("/functions", headers=entetes, json={"libelle": f"Recherche fonction {suffixe}"}).json()
     chantier = client.post(
         "/chantiers",
@@ -45,9 +45,9 @@ def jeu(plateforme: Plateforme, connecter: Any) -> dict[str, Any]:
         return reponse.json()
 
     noms = {cle: f"Rech{suffixe} {cle}" for cle in ("avec", "sans", "sorti")}
-    avec = creer(noms["avec"], f"CIN-{suffixe}-1", equipe["id"])
-    sans = creer(noms["sans"], f"CIN-{suffixe}-2", None)
-    sorti = creer(noms["sorti"], f"CIN-{suffixe}-3", None)
+    avec = creer(noms["avec"], f"CIN{suffixe}1", equipe["id"])
+    sans = creer(noms["sans"], f"CIN{suffixe}2", None)
+    sorti = creer(noms["sorti"], f"CIN{suffixe}3", None)
     modif = client.put(
         f"/employees/{sorti['id']}",
         headers=entetes,
@@ -106,7 +106,7 @@ def test_la_zone_unique_cherche_le_nom_ou_le_cin_dans_n_importe_quel_ordre(jeu: 
 
 
 def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
-    base = jeu["corps"]("Invalide", f"CIN-INV-{uuid.uuid4().hex[:6]}", None)
+    base = jeu["corps"]("Invalide", f"CININV{uuid.uuid4().hex[:6].upper()}", None)
     for variante in (
         {"typeSalaire": "MENSUEL"},  # type sans salaire
         {"dateNaissance": "2999-01-01"},  # naissance future
@@ -135,7 +135,7 @@ def test_saisie_invalide_refusee(jeu: dict[str, Any]) -> None:
 def test_le_type_de_salaire_se_deduit_du_montant_s_il_n_est_pas_choisi(
     jeu: dict[str, Any], salaire: int, type_attendu: str
 ) -> None:
-    base = jeu["corps"]("Deduit", f"CIN-TYP-{uuid.uuid4().hex[:6]}", None)
+    base = jeu["corps"]("Deduit", f"CINTYP{uuid.uuid4().hex[:6].upper()}", None)
     reponse = jeu["client"].post("/employees", headers=jeu["entetes"], json={**base, "salaire": salaire})
     assert reponse.status_code == 201, reponse.text
     assert reponse.json()["typeSalaire"] == type_attendu
@@ -144,7 +144,7 @@ def test_le_type_de_salaire_se_deduit_du_montant_s_il_n_est_pas_choisi(
 def test_l_utilisateur_peut_choisir_le_type_de_salaire_a_la_creation_et_a_la_modification(
     jeu: dict[str, Any],
 ) -> None:
-    base = jeu["corps"]("Choisi", f"CIN-CHX-{uuid.uuid4().hex[:6]}", None)
+    base = jeu["corps"]("Choisi", f"CINCHX{uuid.uuid4().hex[:6].upper()}", None)
     reponse = jeu["client"].post(
         "/employees", headers=jeu["entetes"], json={**base, "salaire": 5500, "typeSalaire": "JOURNALIER"}
     )
@@ -158,7 +158,7 @@ def test_l_utilisateur_peut_choisir_le_type_de_salaire_a_la_creation_et_a_la_mod
 
 
 def test_references_inconnues_et_doublon_de_cin_refuses(jeu: dict[str, Any]) -> None:
-    base = jeu["corps"]("Reference", f"CIN-REF-{uuid.uuid4().hex[:6]}", None)
+    base = jeu["corps"]("Reference", f"CINREF{uuid.uuid4().hex[:6].upper()}", None)
     for variante in ({"fonctionId": 999_999}, {"chantierId": 999_999}, {"equipeId": 999_999}):
         reponse = jeu["client"].post("/employees", headers=jeu["entetes"], json={**base, **variante})
         assert reponse.status_code in (400, 404), (variante, reponse.text)

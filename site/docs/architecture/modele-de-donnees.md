@@ -47,10 +47,10 @@ singulier et en français, sauf `fonction` (le modèle s'appelle `Function`), `e
 
 | Table | Clé métier (unique) | Colonnes | Clés étrangères |
 |---|---|---|---|
-| `fonction` | `libelle` (unique après trim et comparaison sans casse, V27) | `libelle` (100, non nul), `version` | — |
-| `chantier` | `code` (unique après trim et comparaison sans casse, V27) | `code` (100, non nul), `designation` (500), `nom` (255), `nature` (30, nullable avant qualification), `localisation` (2048), `latitude`/`longitude` (`NUMERIC(11,8)`, paire nullable), `afficher_sur_carte` (booléen non nul, faux), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
+| `fonction` | `libelle` (unique sans casse, forme canonique imposée : espaces internes réduits, `0011`) | `libelle` (100, non nul), `version` | — |
+| `chantier` | `code` (unique sans casse, forme canonique imposée, `0011`) | `code` (100, non nul), `designation` (500), `nom` (255), `nature` (30, nullable avant qualification), `localisation` (2048), `latitude`/`longitude` (`NUMERIC(11,8)`, paire nullable), `afficher_sur_carte` (booléen non nul, faux), `source_erp` (booléen, non nul, faux), `actif` (booléen, non nul, vrai), `version` | — |
 | `equipe` | Voir le [modèle du domaine Équipe](../domaines/equipe/index.md#modèle-de-données) | `code` (50), `libelle` (100), tous deux non nuls, `version` | — |
-| `employe` | `cin` (unique après trim et comparaison sans casse, V27) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,0)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md) |
+| `employe` | `cin` (unique, forme canonique `^[A-Z0-9]+$` imposée, `0011`) | `nom_prenom` (150), `cin` (30), `date_naissance`, `date_embauche`, `statut` (`ACTIF`/`INACTIF`), tous non nuls, `version` ; `salaire` (`NUMERIC(10,0)`, ≥ 0) et `type_salaire` (`MENSUEL`/`JOURNALIER`), nullables — état courant dérivé de la Paie, voir [ADR 0010](../decisions/0010-employe-etat-du-dernier-mois-de-paie.md) |
 | `employe_sortie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `motif` (255 : « STC », saisi ou « Absent du fichier »), tous non nuls, `version` — un départ de l'entreprise par mois au plus | `employee_id` (non nul) |
 | `paie` | `(employee_id, periode)` | `periode` (entier `aaaaMM`), `nombre_jours_travailles` (`NUMERIC(5,0)`), `jours_recuperation_ouvrable` et `jours_recuperation_dimanche` (`NUMERIC(5,0)`), salaires/primes entiers, `observation` (nullable), `version` | `employee_id`, `fonction_id`, `chantier_id` (non nuls), `equipe_id` (nullable) |
 | `heures_supp` | `(employee_id, periode, chantier_id)` | `periode` (`aaaaMM`), `salaire_reference`, `type_salaire_reference`, `s_h` (entier de dirhams, instantanés, nuls pour un forfait seul), `p_h` (heures entières), `montant`, `est_stc_ou_sortie`, `stc_dh`, `forfait`, `net_a_payer` (entiers, montant en `NUMERIC(16,0)`), `version` | `employee_id`, `paie_id`, `fonction_id`, `chantier_id` (non nuls) |
@@ -105,10 +105,10 @@ Le compte applicatif n'a que `SELECT` et `INSERT` sur ces tables (voir `afterMig
 
 | Donnée | Garantie en base | Garantie en service |
 |---|---|---|
-| Fonction (`libelle`) | `V27` : index unique sur `UPPER(BTRIM(libelle))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
-| Chantier (`code`) | `V27` : index unique sur `UPPER(BTRIM(code))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
-| Équipe (`code`, `libelle`) | `V25` : index uniques sur `UPPER(BTRIM(...))` | Code et libellé trimés, comparaison insensible à la casse, `409` |
-| Employé (`cin`) | `V27` : index unique sur `UPPER(BTRIM(cin))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
+| Fonction (`libelle`) | `V27` : index unique sur `UPPER(BTRIM(libelle))` ; `0011` : contrainte `ck_fonction_libelle_canonique` (espaces internes réduits) | Espaces réduits, comparaison insensible à la casse, `409` |
+| Chantier (`code`) | `V27` : index unique sur `UPPER(BTRIM(code))` ; `0011` : contrainte `ck_chantier_code_canonique` | Espaces réduits, comparaison insensible à la casse, `409` |
+| Équipe (`code`, `libelle`) | `V25` : index uniques sur `UPPER(BTRIM(...))` ; `0011` : contraintes `ck_equipe_code_canonique`, `ck_equipe_libelle_canonique` | Espaces réduits, comparaison insensible à la casse, `409` |
+| Employé (`cin`) | `V27` : index unique sur `UPPER(BTRIM(cin))` ; `0011` : contrainte `ck_employe_cin_canonique` (`^[A-Z0-9]+$`) et fusion auditée des doublons | Espaces retirés, majuscules, lettres et chiffres seulement, `409` |
 | Bulletin (employé, période) | `UNIQUE` | Contrôle avant création, `409` |
 | Utilisateur (`username`, `email`) | `V27` : index uniques sur `UPPER(BTRIM(...))` et contraintes anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |
 | Rôle (`nom`) | `V27` : index unique sur `UPPER(BTRIM(nom))` et contrainte anti-espaces extérieurs | Valeur trimée, comparaison insensible à la casse, `409` |

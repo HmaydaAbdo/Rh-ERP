@@ -41,7 +41,7 @@ class Scenario:
 
 @pytest.fixture
 def scenario(plateforme: Plateforme) -> Iterator[Scenario]:
-    marque = uuid.uuid4().hex[:8]
+    marque = uuid.uuid4().hex[:8].upper()
     with plateforme.moteur.begin() as c:
         codes = [f"P{marque}{i}" for i in range(2)]
         libelles = [f"Fct {marque} {i}" for i in range(2)]

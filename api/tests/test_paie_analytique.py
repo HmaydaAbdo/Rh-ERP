@@ -86,7 +86,7 @@ def test_route_analytique_agrege_les_bulletins_du_mois(plateforme: Plateforme, c
             text(
                 "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, "
                 "fonction_id, chantier_id, statut) "
-                "VALUES ('Essai Paie', 'TEST-ANA-1', '1990-01-01', '2020-01-01', :f, :c, 'ACTIF') RETURNING id"
+                "VALUES ('Essai Paie', 'TESTANA1', '1990-01-01', '2020-01-01', :f, :c, 'ACTIF') RETURNING id"
             ),
             {"f": fonction, "c": chantier},
         ).scalar_one()

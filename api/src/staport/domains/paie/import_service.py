@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import CIN_REGLE, cin_canonique, cin_valide, texte_canonique
 from staport.domains.common.montant import arrondir_montant
 from staport.domains.employee.models import Employee, EmployeeSortie, EmployeeStatut
 from staport.domains.equipe.models import Equipe
@@ -37,6 +38,23 @@ from .schemas import (
     PaieImportRetour,
 )
 
+COLONNE_CIN = 2
+COLONNES_CODES = (1, 11, 12)  # fonction, chantier, équipe
+
+
+def _identifiants_canoniques(ligne: list[Any]) -> list[Any]:
+    """CIN, fonction, chantier et équipe du fichier sous leur forme canonique (`common/cles.py`, KAN-319).
+
+    Sans elle, « XY 100200 » ne retrouvait pas la fiche « XY100200 » et l'étape de correction créait un doublon.
+    """
+    ligne = list(ligne)
+    if len(ligne) > COLONNE_CIN and ligne[COLONNE_CIN] is not None:
+        ligne[COLONNE_CIN] = cin_canonique(ligne[COLONNE_CIN]) or None
+    for index in COLONNES_CODES:
+        if len(ligne) > index and isinstance(ligne[index], str):
+            ligne[index] = texte_canonique(ligne[index]) or None
+    return ligne
+
 
 def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
     try:
@@ -54,7 +72,7 @@ def lire_lignes_paie(contenu: bytes) -> list[tuple[int, list[Any]]]:
             # Une cellule vide d'apparence (texte vide ou espaces, fréquent après une formule) vaut une cellule absente.
             ligne = [None if isinstance(valeur, str) and not valeur.strip() else valeur for valeur in cellules]
             if any(valeur is not None and str(valeur).strip() for valeur in ligne):
-                lignes.append((numero, ligne))
+                lignes.append((numero, _identifiants_canoniques(ligne)))
         return lignes
     finally:
         classeur.close()
@@ -371,7 +389,15 @@ class ServiceImportPaie:
                             raison=f"longueur maximale de {limite} caractères dépassée",
                         )
                     )
-            if cin is None or cin.upper() not in employees:
+            if cin and not cin_valide(cin):
+                # Valeur abîmée (notation scientifique d'Excel, ponctuation) : jamais une nouvelle fiche (KAN-319).
+                erreurs.append(
+                    PaieImportErreur(
+                        numero_ligne=numero, cin=cin, nom_prenom=nom, champ="cin", valeur=cin, raison=CIN_REGLE
+                    )
+                )
+                cin = None
+            elif cin is None or cin.upper() not in employees:
                 if not cin:  # un CIN renseigné mais inconnu n'est pas une erreur : il rejoint `cinInconnus`
                     erreurs.append(
                         PaieImportErreur(

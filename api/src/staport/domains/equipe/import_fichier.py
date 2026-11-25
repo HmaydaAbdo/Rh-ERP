@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import cle, texte_canonique
 from staport.domains.common.fichier import decrire_fichier, texte_cellule
 
 from .exceptions import ErreurImportEquipe
@@ -36,7 +37,7 @@ def generer_modele() -> BytesIO:
 
 
 def _normaliser(valeur: object) -> str:
-    return texte_cellule(valeur).strip().upper()
+    return cle(texte_cellule(valeur))
 
 
 def _cellule(cellules: Cellules, index: int) -> object:
@@ -94,8 +95,8 @@ async def importer(
         a_creer: list[Equipe] = []
         total = 0
         for numero, cellules in lignes:
-            code = texte_cellule(_cellule(cellules, 0)).strip()
-            libelle = texte_cellule(_cellule(cellules, 1)).strip()
+            code = texte_canonique(texte_cellule(_cellule(cellules, 0)))
+            libelle = texte_canonique(texte_cellule(_cellule(cellules, 1)))
             if not code and not libelle and _vide_a_partir(cellules, 2):
                 continue
             total += 1

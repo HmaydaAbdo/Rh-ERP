@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import cin_canonique
 from staport.domains.common.fichier import decrire_fichier
 from staport.domains.employee.models import Employee, TypeSalaire
 from staport.domains.function.models import Fonction
@@ -53,7 +54,7 @@ class _Dossier:
 
 
 def _cle(cin: str | None) -> str:
-    return "" if cin is None else cin.strip().upper()
+    return "" if cin is None else cin_canonique(cin)
 
 
 def _nom_normalise(valeur: str | None) -> str:

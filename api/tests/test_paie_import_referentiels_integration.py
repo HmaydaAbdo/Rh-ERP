@@ -26,7 +26,7 @@ def _fichier(fonction: str, chantier: str, equipe: str) -> bytes:
     feuille.append([])
     feuille.append([])
     feuille.append([])
-    feuille.append(["Nom corrigé", fonction, "CIN-REF", 25, None, None, 1000, None, None, 1000, None, chantier, equipe])
+    feuille.append(["Nom corrigé", fonction, "CINREF", 25, None, None, 1000, None, None, 1000, None, chantier, equipe])
     sortie = BytesIO()
     classeur.save(sortie)
     return sortie.getvalue()
@@ -74,7 +74,7 @@ async def _verifier_referentiels(url: str) -> None:
                     text(
                         "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, "
                         "fonction_id, chantier_id, equipe_id, salaire, type_salaire, statut) "
-                        "VALUES ('Nom initial', 'CIN-REF', CAST(:naissance AS date), CAST(:embauche AS date), "
+                        "VALUES ('Nom initial', 'CINREF', CAST(:naissance AS date), CAST(:embauche AS date), "
                         ":fonction, :chantier, :equipe, "
                         "1000, 'MENSUEL', 'ACTIF') RETURNING id"
                     ),
@@ -179,7 +179,7 @@ async def _verifier_automatique(url: str) -> None:
             await session.execute(
                 text(
                     "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
-                    "salaire, type_salaire, statut) VALUES ('Nom corrigé', 'CIN-REF', "
+                    "salaire, type_salaire, statut) VALUES ('Nom corrigé', 'CINREF', "
                     "CAST(:n AS date), CAST(:e AS date), "
                     ":f, :c, 1000, 'MENSUEL', 'ACTIF')"
                 ),

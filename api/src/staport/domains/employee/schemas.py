@@ -4,6 +4,7 @@ from typing import Annotated
 
 from pydantic import Field, model_validator
 
+from staport.domains.common.cles import Cin
 from staport.domains.common.schemas import ModeleApi, Montant, Nombre, NonVide, Page, regle_metier
 from staport.domains.paie.periode import PeriodePaie
 
@@ -12,7 +13,7 @@ from .models import EmployeeStatut, TypeSalaire
 
 class _EmployeeBase(ModeleApi):
     nom_prenom: Annotated[NonVide, Field(max_length=150)]
-    cin: Annotated[NonVide, Field(max_length=30)]
+    cin: Annotated[Cin, Field(max_length=30)]
     date_naissance: date
     date_embauche: date
     fonction_id: int

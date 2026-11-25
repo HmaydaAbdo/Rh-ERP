@@ -25,7 +25,7 @@ class Jeu:
 
 @pytest.fixture
 def jeu(plateforme: Plateforme) -> Iterator[Jeu]:
-    marque = uuid.uuid4().hex[:8]
+    marque = uuid.uuid4().hex[:8].upper()
     with plateforme.moteur.begin() as c:
         fonction = c.execute(
             text("INSERT INTO fonction (libelle) VALUES (:l) RETURNING id"), {"l": f"GRP {marque}"}

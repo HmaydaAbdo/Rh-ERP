@@ -2,13 +2,14 @@ from typing import Annotated
 
 from pydantic import Field
 
+from staport.domains.common.cles import TexteCanonique
 from staport.domains.common.schemas import Coordonnee, ModeleApi, Nombre, NonVide, Page
 
 from .models import NatureChantier
 
 
 class ChantierCreationRequete(ModeleApi):
-    code: Annotated[NonVide, Field(max_length=100)]
+    code: Annotated[TexteCanonique, Field(max_length=100)]
     designation: Annotated[NonVide, Field(max_length=500)]
     nom: Annotated[str | None, Field(max_length=255)] = None
     nature: NatureChantier

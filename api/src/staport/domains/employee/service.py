@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from staport.domains.chantier.models import Chantier
 from staport.domains.common.audit_contexte import Auditeur, TypeOperation
+from staport.domains.common.cles import CIN_REGLE, cin_canonique, cin_valide, cle
 from staport.domains.common.montant import arrondir_montant
 from staport.domains.common.optimiste import verifier_version
 from staport.domains.common.pagination import Pagination
@@ -462,16 +463,16 @@ class ServiceEmployee:
             )
         async with s.begin():
             fonctions = {
-                libelle.strip().upper(): identifiant
+                cle(libelle): identifiant
                 for identifiant, libelle in (await s.execute(select(Fonction.id, Fonction.libelle))).all()
             }
             chantiers = {
-                code.strip().upper(): identifiant
+                cle(code): identifiant
                 for identifiant, code in (
                     await s.execute(select(Chantier.id, Chantier.code).where(Chantier.actif.is_(True)))
                 ).all()
             }
-            cins = {x.strip().upper() for x in (await s.execute(select(Employee.cin))).scalars()}
+            cins = {cin_canonique(x) for x in (await s.execute(select(Employee.cin))).scalars()}
             vus: set[str] = set()
             total = 0
             for numero, valeurs in enumerate(lignes[1:], 2):
@@ -482,29 +483,32 @@ class ServiceEmployee:
                     valeurs[i] if i < len(valeurs) else None for i in range(6)
                 )
                 embauche, naissance = _date_cellule(embauche), _date_cellule(naissance)
-                nom, cin, fonction, chantier = _texte(nom), _texte(cin), _texte(fonction), _texte(chantier)
+                nom, fonction, chantier = _texte(nom), _texte(fonction), _texte(chantier)
+                cin = cin_canonique(cin) or None
                 raison = _raison_ligne(nom, cin, naissance, embauche, fonction, chantier)
-                cle = (cin or "").strip().upper()
-                if raison is None and cle in vus:
+                cle_cin = cin or ""
+                if raison is None and not cin_valide(cle_cin):
+                    raison = CIN_REGLE
+                elif raison is None and cle_cin in vus:
                     raison = "CIN en doublon dans le fichier"
-                elif raison is None and cle in cins:
+                elif raison is None and cle_cin in cins:
                     raison = "Un employé existe déjà avec ce CIN (à modifier depuis l'écran Employés)"
-                elif raison is None and (fonction or "").strip().upper() not in fonctions:
+                elif raison is None and cle(fonction) not in fonctions:
                     raison = f"Fonction introuvable : {(fonction or '').strip()}"
-                elif raison is None and (chantier or "").strip().upper() not in chantiers:
+                elif raison is None and cle(chantier) not in chantiers:
                     raison = f"Chantier introuvable ou clôturé : {(chantier or '').strip()}"
                 if raison:
                     erreurs.append(EmployeeLigneIgnoree(numero_ligne=numero, cin=cin, nom_prenom=nom, raison=raison))
                     continue
-                vus.add(cle)
+                vus.add(cle_cin)
                 nouveaux.append(
                     Employee(
                         nom_prenom=(nom or "").strip(),
-                        cin=(cin or "").strip(),
+                        cin=cle_cin,
                         date_naissance=cast(date, naissance),
                         date_embauche=cast(date, embauche),
-                        fonction_id=fonctions[(fonction or "").strip().upper()],
-                        chantier_id=chantiers[(chantier or "").strip().upper()],
+                        fonction_id=fonctions[cle(fonction)],
+                        chantier_id=chantiers[cle(chantier)],
                     )
                 )
             if not erreurs:

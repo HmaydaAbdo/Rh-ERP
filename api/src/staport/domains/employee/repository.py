@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from staport.domains.chantier.models import Chantier
+from staport.domains.common.cles import cin_canonique
 from staport.domains.common.pagination import Pagination
 from staport.domains.common.recherche import ECHAPPEMENT, motif_contient
 from staport.domains.equipe.models import Equipe
@@ -56,7 +57,7 @@ async def par_id(s: AsyncSession, i: int) -> Employee | None:
 
 
 async def existe_cin(s: AsyncSession, cin: str, sauf_id: int | None = None) -> bool:
-    q = select(func.count()).select_from(Employee).where(func.upper(func.btrim(Employee.cin)) == cin.upper().strip())
+    q = select(func.count()).select_from(Employee).where(Employee.cin == cin_canonique(cin))
     if sauf_id is not None:
         q = q.where(Employee.id != sauf_id)
     return (await s.execute(q)).scalar_one() > 0

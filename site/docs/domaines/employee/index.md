@@ -91,8 +91,11 @@ L'assistant RH n'accède aux employés que par des **outils MCP de lecture**, en
 
 ## Règles
 
-- Le CIN est obligatoire, limité à 30 caractères et unique sans distinction de casse après retrait
-  des espaces extérieurs. Le nom et prénom est obligatoire, limité à 150 caractères.
+- Le CIN est obligatoire, limité à 30 caractères et unique. Il est enregistré sous sa forme
+  canonique, à chaque entrée (formulaire, API, imports d'employés, de paie et d'heures
+  supplémentaires) : tous les espaces retirés, en majuscules, lettres et chiffres seulement
+  (`XY 100200` devient `XY100200`, `9.00000E+11` est refusé). La contrainte
+  `ck_employe_cin_canonique` l'impose en base (KAN-319, révision `0011`). Le nom et prénom est obligatoire, limité à 150 caractères.
 - Les deux dates et la fonction sont obligatoires. La naissance est strictement antérieure à
   aujourd’hui, dans l’API, le formulaire et l’import. La date d’embauche peut être future.
 - Une fiche « En poste » (`ACTIF`) a un chantier et peut avoir une équipe. Une fiche « Sorti »
