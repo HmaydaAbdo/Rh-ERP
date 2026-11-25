@@ -214,7 +214,11 @@ def test_les_roles_sont_filtres_par_nom_et_parcourus_par_pages(
     role = _donnees(_appel(plateforme, admin[0], "roles_lister", nom="SYSTEM_ADMIN"))["roles"][0]
     assert role["protege"] is True and "AUDIT_READ" in role["permissions"]
     assert role["permissions"] == sorted(role["permissions"])
-    assert [r["nom"] for r in tous["roles"]] == sorted(r["nom"] for r in tous["roles"])
+    # Ordre de la base (sa collation) et non le tri Python, sensible à la casse : un rôle créé en minuscules par un
+    # autre test de la session se range sinon différemment.
+    with plateforme.moteur.connect() as c:
+        ordre_base = list(c.execute(text("SELECT nom FROM role ORDER BY nom")).scalars())
+    assert [r["nom"] for r in tous["roles"]] == ordre_base[: len(tous["roles"])]
     filtre = _donnees(_appel(plateforme, admin[0], "roles_lister", nom="system"))
     assert [r["nom"] for r in filtre["roles"]] == ["SYSTEM_ADMIN"] and filtre["total"] == 1
     page = _donnees(_appel(plateforme, admin[0], "roles_lister", limite=1, page=0))
