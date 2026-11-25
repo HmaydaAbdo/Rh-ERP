@@ -53,7 +53,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0009_type_salaire_deduit"
+        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -62,7 +62,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
                 "JOIN permission p ON p.id = rp.permission_id WHERE p.code = 'EMPLOYEE_EXPORT' ORDER BY r.nom"
             )
         ).scalars()
-        assert list(titulaires) == ["PAIE_MANAGER", "SYSTEM_ADMIN"]
+        assert list(titulaires) == ["CHARGE_RH", "PAIE_MANAGER", "SYSTEM_ADMIN"]
         assert c.execute(text("SELECT count(*) FROM permission")).scalar_one() > 0
         assert (
             c.execute(text("SELECT count(*) FROM pg_extension WHERE extname IN ('vector','pgcrypto')")).scalar_one()
@@ -113,10 +113,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert (
-            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0009_type_salaire_deduit"
-        )
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
             text("SELECT has_table_privilege('staport_env_test', 'audit_journal', 'INSERT')")
@@ -197,12 +194,10 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     migrer()
     moteur = create_engine(url)
     with moteur.connect() as connexion:
-        assert (
-            connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0009_type_salaire_deduit"
-        )
+        assert connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0010_role_charge_rh"
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
-        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant
+        # Les rôles existants sont conservés ; seul CHARGE_RH (révision 0010) s'ajoute.
+        assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() == roles_avant + 1
     moteur.dispose()
 
 
@@ -328,5 +323,136 @@ def test_la_revision_0009_corrige_les_types_de_salaire_et_recalcule_les_heures_s
                 )
             ).scalar_one()
             == 4
+        )
+    moteur.dispose()
+
+
+PERMISSIONS_CHARGE_RH = {
+    "ACCUEIL_READ",
+    "ACCUEIL_WRITE",
+    "CHANTIER_READ",
+    "EMPLOYEE_EXPORT",
+    "EMPLOYEE_READ",
+    "EQUIPE_READ",
+    "FUNCTION_READ",
+    "HEURES_SUP_READ",
+    "IA_UTILISER",
+    "PAIE_EXPORT",
+    "PAIE_READ",
+}
+
+
+def test_la_revision_0010_cree_le_role_charge_rh_et_le_compte_de_rania_atik(creer_base: Callable[[str], str]) -> None:
+    """Rôle en consultation seule, compte sans mot de passe utilisable relié à sa fiche, le tout journalisé."""
+    from pwdlib import PasswordHash
+    from pwdlib.hashers.argon2 import Argon2Hasher
+
+    url = creer_base("role_charge_rh")
+    command.upgrade(_config(url), "0009_type_salaire_deduit")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('Chargée RH') RETURNING id")).scalar_one()
+        chantier = c.execute(text("INSERT INTO chantier (code) VALUES ('SIEGE') RETURNING id")).scalar_one()
+        fiche = c.execute(
+            text(
+                "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, chantier_id, "
+                "statut) VALUES ('ATIK RANIA', 'RA1', '1995-01-01', '2024-01-01', :f, :c, 'ACTIF') RETURNING id"
+            ),
+            {"f": fonction, "c": chantier},
+        ).scalar_one()
+    moteur.dispose()
+
+    command.upgrade(_config(url), "head")
+
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        permissions = set(
+            c.execute(
+                text(
+                    "SELECT p.code FROM role r JOIN role_permission rp ON rp.role_id = r.id "
+                    "JOIN permission p ON p.id = rp.permission_id WHERE r.nom = 'CHARGE_RH'"
+                )
+            ).scalars()
+        )
+        assert permissions == PERMISSIONS_CHARGE_RH
+        compte = c.execute(
+            text(
+                "SELECT u.id, u.email, u.actif, u.employee_id, u.mot_de_passe_hash, r.nom FROM utilisateur u "
+                "JOIN utilisateur_role ur ON ur.utilisateur_id = u.id JOIN role r ON r.id = ur.role_id "
+                "WHERE u.username = 'rania.atik'"
+            )
+        ).one()
+        assert (compte.email, compte.actif, compte.employee_id, compte.nom) == (
+            "rania.atik@staport-sa.ma",
+            True,
+            fiche,
+            "CHARGE_RH",
+        )
+        # Empreinte Argon2 valide (la connexion ne plante pas) mais d'un secret que personne ne connaît.
+        assert compte.mot_de_passe_hash.startswith("$argon2")
+        assert not PasswordHash((Argon2Hasher(),)).verify("", compte.mot_de_passe_hash)
+        assert c.execute(
+            text("SELECT revtype FROM utilisateur_aud WHERE id = :id"), {"id": compte.id}
+        ).scalars().all() == [0]
+        assert c.execute(
+            text(
+                "SELECT count(*) FROM role_permission_aud rpa JOIN role r ON r.id = rpa.role_id "
+                "WHERE r.nom = 'CHARGE_RH'"
+            )
+        ).scalar_one() == len(PERMISSIONS_CHARGE_RH)
+        actions = set(
+            c.execute(
+                text("SELECT action FROM audit_journal WHERE perimetre ->> 'migration' = '0010_role_charge_rh'")
+            ).scalars()
+        )
+        assert actions == {"ROLE_CREATION", "UTILISATEUR_CREATION"}
+    moteur.dispose()
+
+
+def test_la_revision_0010_reprend_un_role_et_un_compte_deja_crees(creer_base: Callable[[str], str]) -> None:
+    """Créés à la main avant la migration : rien n'est dupliqué, il ne manque que les permissions et le rôle."""
+    url = creer_base("role_charge_rh_existant")
+    command.upgrade(_config(url), "0009_type_salaire_deduit")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        role = c.execute(
+            text("INSERT INTO role (nom, description) VALUES ('Charge_RH', 'créé à la main') RETURNING id")
+        ).scalar_one()
+        c.execute(
+            text(
+                "INSERT INTO role_permission (role_id, permission_id) "
+                "SELECT :r, id FROM permission WHERE code = 'EMPLOYEE_READ'"
+            ),
+            {"r": role},
+        )
+        c.execute(
+            text(
+                "INSERT INTO utilisateur (username, email, mot_de_passe_hash) "
+                "VALUES ('ratik', 'Rania.Atik@staport-sa.ma', 'x')"
+            )
+        )
+    moteur.dispose()
+
+    command.upgrade(_config(url), "head")
+
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        assert c.execute(text("SELECT count(*) FROM role WHERE UPPER(nom) = 'CHARGE_RH'")).scalar_one() == 1
+        assert c.execute(text("SELECT count(*) FROM utilisateur")).scalar_one() == 1
+        assert (
+            c.execute(
+                text(
+                    "SELECT r.nom FROM utilisateur u JOIN utilisateur_role ur ON ur.utilisateur_id = u.id "
+                    "JOIN role r ON r.id = ur.role_id WHERE u.username = 'ratik'"
+                )
+            ).scalar_one()
+            == "Charge_RH"
+        )
+        assert c.execute(
+            text("SELECT count(*) FROM role_permission WHERE role_id = :r"), {"r": role}
+        ).scalar_one() == len(PERMISSIONS_CHARGE_RH)
+        assert (
+            c.execute(text("SELECT count(*) FROM role_permission_aud WHERE role_id = :r"), {"r": role}).scalar_one()
+            == len(PERMISSIONS_CHARGE_RH) - 1
         )
     moteur.dispose()

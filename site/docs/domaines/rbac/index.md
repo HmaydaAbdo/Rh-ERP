@@ -104,6 +104,7 @@ Certains écrans appellent plusieurs domaines ; un rôle doit alors porter **tou
 | `SYSTEM_ADMIN` | Les 32 |
 | `PAIE_MANAGER` | Les 24 permissions métier (tout sauf `USER_MANAGE`, `ROLE_MANAGE`, `AUDIT_READ`, `CARTE_READ`, `IA_UTILISER`, `PAIE_RESTORE` et `PARAMETRE_*`) |
 | `DIRECTION` (V28) | `CARTE_READ` seulement ; le Président et les directeurs |
+| `CHARGE_RH` (révision `0010_role_charge_rh`) | Consultation seule, pour le chargé RH du département RH : `EMPLOYEE_READ`, `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ`, `PAIE_READ`, `HEURES_SUP_READ`, `EMPLOYEE_EXPORT`, `PAIE_EXPORT`, `ACCUEIL_READ`, `ACCUEIL_WRITE`, `IA_UTILISER` ; aucune écriture, aucun import, aucune suppression, ni administration, audit, paramètres ou carte (décision du propriétaire, 2026-11-25). La révision crée aussi le compte `rania.atik` (Rania Atik), sans mot de passe utilisable : elle choisit le sien par « Mot de passe oublié » |
 
 D'autres rôles se créent depuis l'écran **Rôles** (`/admin/roles`), sans toucher au code.
 

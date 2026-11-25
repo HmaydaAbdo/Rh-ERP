@@ -57,13 +57,14 @@ auth/
 - Un rôle (ex. `SYSTEM_ADMIN`) est aussi transmis comme autorité dans le jeton, mais aucune règle métier ne
   s'appuie sur un nom de rôle, à l'exception de l'accès aux métriques.
 
-### Rôles de départ (migrations V4 et V28)
+### Rôles de départ (migrations V4, V28 et 0010)
 
 | Rôle | Permissions |
 |---|---|
 | `SYSTEM_ADMIN` | Toutes (y compris `USER_MANAGE`, `ROLE_MANAGE` et `AUDIT_READ`) |
 | `PAIE_MANAGER` | Toutes les permissions métier, sans `USER_MANAGE` ni `ROLE_MANAGE` |
 | `DIRECTION` (V28) | `CARTE_READ` seulement (le Président et les directeurs) |
+| `CHARGE_RH` (révision `0010_role_charge_rh`) | Consultation seule, pour le chargé RH du département RH : `EMPLOYEE_READ`, `FUNCTION_READ`, `CHANTIER_READ`, `EQUIPE_READ`, `PAIE_READ`, `HEURES_SUP_READ`, `EMPLOYEE_EXPORT`, `PAIE_EXPORT`, `ACCUEIL_READ`, `ACCUEIL_WRITE`, `IA_UTILISER` ; aucune écriture, aucun import, aucune suppression, ni administration, audit, paramètres ou carte (décision du propriétaire, 2026-11-25). La révision crée aussi le compte `rania.atik` (Rania Atik), sans mot de passe utilisable : elle choisit le sien par « Mot de passe oublié » |
 
 Les permissions `EQUIPE_*` (migration V9) sont attribuées aux rôles qui portaient déjà les permissions
 `CHANTIER_*`. `AUDIT_READ` (migration V12) est attribuée à `SYSTEM_ADMIN` seulement. `CARTE_READ` (migration V28) est attribuée à `SYSTEM_ADMIN` et au rôle `DIRECTION`, pas à `PAIE_MANAGER`. Tout autre rôle se crée depuis l'écran **Rôles**.
