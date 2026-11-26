@@ -6,7 +6,7 @@ absent sous Windows, voir `conventions/lecons.md`).
 
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
@@ -197,7 +197,7 @@ def test_le_gabarit_de_l_attestation_reprend_le_modele_et_accorde_la_civilite() 
     assert "<strong>CHAUFFEUR CAMION</strong> depuis le <strong>01/06/2024</strong>" in html
     assert "intéressée sur sa demande" in html
     assert "La Direction" in html
-    masculin = construire_html(Attestation(**{**attestation.__dict__, "civilite": Civilite.MONSIEUR}))
+    masculin = construire_html(replace(attestation, civilite=Civilite.MONSIEUR))
     assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
 
 

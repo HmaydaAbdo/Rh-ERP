@@ -3,10 +3,11 @@ import localeFr from '@angular/common/locales/fr';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { fournirPermissions } from '../../../shared/testing/ecrans';
 import { EmployeeReferenceService } from '../../../shared/reference-data/employee-reference.service';
+import { NotificationService } from '../../../shared/ui/feedback/feedback.service';
 import { Employee } from '../../employee/models/employee.model';
 import { EmployeeService } from '../../employee/services/employee.service';
 import { AttestationTravailComponent, raisonsAttestationImpossible } from './attestation-travail.component';
@@ -36,6 +37,9 @@ describe('raisonsAttestationImpossible', () => {
 describe('AttestationTravailComponent', () => {
   const service = { getById: vi.fn(), attestationTravail: vi.fn() };
   const references = { fetchPage: vi.fn(), fetchById: vi.fn() };
+  const notifications = { add: vi.fn() };
+
+  afterEach(() => vi.restoreAllMocks());
 
   function afficher(employe: Employee) {
     service.getById.mockReset().mockReturnValue(of(employe));
@@ -48,12 +52,13 @@ describe('AttestationTravailComponent', () => {
         { provide: LOCALE_ID, useValue: 'fr-FR' },
         fournirPermissions(['DOCUMENT_ADMIN_EDITER', 'EMPLOYEE_READ']).providers,
         { provide: EmployeeService, useValue: service },
-        { provide: EmployeeReferenceService, useValue: references }
+        { provide: EmployeeReferenceService, useValue: references },
+        { provide: NotificationService, useValue: notifications }
       ]
     });
     const fixture = TestBed.createComponent(AttestationTravailComponent);
     fixture.detectChanges();
-    const composant = fixture.componentInstance as unknown as { form: { employeeId: () => { value: { set(v: number): void } }; civilite: () => { value: () => unknown } } };
+    const composant = fixture.componentInstance as unknown as { form: { employeeId: () => { value: { set(v: number): void } }; civilite: () => { value: { (): unknown; set(v: string): void } } } };
     composant.form.employeeId().value.set(employe.id);
     fixture.detectChanges();
     return { fixture, page: fixture.nativeElement as HTMLElement, composant };
@@ -81,5 +86,52 @@ describe('AttestationTravailComponent', () => {
     expect(page.textContent).toContain('Attestation impossible : le matricule CNSS n’est pas renseigné');
     const bouton = page.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(bouton.disabled).toBe(true);
+  });
+
+  async function imprimer(employe: Employee = DECLARE) {
+    const vue = afficher(employe);
+    await vue.fixture.whenStable();
+    vue.fixture.detectChanges();
+    notifications.add.mockReset();
+    vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:attestation');
+    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    return vue;
+  }
+
+  it('imprime : demande le PDF avec la civilité choisie et l’ouvre dans un nouvel onglet', async () => {
+    const { fixture, page, composant } = await imprimer();
+    const ouvrir = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+    composant.form.civilite().value.set('MADAME');
+
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME');
+    expect(ouvrir).toHaveBeenCalledWith('blob:attestation', '_blank');
+    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success', detail: 'ALAMI YOUSSEF' }));
+  });
+
+  it('télécharge le PDF quand le navigateur bloque le nouvel onglet', async () => {
+    const { fixture, page } = await imprimer();
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    const telecharger = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(telecharger).toHaveBeenCalled();
+    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('signale l’échec de la génération', async () => {
+    const { fixture, page } = await imprimer();
+    service.attestationTravail.mockReturnValue(throwError(() => new Error('refus')));
+    const ouvrir = vi.spyOn(window, 'open');
+
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(ouvrir).not.toHaveBeenCalled();
+    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', summary: 'L’attestation n’a pas pu être générée.' }));
   });
 });
