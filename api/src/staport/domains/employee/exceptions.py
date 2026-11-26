@@ -17,6 +17,22 @@ class EmployeeDejaExistant(ErreurMetier):
         super().__init__(f"Un employé existe déjà avec le CIN : {cin}")
 
 
+class MatriculeCnssDejaUtilise(ErreurMetier):
+    statut = HTTPStatus.CONFLICT
+
+    def __init__(self, matricule: str):
+        super().__init__(f"Le matricule CNSS {matricule} est déjà porté par un autre employé")
+
+
+class AttestationImpossible(ErreurMetier):
+    """La fiche ne permet pas d'attester (HTTP 400) : employé sorti ou déclaration CNSS incomplète."""
+
+    statut = HTTPStatus.BAD_REQUEST
+
+    def __init__(self, raisons: list[str]):
+        super().__init__("Attestation impossible : " + " ; ".join(raisons) + ".")
+
+
 class ReferenceInvalide(ErreurMetier):
     """Fonction, chantier ou équipe inexistant (HTTP 400)."""
 

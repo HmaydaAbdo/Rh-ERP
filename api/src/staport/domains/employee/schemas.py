@@ -2,13 +2,37 @@ from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import Field, model_validator
+from pydantic import AfterValidator, BeforeValidator, Field, model_validator
 
 from staport.domains.common.cles import Cin
 from staport.domains.common.schemas import ModeleApi, Montant, Nombre, NonVide, Page, regle_metier
 from staport.domains.paie.periode import PeriodePaie
 
-from .models import EmployeeStatut, TypeSalaire
+from .models import Civilite, EmployeeStatut, TypeSalaire
+
+MATRICULE_MAX = 20
+CNSS_REGLE = "Le matricule CNSS ne contient que des chiffres, 20 au plus (ex. 123456789)."
+
+
+def matricule_cnss_canonique(valeur: object) -> str:
+    """Le matricule tel qu'enregistré : sans aucun espace ; un nombre lu d'Excel (123456789.0) redevient entier."""
+    if isinstance(valeur, float) and valeur.is_integer():
+        valeur = int(valeur)
+    return "".join(str(valeur or "").split())
+
+
+def _matricule_schema(valeur: object) -> object:
+    return matricule_cnss_canonique(valeur) or None if isinstance(valeur, str | int | float) else valeur
+
+
+def _matricule_controle(valeur: str | None) -> str | None:
+    if valeur is not None and not (valeur.isascii() and valeur.isdigit() and len(valeur) <= MATRICULE_MAX):
+        raise regle_metier("matriculeCnss", CNSS_REGLE)
+    return valeur
+
+
+MatriculeCnss = Annotated[str | None, BeforeValidator(_matricule_schema), AfterValidator(_matricule_controle)]
+"""Matricule CNSS facultatif : espaces retirés, vide = absent, chiffres seulement."""
 
 
 class _EmployeeBase(ModeleApi):
@@ -21,6 +45,10 @@ class _EmployeeBase(ModeleApi):
     salaire: Montant | None = Field(default=None, ge=0, max_digits=10, decimal_places=0)
     # Facultatif : absent, le type se déduit du salaire ; présent, c'est le choix explicite de l'utilisateur.
     type_salaire: TypeSalaire | None = None
+    # Déclaration CNSS et civilité (KAN-320) : facultatives ; absentes d'une modification, elles restent inchangées.
+    matricule_cnss: MatriculeCnss = None
+    date_declaration_cnss: date | None = None
+    civilite: Civilite | None = None
 
     @model_validator(mode="after")
     def coherence(self):
@@ -28,6 +56,8 @@ class _EmployeeBase(ModeleApi):
             raise regle_metier("typeSansSalaire", "un type de salaire exige un salaire")
         if self.date_naissance >= date.today():
             raise regle_metier("dateNaissance", "la date de naissance doit être passée")
+        if self.date_declaration_cnss is not None and self.date_declaration_cnss > date.today():
+            raise regle_metier("dateDeclarationCnss", "la date de déclaration CNSS ne peut pas être future")
         return self
 
 
@@ -96,6 +126,9 @@ class EmployeeReponse(ModeleApi):
     salaire: Nombre | None
     type_salaire: TypeSalaire | None
     statut: EmployeeStatut
+    matricule_cnss: str | None
+    date_declaration_cnss: date | None
+    civilite: Civilite | None
 
 
 EmployeesPage = Page[EmployeeReponse]
@@ -248,5 +281,20 @@ class EmployeeLigneIgnoree(ModeleApi):
 class EmployeeImportReponse(ModeleApi):
     total_lignes: int
     crees: int
+    ignores: int
+    lignes_ignorees: list[EmployeeLigneIgnoree]
+
+
+class AttestationTravailRequete(ModeleApi):
+    civilite: Civilite
+
+
+class CnssImportReponse(ModeleApi):
+    """Import des déclarations CNSS : atomique, une ligne rejetée refuse tout le fichier."""
+
+    total_lignes: int
+    mis_a_jour: int
+    inchanges: int
+    sans_declaration: int
     ignores: int
     lignes_ignorees: list[EmployeeLigneIgnoree]

@@ -1,0 +1,62 @@
+/* Feuille de style STATIQUE de l'attestation de travail (voir `attestation_pdf.py`) : jamais interpolée avec une
+   donnée ; les polices et le logo sont ceux du rapport de paie (base du rendu : `paie/report`). */
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Regular.ttf"); font-weight: normal; }
+@font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; }
+
+@page {
+  size: A4 portrait;
+  margin: 22mm 24mm 24mm 24mm;
+}
+
+body {
+  font-family: "Liberation Serif", serif;
+  font-size: 13pt;
+  color: #111;
+  line-height: 1.7;
+}
+
+.entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.2pt solid #1f3a5f;
+  padding-bottom: 4mm;
+}
+
+.entete .logo { height: 18mm; }
+
+.entete .societe {
+  text-align: right;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  color: #1f3a5f;
+}
+
+.entete .societe strong { font-size: 12pt; }
+
+.lieu-date {
+  margin-top: 14mm;
+  text-align: right;
+}
+
+h1 {
+  margin: 20mm 0 14mm;
+  text-align: center;
+  font-size: 19pt;
+  letter-spacing: 1.5pt;
+  text-decoration: underline;
+  text-underline-offset: 3pt;
+}
+
+p.corps {
+  text-align: justify;
+  text-indent: 12mm;
+  margin: 0 0 7mm;
+}
+
+.signature {
+  margin-top: 24mm;
+  margin-left: 55%;
+  text-align: center;
+  font-weight: bold;
+}

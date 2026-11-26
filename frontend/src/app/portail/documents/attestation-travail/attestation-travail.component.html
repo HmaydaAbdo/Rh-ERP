@@ -1,0 +1,44 @@
+<div class="app-page app-page--narrow">
+  <div class="app-page__header"><h1>Documents administratifs</h1></div>
+
+  <form [formRoot]="form" class="app-form__grid">
+    <div class="app-form__section">
+      <h2>Attestation de travail</h2>
+      <p class="app-muted">Pour un employé en poste et déclaré à la CNSS : « depuis le » reprend la date de déclaration CNSS.</p>
+    </div>
+
+    <div class="field app-form__wide">
+      <label for="attestation-employe">Employé <span class="field__req" aria-hidden="true">*</span></label>
+      <app-lazy-select ariaLabel="Employé" inputId="attestation-employe" [formField]="form.employeeId" [source]="employes" optionLabel="displayLabel" placeholder="Rechercher par nom ou CIN" />
+      <stp-field-error [field]="form.employeeId" />
+    </div>
+
+    @if (fiche.isLoading()) {
+      <stp-message class="app-form__wide" text="Chargement de la fiche…" />
+    } @else if (fiche.error()) {
+      <stp-message class="app-form__wide" severity="error" text="La fiche de l’employé n’a pas pu être chargée." />
+    } @else if (fiche.value(); as employe) {
+      <dl class="app-facts app-form__wide" aria-label="Informations imprimées sur l’attestation">
+        <div><dt>Nom et prénom</dt><dd>{{ employe.nomPrenom }}</dd></div>
+        <div><dt>CIN</dt><dd>{{ employe.cin }}</dd></div>
+        <div><dt>Fonction</dt><dd>{{ employe.fonction.libelle }}</dd></div>
+        <div><dt>Matricule CNSS</dt><dd>{{ employe.matriculeCnss ?? 'Non renseigné' }}</dd></div>
+        <div><dt>Depuis le</dt><dd>{{ employe.dateDeclarationCnss ? (employe.dateDeclarationCnss | date: 'dd/MM/yyyy') : 'Non renseigné' }}</dd></div>
+        <div><dt>Statut</dt><dd>{{ employe.statut === 'ACTIF' ? 'En poste' : 'Sorti' }}</dd></div>
+      </dl>
+      @if (raisons().length > 0) {
+        <stp-message class="app-form__wide" severity="warn" [text]="'Attestation impossible : ' + raisons().join(' ; ') + '. Complétez la fiche depuis l’écran Employés.'" />
+      }
+    }
+
+    <div class="field">
+      <label for="attestation-civilite">Civilité <span class="field__req" aria-hidden="true">*</span></label>
+      <stp-select ariaLabel="Civilité" inputId="attestation-civilite" [formField]="form.civilite" [options]="civiliteOptions" placeholder="Choisir" />
+      <stp-field-error [field]="form.civilite" />
+    </div>
+
+    <div class="app-form__actions app-form__wide">
+      <button stp-button icon="file-text" type="submit" [loading]="impression()" [disabled]="raisons().length > 0 || fiche.isLoading()">Imprimer l’attestation</button>
+    </div>
+  </form>
+</div>

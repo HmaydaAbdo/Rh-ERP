@@ -26,7 +26,8 @@ const EMPLOYE: Employee = {
   equipe: null,
   salaire: null,
   typeSalaire: null,
-  statut: 'ACTIF'
+  statut: 'ACTIF',
+  matriculeCnss: null, dateDeclarationCnss: null, civilite: null
 };
 
 describe('EmployeeDetailComponent', () => {
@@ -94,7 +95,7 @@ describe('EmployeeDetailComponent', () => {
     expect(page.querySelector('h1')?.textContent).toBe('Ali Alaoui');
     expect(page.querySelector('.app-profile__avatar')?.textContent).toBe('AA');
     expect(page.querySelector('.app-profile__identity p span')?.textContent).toBe('CIN AB123');
-    expect(valeurs(page)).toEqual(['MACON', 'C196', 'Sans équipe', '5 ans et 11 mois depuis le 02/11/2020', '36 ans né le 07/03/1990']);
+    expect(valeurs(page)).toEqual(['MACON', 'C196', 'Sans équipe', '5 ans et 11 mois depuis le 02/11/2020', '36 ans né le 07/03/1990', 'Non déclaré']);
   });
 
   it('montre l’équipe, puis le salaire et le parcours à qui peut lire la paie seulement', () => {

@@ -108,6 +108,11 @@ def _fiche(employe: EmployeeReponse, voit_paie: bool) -> dict[str, Any]:
         "fonction": {"id": fonction.id, "libelle": fonction.libelle},
         "chantier": None if chantier is None else {"id": chantier.id, "code": chantier.code},
         "equipe": None if equipe is None else {"id": equipe.id, "code": equipe.code},
+        "matriculeCnss": employe.matricule_cnss,
+        "dateDeclarationCnss": None
+        if employe.date_declaration_cnss is None
+        else employe.date_declaration_cnss.isoformat(),
+        "civilite": None if employe.civilite is None else employe.civilite.value,
     }
     if voit_paie:
         fiche["salaire"] = None if employe.salaire is None else float(employe.salaire)
@@ -278,7 +283,8 @@ def enregistrer(
         annotations=LECTURE_SEULE,
         description=(
             "Lit la fiche complète d'un employé à partir de son identifiant : CIN, dates de naissance et "
-            "d'embauche, fonction, chantier, équipe, statut, et la liste de ses départs enregistrés (période et "
+            "d'embauche, fonction, chantier, équipe, statut, déclaration CNSS (matricule, date) et civilité, "
+            "et la liste de ses départs enregistrés (période et "
             "motif) ; le salaire seulement avec le droit de voir la paie. Identifiant inconnu : le chercher d'abord "
             "avec `employes_rechercher`. Pour l'historique mois par mois, utiliser `employe_parcours`. "
             "Rend un seul employé, sans pagination."

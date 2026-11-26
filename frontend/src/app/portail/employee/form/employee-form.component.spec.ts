@@ -39,7 +39,8 @@ const EMPLOYE: Employee = {
   equipe: null,
   salaire: null,
   typeSalaire: null,
-  statut: 'ACTIF'
+  statut: 'ACTIF',
+  matriculeCnss: null, dateDeclarationCnss: null, civilite: null
 };
 
 describe('EmployeeFormComponent', () => {
@@ -189,7 +190,8 @@ describe('EmployeeFormComponent', () => {
         chantierId: 4,
         equipeId: null,
         salaire: null,
-        typeSalaire: null
+        typeSalaire: null,
+        matriculeCnss: null, dateDeclarationCnss: null, civilite: null
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé créé');
       expect(navigation).toHaveBeenCalledWith(['/employees', 15]);
@@ -320,6 +322,7 @@ describe('EmployeeFormComponent', () => {
         equipeId: null,
         salaire: null,
         typeSalaire: null,
+        matriculeCnss: null, dateDeclarationCnss: null, civilite: null,
         statut: 'INACTIF'
       });
       expect(TestBed.inject(NotificationService).notifications()[0].summary).toBe('Employé modifié');

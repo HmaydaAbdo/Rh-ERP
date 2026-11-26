@@ -68,6 +68,17 @@
           <dt>Âge</dt>
           <dd>{{ age() }} ans <small>né le {{ employee.dateNaissance | date: 'dd/MM/yyyy' }}</small></dd>
         </div>
+        <div>
+          <dt>Déclaration CNSS</dt>
+          <dd>
+            @if (employee.matriculeCnss) {
+              N° {{ employee.matriculeCnss }}
+              @if (employee.dateDeclarationCnss) { <small>déclaré le {{ employee.dateDeclarationCnss | date: 'dd/MM/yyyy' }}</small> }
+            } @else {
+              Non déclaré
+            }
+          </dd>
+        </div>
       </dl>
     </section>
 

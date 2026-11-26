@@ -4,6 +4,15 @@ import { EquipeReference } from '../../../shared/reference-data/equipe-reference
 
 export type EmployeeStatut = 'ACTIF' | 'INACTIF';
 
+/** Civilité imprimée sur les documents administratifs (attestation de travail). */
+export type Civilite = 'MONSIEUR' | 'MADAME' | 'MADEMOISELLE';
+
+export const CIVILITE_OPTIONS: { label: string; value: Civilite }[] = [
+  { label: 'Monsieur', value: 'MONSIEUR' },
+  { label: 'Madame', value: 'MADAME' },
+  { label: 'Mademoiselle', value: 'MADEMOISELLE' }
+];
+
 /** Un salaire mensuel, ou le tarif d'une journée. */
 export type TypeSalaire = 'MENSUEL' | 'JOURNALIER';
 
@@ -22,6 +31,10 @@ export interface Employee {
   typeSalaire: TypeSalaire | null;
   statut: EmployeeStatut;
   version: number;
+  /** Déclaration CNSS (matricule, date) et civilité : facultatives, utilisées par les documents administratifs. */
+  matriculeCnss: string | null;
+  dateDeclarationCnss: string | null;
+  civilite: Civilite | null;
 }
 
 export interface EmployeeCreateRequest {
@@ -34,6 +47,9 @@ export interface EmployeeCreateRequest {
   equipeId: number | null;
   salaire: number | null;
   typeSalaire: TypeSalaire | null;
+  matriculeCnss: string | null;
+  dateDeclarationCnss: string | null;
+  civilite: Civilite | null;
 }
 
 export interface EmployeeUpdateRequest extends Omit<EmployeeCreateRequest, 'chantierId'> {
@@ -94,4 +110,14 @@ export interface EmployeeAnalytique {
   embauchesDouzeMois: number;
   parAge: EmployeeTranche[];
   parAnciennete: EmployeeTranche[];
+}
+
+/** Résultat de l'import des déclarations CNSS : atomique, une ligne refusée n'écrit rien. */
+export interface CnssImportResult {
+  totalLignes: number;
+  misAJour: number;
+  inchanges: number;
+  sansDeclaration: number;
+  ignores: number;
+  lignesIgnorees: EmployeeImportLigneIgnoree[];
 }

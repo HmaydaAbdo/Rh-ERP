@@ -11,6 +11,23 @@
 </div>
 
 <input #fileInput type="file" accept=".xlsx" class="hidden" (change)="onFileSelected($event)" />
+<input #fichierCnss type="file" accept=".xlsx" class="hidden" aria-label="Fichier des déclarations CNSS" (change)="importerCnss($event)" />
+
+<stp-dialog header="Import des déclarations CNSS" width="640px" [(open)]="dialogueCnss">
+  @if (resultatCnss(); as resultat) {
+    @if (resultat.ignores > 0) {
+      <p>Le fichier est refusé : <strong>{{ resultat.ignores }}</strong> ligne(s) à corriger. Aucune fiche n’a été modifiée.</p>
+      <stp-table label="Lignes de déclarations CNSS refusées" [value]="resultat.lignesIgnorees" [columns]="colonnesIgnorees" [paginated]="false" [reorderable]="false" [rowActionsVisible]="false" />
+    } @else {
+      <p>
+        <strong>{{ resultat.totalLignes }}</strong> ligne(s) lue(s) —
+        <strong>{{ resultat.misAJour }}</strong> fiche(s) mise(s) à jour,
+        <strong>{{ resultat.inchanges }}</strong> déjà à jour,
+        <strong>{{ resultat.sansDeclaration }}</strong> sans déclaration.
+      </p>
+    }
+  }
+</stp-dialog>
 
 <stp-dialog header="Résultat de l'import" width="640px" [(open)]="showImportResultDialog">
   @if (importResult(); as result) {

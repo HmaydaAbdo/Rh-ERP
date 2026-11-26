@@ -23,6 +23,8 @@ sidebar_position: 3
 | `POST /employees/mouvements-mois/pdf` | `EMPLOYEE_EXPORT` |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` |
+| `POST /employees/import/cnss` | `EMPLOYEE_IMPORT` |
+| `POST /employees/{id}/attestation-travail` | `DOCUMENT_ADMIN_EDITER` |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` |
 
 ## Frontend
@@ -33,7 +35,8 @@ sidebar_position: 3
 | Routes `/employees` et `/employees/:id` | `authGuard` + `permissionGuard` (`EMPLOYEE_READ`) |
 | Routes `/employees/new` et `/employees/:id/edit` | `authGuard` + `permissionGuard` (`EMPLOYEE_WRITE`) |
 | Boutons « Nouvel employé » et « Modifier » (liste, détail) | `EMPLOYEE_WRITE` — `canWrite()` |
-| Boutons « Importer » / « Modèle Excel » | `EMPLOYEE_IMPORT` — `canImport()` |
+| Boutons « Importer » / « Modèle Excel » / « Importer les déclarations CNSS » | `EMPLOYEE_IMPORT` — `canImport()` |
+| Lien sidebar « Documents » et route `/documents` (attestation de travail) | `DOCUMENT_ADMIN_EDITER` + `EMPLOYEE_READ` (`permissionGuard`) |
 | Boutons « Exporter en PDF » (STC / Sortie, Entrants) et « Mouvements du mois (PDF) » (Employés) | `EMPLOYEE_EXPORT` — `canExport()` / `peutExporter` |
 | Lien sidebar « Entrants » et routes `/entrants`, `/entrants/cartes`, `/entrants/analytique` | `EMPLOYEE_READ` |
 | Lien sidebar « STC / Sortie » et routes `/sorties`, `/sorties/cartes`, `/sorties/analytique` | `EMPLOYEE_READ` |

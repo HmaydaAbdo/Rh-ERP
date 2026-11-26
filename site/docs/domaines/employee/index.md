@@ -137,6 +137,9 @@ Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimist
 | `salaire` | `NUMERIC(10,0)` | Facultatif; montant mensuel ou tarif d’une journée |
 | `type_salaire` | `VARCHAR(20)` | Déduit du salaire (≤ 500 DH : `JOURNALIER`, sinon `MENSUEL`), modifiable à la main depuis le formulaire Employé ; `NULL` seulement sans salaire |
 | `statut` | `VARCHAR(20)` | Obligatoire; `ACTIF` à la création, ou `INACTIF` |
+| `matricule_cnss` | `VARCHAR(20)` | Facultatif; chiffres seulement (`ck_employe_matricule_cnss`), unique (`uk_employe_matricule_cnss`) ; révision `0012`, KAN-320 |
+| `date_declaration_cnss` | `DATE` | Facultative; non future ; « depuis le » de l’attestation de travail |
+| `civilite` | `VARCHAR(12)` | Facultative; `MONSIEUR`, `MADAME` ou `MADEMOISELLE` (`ck_employe_civilite`) ; choisie à l’impression d’une attestation et conservée |
 
 Les relations, statut et date d’embauche sont indexés. Les contraintes de base protègent les
 références, le CIN et l’absence d’affectation des fiches sorties. Le modèle transverse est dans
@@ -233,6 +236,8 @@ Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienne
 | `POST /employees/mouvements-mois/pdf` | `EMPLOYEE_EXPORT` | PDF combiné des entrées et sorties du mois : cartes de synthèse (entrants, sortants, solde net, effectif payé, chantiers concernés, masses), puis un tableau de sortants et un tableau d'entrants, triés par ordre alphabétique du nom. Bouton « Mouvements du mois (PDF) » de la page Employés |
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` | `204`; absent `404`, fiche utilisée `409` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` | Multipart `file`; résultat `200`, fichier ou lignes invalides `400` |
+| `POST /employees/import/cnss` | `EMPLOYEE_IMPORT` | Multipart `file` : déclarations CNSS par CIN (voir [Import des déclarations CNSS](#import-des-déclarations-cnss)) ; `200` avec `misAJour`, `inchanges`, `sansDeclaration`, ou `400` avec les lignes refusées. Audité `EMPLOYE_IMPORT_CNSS` |
+| `POST /employees/{id}/attestation-travail` | `DOCUMENT_ADMIN_EDITER` | Corps `{ civilite }` ; PDF A4 de l’attestation de travail. `400` si l’employé est sorti ou si le matricule ou la date de déclaration CNSS manque ; la civilité choisie est enregistrée sur la fiche (`EMPLOYE_MODIFICATION`, périmètre `origine = ATTESTATION_TRAVAIL`) |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` | Modèle XLSX vierge |
 
 Chaque route exige une authentification. Le [catalogue RBAC Employé](droits.md) décrit
@@ -271,6 +276,28 @@ peut révéler un autre problème de la même ligne.
 
 Les référentiels sont lus une fois par pages bornées, puis les références et CIN sont comparés en
 mémoire. Les règles communes et l’atomicité sont précisées dans [Imports](../imports.md).
+
+## Import des déclarations CNSS
+
+Le classeur `.xlsx` (première feuille) contient au moins les colonnes **CIN**, **Matricule CNSS** et
+**Date de déclaration**, dans n’importe quel ordre et parmi d’autres colonnes (N°, nom et prénom). Chaque
+ligne retrouve sa fiche par son CIN canonique ; une ligne sans matricule ni date est un employé non déclaré :
+elle est comptée et ne change rien. Comme l’import des fiches, il est atomique : une seule ligne refusée
+(CIN inconnu ou invalide, matricule invalide ou déjà porté par une autre fiche, date manquante ou future,
+CIN ou matricule en doublon dans le fichier) refuse tout le fichier, avec la raison de chaque ligne. Une
+fiche déjà à jour n’est pas réécrite. Menu « Importer les déclarations CNSS » du bouton « Importer »
+(écran Employés).
+
+## Documents administratifs
+
+Rubrique **Documents** du portail (`/documents`, permission `DOCUMENT_ADMIN_EDITER`, accordée au chargé RH
+et à l’administrateur, KAN-320). L’employé se cherche par nom ou CIN ; la page montre ce qui sera imprimé
+(nom, CIN, fonction, matricule CNSS, date de déclaration, statut) et la civilité proposée depuis la fiche.
+L’**attestation de travail** reprend le modèle de la Direction (STE STAPORT S.A., Marrakech) : « depuis le »
+est la date de déclaration CNSS, la fonction est le libellé actuel (décisions du propriétaire,
+2026-11-25). Améliorations : en-tête au logo, accords selon la civilité (immatriculé·e, intéressé·e),
+« jusqu’à ce jour ». Elle n’est délivrée qu’à un employé en poste et déclaré ; sinon la page et l’API
+nomment ce qui manque. Le PDF s’ouvre dans un nouvel onglet pour l’impression.
 
 ## Parcours frontend et exports
 

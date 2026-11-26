@@ -99,6 +99,12 @@ export const routes: Routes = [
     loadChildren: () => import('./portail/heures-supp/heures-supp.routes').then((m) => m.HEURES_SUPP_ROUTES)
   },
   {
+    path: 'documents',
+    title: 'Documents administratifs',
+    canActivate: [authGuard],
+    loadChildren: () => import('./portail/documents/documents.routes').then((m) => m.DOCUMENTS_ROUTES)
+  },
+  {
     path: 'audit',
     title: "Journal d’audit",
     canActivate: [authGuard],

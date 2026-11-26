@@ -16,8 +16,8 @@ import { EmployeeListComponent } from './employee-list.component';
 registerLocaleData(localeFr);
 
 const EMPLOYES: Employee[] = [
-  { id: 1, version: 0, nomPrenom: 'Ali Alaoui', cin: 'AB123', dateNaissance: '1990-03-07', dateEmbauche: '2020-11-02', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 2, code: 'C196' }, equipe: { id: 5, code: 'OP', libelle: 'Opérateurs' }, salaire: 4000, typeSalaire: 'MENSUEL', statut: 'ACTIF' },
-  { id: 2, version: 0, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-01', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, equipe: null, salaire: 120, typeSalaire: 'JOURNALIER', statut: 'INACTIF' }
+  { id: 1, version: 0, nomPrenom: 'Ali Alaoui', cin: 'AB123', dateNaissance: '1990-03-07', dateEmbauche: '2020-11-02', fonction: { id: 1, libelle: 'MACON' }, chantier: { id: 2, code: 'C196' }, equipe: { id: 5, code: 'OP', libelle: 'Opérateurs' }, salaire: 4000, typeSalaire: 'MENSUEL', statut: 'ACTIF', matriculeCnss: null, dateDeclarationCnss: null, civilite: null },
+  { id: 2, version: 0, nomPrenom: 'Zahra Idrissi', cin: 'CD456', dateNaissance: '1985-01-01', dateEmbauche: '2018-05-14', fonction: { id: 3, libelle: 'CHAUFFEUR' }, chantier: { id: 4, code: 'C168' }, equipe: null, salaire: 120, typeSalaire: 'JOURNALIER', statut: 'INACTIF', matriculeCnss: null, dateDeclarationCnss: null, civilite: null }
 ];
 
 const page = (content: Employee[]) => ({ content, page: { size: 10, number: 0, totalElements: content.length, totalPages: 1 } });

@@ -63,6 +63,13 @@ async def existe_cin(s: AsyncSession, cin: str, sauf_id: int | None = None) -> b
     return (await s.execute(q)).scalar_one() > 0
 
 
+async def existe_matricule_cnss(s: AsyncSession, matricule: str, sauf_id: int | None = None) -> bool:
+    q = select(func.count()).select_from(Employee).where(Employee.matricule_cnss == matricule)
+    if sauf_id is not None:
+        q = q.where(Employee.id != sauf_id)
+    return (await s.execute(q)).scalar_one() > 0
+
+
 def filtres(c: EmployeeRecherche) -> list[ColumnElement[bool]]:
     """Filtres de la recherche, partagés par la liste, l'analyse et les regroupements."""
     f: list[ColumnElement[bool]] = []

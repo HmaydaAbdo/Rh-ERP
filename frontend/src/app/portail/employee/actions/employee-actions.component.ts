@@ -15,7 +15,7 @@ import { MonthPickerComponent } from '../../../shared/ui/month-picker/month-pick
 import { telechargerFichier } from '../../../shared/utils/telecharger-fichier';
 import { moisCourant, versRequete } from '../../mouvement/mouvement-filtres';
 import { AUCUN_FILTRE, EmployeeFiltres } from '../filtres/employee-filtres';
-import { EmployeeImportResult } from '../models/employee.model';
+import { CnssImportResult, EmployeeImportResult } from '../models/employee.model';
 import { EmployeeService } from '../services/employee.service';
 
 /**
@@ -41,6 +41,9 @@ export class EmployeeActionsComponent {
   private readonly authService = inject(AuthService);
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+  private readonly fichierCnss = viewChild.required<ElementRef<HTMLInputElement>>('fichierCnss');
+  protected readonly resultatCnss = signal<CnssImportResult | null>(null);
+  protected readonly dialogueCnss = signal(false);
 
   protected readonly canWrite = computed(() => this.authService.hasPermission('EMPLOYEE_WRITE'));
   protected readonly canImport = computed(() => this.authService.hasPermission('EMPLOYEE_IMPORT'));
@@ -56,8 +59,17 @@ export class EmployeeActionsComponent {
   protected readonly showImportResultDialog = signal(false);
   protected readonly downloadingTemplate = signal(false);
 
-  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » : c'est le fichier qu'il attend. */
+  /** Le modèle Excel se télécharge depuis le menu du bouton « Importer » ; les déclarations CNSS s'y importent aussi. */
   protected readonly menuImport: MenuAction[] = [
+    {
+      label: 'Importer les déclarations CNSS',
+      icon: 'upload',
+      command: () => {
+        if (!this.importing()) {
+          this.fichierCnss().nativeElement.click();
+        }
+      }
+    },
     {
       label: 'Télécharger le modèle Excel',
       icon: 'file-spreadsheet',
@@ -117,6 +129,40 @@ export class EmployeeActionsComponent {
           if (result && Array.isArray(result.lignesIgnorees)) {
             this.importResult.set(result);
             this.showImportResultDialog.set(true);
+          }
+        }
+      });
+  }
+
+  /** Matricule et date de déclaration CNSS par CIN : le rapport s'ouvre, que le fichier soit accepté ou refusé. */
+  protected importerCnss(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    this.importing.set(true);
+    this.employeeService
+      .importerCnss(file)
+      .pipe(finalize(() => this.importing.set(false)))
+      .subscribe({
+        next: (resultat) => {
+          this.resultatCnss.set(resultat);
+          this.dialogueCnss.set(true);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Déclarations CNSS importées',
+            detail: `${resultat.misAJour} fiche(s) mise(s) à jour`,
+            life: 6000
+          });
+          this.importe.emit();
+        },
+        error: (err: HttpErrorResponse) => {
+          const resultat = err.error as CnssImportResult | null;
+          if (resultat && Array.isArray(resultat.lignesIgnorees)) {
+            this.resultatCnss.set(resultat);
+            this.dialogueCnss.set(true);
           }
         }
       });

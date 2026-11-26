@@ -27,6 +27,7 @@ from .exceptions import (
     EmployeeIntrouvable,
     EmployeeUtilise,
     ErreurImportEmployee,
+    MatriculeCnssDejaUtilise,
     ReferenceInvalide,
 )
 from .models import Employee, EmployeeSortie
@@ -123,6 +124,9 @@ async def reponses(s: AsyncSession, employes: list[Employee]) -> list[EmployeeRe
             salaire=x.salaire,
             type_salaire=x.type_salaire,
             statut=x.statut,
+            matricule_cnss=x.matricule_cnss,
+            date_declaration_cnss=x.date_declaration_cnss,
+            civilite=x.civilite,
         )
         for x in employes
     ]
@@ -135,7 +139,7 @@ async def reponse(s: AsyncSession, x: Employee) -> EmployeeReponse:
 ENTETES_IMPORT = ("Date d'embauche", "Nom & prénom", "CIN", "Fonction", "Chantier", "Date de naissance")
 
 
-def _texte(valeur: Any) -> str | None:
+def texte_affiche(valeur: Any) -> str | None:
     """Le texte affiché de la cellule, `None` si elle est vide ou blanche."""
     if valeur is None or isinstance(valeur, bool):
         texte = None if valeur is None else str(valeur).upper()
@@ -148,7 +152,7 @@ def _texte(valeur: Any) -> str | None:
     return None if texte is None or not texte.strip() else texte
 
 
-def _date_cellule(valeur: Any) -> date | None:
+def date_cellule(valeur: Any) -> date | None:
     """`getCellAsLocalDate` : seule une cellule numérique (date ou nombre de série) donne une date."""
     if isinstance(valeur, datetime):
         return valeur.date()
@@ -232,6 +236,8 @@ class ServiceEmployee:
             cin = r.cin.strip()
             if await repository.existe_cin(s, cin):
                 raise EmployeeDejaExistant(cin)
+            if r.matricule_cnss is not None and await repository.existe_matricule_cnss(s, r.matricule_cnss):
+                raise MatriculeCnssDejaUtilise(r.matricule_cnss)
             await self._verifier_references(s, r.fonction_id, r.chantier_id, r.equipe_id)
             x = Employee(
                 nom_prenom=r.nom_prenom,
@@ -242,6 +248,9 @@ class ServiceEmployee:
                 chantier_id=r.chantier_id,
                 equipe_id=r.equipe_id,
                 salaire=r.salaire if voit_paie else None,
+                matricule_cnss=r.matricule_cnss,
+                date_declaration_cnss=r.date_declaration_cnss,
+                civilite=r.civilite,
             )
             if voit_paie and r.type_salaire is not None:
                 x.type_salaire = r.type_salaire  # choix explicite ; sinon le modèle l'a déduit du salaire
@@ -272,6 +281,16 @@ class ServiceEmployee:
                 r.statut,
             )
             x.chantier_id, x.equipe_id = (r.chantier_id, r.equipe_id) if r.statut.value == "ACTIF" else (None, None)
+            # Champs facultatifs : un client qui ne les envoie pas (ancien formulaire, assistant) ne les efface pas.
+            fournis = r.model_fields_set
+            if "matricule_cnss" in fournis:
+                if r.matricule_cnss is not None and await repository.existe_matricule_cnss(s, r.matricule_cnss, i):
+                    raise MatriculeCnssDejaUtilise(r.matricule_cnss)
+                x.matricule_cnss = r.matricule_cnss
+            if "date_declaration_cnss" in fournis:
+                x.date_declaration_cnss = r.date_declaration_cnss
+            if "civilite" in fournis:
+                x.civilite = r.civilite
             if voit_paie:
                 x.salaire = r.salaire  # le modèle Employee déduit le type du montant
                 if r.type_salaire is not None:
@@ -476,14 +495,15 @@ class ServiceEmployee:
             vus: set[str] = set()
             total = 0
             for numero, valeurs in enumerate(lignes[1:], 2):
-                if all(_texte(v) is None for v in valeurs):  # `estLigneVide` : une ligne sans valeur n'est pas comptée
+                # `estLigneVide` : une ligne sans valeur n'est pas comptée
+                if all(texte_affiche(v) is None for v in valeurs):
                     continue
                 total += 1
                 embauche, nom, cin, fonction, chantier, naissance = (
                     valeurs[i] if i < len(valeurs) else None for i in range(6)
                 )
-                embauche, naissance = _date_cellule(embauche), _date_cellule(naissance)
-                nom, fonction, chantier = _texte(nom), _texte(fonction), _texte(chantier)
+                embauche, naissance = date_cellule(embauche), date_cellule(naissance)
+                nom, fonction, chantier = texte_affiche(nom), texte_affiche(fonction), texte_affiche(chantier)
                 cin = cin_canonique(cin) or None
                 raison = _raison_ligne(nom, cin, naissance, embauche, fonction, chantier)
                 cle_cin = cin or ""

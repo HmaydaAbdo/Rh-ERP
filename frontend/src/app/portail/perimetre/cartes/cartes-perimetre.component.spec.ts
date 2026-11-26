@@ -33,7 +33,7 @@ const ITEMS = [
 const fiche = (id: number): Employee => ({
   id, version: 0, nomPrenom: `Employé ${id}`, cin: `TEST${id}`, dateNaissance: '1990-01-01', dateEmbauche: '2020-01-01',
   fonction: { id: 7, libelle: 'MACON' }, chantier: { id: 1, code: 'C168' }, equipe: null,
-  salaire: null, typeSalaire: null, statut: 'ACTIF'
+  salaire: null, typeSalaire: null, statut: 'ACTIF', matriculeCnss: null, dateDeclarationCnss: null, civilite: null
 });
 const pageEmployes = (content: Employee[], total = 48) => ({ content, page: { size: 24, number: 0, totalElements: total, totalPages: 2 } });
 

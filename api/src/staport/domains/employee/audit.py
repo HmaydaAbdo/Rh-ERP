@@ -21,6 +21,9 @@ employee_aud = Table(
     Column("salaire", Numeric(10, 2)),
     Column("type_salaire", String(20)),
     Column("statut", String(20)),
+    Column("matricule_cnss", String(20)),
+    Column("date_declaration_cnss", Date),
+    Column("civilite", String(12)),
 )
 Index("idx_employe_aud_rev", employee_aud.c.rev)
 registre.enregistrer(
@@ -42,6 +45,9 @@ registre.enregistrer(
                 "salaire",
                 "type_salaire",
                 "statut",
+                "matricule_cnss",
+                "date_declaration_cnss",
+                "civilite",
             )
         ),
     )

@@ -462,6 +462,9 @@ AUDITEES = {
     ("PUT", "/employees/{identifiant}"): "EMPLOYE_MODIFICATION",
     ("DELETE", "/employees/{identifiant}"): "EMPLOYE_SUPPRESSION",
     ("POST", "/employees/import"): "EMPLOYE_IMPORT",
+    ("POST", "/employees/import/cnss"): "EMPLOYE_IMPORT_CNSS",
+    # Sortie de données ; écrit une EMPLOYE_MODIFICATION seulement quand la civilité choisie change.
+    ("POST", "/employees/{identifiant}/attestation-travail"): "EMPLOYE_MODIFICATION",
     ("POST", "/paie"): "PAIE_CREATION",
     ("PUT", "/paie/{identifiant}"): "PAIE_MODIFICATION",
     ("DELETE", "/paie/{identifiant}"): "PAIE_SUPPRESSION",

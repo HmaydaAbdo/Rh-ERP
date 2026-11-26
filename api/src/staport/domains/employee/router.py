@@ -1,4 +1,5 @@
 from dataclasses import replace
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile, status
@@ -11,8 +12,10 @@ from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.paie.periode import afficher_periode
 from staport.platform.base_de_donnees import session_requete
 
+from .import_cnss import importer_cnss
 from .repository import CHAMPS_DE_PAIE, TRIS_PUBLICS
 from .schemas import (
+    AttestationTravailRequete,
     DimensionEmployes,
     EmployeeAnalytiqueReponse,
     EmployeeCreationRequete,
@@ -156,6 +159,27 @@ async def importer(session: Session, contexte: Contexte, file: UploadFile = File
     resultat = await contexte.employees.importer(session, await file.read())
     statut = status.HTTP_400_BAD_REQUEST if resultat.ignores > 0 else status.HTTP_200_OK
     return JSONResponse(resultat.model_dump(by_alias=True, mode="json"), status_code=statut)
+
+
+@employees.post("/import/cnss", dependencies=[Depends(exiger("EMPLOYEE_IMPORT"))], response_model=None)
+async def importer_declarations_cnss(
+    session: Session,
+    contexte: Contexte,
+    file: UploadFile = File(...),  # noqa: B008
+) -> JSONResponse:
+    """Déclarations CNSS (matricule, date) par CIN : atomique, une ligne rejetée refuse tout le fichier (HTTP 400)."""
+    resultat = await importer_cnss(contexte.audit, session, file.filename, await file.read())
+    statut = status.HTTP_400_BAD_REQUEST if resultat.ignores > 0 else status.HTTP_200_OK
+    return JSONResponse(resultat.model_dump(by_alias=True, mode="json"), status_code=statut)
+
+
+@employees.post("/{identifiant}/attestation-travail", dependencies=[Depends(exiger("DOCUMENT_ADMIN_EDITER"))])
+async def attestation_travail(
+    identifiant: int, corps: AttestationTravailRequete, session: Session, contexte: Contexte
+) -> Response:
+    """Attestation de travail d'un employé en poste et déclaré à la CNSS ; la civilité choisie reste sur la fiche."""
+    contenu, nom = await contexte.attestations.generer(session, identifiant, corps.civilite, date.today())
+    return _pdf(contenu, nom)
 
 
 @employees.delete(

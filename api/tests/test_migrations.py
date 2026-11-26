@@ -53,7 +53,8 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     command.upgrade(_config(url, COMPTE_APP), "head")
     moteur = create_engine(url)
     with moteur.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0011_identifiants_canoniques"
+        version = c.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+        assert version == "0012_documents_administratifs"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -115,7 +116,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0011_identifiants_canoniques"
+            == "0012_documents_administratifs"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -199,7 +200,7 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0011_identifiants_canoniques"
+            == "0012_documents_administratifs"
         )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         # Les rôles existants sont conservés ; seul CHARGE_RH (révision 0010) s'ajoute.
@@ -368,7 +369,7 @@ def test_la_revision_0010_cree_le_role_charge_rh_et_le_compte_de_rania_atik(cree
         ).scalar_one()
     moteur.dispose()
 
-    command.upgrade(_config(url), "head")
+    command.upgrade(_config(url), "0010_role_charge_rh")
 
     moteur = create_engine(url)
     with moteur.connect() as c:
@@ -439,7 +440,7 @@ def test_la_revision_0010_reprend_un_role_et_un_compte_deja_crees(creer_base: Ca
         )
     moteur.dispose()
 
-    command.upgrade(_config(url), "head")
+    command.upgrade(_config(url), "0010_role_charge_rh")
 
     moteur = create_engine(url)
     with moteur.connect() as c:
@@ -553,4 +554,48 @@ def test_la_revision_0011_fusionne_les_doublons_et_pose_les_identifiants_canoniq
         c.execute(text("UPDATE employe SET cin = 'XY 100200' WHERE id = :i"), {"i": nouveau})
     with pytest.raises(Exception, match="ck_fonction_libelle_canonique"), moteur.begin() as c:
         c.execute(text("INSERT INTO fonction (libelle) VALUES ('OP.  NOUVEAU')"))
+    moteur.dispose()
+
+
+def test_la_revision_0012_ajoute_la_declaration_cnss_et_la_permission_des_documents(
+    creer_base: Callable[[str], str],
+) -> None:
+    url = creer_base("documents_administratifs")
+    command.upgrade(_config(url), "head")
+    moteur = create_engine(url)
+    with moteur.connect() as c:
+        titulaires = c.execute(
+            text(
+                "SELECT r.nom FROM role r JOIN role_permission rp ON rp.role_id = r.id "
+                "JOIN permission p ON p.id = rp.permission_id WHERE p.code = 'DOCUMENT_ADMIN_EDITER' ORDER BY r.nom"
+            )
+        ).scalars()
+        assert list(titulaires) == ["CHARGE_RH", "SYSTEM_ADMIN"]
+        for table in ("employe", "employe_aud"):
+            colonnes = set(
+                c.execute(
+                    text("SELECT column_name FROM information_schema.columns WHERE table_name = :t"), {"t": table}
+                ).scalars()
+            )
+            assert {"matricule_cnss", "date_declaration_cnss", "civilite"} <= colonnes
+        journal = c.execute(
+            text(
+                "SELECT action, nombre_elements FROM audit_journal "
+                "WHERE perimetre ->> 'migration' = '0012_documents_administratifs'"
+            )
+        ).one()
+        assert tuple(journal) == ("PERMISSION_CREATION", 3)
+    with moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('CHAUFFEUR') RETURNING id")).scalar_one()
+        c.execute(
+            text(
+                "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, statut, "
+                "matricule_cnss, date_declaration_cnss, civilite) VALUES ('ALAMI YOUSSEF', 'AB123456', '1990-01-01', "
+                "'2024-06-01', :f, 'INACTIF', '123456789', '2024-06-01', 'MONSIEUR')"
+            ),
+            {"f": fonction},
+        )
+    for invalide in ("matricule_cnss = '12A'", "civilite = 'MR'"):
+        with pytest.raises(Exception, match="ck_employe_"), moteur.begin() as c:
+            c.execute(text(f"UPDATE employe SET {invalide}"))  # noqa: S608
     moteur.dispose()

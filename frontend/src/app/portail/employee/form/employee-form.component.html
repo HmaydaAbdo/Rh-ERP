@@ -89,6 +89,23 @@
       </div>
     }
 
+    <div class="field">
+      <label for="civilite">Civilité (facultative)</label>
+      <stp-select ariaLabel="Civilité" inputId="civilite" [formField]="form.civilite" [options]="civiliteOptions" placeholder="Non renseignée"></stp-select>
+    </div>
+
+    <div class="field">
+      <label for="matriculeCnss">Matricule CNSS (facultatif)</label>
+      <input class="stp-input" spellcheck="false" autocomplete="off" inputmode="numeric" id="matriculeCnss" type="text" [formField]="form.matriculeCnss" />
+      <stp-field-error [field]="form.matriculeCnss" />
+    </div>
+
+    <div class="field">
+      <label for="dateDeclarationCnss">Date de déclaration CNSS (facultative)</label>
+      <stp-date-input inputId="dateDeclarationCnss" [formField]="form.dateDeclarationCnss" />
+      <stp-field-error [field]="form.dateDeclarationCnss" />
+    </div>
+
     @if (isEditMode()) {
       <div class="field">
         <label for="statut">Statut <span class="field__req" aria-hidden="true">*</span></label>

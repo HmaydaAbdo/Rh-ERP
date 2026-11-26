@@ -13,6 +13,12 @@ class EmployeeStatut(StrEnum):
     INACTIF = "INACTIF"
 
 
+class Civilite(StrEnum):
+    MONSIEUR = "MONSIEUR"
+    MADAME = "MADAME"
+    MADEMOISELLE = "MADEMOISELLE"
+
+
 class TypeSalaire(StrEnum):
     MENSUEL = "MENSUEL"
     JOURNALIER = "JOURNALIER"
@@ -46,6 +52,10 @@ class Employee(Base):
     salaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 0))
     type_salaire: Mapped[TypeSalaire | None] = mapped_column(String(20))
     statut: Mapped[EmployeeStatut] = mapped_column(String(20), nullable=False, default=EmployeeStatut.ACTIF)
+    # Déclaration CNSS et civilité (révision 0012, KAN-320) : facultatives, utilisées par les documents administratifs.
+    matricule_cnss: Mapped[str | None] = mapped_column(String(20))
+    date_declaration_cnss: Mapped[date | None] = mapped_column(Date)
+    civilite: Mapped[Civilite | None] = mapped_column(String(12))
 
     @validates("salaire")
     def _deduire_le_type(self, _cle: str, salaire: Decimal | None) -> Decimal | None:

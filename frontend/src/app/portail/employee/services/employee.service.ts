@@ -6,6 +6,8 @@ import { MouvementRequete } from '../../mouvement/mouvement-filtres';
 
 import { Page } from '../../../shared/models/page.model';
 import {
+  CnssImportResult,
+  Civilite,
   Employee,
   DimensionEmployes,
   EmployeeAnalytique,
@@ -66,6 +68,18 @@ export class EmployeeService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<EmployeeImportResult>(`${this.baseUrl}/import`, formData);
+  }
+
+  /** Déclarations CNSS (CIN, matricule, date de déclaration) : atomique, une ligne refusée n'écrit rien (`EMPLOYEE_IMPORT`). */
+  importerCnss(file: File): Observable<CnssImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<CnssImportResult>(`${this.baseUrl}/import/cnss`, formData);
+  }
+
+  /** L'attestation de travail en PDF ; la civilité choisie reste sur la fiche (`DOCUMENT_ADMIN_EDITER`). */
+  attestationTravail(id: number, civilite: Civilite): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/${id}/attestation-travail`, { civilite }, { responseType: 'blob' });
   }
 
   telechargerModele(): Observable<Blob> {

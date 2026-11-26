@@ -19,7 +19,7 @@ import { IconComponent } from '../../../shared/ui/icon/icon.component';
 import { NumberInputComponent } from '../../../shared/ui/number-input/number-input.component';
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
-import { EmployeeStatut, TypeSalaire } from '../models/employee.model';
+import { Civilite, CIVILITE_OPTIONS, EmployeeStatut, TypeSalaire } from '../models/employee.model';
 import { STATUT_EMPLOYE_OPTIONS } from '../models/employee-statut';
 import { EmployeeService } from '../services/employee.service';
 
@@ -54,6 +54,9 @@ interface EmployeeSaisie {
   salaire: number | null;
   typeSalaire: TypeSalaire | null;
   statut: EmployeeStatut;
+  matriculeCnss: string;
+  dateDeclarationCnss: Date | null;
+  civilite: Civilite | null;
 }
 
 @Component({
@@ -75,6 +78,7 @@ export class EmployeeFormComponent {
 
   protected readonly statutOptions = STATUT_EMPLOYE_OPTIONS;
   protected readonly typeSalaireOptions = TYPE_SALAIRE_OPTIONS;
+  protected readonly civiliteOptions = CIVILITE_OPTIONS;
   /** Le salaire est une donnée de paie : ses champs ne sont proposés qu'à qui a `PAIE_READ` (le serveur ignore sinon ce qui est saisi). */
   protected readonly voitLaPaie = computed(() => this.authService.hasPermission('PAIE_READ'));
 
@@ -97,7 +101,10 @@ export class EmployeeFormComponent {
     equipeId: null,
     salaire: null,
     typeSalaire: null,
-    statut: 'ACTIF'
+    statut: 'ACTIF',
+    matriculeCnss: '',
+    dateDeclarationCnss: null,
+    civilite: null
   });
   protected readonly form = form(
     this.modele,
@@ -125,6 +132,18 @@ export class EmployeeFormComponent {
           : undefined
       );
       min(chemin.salaire, 0, { message: 'Le salaire ne peut pas être négatif.' });
+      // Même règle que l'API : espaces ignorés, chiffres seulement, 20 au plus.
+      validate(chemin.matriculeCnss, ({ value }) =>
+        /^\d{0,20}$/.test(value().replace(/\s/g, ''))
+          ? undefined
+          : { kind: 'matriculeCnss', message: 'Le matricule CNSS ne contient que des chiffres, 20 au plus.' }
+      );
+      validate(chemin.dateDeclarationCnss, ({ value }) => {
+        const declaration = value();
+        return declaration !== null && toIsoDate(declaration) > toIsoDate(new Date())
+          ? { kind: 'future', message: 'La date de déclaration CNSS ne peut pas être future.' }
+          : undefined;
+      });
       // Le salaire et son type vont ensemble : l'un sans l'autre ne dit pas combien l'employé est payé.
       validate(chemin.typeSalaire, ({ value, valueOf }) =>
         (value() === null) !== (valueOf(chemin.salaire) === null)
@@ -178,7 +197,10 @@ export class EmployeeFormComponent {
           equipeId: employee.equipe?.id ?? null,
           salaire: employee.salaire,
           typeSalaire: employee.typeSalaire,
-          statut: employee.statut
+          statut: employee.statut,
+          matriculeCnss: employee.matriculeCnss ?? '',
+          dateDeclarationCnss: employee.dateDeclarationCnss ? fromIsoDate(employee.dateDeclarationCnss) : null,
+          civilite: employee.civilite
         });
       },
       error: () => this.erreurChargement.set(true)
@@ -197,7 +219,10 @@ export class EmployeeFormComponent {
       dateEmbauche: toIsoDate(saisie.dateEmbauche!),
       fonctionId: saisie.fonctionId!,
       salaire: saisie.salaire,
-      typeSalaire: saisie.typeSalaire
+      typeSalaire: saisie.typeSalaire,
+      matriculeCnss: saisie.matriculeCnss.replace(/\s/g, '') || null,
+      dateDeclarationCnss: saisie.dateDeclarationCnss ? toIsoDate(saisie.dateDeclarationCnss) : null,
+      civilite: saisie.civilite
     };
     const id = this.employeeId();
 
