@@ -99,3 +99,17 @@ api/coverage.json
 
 # Journaux et rapports des lanceurs IA (api/tests/test_ia_lanceurs.py)
 api/target/
+
+# --- Données réelles : jamais versionnées, le dépôt est public (purge de l'historique du 2026-11-26) ---
+# Sauvegardes et exports de base (le dossier backup/ ne versionne que l'image et ses scripts).
+/backup/*/
+*.dump
+*.age
+*.sql.gz
+# Rapports, classeurs et archives déposés à la racine (paie, déclarations CNSS, sources du backend).
+/*.pdf
+/*.xlsx
+/*.xls
+/*.docx
+/*.zip
+.env
