@@ -233,3 +233,9 @@ En relisant tout l'historique contre la base de production, on a trouvé dans le
 ## Une ressource Angular qui lit tout le modèle du formulaire se recharge à chaque saisie (2026-11-27, KAN-322)
 
 Sur l'écran Documents, la civilité choisie ne restait pas. La fiche de l'employé venait d'un `rxResource` dont les `params` lisaient `this.modele().employeeId` : changer la civilité remplaçait le modèle, la ressource repartait (troisième `GET /employees/9`), puis l'`effect` qui propose la civilité de la fiche remettait la valeur enregistrée, vide, par-dessus le choix. Les tests unitaires posaient la valeur sans observer les appels et ne l'ont pas vu ; un E2E qui clique comme l'utilisateur l'a reproduit aussitôt. **À faire :** isoler dans un `computed` la seule donnée dont dépend une ressource (`computed(() => this.modele().employeeId)`) ; tester un formulaire par un E2E qui choisit chaque champ à la souris et compte les appels d'API.
+
+- **2026-11-27, nginx — une même adresse sert la page et l'API selon `Accept`.** Après une navigation directe vers
+  `/parametres`, le navigateur gardait la page HTML en cache et la resservait à l'appel HttpClient de l'écran
+  Paramètres (« Impossible de charger les paramètres »). La page de repli des préfixes d'API part désormais avec
+  `Cache-Control: no-store` et `Vary: Accept`. Toute réponse qui dépend d'un en-tête de requête doit le déclarer dans
+  `Vary`, et un `add_header` de location doit reprendre les en-têtes de sécurité du serveur.
