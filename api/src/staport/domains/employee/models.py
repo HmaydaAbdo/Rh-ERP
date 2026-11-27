@@ -16,7 +16,6 @@ class EmployeeStatut(StrEnum):
 class Civilite(StrEnum):
     MONSIEUR = "MONSIEUR"
     MADAME = "MADAME"
-    MADEMOISELLE = "MADEMOISELLE"
 
 
 class TypeSalaire(StrEnum):

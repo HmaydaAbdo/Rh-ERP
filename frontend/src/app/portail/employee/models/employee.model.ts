@@ -4,13 +4,15 @@ import { EquipeReference } from '../../../shared/reference-data/equipe-reference
 
 export type EmployeeStatut = 'ACTIF' | 'INACTIF';
 
-/** Civilité imprimée sur les documents administratifs (attestation de travail). */
-export type Civilite = 'MONSIEUR' | 'MADAME' | 'MADEMOISELLE';
+/** Civilité imprimée sur les documents administratifs (attestation de travail) : Monsieur ou Madame. */
+export type Civilite = 'MONSIEUR' | 'MADAME';
+
+/** Format d'un document administratif : le PDF à imprimer, ou le Word à retoucher avant impression. */
+export type FormatDocument = 'PDF' | 'WORD';
 
 export const CIVILITE_OPTIONS: { label: string; value: Civilite }[] = [
   { label: 'Monsieur', value: 'MONSIEUR' },
-  { label: 'Madame', value: 'MADAME' },
-  { label: 'Mademoiselle', value: 'MADEMOISELLE' }
+  { label: 'Madame', value: 'MADAME' }
 ];
 
 /** Un salaire mensuel, ou le tarif d'une journée. */

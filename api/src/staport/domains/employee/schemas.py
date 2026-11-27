@@ -285,8 +285,16 @@ class EmployeeImportReponse(ModeleApi):
     lignes_ignorees: list[EmployeeLigneIgnoree]
 
 
+class FormatDocument(StrEnum):
+    """Format d'un document administratif : le PDF à imprimer tel quel, ou le Word à retoucher avant impression."""
+
+    PDF = "PDF"
+    WORD = "WORD"
+
+
 class AttestationTravailRequete(ModeleApi):
     civilite: Civilite
+    format: FormatDocument = FormatDocument.PDF
 
 
 class CnssImportReponse(ModeleApi):

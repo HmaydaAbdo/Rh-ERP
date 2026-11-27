@@ -14,11 +14,12 @@ from typing import Any
 
 import pytest
 from conftest import ADMIN, Plateforme
+from docx import Document
 from openpyxl import Workbook
 from sqlalchemy import text
 
-from staport.domains.employee import attestation_pdf
-from staport.domains.employee.attestation_pdf import Attestation, construire_html
+from staport.domains.employee import attestation
+from staport.domains.employee.attestation import Attestation, construire_docx, construire_html
 from staport.domains.employee.models import Civilite
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -201,6 +202,33 @@ def test_le_gabarit_de_l_attestation_reprend_le_modele_et_accorde_la_civilite() 
     assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
 
 
+def test_l_attestation_word_reprend_le_texte_du_pdf() -> None:
+    attestation = Attestation(
+        civilite=Civilite.MADAME,
+        nom_prenom="Benali Sara",
+        cin="AB123456",
+        matricule_cnss="123456789",
+        depuis=date(2024, 6, 1),
+        fonction="CHAUFFEUR CAMION",
+        fait_le=date(2025, 10, 10),
+    )
+
+    document = Document(BytesIO(construire_docx(attestation)))
+
+    paragraphes = [p.text for p in document.paragraphs]
+    assert "Marrakech, le 10/10/2025" in paragraphes
+    assert "ATTESTATION DE TRAVAIL" in paragraphes
+    assert "La Direction" in paragraphes
+    corps = next(p for p in document.paragraphs if p.text.startswith("Nous soussignés"))
+    assert "Madame BENALI SARA, titulaire de la CIN N° AB123456, " in corps.text
+    assert "immatriculée à la CNSS sous le N° 123456789" in corps.text
+    assert "CHAUFFEUR CAMION depuis le 01/06/2024" in corps.text
+    assert {r.text for r in corps.runs if r.bold} >= {"BENALI SARA", "AB123456", "123456789", "CHAUFFEUR CAMION"}
+    assert any("intéressée sur sa demande" in p for p in paragraphes)
+    assert "STAPORT S.A." in document.tables[0].rows[0].cells[1].text
+    assert len(document.inline_shapes) == 1  # le logo
+
+
 def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     plateforme: Plateforme,
     jeu: Jeu,
@@ -214,7 +242,7 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
         pages.append(html)
         return b"%PDF"
 
-    monkeypatch.setattr(attestation_pdf, "rendre_pdf", faux_rendu)
+    monkeypatch.setattr(attestation, "rendre_pdf", faux_rendu)
     sans_cnss = _employe(plateforme, jeu, "G")
     declare = _employe(plateforme, jeu, "H", matriculeCnss=_matricule(), dateDeclarationCnss="2024-06-01")
     _id, mdp = creer_utilisateur(roles=("CHARGE_RH",), username=f"charge-rh-{jeu.marque.lower()}")
@@ -239,6 +267,20 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     assert "Monsieur <strong>ALAMI YOUSSEF H</strong>" in pages[-1]
     fiche = plateforme.client.get(f"/employees/{declare['id']}", headers=jeu.entetes).json()
     assert fiche["civilite"] == "MONSIEUR"
+
+    word = plateforme.client.post(
+        f"/employees/{declare['id']}/attestation-travail",
+        headers=charge_rh,
+        json={"civilite": "MONSIEUR", "format": "WORD"},
+    )
+    assert word.status_code == 200, word.text
+    assert word.headers["content-type"] == ("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    assert f"Attestation_de_travail_{declare['cin']}.docx" in word.headers["content-disposition"]
+    assert any("ALAMI YOUSSEF H" in p.text for p in Document(BytesIO(word.content)).paragraphs)
+    mademoiselle = plateforme.client.post(
+        f"/employees/{declare['id']}/attestation-travail", headers=charge_rh, json={"civilite": "MADEMOISELLE"}
+    )
+    assert mademoiselle.status_code == 400
     with plateforme.moteur.connect() as c:
         assert (
             c.execute(

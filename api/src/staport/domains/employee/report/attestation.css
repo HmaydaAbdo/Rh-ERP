@@ -1,4 +1,4 @@
-/* Feuille de style STATIQUE de l'attestation de travail (voir `attestation_pdf.py`) : jamais interpolée avec une
+/* Feuille de style STATIQUE de l'attestation de travail (voir `attestation.py`) : jamais interpolée avec une
    donnée ; les polices et le logo sont ceux du rapport de paie (base du rendu : `paie/report`). */
 @font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Regular.ttf"); font-weight: normal; }
 @font-face { font-family: "Liberation Serif"; src: url("fonts/LiberationSerif-Bold.ttf"); font-weight: bold; }

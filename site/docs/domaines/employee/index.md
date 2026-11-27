@@ -139,7 +139,7 @@ Table `employe`, entité `Employee`, auditée et modifiable avec verrou optimist
 | `statut` | `VARCHAR(20)` | Obligatoire; `ACTIF` à la création, ou `INACTIF` |
 | `matricule_cnss` | `VARCHAR(20)` | Facultatif; chiffres seulement (`ck_employe_matricule_cnss`), unique (`uk_employe_matricule_cnss`) ; révision `0012`, KAN-320 |
 | `date_declaration_cnss` | `DATE` | Facultative; non future ; « depuis le » de l’attestation de travail |
-| `civilite` | `VARCHAR(12)` | Facultative; `MONSIEUR`, `MADAME` ou `MADEMOISELLE` (`ck_employe_civilite`) ; choisie à l’impression d’une attestation et conservée |
+| `civilite` | `VARCHAR(12)` | Facultative; `MONSIEUR` ou `MADAME` (`ck_employe_civilite`, « Mademoiselle » retirée par la révision 0013) ; choisie à l’impression d’une attestation et conservée |
 
 Les relations, statut et date d’embauche sont indexés. Les contraintes de base protègent les
 références, le CIN et l’absence d’affectation des fiches sorties. Le modèle transverse est dans
@@ -237,7 +237,7 @@ Les tranches sont : âge `<25`, `25–34`, `35–44`, `45–54`, `55+`; ancienne
 | `DELETE /employees/{id}` | `EMPLOYEE_DELETE` | `204`; absent `404`, fiche utilisée `409` |
 | `POST /employees/import` | `EMPLOYEE_IMPORT` | Multipart `file`; résultat `200`, fichier ou lignes invalides `400` |
 | `POST /employees/import/cnss` | `EMPLOYEE_IMPORT` | Multipart `file` : déclarations CNSS par CIN (voir [Import des déclarations CNSS](#import-des-déclarations-cnss)) ; `200` avec `misAJour`, `inchanges`, `sansDeclaration`, ou `400` avec les lignes refusées. Audité `EMPLOYE_IMPORT_CNSS` |
-| `POST /employees/{id}/attestation-travail` | `DOCUMENT_ADMIN_EDITER` | Corps `{ civilite }` ; PDF A4 de l’attestation de travail. `400` si l’employé est sorti ou si le matricule ou la date de déclaration CNSS manque ; la civilité choisie est enregistrée sur la fiche (`EMPLOYE_MODIFICATION`, périmètre `origine = ATTESTATION_TRAVAIL`) |
+| `POST /employees/{id}/attestation-travail` | `DOCUMENT_ADMIN_EDITER` | Corps `{ civilite, format }` (`format` : `PDF` par défaut, ou `WORD`) ; attestation de travail en PDF A4 à imprimer, ou en Word (`.docx`) à retoucher, même texte. `400` si l’employé est sorti ou si le matricule ou la date de déclaration CNSS manque ; la civilité choisie est enregistrée sur la fiche (`EMPLOYE_MODIFICATION`, périmètre `origine = ATTESTATION_TRAVAIL`) |
 | `GET /employees/import/modele` | `EMPLOYEE_IMPORT` | Modèle XLSX vierge |
 
 Chaque route exige une authentification. Le [catalogue RBAC Employé](droits.md) décrit

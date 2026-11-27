@@ -15,7 +15,7 @@ from staport.domains.auth.service_role import ServiceRole
 from staport.domains.auth.service_utilisateur import ServiceUtilisateur
 from staport.domains.chantier.service import ServiceChantier
 from staport.domains.common.audit_contexte import Auditeur
-from staport.domains.employee.attestation_pdf import ServiceAttestation
+from staport.domains.employee.attestation import ServiceAttestation
 from staport.domains.employee.mouvements_pdf import ServiceMouvementsPdf
 from staport.domains.employee.service import ServiceEmployee
 from staport.domains.equipe.service import ServiceEquipe

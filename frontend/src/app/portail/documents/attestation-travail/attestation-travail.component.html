@@ -38,7 +38,8 @@
     </div>
 
     <div class="app-form__actions app-form__wide">
-      <button stp-button icon="file-text" type="submit" [loading]="impression()" [disabled]="raisons().length > 0 || fiche.isLoading()">Imprimer l’attestation</button>
+      <button stp-button icon="file-text" type="submit" [loading]="impression() === 'PDF'" [disabled]="raisons().length > 0 || fiche.isLoading() || impression() !== null" (click)="choisirFormat('PDF')">Imprimer l’attestation</button>
+      <button stp-button variant="secondary" icon="download" type="submit" [loading]="impression() === 'WORD'" [disabled]="raisons().length > 0 || fiche.isLoading() || impression() !== null" (click)="choisirFormat('WORD')">Télécharger en Word</button>
     </div>
   </form>
 </div>

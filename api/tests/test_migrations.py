@@ -54,7 +54,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     moteur = create_engine(url)
     with moteur.connect() as c:
         version = c.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "0012_documents_administratifs"
+        assert version == "0013_civilite_sans_mademoiselle"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -116,7 +116,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0012_documents_administratifs"
+            == "0013_civilite_sans_mademoiselle"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -200,7 +200,7 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0012_documents_administratifs"
+            == "0013_civilite_sans_mademoiselle"
         )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         # Les rôles existants sont conservés ; seul CHARGE_RH (révision 0010) s'ajoute.
@@ -598,4 +598,43 @@ def test_la_revision_0012_ajoute_la_declaration_cnss_et_la_permission_des_docume
     for invalide in ("matricule_cnss = '12A'", "civilite = 'MR'"):
         with pytest.raises(Exception, match="ck_employe_"), moteur.begin() as c:
             c.execute(text(f"UPDATE employe SET {invalide}"))  # noqa: S608
+    moteur.dispose()
+
+
+def test_la_revision_0013_retire_mademoiselle_et_journalise_les_fiches_corrigees(
+    creer_base: Callable[[str], str],
+) -> None:
+    url = creer_base("civilite_sans_mademoiselle")
+    command.upgrade(_config(url), "0012_documents_administratifs")
+    moteur = create_engine(url)
+    with moteur.begin() as c:
+        fonction = c.execute(text("INSERT INTO fonction (libelle) VALUES ('CHAUFFEUR') RETURNING id")).scalar_one()
+        employe = c.execute(
+            text(
+                "INSERT INTO employe (nom_prenom, cin, date_naissance, date_embauche, fonction_id, statut, civilite) "
+                "VALUES ('ALAMI SARA', 'AB123456', '1990-01-01', '2024-06-01', :f, 'INACTIF', 'MADEMOISELLE') "
+                "RETURNING id"
+            ),
+            {"f": fonction},
+        ).scalar_one()
+
+    command.upgrade(_config(url), "head")
+
+    with moteur.connect() as c:
+        assert c.execute(text("SELECT civilite FROM employe WHERE id = :i"), {"i": employe}).scalar_one() == "MADAME"
+        assert (
+            c.execute(
+                text("SELECT civilite FROM employe_aud WHERE id = :i AND revtype = 1"), {"i": employe}
+            ).scalar_one()
+            == "MADAME"
+        )
+        journal = c.execute(
+            text(
+                "SELECT action, nombre_elements FROM audit_journal "
+                "WHERE perimetre ->> 'migration' = '0013_civilite_sans_mademoiselle'"
+            )
+        ).one()
+        assert tuple(journal) == ("EMPLOYE_MODIFICATION", 1)
+    with pytest.raises(Exception, match="ck_employe_civilite"), moteur.begin() as c:
+        c.execute(text("UPDATE employe SET civilite = 'MADEMOISELLE'"))
     moteur.dispose()

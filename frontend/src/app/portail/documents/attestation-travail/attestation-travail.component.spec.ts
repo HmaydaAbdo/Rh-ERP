@@ -106,7 +106,7 @@ describe('AttestationTravailComponent', () => {
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME');
+    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME', 'PDF');
     expect(ouvrir).toHaveBeenCalledWith('blob:attestation', '_blank');
     expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success', detail: 'ALAMI YOUSSEF' }));
   });
@@ -121,6 +121,34 @@ describe('AttestationTravailComponent', () => {
 
     expect(telecharger).toHaveBeenCalled();
     expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('télécharge l’attestation en Word avec la civilité choisie', async () => {
+    const { fixture, page, composant } = await imprimer();
+    const ouvrir = vi.spyOn(window, 'open');
+    const telecharger = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    composant.form.civilite().value.set('MADAME');
+
+    (page.querySelectorAll('button[type="submit"]')[1] as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME', 'WORD');
+    expect(ouvrir).not.toHaveBeenCalled();
+    expect(telecharger).toHaveBeenCalled();
+    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('ne recharge pas la fiche quand la civilité change : le choix de l’utilisateur reste', async () => {
+    const { fixture, composant } = afficher(DECLARE);
+    await fixture.whenStable();
+    service.getById.mockClear();
+
+    composant.form.civilite().value.set('MADAME');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(service.getById).not.toHaveBeenCalled();
+    expect(composant.form.civilite().value()).toBe('MADAME');
   });
 
   it('signale l’échec de la génération', async () => {
