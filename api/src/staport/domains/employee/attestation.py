@@ -167,14 +167,17 @@ def construire_docx(a: Attestation) -> bytes:
     document = Document()
     section = document.sections[0]
     section.page_width, section.page_height = Mm(210), Mm(297)
-    section.top_margin, section.bottom_margin = Mm(22), Mm(24)
-    section.left_margin = section.right_margin = Mm(24)
+    # Toute la largeur de la page (décision du propriétaire, 2026-11-27) : marges latérales de 15 mm, logo près du bord,
+    # bandeau de pied de page d'un bord à l'autre.
+    section.top_margin, section.bottom_margin = Mm(32), Mm(40)
+    section.left_margin = section.right_margin = Mm(15)
+    section.header_distance, section.footer_distance = Mm(10), Mm(8)
     normal = cast(ParagraphStyle, document.styles["Normal"])
     normal.font.name = "Liberation Serif"
     normal.font.size = Pt(13)
 
     section.header.paragraphs[0].add_run().add_picture(str(LOGO), height=Mm(18))
-    _pied_de_page_docx(section.footer, a.capital_social, Mm(210 - 24 - 24))
+    _pied_de_page_docx(section.footer, a.capital_social, Mm(210))
 
     date_lieu = document.add_paragraph(f"{LIEU}, le {a.fait_le:%d/%m/%Y}")
     date_lieu.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -207,10 +210,12 @@ def construire_docx(a: Attestation) -> bytes:
 
 
 def _pied_de_page_docx(pied: _Footer, capital_social: int, largeur: Length) -> None:
-    """Le bandeau bleu du papier à en-tête : une cellule pleine largeur, texte blanc centré."""
+    """Le bandeau bleu du papier à en-tête : une cellule de la largeur de la feuille, centrée, texte blanc centré."""
     bandeau = pied.add_table(rows=1, cols=1, width=largeur)
     bandeau.alignment = WD_TABLE_ALIGNMENT.CENTER
+    bandeau.autofit = False
     cellule = bandeau.cell(0, 0)
+    cellule.width = bandeau.columns[0].width = largeur
     # python-docx n'expose pas la trame d'une cellule : l'élément `w:shd` est posé directement.
     cellule._tc.get_or_add_tcPr().append(  # pyright: ignore[reportPrivateUsage, reportUnknownMemberType]
         parse_xml(f'<w:shd {nsdecls("w")} w:val="clear" w:color="auto" w:fill="{BLEU_BANDEAU}"/>')

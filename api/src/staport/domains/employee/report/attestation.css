@@ -5,17 +5,16 @@
 
 @page {
   size: A4 portrait;
-  margin: 22mm 24mm 40mm 24mm;
-  @bottom-center {
-    content: element(pied);
-    vertical-align: bottom;
-    padding-bottom: 8mm;
-  }
+  margin: 12mm 15mm 40mm 15mm;
 }
 
-/* Bandeau des coordonnées légales, en pied de chaque page (papier à en-tête de la société). */
+/* Bandeau des coordonnées légales, en pied de chaque page (papier à en-tête de la société) : un élément fixe se répète
+   sur chaque page ; il rattrape les marges latérales pour aller d'un bord à l'autre de la feuille. */
 .pied {
-  position: running(pied);
+  position: fixed;
+  left: -15mm;
+  right: -15mm;
+  bottom: -32mm;
   background: #145b8e;
   color: #fff;
   font-family: "DejaVu Sans", sans-serif;
