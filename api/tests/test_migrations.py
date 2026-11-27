@@ -54,7 +54,7 @@ def test_la_base_construit_le_schema_et_les_donnees_de_reference(creer_base: Cal
     moteur = create_engine(url)
     with moteur.connect() as c:
         version = c.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "0013_civilite_sans_mademoiselle"
+        assert version == "0014_parametre_capital_social"
         tables = set(c.execute(text("SELECT tablename FROM pg_tables WHERE schemaname='public'")).scalars())
         assert {"employe", "paie", "heures_supp", "audit_journal", "permission", "role"} <= tables
         titulaires = c.execute(
@@ -116,7 +116,7 @@ def test_deploiement_sur_base_neuve_et_relance_sont_idempotents(
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0013_civilite_sans_mademoiselle"
+            == "0014_parametre_capital_social"
         )
         assert connexion.execute(text("SELECT count(*) FROM role")).scalar_one() > 0
         assert connexion.execute(
@@ -200,7 +200,7 @@ def test_une_base_de_production_restauree_monte_a_la_derniere_revision_et_perd_l
     with moteur.connect() as connexion:
         assert (
             connexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-            == "0013_civilite_sans_mademoiselle"
+            == "0014_parametre_capital_social"
         )
         assert connexion.execute(text("SELECT to_regclass('public.flyway_schema_history')")).scalar_one() is None
         # Les rôles existants sont conservés ; seul CHARGE_RH (révision 0010) s'ajoute.

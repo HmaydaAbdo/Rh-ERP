@@ -93,6 +93,9 @@ class ServiceParametre:
     async def cron_synchronisation_chantiers(self, session: AsyncSession) -> str:
         return await self._valeur(session, catalogue.CRON_SYNCHRONISATION_CHANTIERS)
 
+    async def capital_social(self, session: AsyncSession) -> int:
+        return await self._entier(session, catalogue.CAPITAL_SOCIAL)
+
     async def enregistrer_ouverture_vue_libre(self, session: AsyncSession, requete: OuvertureVueLibreRequete) -> None:
         """Inscrit au journal d'audit l'ouverture d'une vue libre (fil et taille, sans le contenu)."""
         action = self._auditeur.auditer(session, "VUE_LIBRE_OUVERTURE", TypeOperation.CREATE, "VueLibre")

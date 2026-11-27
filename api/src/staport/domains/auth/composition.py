@@ -122,7 +122,7 @@ def creer_contexte(
         chantiers=service_chantier,
         employees=service_employee,
         mouvements_pdf=ServiceMouvementsPdf(service_employee),
-        attestations=ServiceAttestation(publication),
+        attestations=ServiceAttestation(publication, service_parametre),
         paies=service_paie,
         export_paie=ServiceExportPaie(),
         materiel_paie=ServiceMaterielPaie(),

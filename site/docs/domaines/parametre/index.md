@@ -33,6 +33,7 @@ Le backend garde les valeurs en mémoire sur son instance et les invalide après
 | `securite.mot-de-passe.longueur-minimale` | 10 caractères | Minimum à la création et lors des réinitialisations ; de 8 à 100. Les mots de passe existants ne changent pas. |
 | `paie.analytique.pas-tranche` | 500 DH | Pas et largeur minimale des tranches de répartition des salaires ; de 1 à 100 000 DH. |
 | `chantier.synchronisation.cron` | `0 0 23 * * *` | Expression cron à six champs, secondes comprises, lue en UTC ; planifie la synchronisation quotidienne à 23 h. Relue avant chaque exécution. |
+| `societe.capital-social` | 70 000 000 DH | Capital imprimé dans le bandeau de pied de page des documents administratifs (« Capital Social : 70 000 000,00Dh ») ; de 1 à 1 000 000 000 000 DH. S'applique aux documents générés après le changement (révision `0014_parametre_capital_social`, KAN-323). |
 
 La définition complète (libellé, description, type et bornes) appartient au catalogue (`catalogue.py`). Une valeur entière est normalisée
 et bornée côté serveur. Une expression cron est validée par APScheduler (jours de semaine par noms `MON` à `SUN` ou `*`, jamais en chiffres). Une valeur invalide répond `400` et n'est pas enregistrée.

@@ -158,6 +158,17 @@ CRON_SYNCHRONISATION_CHANTIERS = DefinitionParametre(
     None,
 )
 
+CAPITAL_SOCIAL = DefinitionParametre(
+    "societe.capital-social",
+    "Capital social",
+    "Montant imprimé dans le pied de page des documents administratifs (attestation de travail) : « Capital Social : "
+    "70 000 000,00Dh ». S'applique aux documents générés après le changement.",
+    TypeParametre.ENTIER,
+    "DH",
+    1,
+    1_000_000_000_000,
+)
+
 CATALOGUE: tuple[DefinitionParametre, ...] = (
     JETON_ACCES,
     JETON_SESSION,
@@ -165,6 +176,7 @@ CATALOGUE: tuple[DefinitionParametre, ...] = (
     LONGUEUR_MOT_DE_PASSE,
     PAS_TRANCHE_ANALYTIQUE,
     CRON_SYNCHRONISATION_CHANTIERS,
+    CAPITAL_SOCIAL,
 )
 
 

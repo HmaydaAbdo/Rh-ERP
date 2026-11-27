@@ -5,7 +5,24 @@
 
 @page {
   size: A4 portrait;
-  margin: 22mm 24mm 24mm 24mm;
+  margin: 22mm 24mm 40mm 24mm;
+  @bottom-center {
+    content: element(pied);
+    vertical-align: bottom;
+    padding-bottom: 8mm;
+  }
+}
+
+/* Bandeau des coordonnées légales, en pied de chaque page (papier à en-tête de la société). */
+.pied {
+  position: running(pied);
+  background: #145b8e;
+  color: #fff;
+  font-family: "DejaVu Sans", sans-serif;
+  font-size: 6.5pt;
+  line-height: 1.45;
+  text-align: center;
+  padding: 2mm 3mm;
 }
 
 body {
@@ -15,27 +32,10 @@ body {
   line-height: 1.7;
 }
 
-.entete {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1.2pt solid #1f3a5f;
-  padding-bottom: 4mm;
-}
-
 .entete .logo { height: 18mm; }
 
-.entete .societe {
-  text-align: right;
-  font-size: 10.5pt;
-  line-height: 1.35;
-  color: #1f3a5f;
-}
-
-.entete .societe strong { font-size: 12pt; }
-
 .lieu-date {
-  margin-top: 14mm;
+  margin-top: 6mm;
   text-align: right;
 }
 

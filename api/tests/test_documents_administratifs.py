@@ -187,6 +187,7 @@ def test_le_gabarit_de_l_attestation_reprend_le_modele_et_accorde_la_civilite() 
         depuis=date(2024, 6, 1),
         fonction="CHAUFFEUR CAMION",
         fait_le=date(2025, 10, 10),
+        capital_social=70_000_000,
     )
 
     html = construire_html(attestation)
@@ -198,6 +199,9 @@ def test_le_gabarit_de_l_attestation_reprend_le_modele_et_accorde_la_civilite() 
     assert "<strong>CHAUFFEUR CAMION</strong> depuis le <strong>01/06/2024</strong>" in html
     assert "intéressée sur sa demande" in html
     assert "La Direction" in html
+    assert "Direction des Ressources Humaines" not in html  # l'en-tête ne garde que le logo
+    assert '<div class="pied">' in html
+    assert "Capital Social : 70 000 000,00Dh | R.C : 96 537" in html
     masculin = construire_html(replace(attestation, civilite=Civilite.MONSIEUR))
     assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
 
@@ -211,6 +215,7 @@ def test_l_attestation_word_reprend_le_texte_du_pdf() -> None:
         depuis=date(2024, 6, 1),
         fonction="CHAUFFEUR CAMION",
         fait_le=date(2025, 10, 10),
+        capital_social=70_000_000,
     )
 
     document = Document(BytesIO(construire_docx(attestation)))
@@ -225,8 +230,12 @@ def test_l_attestation_word_reprend_le_texte_du_pdf() -> None:
     assert "CHAUFFEUR CAMION depuis le 01/06/2024" in corps.text
     assert {r.text for r in corps.runs if r.bold} >= {"BENALI SARA", "AB123456", "123456789", "CHAUFFEUR CAMION"}
     assert any("intéressée sur sa demande" in p for p in paragraphes)
-    assert "STAPORT S.A." in document.tables[0].rows[0].cells[1].text
-    assert len(document.inline_shapes) == 1  # le logo
+    section = document.sections[0]
+    assert section.header.part.blob.count(b"</pic:pic>") == 1  # l'en-tête ne garde que le logo
+    assert "Direction des Ressources Humaines" not in "".join(p.text for p in section.header.paragraphs)
+    pied = section.footer.tables[0].cell(0, 0).text
+    assert pied.startswith("Société des Travaux d") and "Ponts et Routes - Société Anonyme" in pied
+    assert "Capital Social : 70 000 000,00Dh | R.C : 96 537" in pied
 
 
 def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
@@ -276,7 +285,26 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     assert word.status_code == 200, word.text
     assert word.headers["content-type"] == ("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     assert f"Attestation_de_travail_{declare['cin']}.docx" in word.headers["content-disposition"]
-    assert any("ALAMI YOUSSEF H" in p.text for p in Document(BytesIO(word.content)).paragraphs)
+    document_word = Document(BytesIO(word.content))
+    assert any("ALAMI YOUSSEF H" in p.text for p in document_word.paragraphs)
+    assert "Capital Social : 70 000 000,00Dh" in document_word.sections[0].footer.tables[0].cell(0, 0).text
+
+    # Le capital se règle dans l'écran Paramètres et s'imprime sur les attestations suivantes.
+    capital = next(
+        p
+        for p in plateforme.client.get("/parametres", headers=jeu.entetes).json()
+        if p["cle"] == "societe.capital-social"
+    )
+    modifie = plateforme.client.put(
+        f"/parametres/{capital['id']}", headers=jeu.entetes, json={"version": capital["version"], "valeur": "80000000"}
+    )
+    assert modifie.status_code == 200, modifie.text
+    plateforme.client.post(
+        f"/employees/{declare['id']}/attestation-travail", headers=charge_rh, json={"civilite": "MONSIEUR"}
+    )
+    assert "Capital Social : 80 000 000,00Dh" in pages[-1]
+    retour = {"version": modifie.json()["version"], "valeur": capital["valeur"]}
+    assert plateforme.client.put(f"/parametres/{capital['id']}", headers=jeu.entetes, json=retour).status_code == 200
     mademoiselle = plateforme.client.post(
         f"/employees/{declare['id']}/attestation-travail", headers=charge_rh, json={"civilite": "MADEMOISELLE"}
     )

@@ -26,7 +26,7 @@ from staport.domains.parametre.exceptions import InstallationIncomplete, Paramet
 
 def test_les_codes_sont_uniques_et_retrouvables() -> None:
     codes = [d.code for d in catalogue.CATALOGUE]
-    assert len(set(codes)) == len(codes) == 6
+    assert len(set(codes)) == len(codes) == 7
     for definition in catalogue.CATALOGUE:
         assert catalogue.depuis_code(definition.code) is definition
     assert catalogue.depuis_code("inconnu") is None
@@ -99,6 +99,7 @@ DEPART = {
     catalogue.LONGUEUR_MOT_DE_PASSE.code: "10",
     catalogue.PAS_TRANCHE_ANALYTIQUE.code: "500",
     catalogue.CRON_SYNCHRONISATION_CHANTIERS.code: "0 0 23 * * *",
+    catalogue.CAPITAL_SOCIAL.code: "70000000",
 }
 
 
@@ -150,6 +151,7 @@ def test_la_migration_pose_une_valeur_de_depart_pour_chaque_cle_du_catalogue(
                 await service.longueur_minimale_mot_de_passe(s),
                 await service.pas_tranche_analytique(s),
                 await service.cron_synchronisation_chantiers(s),
+                await service.capital_social(s),
             )
 
     assert session.call(lire) == (
@@ -159,6 +161,7 @@ def test_la_migration_pose_une_valeur_de_depart_pour_chaque_cle_du_catalogue(
         10,
         Decimal(500),
         "0 0 23 * * *",
+        70_000_000,
     )
 
 
