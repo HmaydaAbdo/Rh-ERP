@@ -15,12 +15,6 @@
         "value": "liberation serif",
         "createdAt": "2026-11-02T18:26:33.461Z",
         "reason": "police du rapport PDF imprimé, identique au rapport de paie existant ; hors du système d'interface de DESIGN.md"
-      },
-      {
-        "rule": "design-system-font",
-        "value": "dejavu sans",
-        "createdAt": "2026-11-27T15:04:39.806Z",
-        "reason": "Claude: feuille d'impression PDF de l'attestation (papier à en-tête de la société, pas l'interface) ; DejaVu Sans est la seule police sans empattement de l'image WeasyPrint"
       }
     ]
   }

@@ -8,7 +8,6 @@ import { Page } from '../../../shared/models/page.model';
 import {
   CnssImportResult,
   Civilite,
-  FormatDocument,
   Employee,
   DimensionEmployes,
   EmployeeAnalytique,
@@ -78,9 +77,9 @@ export class EmployeeService {
     return this.http.post<CnssImportResult>(`${this.baseUrl}/import/cnss`, formData);
   }
 
-  /** L'attestation de travail en PDF ou en Word ; la civilité choisie reste sur la fiche (`DOCUMENT_ADMIN_EDITER`). */
-  attestationTravail(id: number, civilite: Civilite, format: FormatDocument = 'PDF'): Observable<Blob> {
-    return this.http.post(`${this.baseUrl}/${id}/attestation-travail`, { civilite, format }, { responseType: 'blob' });
+  /** L'attestation de travail en Word ; la civilité choisie reste sur la fiche (`DOCUMENT_ADMIN_EDITER`). */
+  attestationTravail(id: number, civilite: Civilite): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/${id}/attestation-travail`, { civilite }, { responseType: 'blob' });
   }
 
   telechargerModele(): Observable<Blob> {

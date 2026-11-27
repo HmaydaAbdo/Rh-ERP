@@ -98,44 +98,17 @@ describe('AttestationTravailComponent', () => {
     return vue;
   }
 
-  it('imprime : demande le PDF avec la civilité choisie et l’ouvre dans un nouvel onglet', async () => {
-    const { fixture, page, composant } = await imprimer();
-    const ouvrir = vi.spyOn(window, 'open').mockReturnValue({} as Window);
-    composant.form.civilite().value.set('MADAME');
-
-    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
-    await fixture.whenStable();
-
-    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME', 'PDF');
-    expect(ouvrir).toHaveBeenCalledWith('blob:attestation', '_blank');
-    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success', detail: 'ALAMI YOUSSEF' }));
-  });
-
-  it('télécharge le PDF quand le navigateur bloque le nouvel onglet', async () => {
-    const { fixture, page } = await imprimer();
-    vi.spyOn(window, 'open').mockReturnValue(null);
-    const telecharger = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-
-    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
-    await fixture.whenStable();
-
-    expect(telecharger).toHaveBeenCalled();
-    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
-  });
-
   it('télécharge l’attestation en Word avec la civilité choisie', async () => {
     const { fixture, page, composant } = await imprimer();
-    const ouvrir = vi.spyOn(window, 'open');
     const telecharger = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     composant.form.civilite().value.set('MADAME');
 
-    (page.querySelectorAll('button[type="submit"]')[1] as HTMLButtonElement).click();
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME', 'WORD');
-    expect(ouvrir).not.toHaveBeenCalled();
+    expect(service.attestationTravail).toHaveBeenCalledWith(9, 'MADAME');
     expect(telecharger).toHaveBeenCalled();
-    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success', detail: 'ALAMI YOUSSEF' }));
   });
 
   it('ne recharge pas la fiche quand la civilité change : le choix de l’utilisateur reste', async () => {
@@ -154,12 +127,12 @@ describe('AttestationTravailComponent', () => {
   it('signale l’échec de la génération', async () => {
     const { fixture, page } = await imprimer();
     service.attestationTravail.mockReturnValue(throwError(() => new Error('refus')));
-    const ouvrir = vi.spyOn(window, 'open');
+    const telecharger = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(ouvrir).not.toHaveBeenCalled();
+    expect(telecharger).not.toHaveBeenCalled();
     expect(notifications.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', summary: 'L’attestation n’a pas pu être générée.' }));
   });
 });

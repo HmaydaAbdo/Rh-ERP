@@ -1,25 +1,22 @@
-"""Documents administratifs (KAN-320) : import des déclarations CNSS et attestation de travail.
-
-Le rendu WeasyPrint est remplacé par un double : la page HTML est vérifiée ici, le PDF dans l'image Linux (Pango
-absent sous Windows, voir `conventions/lecons.md`).
-"""
+"""Documents administratifs (KAN-320) : import des déclarations CNSS et attestation de travail (Word)."""
 
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from io import BytesIO
-from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from conftest import ADMIN, Plateforme
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
+from docx.styles.style import ParagraphStyle
 from openpyxl import Workbook
 from sqlalchemy import text
 
-from staport.domains.employee import attestation
-from staport.domains.employee.attestation import Attestation, construire_docx, construire_html
+from staport.domains.employee.attestation import Attestation, construire_docx
 from staport.domains.employee.models import Civilite
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -178,35 +175,7 @@ def test_un_matricule_cnss_ne_peut_appartenir_qu_a_une_fiche(plateforme: Platefo
     assert invalide.status_code == 400
 
 
-def test_le_gabarit_de_l_attestation_reprend_le_modele_et_accorde_la_civilite() -> None:
-    attestation = Attestation(
-        civilite=Civilite.MADAME,
-        nom_prenom="Benali <Sara>",
-        cin="AB123456",
-        matricule_cnss="123456789",
-        depuis=date(2024, 6, 1),
-        fonction="CHAUFFEUR CAMION",
-        fait_le=date(2025, 10, 10),
-        capital_social=70_000_000,
-    )
-
-    html = construire_html(attestation)
-
-    assert "Marrakech, le 10/10/2025" in html
-    assert "ATTESTATION DE TRAVAIL" in html
-    assert "Madame <strong>BENALI &lt;SARA&gt;</strong>" in html  # échappé
-    assert "immatriculée à la CNSS sous le N° <strong>123456789</strong>" in html
-    assert "<strong>CHAUFFEUR CAMION</strong> depuis le <strong>01/06/2024</strong>" in html
-    assert "intéressée sur sa demande" in html
-    assert "La Direction" in html
-    assert "Direction des Ressources Humaines" not in html  # l'en-tête ne garde que le logo
-    assert '<div class="pied">' in html
-    assert "Capital Social : 70 000 000,00Dh | R.C : 96 537" in html
-    masculin = construire_html(replace(attestation, civilite=Civilite.MONSIEUR))
-    assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
-
-
-def test_l_attestation_word_reprend_le_texte_du_pdf() -> None:
+def test_l_attestation_word_suit_le_modele_et_accorde_la_civilite() -> None:
     attestation = Attestation(
         civilite=Civilite.MADAME,
         nom_prenom="Benali Sara",
@@ -236,6 +205,27 @@ def test_l_attestation_word_reprend_le_texte_du_pdf() -> None:
     pied = section.footer.tables[0].cell(0, 0).text
     assert pied.startswith("Société des Travaux d") and "Ponts et Routes - Société Anonyme" in pied
     assert "Capital Social : 70 000 000,00Dh | R.C : 96 537" in pied
+    # Typographie demandée : Bahnschrift Light, contenu 14 pt, titre et signature 16 pt.
+    normal = cast(ParagraphStyle, document.styles["Normal"])
+    assert (normal.font.name, normal.font.size) == ("Bahnschrift Light", Pt(14))
+    for libelle in ("ATTESTATION DE TRAVAIL", "La Direction"):
+        texte = next(p for p in document.paragraphs if p.text == libelle).runs[0]
+        assert texte.bold and texte.font.size == Pt(16)
+    signature = next(p for p in document.paragraphs if p.text == "La Direction")
+    assert signature.alignment == WD_ALIGN_PARAGRAPH.CENTER
+    assert not signature.paragraph_format.left_indent  # pyright: ignore[reportUnknownMemberType]
+    assert {r.text for r in corps.runs if r.bold} == {
+        "STAPORT S.A.",
+        "BENALI SARA",
+        "AB123456",
+        "123456789",
+        "CHAUFFEUR CAMION",
+        "01/06/2024",
+    }
+    masculin = "".join(
+        p.text for p in Document(BytesIO(construire_docx(replace(attestation, civilite=Civilite.MONSIEUR)))).paragraphs
+    )
+    assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
 
 
 def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
@@ -243,15 +233,7 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     jeu: Jeu,
     creer_utilisateur: Callable[..., tuple[int, str]],
     connecter: Callable[[str, str], dict[str, Any]],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    pages: list[str] = []
-
-    async def faux_rendu(html: str, base: Path) -> bytes:
-        pages.append(html)
-        return b"%PDF"
-
-    monkeypatch.setattr(attestation, "rendre_pdf", faux_rendu)
     sans_cnss = _employe(plateforme, jeu, "G")
     declare = _employe(plateforme, jeu, "H", matriculeCnss=_matricule(), dateDeclarationCnss="2024-06-01")
     _id, mdp = creer_utilisateur(roles=("CHARGE_RH",), username=f"charge-rh-{jeu.marque.lower()}")
@@ -271,23 +253,15 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     )
 
     assert reponse.status_code == 200, reponse.text
-    assert reponse.headers["content-type"] == "application/pdf"
-    assert f"Attestation_de_travail_{declare['cin']}.pdf" in reponse.headers["content-disposition"]
-    assert "Monsieur <strong>ALAMI YOUSSEF H</strong>" in pages[-1]
+    assert reponse.headers["content-type"] == (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    assert f"Attestation_de_travail_{declare['cin']}.docx" in reponse.headers["content-disposition"]
+    document_word = Document(BytesIO(reponse.content))
+    assert any("Monsieur ALAMI YOUSSEF H" in p.text for p in document_word.paragraphs)
+    assert "Capital Social : 70 000 000,00Dh" in document_word.sections[0].footer.tables[0].cell(0, 0).text
     fiche = plateforme.client.get(f"/employees/{declare['id']}", headers=jeu.entetes).json()
     assert fiche["civilite"] == "MONSIEUR"
-
-    word = plateforme.client.post(
-        f"/employees/{declare['id']}/attestation-travail",
-        headers=charge_rh,
-        json={"civilite": "MONSIEUR", "format": "WORD"},
-    )
-    assert word.status_code == 200, word.text
-    assert word.headers["content-type"] == ("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-    assert f"Attestation_de_travail_{declare['cin']}.docx" in word.headers["content-disposition"]
-    document_word = Document(BytesIO(word.content))
-    assert any("ALAMI YOUSSEF H" in p.text for p in document_word.paragraphs)
-    assert "Capital Social : 70 000 000,00Dh" in document_word.sections[0].footer.tables[0].cell(0, 0).text
 
     # Le capital se règle dans l'écran Paramètres et s'imprime sur les attestations suivantes.
     capital = next(
@@ -299,10 +273,11 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
         f"/parametres/{capital['id']}", headers=jeu.entetes, json={"version": capital["version"], "valeur": "80000000"}
     )
     assert modifie.status_code == 200, modifie.text
-    plateforme.client.post(
+    apres = plateforme.client.post(
         f"/employees/{declare['id']}/attestation-travail", headers=charge_rh, json={"civilite": "MONSIEUR"}
     )
-    assert "Capital Social : 80 000 000,00Dh" in pages[-1]
+    pied = Document(BytesIO(apres.content)).sections[0].footer.tables[0].cell(0, 0).text
+    assert "Capital Social : 80 000 000,00Dh" in pied
     retour = {"version": modifie.json()["version"], "valeur": capital["valeur"]}
     assert plateforme.client.put(f"/parametres/{capital['id']}", headers=jeu.entetes, json=retour).status_code == 200
     mademoiselle = plateforme.client.post(

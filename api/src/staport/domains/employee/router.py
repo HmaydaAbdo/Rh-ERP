@@ -12,6 +12,7 @@ from staport.domains.common.pagination import Pagination, pagination
 from staport.domains.paie.periode import afficher_periode
 from staport.platform.base_de_donnees import session_requete
 
+from .attestation import TYPE_DOCX
 from .import_cnss import importer_cnss
 from .repository import CHAMPS_DE_PAIE, TRIS_PUBLICS
 from .schemas import (
@@ -177,13 +178,11 @@ async def importer_declarations_cnss(
 async def attestation_travail(
     identifiant: int, corps: AttestationTravailRequete, session: Session, contexte: Contexte
 ) -> Response:
-    """Attestation de travail d'un employé en poste et déclaré à la CNSS, en PDF ou en Word ; la civilité choisie reste
-    sur la fiche."""
-    document = await contexte.attestations.generer(session, identifiant, corps.civilite, corps.format, date.today())
+    """Attestation de travail d'un employé en poste et déclaré à la CNSS, en Word ; la civilité choisie reste sur la
+    fiche."""
+    document = await contexte.attestations.generer(session, identifiant, corps.civilite, date.today())
     return Response(
-        document.contenu,
-        media_type=document.type_mime,
-        headers={"Content-Disposition": f"attachment; filename={document.nom}"},
+        document.contenu, media_type=TYPE_DOCX, headers={"Content-Disposition": f"attachment; filename={document.nom}"}
     )
 
 

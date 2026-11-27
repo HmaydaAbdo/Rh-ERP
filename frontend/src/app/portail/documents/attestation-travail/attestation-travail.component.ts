@@ -13,7 +13,7 @@ import { LazySelectComponent } from '../../../shared/ui/lazy-select/lazy-select.
 import { MessageComponent } from '../../../shared/ui/message/message.component';
 import { SelectComponent } from '../../../shared/ui/select/select.component';
 import { telechargerFichier } from '../../../shared/utils/telecharger-fichier';
-import { Civilite, CIVILITE_OPTIONS, Employee, FormatDocument } from '../../employee/models/employee.model';
+import { Civilite, CIVILITE_OPTIONS, Employee } from '../../employee/models/employee.model';
 import { EmployeeService } from '../../employee/services/employee.service';
 
 interface DemandeAttestation {
@@ -32,8 +32,8 @@ export function raisonsAttestationImpossible(employe: Employee): string[] {
 
 /**
  * Attestation de travail (KAN-320) : l'employé se cherche par nom ou CIN, sa fiche montre ce qui sera imprimé, la civilité
- * se choisit (proposée depuis la fiche, puis conservée par le serveur). Le PDF s'ouvre dans un nouvel onglet pour
- * l'impression, ou se télécharge si le navigateur bloque l'onglet ; le Word se télécharge pour être retouché.
+ * se choisit (proposée depuis la fiche, puis conservée par le serveur). L'attestation se télécharge en Word, à retoucher
+ * puis imprimer (le PDF a été retiré, décision du propriétaire du 2026-11-27).
  */
 @Component({
   selector: 'app-attestation-travail',
@@ -47,10 +47,7 @@ export class AttestationTravailComponent {
   private readonly notifications = inject(NotificationService);
 
   protected readonly civiliteOptions = CIVILITE_OPTIONS;
-  /** Le format en cours de génération (le bouton correspondant tourne), `null` au repos. */
-  protected readonly impression = signal<FormatDocument | null>(null);
-  /** Le format demandé par le bouton qui soumet le formulaire. */
-  private format: FormatDocument = 'PDF';
+  protected readonly generation = signal(false);
 
   private readonly modele = signal<DemandeAttestation>({ employeeId: null, civilite: null });
   protected readonly form = form(
@@ -88,35 +85,19 @@ export class AttestationTravailComponent {
     });
   }
 
-  /** Retient le format du bouton cliqué : le formulaire est ensuite soumis par ce même clic. */
-  protected choisirFormat(format: FormatDocument): void {
-    this.format = format;
-  }
-
   private imprimer(): void {
     const { employeeId, civilite } = this.modele();
     const employe = this.fiche.value();
-    const format = this.format;
     if (employeeId === null || civilite === null || !employe || this.raisons().length > 0) {
       return;
     }
-    this.impression.set(format);
+    this.generation.set(true);
     this.employeeService
-      .attestationTravail(employeeId, civilite, format)
-      .pipe(finalize(() => this.impression.set(null)))
+      .attestationTravail(employeeId, civilite)
+      .pipe(finalize(() => this.generation.set(false)))
       .subscribe({
         next: (document) => {
-          const nom = `Attestation_de_travail_${employe.cin}`;
-          if (format === 'WORD') {
-            telechargerFichier(document, `${nom}.docx`);
-          } else {
-            const url = window.URL.createObjectURL(document);
-            const onglet = window.open(url, '_blank');
-            if (onglet === null) {
-              telechargerFichier(document, `${nom}.pdf`);
-            }
-            setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-          }
+          telechargerFichier(document, `Attestation_de_travail_${employe.cin}.docx`);
           this.notifications.add({ severity: 'success', summary: 'Attestation de travail prête', detail: employe.nomPrenom, life: 4000 });
         },
         error: () => this.notifications.add({ severity: 'error', summary: 'L’attestation n’a pas pu être générée.' })

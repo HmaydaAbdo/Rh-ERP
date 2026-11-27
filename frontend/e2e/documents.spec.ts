@@ -15,12 +15,15 @@ async function choisir(page: Page, nom: string, option: string): Promise<void> {
 }
 
 test.describe('Documents administratifs', () => {
-  test('attestation de travail : la civilité choisie reste choisie et part avec la demande, en PDF puis en Word', async ({ page }) => {
+  test('attestation de travail : la civilité choisie reste choisie et part avec la demande du Word', async ({ page }) => {
     const mock = await mockApi(page, { username: 'rh', permissions: DROITS }, {
       'POST /employees/search': () => pageDe([EMPLOYE]),
       'GET /employees/9': () => EMPLOYE,
       'POST /employees/9/attestation-travail': (_requete, route) => {
-        void route.fulfill({ body: '%PDF-1.7', contentType: 'application/pdf' });
+        void route.fulfill({
+          body: 'PK',
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
         return null;
       }
     });
@@ -37,12 +40,10 @@ test.describe('Documents administratifs', () => {
     await expect(page.getByRole('option')).toHaveText(['Monsieur', 'Madame']);
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Imprimer l’attestation' }).click();
-    await expect.poll(() => mock.bodies['POST /employees/9/attestation-travail']).toEqual([{ civilite: 'MADAME', format: 'PDF' }]);
-
-    const telechargement = page.waitForEvent('download', (fichier) => fichier.suggestedFilename().endsWith('.docx'));
+    await expect(page.getByRole('button', { name: 'Imprimer l’attestation' })).toHaveCount(0);
+    const telechargement = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Télécharger en Word' }).click();
     expect((await telechargement).suggestedFilename()).toBe('Attestation_de_travail_AB123456.docx');
-    expect(mock.bodies['POST /employees/9/attestation-travail']?.[1]).toEqual({ civilite: 'MADAME', format: 'WORD' });
+    expect(mock.bodies['POST /employees/9/attestation-travail']).toEqual([{ civilite: 'MADAME' }]);
   });
 });
