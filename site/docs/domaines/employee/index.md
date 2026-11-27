@@ -295,9 +295,14 @@ et à l’administrateur, KAN-320). L’employé se cherche par nom ou CIN ; la 
 (nom, CIN, fonction, matricule CNSS, date de déclaration, statut) et la civilité proposée depuis la fiche.
 L’**attestation de travail** reprend le modèle de la Direction (STE STAPORT S.A., Marrakech) : « depuis le »
 est la date de déclaration CNSS, la fonction est le libellé actuel (décisions du propriétaire,
-2026-11-25). Améliorations : en-tête au logo, accords selon la civilité (immatriculé·e, intéressé·e),
-« jusqu’à ce jour ». Elle n’est délivrée qu’à un employé en poste et déclaré ; sinon la page et l’API
-nomment ce qui manque. Le PDF s’ouvre dans un nouvel onglet pour l’impression.
+2026-11-25). Le document est un **Word** à retoucher puis imprimer (le PDF a été retiré, 2026-11-27) ; il
+reproduit le modèle retouché par le propriétaire : Bahnschrift Light 14 pt, « MARRAKECH LE » en gras, titre en
+gras 16 pt, corps en interligne 1,5 où la raison sociale, la civilité abrégée (Mr., Mme) avec le nom, la CIN, le
+matricule, la fonction et la date sont en gras, « La Direction » centrée en 15 pt. Le texte s’accorde selon la
+civilité (immatriculé·e, intéressé·e) et élide « en qualité d’ » devant une voyelle ; l’employé travaille
+« jusqu’à nos jours ». En-tête au logo seul, pied de page au bandeau des coordonnées légales dont le capital social
+est un paramètre. Elle n’est délivrée qu’à un employé en poste et déclaré ; sinon la page et l’API nomment ce qui
+manque.
 
 ## Parcours frontend et exports
 

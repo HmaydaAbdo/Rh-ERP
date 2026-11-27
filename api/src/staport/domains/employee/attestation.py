@@ -2,11 +2,12 @@
 
 Décisions du propriétaire (2026-11-25) : « depuis le » est la date de déclaration CNSS ; la fonction est le libellé
 actuel, tel quel ; la civilité (Monsieur ou Madame) se choisit à l'impression et reste sur la fiche. L'attestation dit
-que l'employé travaille « jusqu'à ce jour » : elle n'est délivrée qu'à un employé en poste, déclaré à la CNSS.
+que l'employé travaille « jusqu'à nos jours » : elle n'est délivrée qu'à un employé en poste, déclaré à la CNSS.
 
 Le document est un Word (python-docx), à retoucher puis imprimer : le PDF a été retiré (décision du propriétaire,
-2026-11-27). Typographie demandée : Bahnschrift Light, contenu en 14 pt, titre et signature en 16 pt ; les données de
-l'employé et la raison sociale sont en gras.
+2026-11-27). Il reproduit le modèle retouché par le propriétaire (2026-11-27) : Bahnschrift Light 14 pt, date en
+majuscules et en gras, titre en gras 16 pt, corps aligné à gauche en interligne 1,5 avec la raison sociale et les
+données de l'employé en gras, « La Direction » centrée en 15 pt.
 
 En-tête et pied de page suivent le papier à en-tête de la société (2026-11-27) : le logo seul en haut ; en bas, le
 bandeau bleu des coordonnées légales. Le capital social y est lu dans les paramètres (`societe.capital-social`),
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from docx import Document
+from docx.document import Document as DocumentObject
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import parse_xml
@@ -42,9 +44,14 @@ LOGO = Path(_rapport_paie.__file__).with_name("report") / "logo-staport.png"
 POLICE = "Bahnschrift Light"
 TAILLE_CONTENU = Pt(14)
 TAILLE_TITRE = Pt(16)
+TAILLE_SIGNATURE = Pt(15)
+TAILLE_VIDE = Pt(11)  # les lignes vides de petite taille du modèle
+ESPACE_AVANT = Pt(10)  # espace avant chaque paragraphe du modèle
+INTERLIGNE_CORPS = 1.5
+RETRAITS_CORPS = (Mm(20), Mm(15))  # retrait de première ligne de chaque paragraphe du corps, comme sur le modèle
 HAUTEUR_LOGO = Mm(26)
-SOCIETE = "STAPORT S.A."
-LIEU = "Marrakech"
+SOCIETE = "STE STAPORT S.A"
+LIEU = "MARRAKECH"
 TITRE = "ATTESTATION DE TRAVAIL"
 SIGNATAIRE = "La Direction"
 APOSTROPHE = chr(0x2019)  # apostrophe typographique
@@ -62,11 +69,12 @@ PIED_AVANT_CAPITAL = (
 )
 IDENTIFIANTS_LEGAUX = "R.C : 96 537 | C.N.S.S : 606 7111 | Patente: 37963740 | I.F : 2201604 | ICE : 001515324000076"
 
-# Formule et accords selon la civilité.
+# Abréviation de la civilité et accord selon la civilité.
 FORMULES: dict[Civilite, tuple[str, str]] = {
-    Civilite.MONSIEUR: ("Monsieur", ""),
-    Civilite.MADAME: ("Madame", "e"),
+    Civilite.MONSIEUR: ("Mr.", ""),
+    Civilite.MADAME: ("Mme", "e"),
 }
+VOYELLES = frozenset("AEIOUYÀÂÉÈÊËÎÏÔÛÙ")
 
 # Un paragraphe du corps : des segments (texte, gras ?).
 Paragraphe = list[tuple[str, bool]]
@@ -105,22 +113,23 @@ def manques(x: Employee) -> list[str]:
 def corps(a: Attestation) -> list[Paragraphe]:
     """Le texte de l'attestation ; la raison sociale et les données de l'employé sont en gras."""
     formule, accord = FORMULES[a.civilite]
+    # « en qualité d'AGENT », « en qualité de CHAUFFEUR » : élision devant une voyelle.
+    qualite = f"d{APOSTROPHE}" if a.fonction[:1].upper() in VOYELLES else "de "
     return [
         [
-            ("Nous soussignés, la société ", False),
+            ("Nous soussignés, la ", False),
             (SOCIETE, True),
-            (", attestons par la présente que ", False),
-            (f"{formule} ", False),
-            (a.nom_prenom.upper(), True),
-            (", titulaire de la CIN N° ", False),
+            (". attestons par la présente que ", False),
+            (f"{formule} {a.nom_prenom.upper()}", True),
+            (" titulaire de la CIN N° ", False),
             (a.cin, True),
-            (f", immatriculé{accord} à la CNSS sous le N° ", False),
+            (f", immatriculé{accord} à la CNSS sous N° ", False),
             (a.matricule_cnss, True),
-            (", travaille au sein de notre société en qualité de ", False),
+            (f", travaille au sein de notre Société en qualité {qualite}", False),
             (a.fonction, True),
             (" depuis le ", False),
             (f"{a.depuis:%d/%m/%Y}", True),
-            (f" jusqu{APOSTROPHE}à ce jour.", False),
+            (f" jusqu{APOSTROPHE}à nos jours.", False),
         ],
         [
             (
@@ -151,38 +160,48 @@ def construire_docx(a: Attestation) -> bytes:
     normal = cast(ParagraphStyle, document.styles["Normal"])
     normal.font.name = POLICE
     normal.font.size = TAILLE_CONTENU
+    normal.paragraph_format.space_before, normal.paragraph_format.space_after = ESPACE_AVANT, Pt(0)
+    normal.paragraph_format.line_spacing = 1.15
 
-    section.header.paragraphs[0].add_run().add_picture(str(LOGO), height=HAUTEUR_LOGO)
+    logo = section.header.paragraphs[0]
+    logo.paragraph_format.space_before = Pt(0)
+    logo.add_run().add_picture(str(LOGO), height=HAUTEUR_LOGO)
     _pied_de_page_docx(section.footer, a.capital_social, Mm(210))
 
-    date_lieu = document.add_paragraph(f"{LIEU}, le {a.fait_le:%d/%m/%Y}")
+    date_lieu = document.add_paragraph()
     date_lieu.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    date_lieu.paragraph_format.space_before = Mm(6)
+    date_lieu.add_run(f"{LIEU} LE {a.fait_le:%d/%m/%Y}").bold = True
+    _lignes_vides(document, TAILLE_CONTENU, TAILLE_VIDE)
 
     titre = document.add_paragraph()
     titre.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    titre.paragraph_format.space_before, titre.paragraph_format.space_after = Mm(20), Mm(14)
     texte_titre = titre.add_run(TITRE)
-    texte_titre.bold, texte_titre.underline, texte_titre.font.size = True, True, TAILLE_TITRE
+    texte_titre.bold, texte_titre.font.size = True, TAILLE_TITRE
+    _lignes_vides(document, TAILLE_VIDE, TAILLE_VIDE)
 
-    for segments in corps(a):
+    for segments, retrait in zip(corps(a), RETRAITS_CORPS, strict=True):
         paragraphe = document.add_paragraph()
-        paragraphe.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        paragraphe.paragraph_format.first_line_indent = Mm(12)
-        paragraphe.paragraph_format.space_after = Mm(7)
-        paragraphe.paragraph_format.line_spacing = 1.5
+        paragraphe.paragraph_format.first_line_indent = retrait
+        paragraphe.paragraph_format.line_spacing = INTERLIGNE_CORPS
         for texte, gras in segments:
             paragraphe.add_run(texte).bold = gras
+    _lignes_vides(document, TAILLE_CONTENU, TAILLE_VIDE, TAILLE_VIDE)
 
     signature = document.add_paragraph()
-    signature.paragraph_format.space_before = Mm(24)
     signature.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    texte_signature = signature.add_run(SIGNATAIRE)
-    texte_signature.bold, texte_signature.font.size = True, TAILLE_TITRE
+    signature.add_run(SIGNATAIRE).font.size = TAILLE_SIGNATURE
 
     flux = BytesIO()
     document.save(flux)
     return flux.getvalue()
+
+
+def _lignes_vides(document: DocumentObject, *tailles: Length) -> None:
+    """Les lignes vides du modèle entre les blocs : la hauteur d'une ligne vide est la taille de sa marque de
+    paragraphe, que python-docx n'expose pas (`w:rPr` du `w:pPr` posé directement)."""
+    for taille in tailles:
+        marque = document.add_paragraph()._p.get_or_add_pPr()  # pyright: ignore[reportPrivateUsage]
+        marque.append(parse_xml(f'<w:rPr {nsdecls("w")}><w:sz w:val="{round(taille.pt * 2)}"/></w:rPr>'))  # pyright: ignore[reportUnknownMemberType]
 
 
 def _pied_de_page_docx(pied: _Footer, capital_social: int, largeur: Length) -> None:
@@ -199,7 +218,7 @@ def _pied_de_page_docx(pied: _Footer, capital_social: int, largeur: Length) -> N
     for rang, ligne in enumerate(lignes_pied_de_page(capital_social)):
         paragraphe = cellule.paragraphs[0] if rang == 0 else cellule.add_paragraph()
         paragraphe.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        paragraphe.paragraph_format.space_after = Pt(0)
+        paragraphe.paragraph_format.space_before = paragraphe.paragraph_format.space_after = Pt(0)
         paragraphe.paragraph_format.line_spacing = 1.0
         texte = paragraphe.add_run(ligne)
         texte.font.name, texte.font.size, texte.font.color.rgb = POLICE, Pt(7), BLANC

@@ -21,7 +21,7 @@ interface DemandeAttestation {
   civilite: Civilite | null;
 }
 
-/** Ce qui empêche d'attester, dans les mots du serveur : l'attestation dit « travaille… jusqu'à ce jour ». */
+/** Ce qui empêche d'attester, dans les mots du serveur : l'attestation dit « travaille… jusqu'à nos jours ». */
 export function raisonsAttestationImpossible(employe: Employee): string[] {
   const raisons: string[] = [];
   if (employe.statut !== 'ACTIF') raisons.push('l’employé n’est plus en poste');

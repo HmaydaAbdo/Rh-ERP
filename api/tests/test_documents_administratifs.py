@@ -16,7 +16,7 @@ from docx.styles.style import ParagraphStyle
 from openpyxl import Workbook
 from sqlalchemy import text
 
-from staport.domains.employee.attestation import Attestation, construire_docx
+from staport.domains.employee.attestation import APOSTROPHE, Attestation, construire_docx
 from staport.domains.employee.models import Civilite
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -190,14 +190,13 @@ def test_l_attestation_word_suit_le_modele_et_accorde_la_civilite() -> None:
     document = Document(BytesIO(construire_docx(attestation)))
 
     paragraphes = [p.text for p in document.paragraphs]
-    assert "Marrakech, le 10/10/2025" in paragraphes
+    assert "MARRAKECH LE 10/10/2025" in paragraphes
     assert "ATTESTATION DE TRAVAIL" in paragraphes
     assert "La Direction" in paragraphes
     corps = next(p for p in document.paragraphs if p.text.startswith("Nous soussignés"))
-    assert "Madame BENALI SARA, titulaire de la CIN N° AB123456, " in corps.text
-    assert "immatriculée à la CNSS sous le N° 123456789" in corps.text
-    assert "CHAUFFEUR CAMION depuis le 01/06/2024" in corps.text
-    assert {r.text for r in corps.runs if r.bold} >= {"BENALI SARA", "AB123456", "123456789", "CHAUFFEUR CAMION"}
+    assert corps.text.startswith("Nous soussignés, la STE STAPORT S.A. attestons par la présente que Mme BENALI SARA ")
+    assert "titulaire de la CIN N° AB123456, immatriculée à la CNSS sous N° 123456789" in corps.text
+    assert f"en qualité de CHAUFFEUR CAMION depuis le 01/06/2024 jusqu{APOSTROPHE}à nos jours." in corps.text
     assert any("intéressée sur sa demande" in p for p in paragraphes)
     section = document.sections[0]
     assert section.header.part.blob.count(b"</pic:pic>") == 1  # l'en-tête ne garde que le logo
@@ -205,18 +204,22 @@ def test_l_attestation_word_suit_le_modele_et_accorde_la_civilite() -> None:
     pied = section.footer.tables[0].cell(0, 0).text
     assert pied.startswith("Société des Travaux d") and "Ponts et Routes - Société Anonyme" in pied
     assert "Capital Social : 70 000 000,00Dh | R.C : 96 537" in pied
-    # Typographie demandée : Bahnschrift Light, contenu 14 pt, titre et signature 16 pt.
+    # Le modèle du propriétaire : Bahnschrift Light 14 pt, date en gras, titre en gras 16 pt sans soulignement,
+    # corps aligné à gauche en interligne 1,5, « La Direction » centrée en 15 pt sans gras.
     normal = cast(ParagraphStyle, document.styles["Normal"])
     assert (normal.font.name, normal.font.size) == ("Bahnschrift Light", Pt(14))
-    for libelle in ("ATTESTATION DE TRAVAIL", "La Direction"):
-        texte = next(p for p in document.paragraphs if p.text == libelle).runs[0]
-        assert texte.bold and texte.font.size == Pt(16)
+    date_lieu = next(p for p in document.paragraphs if p.text.startswith("MARRAKECH"))
+    assert date_lieu.alignment == WD_ALIGN_PARAGRAPH.RIGHT and date_lieu.runs[0].bold
+    titre = next(p for p in document.paragraphs if p.text == "ATTESTATION DE TRAVAIL")
+    assert titre.alignment == WD_ALIGN_PARAGRAPH.CENTER
+    assert titre.runs[0].bold and not titre.runs[0].underline and titre.runs[0].font.size == Pt(16)
+    assert corps.alignment is None and corps.paragraph_format.line_spacing == 1.5  # pyright: ignore[reportUnknownMemberType]
     signature = next(p for p in document.paragraphs if p.text == "La Direction")
     assert signature.alignment == WD_ALIGN_PARAGRAPH.CENTER
-    assert not signature.paragraph_format.left_indent  # pyright: ignore[reportUnknownMemberType]
+    assert not signature.runs[0].bold and signature.runs[0].font.size == Pt(15)
     assert {r.text for r in corps.runs if r.bold} == {
-        "STAPORT S.A.",
-        "BENALI SARA",
+        "STE STAPORT S.A",
+        "Mme BENALI SARA",
         "AB123456",
         "123456789",
         "CHAUFFEUR CAMION",
@@ -225,7 +228,11 @@ def test_l_attestation_word_suit_le_modele_et_accorde_la_civilite() -> None:
     masculin = "".join(
         p.text for p in Document(BytesIO(construire_docx(replace(attestation, civilite=Civilite.MONSIEUR)))).paragraphs
     )
+    assert "Mr. BENALI SARA titulaire" in masculin
     assert "immatriculé à la CNSS" in masculin and "intéressé sur" in masculin
+    # « en qualité d'AGENT » : élision devant une voyelle.
+    agent = Document(BytesIO(construire_docx(replace(attestation, fonction="AGENT ADMINISTRATIF"))))
+    assert f"en qualité d{APOSTROPHE}AGENT ADMINISTRATIF depuis" in "".join(p.text for p in agent.paragraphs)
 
 
 def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
@@ -258,7 +265,7 @@ def test_l_attestation_se_telecharge_et_garde_la_civilite_choisie(
     )
     assert f"Attestation_de_travail_{declare['cin']}.docx" in reponse.headers["content-disposition"]
     document_word = Document(BytesIO(reponse.content))
-    assert any("Monsieur ALAMI YOUSSEF H" in p.text for p in document_word.paragraphs)
+    assert any("Mr. ALAMI YOUSSEF H" in p.text for p in document_word.paragraphs)
     assert "Capital Social : 70 000 000,00Dh" in document_word.sections[0].footer.tables[0].cell(0, 0).text
     fiche = plateforme.client.get(f"/employees/{declare['id']}", headers=jeu.entetes).json()
     assert fiche["civilite"] == "MONSIEUR"
