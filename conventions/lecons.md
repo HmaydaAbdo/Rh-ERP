@@ -237,3 +237,7 @@ Sur l'écran Documents, la civilité choisie ne restait pas. La fiche de l'emplo
 ## Une même adresse sert la page et l'API selon `Accept` : la réponse doit le déclarer (2026-11-27, KAN-323)
 
 Après une navigation directe vers `/parametres`, le navigateur gardait la page Angular en cache et la resservait à l'appel HttpClient de l'écran Paramètres (« Impossible de charger les paramètres »), car nginx choisit entre la page et l'API selon l'en-tête `Accept` sans le déclarer. La page de repli des préfixes d'API part désormais avec `Cache-Control: no-store` et `Vary: Accept`. **À faire :** toute réponse qui dépend d'un en-tête de requête le déclare dans `Vary` ; un `add_header` placé dans une location retire ceux du serveur, il faut y reprendre les en-têtes de sécurité.
+
+## Un conteneur flex réduit à rien cache le recouvrement de ses enfants (2026-11-28, KAN-323)
+
+Sur l'écran Employés, entre téléphone et bureau, les actions recouvraient les onglets de vue : l'en-tête ne passait pas à la ligne, les actions refusaient de rétrécir (`flex: none`) et le sélecteur d'onglets se réduisait à 0 px pendant que ses onglets débordaient par-dessus. Le premier test E2E comparait les boîtes des conteneurs et passait même sur l'ancien CSS. **À faire :** un test de recouvrement compare les éléments visibles eux-mêmes (chaque bouton contre chaque onglet), et on le fait échouer une fois sur l'ancien code avant de lui faire confiance.

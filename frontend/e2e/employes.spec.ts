@@ -98,3 +98,31 @@ test.describe('Employés — Cartes et Analytique', () => {
     expect(accessibilite.violations.map((v) => v.id)).toEqual([]);
   });
 });
+
+test.describe('Employés — en-tête', () => {
+  test('les actions ne recouvrent jamais les onglets de vue, quelle que soit la largeur', async ({ page }) => {
+    await mockApi(page, { username: 'rh', permissions: [...DROITS, 'EMPLOYEE_WRITE', 'EMPLOYEE_IMPORT', 'EMPLOYEE_EXPORT'] }, routes());
+    await page.goto('/employees');
+    await expect(page.getByRole('button', { name: 'Mouvements du mois (PDF)' })).toBeVisible();
+    for (const largeur of [1500, 1024, 900, 800]) {
+      await page.setViewportSize({ width: largeur, height: 800 });
+      // Chaque onglet et le titre comparés à chaque bouton d'action : le conteneur des onglets peut se réduire à rien
+      // pendant que ses onglets débordent, comparer les conteneurs ne verrait pas le recouvrement.
+      const boites = await page.evaluate(() => {
+        const boites = (selecteur: string) => Array.from(document.querySelectorAll(selecteur)).map((e) => e.getBoundingClientRect().toJSON() as DOMRect);
+        return {
+          actions: boites('.app-vues__actions button'),
+          entete: boites('.app-vues__header h1, app-vue-switcher a'),
+          debordement: document.documentElement.scrollWidth - document.documentElement.clientWidth
+        };
+      });
+      const chevauche = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      expect(boites.actions.length, `${largeur} px`).toBeGreaterThan(0);
+      expect(boites.actions.some((action) => boites.entete.some((element) => chevauche(action, element))), `${largeur} px`).toBe(false);
+      expect(boites.debordement, `${largeur} px`).toBeLessThanOrEqual(0);
+      // Le titre et les onglets restent sur la même ligne, posés sur le filet.
+      const bas = boites.entete.map((element) => element.bottom);
+      expect(Math.max(...bas) - Math.min(...bas), `${largeur} px`).toBeLessThan(12);
+    }
+  });
+});
